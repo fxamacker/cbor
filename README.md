@@ -74,7 +74,7 @@ err = enc.Encode(f)
 
 ## API 
 
-See [API docs](https://godoc.org/fxamacker/cbor).
+See [API docs](https://godoc.org/github.com/fxamacker/go-cbor).
 
 ```
 package cbor // import "github.com/fxamacker/cbor"
