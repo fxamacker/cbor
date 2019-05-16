@@ -419,19 +419,30 @@ func isEmptyValue(v reflect.Value) bool {
 // Marshal returns the CBOR encoding of v.
 //
 // Marshal uses the following type-dependent default encodings:
-// - Boolean values encode as CBOR booleans (type 7).
-// - Positive integer values encode as CBOR positive integers (type 0).
-// - Negative integer values encode as CBOR negative integers (type 1).
-// - Floating point values encode as CBOR floating points (type 7).
-// - String values encode as CBOR text strings (type 3).
-// - []byte values encode as CBOR byte strings (type 2).
-// - Array and slice values encode as CBOR arrays (type 4).
-// - Map values encode as CBOR maps (type 5).
-// - Struct values encode as CBOR maps (type 5).  Each exported struct field
-//   becomes a pair with field name encoded as CBOR text string (type 3) and
-//   field value encoded based on its type.
-// - Pointer values encode as the value pointed to.
-// - Nil slice/map/pointer/interface values encode as CBOR nulls (type 7).
+//
+// Boolean values encode as CBOR booleans (type 7).
+//
+// Positive integer values encode as CBOR positive integers (type 0).
+//
+// Negative integer values encode as CBOR negative integers (type 1).
+//
+// Floating point values encode as CBOR floating points (type 7).
+//
+// String values encode as CBOR text strings (type 3).
+//
+// []byte values encode as CBOR byte strings (type 2).
+//
+// Array and slice values encode as CBOR arrays (type 4).
+//
+// Map values encode as CBOR maps (type 5).
+//
+// Struct values encode as CBOR maps (type 5).  Each exported struct field
+// becomes a pair with field name encoded as CBOR text string (type 3) and
+// field value encoded based on its type.
+//
+// Pointer values encode as the value pointed to.
+//
+// Nil slice/map/pointer/interface values encode as CBOR nulls (type 7).
 //
 // Marshal supports format string stored under the "cbor" key in the struct
 // field's tag.  CBOR format string can specify the name of the field, "omitempty"
@@ -453,13 +464,13 @@ func isEmptyValue(v reflect.Value) bool {
 // CBOR cannot represent cyclic data structures and Marshal does not handle them.
 //
 // CTAP2 canonical CBOR encoding uses the following rules:
-// 1. Integers must be encoded as small as possible.
-// 2. The representations of any floating-point values are not changed.
-// 3. The expression of lengths in major types 2 through 5 must be as short as
-//    possible.
-// 4. Indefinite-length items must be made into definite-length items.
-// 5. The keys in every map must be sorted lowest value to highest.
-// 6. Tags must not be present.
+//
+//     1. Integers must be encoded as small as possible.
+//     2. The representations of any floating-point values are not changed.
+//     3. The expression of lengths in major types 2 through 5 must be as short as possible.
+//     4. Indefinite-length items must be made into definite-length items.
+//     5. The keys in every map must be sorted lowest value to highest.
+//     6. Tags must not be present.
 //
 // Canonical CBOR encoding specified in RFC 7049 section 3.9 consists of CTAP2
 // canonical CBOR encoding rules 1, 3, 4, and 5.
