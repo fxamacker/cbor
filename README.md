@@ -1,4 +1,4 @@
-# go-cbor  
+# cbor  
 
 `cbor` is a [CBOR](http://tools.ietf.org/html/rfc7049) encoding and decoding package in Go.  
 
@@ -32,7 +32,7 @@ This package supports [RFC 7049 canonical CBOR encoding](https://tools.ietf.org/
 ## Installation 
 
 ```
-go get github.com/fxamacker/go-cbor
+go get github.com/fxamacker/cbor
 ```
 
 ## Usage
@@ -74,7 +74,7 @@ err = enc.Encode(f)
 
 ## API 
 
-See [API docs](https://godoc.org/github.com/fxamacker/go-cbor).
+See [API docs](https://godoc.org/github.com/fxamacker/cbor).
 
 ```
 package cbor // import "github.com/fxamacker/cbor"
