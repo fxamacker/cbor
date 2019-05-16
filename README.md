@@ -1,4 +1,4 @@
-# CBOR  
+# go-cbor  
 
 `cbor` is a [CBOR](http://tools.ietf.org/html/rfc7049) encoding and decoding package in Go.  
 
@@ -12,14 +12,14 @@ This package adds about 350KB to the size of your binaries with no external depe
 
 ## Canonical CBOR Support
 
-This package supports [RFC 7049 canonical CBOR encoding](https://tools.ietf.org/html/rfc7049#section-3.9), and [CTAP2 canonical CBOR encoding](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).  CTAP2 canonical CBOR encoding is used by [CTAP](https://tools.ietf.org/html/rfc7049#section-3.9) and [WebAuthn](https://www.w3.org/TR/webauthn/) in [FIDO2](https://fidoalliance.org/fido2/) framework.
+This package supports [RFC 7049 canonical CBOR encoding](https://tools.ietf.org/html/rfc7049#section-3.9), and [CTAP2 canonical CBOR encoding](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).  CTAP2 canonical CBOR encoding is used by [CTAP](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html) and [WebAuthn](https://www.w3.org/TR/webauthn/) in [FIDO2](https://fidoalliance.org/fido2/) framework.
 
 ## Features
 
 * Idiomatic API as in `json` package.
 * No external dependencies.
 * No use of `unsafe` package.
-* Tested with [RFC 7049 test examples](http://tools.ietf.org/html/rfc7049#AppendixA).
+* Tested with [RFC 7049 test examples](https://tools.ietf.org/html/rfc7049#appendix-A).
 * `>`90% code coverage.
 * Decode indefinite-length bytes/string/array/map.
 * Decode slices, maps, and structs in-place.
@@ -32,7 +32,7 @@ This package supports [RFC 7049 canonical CBOR encoding](https://tools.ietf.org/
 ## Installation 
 
 ```
-go get github.com/fxamacker/cbor
+go get github.com/fxamacker/go-cbor
 ```
 
 ## Usage
@@ -118,34 +118,34 @@ See [bench_test.go](bench_test.go).
 Benchmarks shows that decoding into struct is >50% faster than decoding into map, and encoding struct is >70% faster than encoding map.  
 
 ```
-BenchmarkUnmarshal/CBOR_boolean_to_Go_interface_{}-2         	                    10000000	       131 ns/op	      16 B/op	       1 allocs/op
-BenchmarkUnmarshal/CBOR_boolean_to_Go_bool-2                 	                    20000000	      76.1 ns/op	       1 B/op	       1 allocs/op
-BenchmarkUnmarshal/CBOR_positive_integer_to_Go_interface_{}-2         	            10000000	       156 ns/op	      24 B/op	       2 allocs/op
-BenchmarkUnmarshal/CBOR_positive_integer_to_Go_uint64-2               	            20000000	      82.0 ns/op	       8 B/op	       1 allocs/op
-BenchmarkUnmarshal/CBOR_negative_integer_to_Go_interface_{}-2         	            10000000	       159 ns/op	      24 B/op	       2 allocs/op
-BenchmarkUnmarshal/CBOR_negative_integer_to_Go_int64-2                	            20000000	      83.3 ns/op	       8 B/op	       1 allocs/op
-BenchmarkUnmarshal/CBOR_float_to_Go_interface_{}-2                    	            10000000	       157 ns/op	      24 B/op	       2 allocs/op
-BenchmarkUnmarshal/CBOR_float_to_Go_float64-2                         	            20000000	      81.1 ns/op	       8 B/op	       1 allocs/op
-BenchmarkUnmarshal/CBOR_byte_string_to_Go_interface_{}-2              	            10000000	       214 ns/op	      80 B/op	       3 allocs/op
-BenchmarkUnmarshal/CBOR_byte_string_to_Go_[]uint8-2                   	            10000000	       161 ns/op	      64 B/op	       2 allocs/op
-BenchmarkUnmarshal/CBOR_byte_string_indefinite_length_to_Go_interface_{}-2         	 2000000	       733 ns/op	     112 B/op	       3 allocs/op
-BenchmarkUnmarshal/CBOR_byte_string_indefinite_length_to_Go_[]uint8-2              	 2000000	       680 ns/op	      96 B/op	       2 allocs/op
-BenchmarkUnmarshal/CBOR_text_string_to_Go_interface_{}-2                           	 5000000	       251 ns/op	      80 B/op	       3 allocs/op
-BenchmarkUnmarshal/CBOR_text_string_to_Go_string-2                                 	10000000	       183 ns/op	      64 B/op	       2 allocs/op
+BenchmarkUnmarshal/CBOR_boolean_to_Go_interface_{}-2         	                        10000000	       132 ns/op	      16 B/op	       1 allocs/op
+BenchmarkUnmarshal/CBOR_boolean_to_Go_bool-2                 	                        20000000	      76.1 ns/op	       1 B/op	       1 allocs/op
+BenchmarkUnmarshal/CBOR_positive_integer_to_Go_interface_{}-2         	                10000000	       159 ns/op	      24 B/op	       2 allocs/op
+BenchmarkUnmarshal/CBOR_positive_integer_to_Go_uint64-2               	                20000000	      82.3 ns/op	       8 B/op	       1 allocs/op
+BenchmarkUnmarshal/CBOR_negative_integer_to_Go_interface_{}-2         	                10000000	       160 ns/op	      24 B/op	       2 allocs/op
+BenchmarkUnmarshal/CBOR_negative_integer_to_Go_int64-2                	                20000000	      83.8 ns/op	       8 B/op	       1 allocs/op
+BenchmarkUnmarshal/CBOR_float_to_Go_interface_{}-2                    	                10000000	       159 ns/op	      24 B/op	       2 allocs/op
+BenchmarkUnmarshal/CBOR_float_to_Go_float64-2                         	                20000000	      81.4 ns/op	       8 B/op	       1 allocs/op
+BenchmarkUnmarshal/CBOR_byte_string_to_Go_interface_{}-2              	                10000000	       214 ns/op	      80 B/op	       3 allocs/op
+BenchmarkUnmarshal/CBOR_byte_string_to_Go_[]uint8-2                   	                10000000	       159 ns/op	      64 B/op	       2 allocs/op
+BenchmarkUnmarshal/CBOR_byte_string_indefinite_length_to_Go_interface_{}-2         	 2000000	       738 ns/op	     112 B/op	       3 allocs/op
+BenchmarkUnmarshal/CBOR_byte_string_indefinite_length_to_Go_[]uint8-2              	 2000000	       687 ns/op	      96 B/op	       2 allocs/op
+BenchmarkUnmarshal/CBOR_text_string_to_Go_interface_{}-2                           	 5000000	       248 ns/op	      80 B/op	       3 allocs/op
+BenchmarkUnmarshal/CBOR_text_string_to_Go_string-2                                 	10000000	       176 ns/op	      64 B/op	       2 allocs/op
 BenchmarkUnmarshal/CBOR_text_string_indefinite_length_to_Go_interface_{}-2         	 1000000	      1147 ns/op	     144 B/op	       4 allocs/op
-BenchmarkUnmarshal/CBOR_text_string_indefinite_length_to_Go_string-2               	 1000000	      1068 ns/op	     128 B/op	       3 allocs/op
-BenchmarkUnmarshal/CBOR_array_to_Go_interface_{}-2                                 	 1000000	      1147 ns/op	     672 B/op	      29 allocs/op
-BenchmarkUnmarshal/CBOR_array_to_Go_[]int-2                                        	 1000000	      1086 ns/op	     272 B/op	       3 allocs/op
-BenchmarkUnmarshal/CBOR_array_indefinite_length_to_Go_interface_{}-2               	 1000000	      1328 ns/op	     672 B/op	      29 allocs/op
-BenchmarkUnmarshal/CBOR_array_indefinite_length_to_Go_[]int-2                      	 1000000	      1287 ns/op	     272 B/op	       3 allocs/op
-BenchmarkUnmarshal/CBOR_map_to_Go_interface_{}-2                                   	  500000	      3100 ns/op	    1421 B/op	      30 allocs/op
-BenchmarkUnmarshal/CBOR_map_to_Go_map[string]interface_{}-2                        	  500000	      4042 ns/op	     964 B/op	      19 allocs/op
-BenchmarkUnmarshal/CBOR_map_to_Go_map[string]string-2                              	  500000	      2754 ns/op	     740 B/op	       5 allocs/op
-BenchmarkUnmarshal/CBOR_map_to_Go_cbor_test.strc-2                                 	 1000000	      1614 ns/op	     208 B/op	       1 allocs/op
-BenchmarkUnmarshal/CBOR_map_indefinite_length_to_Go_interface_{}-2                 	  300000	      4239 ns/op	    2607 B/op	      33 allocs/op
-BenchmarkUnmarshal/CBOR_map_indefinite_length_to_Go_map[string]interface_{}-2      	  300000	      5942 ns/op	    2423 B/op	      22 allocs/op
-BenchmarkUnmarshal/CBOR_map_indefinite_length_to_Go_map[string]string-2            	  300000	      4238 ns/op	    2184 B/op	       7 allocs/op
-BenchmarkUnmarshal/CBOR_map_indefinite_length_to_Go_cbor_test.strc-2               	 1000000	      1847 ns/op	     208 B/op	       1 allocs/op
+BenchmarkUnmarshal/CBOR_text_string_indefinite_length_to_Go_string-2               	 1000000	      1075 ns/op	     128 B/op	       3 allocs/op
+BenchmarkUnmarshal/CBOR_array_to_Go_interface_{}-2                                 	 1000000	      1156 ns/op	     672 B/op	      29 allocs/op
+BenchmarkUnmarshal/CBOR_array_to_Go_[]int-2                                        	 1000000	      1075 ns/op	     272 B/op	       3 allocs/op
+BenchmarkUnmarshal/CBOR_array_indefinite_length_to_Go_interface_{}-2               	 1000000	      1347 ns/op	     672 B/op	      29 allocs/op
+BenchmarkUnmarshal/CBOR_array_indefinite_length_to_Go_[]int-2                      	 1000000	      1275 ns/op	     272 B/op	       3 allocs/op
+BenchmarkUnmarshal/CBOR_map_to_Go_interface_{}-2                                   	  500000	      3094 ns/op	    1420 B/op	      30 allocs/op
+BenchmarkUnmarshal/CBOR_map_to_Go_map[string]interface_{}-2                        	  300000	      4064 ns/op	     964 B/op	      19 allocs/op
+BenchmarkUnmarshal/CBOR_map_to_Go_map[string]string-2                              	  500000	      2808 ns/op	     740 B/op	       5 allocs/op
+BenchmarkUnmarshal/CBOR_map_to_Go_cbor_test.strc-2                                 	 1000000	      1624 ns/op	     208 B/op	       1 allocs/op
+BenchmarkUnmarshal/CBOR_map_indefinite_length_to_Go_interface_{}-2                 	  300000	      4236 ns/op	    2607 B/op	      33 allocs/op
+BenchmarkUnmarshal/CBOR_map_indefinite_length_to_Go_map[string]interface_{}-2      	  300000	      5819 ns/op	    2422 B/op	      22 allocs/op
+BenchmarkUnmarshal/CBOR_map_indefinite_length_to_Go_map[string]string-2            	  300000	      4268 ns/op	    2183 B/op	       7 allocs/op
+BenchmarkUnmarshal/CBOR_map_indefinite_length_to_Go_cbor_test.strc-2               	 1000000	      1860 ns/op	     208 B/op	       1 allocs/op
 ```
 
 ```
