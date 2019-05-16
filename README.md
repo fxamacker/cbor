@@ -1,3 +1,8 @@
+[![Build Status](https://travis-ci.com/fxamacker/cbor.svg?branch=master)](https://travis-ci.com/fxamacker/cbor)
+[![codecov](https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4)](https://codecov.io/gh/fxamacker/cbor)
+[![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/fxamacker/cbor)
+[![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE)
+
 # cbor  
 
 `cbor` is a [CBOR](http://tools.ietf.org/html/rfc7049) encoding and decoding package in Go.  
@@ -20,7 +25,7 @@ This package supports [RFC 7049 canonical CBOR encoding](https://tools.ietf.org/
 * No external dependencies.
 * No use of `unsafe` package.
 * Tested with [RFC 7049 test examples](https://tools.ietf.org/html/rfc7049#appendix-A).
-* `>`90% code coverage.
+* ~90% code coverage.
 * Decode indefinite-length bytes/string/array/map.
 * Decode slices, maps, and structs in-place.
 * Decode into struct with field name case-insensitive match.
