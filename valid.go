@@ -5,6 +5,7 @@ package cbor
 
 import (
 	"encoding/binary"
+	"errors"
 	"io"
 	"strconv"
 )
@@ -89,20 +90,34 @@ func checkValid(data []byte, off int) (_ int, t cborType, err error) {
 
 	switch t {
 	case cborTypeByteString, cborTypeTextString: // Check byte/text string payload.
-		if len(data)-off < int(val) {
+		valInt := int(val)
+		if valInt < 0 || uint64(valInt) != val {
+			// Detect integer overflow
+			return 0, 0, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
+		}
+		if len(data)-off < valInt {
 			return 0, 0, io.ErrUnexpectedEOF
 		}
 		off += int(val)
+
 	case cborTypeArray, cborTypeMap: // Check array and map payload.
-		if t == cborTypeMap {
-			val *= 2
+		valInt := int(val)
+		if valInt < 0 || uint64(valInt) != val {
+			// Detect integer overflow
+			return 0, 0, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
 		}
-		for i := 0; i < int(val); i++ {
-			if off, _, err = checkValid(data, off); err != nil {
-				if err == io.EOF {
-					err = io.ErrUnexpectedEOF
+		elementCount := 1
+		if t == cborTypeMap {
+			elementCount = 2
+		}
+		for i := 0; i < elementCount; i++ {
+			for i := 0; i < valInt; i++ {
+				if off, _, err = checkValid(data, off); err != nil {
+					if err == io.EOF {
+						err = io.ErrUnexpectedEOF
+					}
+					return 0, 0, err
 				}
-				return 0, 0, err
 			}
 		}
 	case cborTypeTag: // Check tagged item following tag.

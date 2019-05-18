@@ -234,7 +234,12 @@ func (d *decodeState) parse(v reflect.Value) (err error) {
 			return fillFloat(t, f, v)
 		}
 	case cborTypeArray:
-		count := int(val)
+		valInt := int(val)
+		if valInt < 0 || uint64(valInt) != val {
+			// Detect integer overflow
+			return errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
+		}
+		count := valInt
 		if ai == 31 {
 			count = -1
 		}
@@ -258,7 +263,12 @@ func (d *decodeState) parse(v reflect.Value) (err error) {
 			return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
 		}
 	case cborTypeMap:
-		count := int(val)
+		valInt := int(val)
+		if valInt < 0 || uint64(valInt) != val {
+			// Detect integer overflow
+			return errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
+		}
+		count := valInt
 		if ai == 31 {
 			count = -1
 		}
@@ -341,13 +351,23 @@ func (d *decodeState) parseInterface() (_ interface{}, err error) {
 			return f, nil
 		}
 	case cborTypeArray:
-		count := int(val)
+		valInt := int(val)
+		if valInt < 0 || uint64(valInt) != val {
+			// Detect integer overflow
+			return nil, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
+		}
+		count := valInt
 		if ai == 31 {
 			count = -1
 		}
 		return d.parseArrayInterface(t, count)
 	case cborTypeMap:
-		count := int(val)
+		valInt := int(val)
+		if valInt < 0 || uint64(valInt) != val {
+			// Detect integer overflow
+			return nil, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
+		}
+		count := valInt
 		if ai == 31 {
 			count = -1
 		}
@@ -417,10 +437,15 @@ func (d *decodeState) parseStringBuf(p []byte) (_ []byte, isCopy bool, err error
 	}
 
 	// Process definite length string.
-	if len(d.data)-d.offset < int(val) {
+	valInt := int(val)
+	if valInt < 0 || uint64(valInt) != val {
+		// Detect integer overflow
+		return nil, false, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
+	}
+	if len(d.data)-d.offset < valInt {
 		return nil, false, io.ErrUnexpectedEOF
 	}
-	oldOff, newOff := d.offset, d.offset+int(val)
+	oldOff, newOff := d.offset, d.offset+valInt
 	d.offset = newOff
 
 	if p != nil {

@@ -1096,3 +1096,16 @@ func TestValid(t *testing.T) {
 		t.Errorf("Valid() returns leftover data 0x%x, want none", cborData)
 	}
 }
+
+func TestFuzzCrash1(t *testing.T) {
+	// Crash1: string/slice/map length in uint64 cast to int causes integer overflow.
+	hexData := "bbcf30303030303030cfd697829782"
+	data := hexDecode(hexData)
+	var intf interface{}
+	wantErrorMsg := "is too large"
+	if err := cbor.Unmarshal(data, &intf); err == nil {
+		t.Errorf("Unmarshal(0x%02x) returns no error, want error containing substring %s", data, wantErrorMsg)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%02x) returns error %s, want error containing substring %s", data, err, wantErrorMsg)
+	}
+}
