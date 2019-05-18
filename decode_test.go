@@ -1136,7 +1136,7 @@ func TestFuzzCrash2(t *testing.T) {
 }
 
 func TestFuzzCrash3(t *testing.T) {
-	// Crash3: encoding nil as collection (slice, array, or map) element.
+	// Crash3: encoding nil elment in slice/array/map
 	hexData := "b0303030303030303030303030303030303038303030faffff30303030303030303030303030"
 	data := hexDecode(hexData)
 	var intf interface{}
@@ -1149,7 +1149,7 @@ func TestFuzzCrash3(t *testing.T) {
 }
 
 func TestFuzzCrash4(t *testing.T) {
-	// Crash3: parsing nil/undefined as collection (slice, array, or map) element.
+	// Crash4: parsing nil/undefined element in slice/array/map.
 	data := []byte("\xbfѣ\x88\xf70000000000000\xff")
 	var intf interface{}
 	wantErrorMsg := "invalid map key type"
@@ -1157,5 +1157,17 @@ func TestFuzzCrash4(t *testing.T) {
 		t.Errorf("Unmarshal(0x%02x) returns no error, want error containing substring %s", data, wantErrorMsg)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
 		t.Errorf("Unmarshal(0x%02x) returns error %s, want error containing substring %s", data, err, wantErrorMsg)
+	}
+}
+
+func TestFuzzCrash5(t *testing.T) {
+	// Crash5: parsing tagged elememt in byte/text string.
+	data := []byte("\u007f\xc5\u007f\xff\xff")
+	var intf interface{}
+	if err := cbor.Unmarshal(data, &intf); err != nil {
+		t.Fatalf("Unmarshal(0x%02x) returns error %s\n", data, err)
+	}
+	if _, err := cbor.Marshal(intf, cbor.EncOptions{Canonical: true}); err != nil {
+		t.Errorf("Marshal(%v) returns error %s", intf, err)
 	}
 }

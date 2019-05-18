@@ -419,6 +419,10 @@ func (d *decodeState) parseStringBuf(p []byte) (_ []byte, isCopy bool, err error
 		return nil, false, err
 	}
 
+	if t == cborTypeTag {
+		return d.parseStringBuf(p)
+	}
+
 	if t != cborTypeByteString && t != cborTypeTextString {
 		panic("cbor: expect byte/text string data, got " + t.String())
 	}
