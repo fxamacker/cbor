@@ -5,11 +5,11 @@
 
 # cbor  
 
-`cbor` is a [CBOR](http://tools.ietf.org/html/rfc7049) encoding and decoding package in Go.  
+`cbor` is a [CBOR](http://tools.ietf.org/html/rfc7049) encoding and decoding package written in Go.  
 
 The goals of this package are: lightweight, idiomatic, and reasonably fast.  
 
-This package adds about 350KB to the size of your binaries with no external dependencies.  
+This package adds less than 400KB to the size of your binaries with no external dependencies.  
 
 `cbor` adopts `json` package API, supports struct field format tags under "cbor" key, and follows `json` struct fields visibility rules.  If you are productive with `json` package, it is very easy to use this package.  
 
@@ -26,6 +26,7 @@ This package supports [RFC 7049 canonical CBOR encoding](https://tools.ietf.org/
 * No use of `unsafe` package.
 * Tested with [RFC 7049 test examples](https://tools.ietf.org/html/rfc7049#appendix-A).
 * ~90% code coverage.
+* Fuzz tested using [cbor-fuzz](https://gitHub.com/fxamacker/cbor-fuzz).
 * Decode indefinite-length bytes/string/array/map.
 * Decode slices, maps, and structs in-place.
 * Decode into struct with field name case-insensitive match.
