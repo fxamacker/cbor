@@ -169,7 +169,7 @@ func (d *decodeState) parse(v reflect.Value) (err error) {
 		return io.EOF
 	}
 
-	if d.data[0] == 0xf6 || d.data[0] == 0xf7 { // CBOR null and CBOR undefined
+	if d.data[d.offset] == 0xf6 || d.data[d.offset] == 0xf7 {
 		d.offset++
 		return fillNil(cborTypePrimitives, v)
 	}
@@ -300,7 +300,7 @@ func (d *decodeState) parseInterface() (_ interface{}, err error) {
 		return nil, io.EOF
 	}
 
-	if d.data[0] == 0xf6 || d.data[0] == 0xf7 { // CBOR null and CBOR undefined
+	if d.data[d.offset] == 0xf6 || d.data[d.offset] == 0xf7 {
 		d.offset++
 		return nil, nil
 	}
