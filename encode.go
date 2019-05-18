@@ -89,7 +89,9 @@ func (e *encodeState) marshal(v interface{}, opts EncOptions) error {
 
 func encode(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 	if !v.IsValid() {
-		return 0, &InvalidValueError{v}
+		// v is zero value
+		e.Write(cborNil)
+		return 1, nil
 	}
 
 	f := getEncodeFunc(v.Kind())

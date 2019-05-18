@@ -1134,3 +1134,16 @@ func TestFuzzCrash2(t *testing.T) {
 		}
 	}
 }
+
+func TestFuzzCrash3(t *testing.T) {
+	// Crash3: collection (slice, array, or map) element is nil.
+	hexData := "b0303030303030303030303030303030303038303030faffff30303030303030303030303030"
+	data := hexDecode(hexData)
+	var intf interface{}
+	if err := cbor.Unmarshal(data, &intf); err != nil {
+		t.Fatalf("Unmarshal(0x%02x) returns error %s\n", data, err)
+	}
+	if _, err := cbor.Marshal(intf, cbor.EncOptions{Canonical: true}); err != nil {
+		t.Errorf("Marshal(%v) returns error %s", intf, err)
+	}
+}
