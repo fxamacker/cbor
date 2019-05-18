@@ -534,6 +534,10 @@ func (d *decodeState) parseMapInterface(t cborType, count int) (_ map[interface{
 		if k, err = d.parseInterface(); err != nil {
 			return nil, err
 		}
+		keyKind := reflect.ValueOf(k).Kind()
+		if !isHashableKind(keyKind) {
+			return nil, errors.New("cbor: invalid map key type: " + keyKind.String())
+		}
 		if e, err = d.parseInterface(); err != nil {
 			return nil, err
 		}
@@ -878,6 +882,15 @@ func isImmutableKind(k reflect.Kind) bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func isHashableKind(k reflect.Kind) bool {
+	switch k {
+	case reflect.Slice, reflect.Map, reflect.Func:
+		return false
+	default:
+		return true
 	}
 }
 

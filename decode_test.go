@@ -1109,3 +1109,28 @@ func TestFuzzCrash1(t *testing.T) {
 		t.Errorf("Unmarshal(0x%02x) returns error %s, want error containing substring %s", data, err, wantErrorMsg)
 	}
 }
+
+func TestFuzzCrash2(t *testing.T) {
+	// Crash2: map key (slice or map) is unhashable.
+	testData := []string{
+		"b0303030308030303030303030303030303030303030303030303030303030303030",
+		"b030303030303030a1413030303030303030303030303030306230303030303030303030303030",
+		"b03030303030303030403030303030303030303030306230303030303030303030303030",
+		"8f303030a7303a30303030a2303030303030303030303030303030303030303030303030303030",
+		"bf30bf8030ffff",
+		"bf30a1a030ff",
+		"8f3030a730304430303030303030303030303030303030303030303030303030303030",
+		"8f303030a730303030303030308530303030303030303030303030303030303030303030",
+		"bfb0303030303030303030303030303030303030303030303030303030303030303030ff",
+	}
+	wantErrorMsg := "invalid map key type"
+	for _, hexData := range testData {
+		data := hexDecode(hexData)
+		var intf interface{}
+		if err := cbor.Unmarshal(data, &intf); err == nil {
+			t.Errorf("Unmarshal(0x%02x) returns no error, want error containing substring %s", data, wantErrorMsg)
+		} else if !strings.Contains(err.Error(), wantErrorMsg) {
+			t.Errorf("Unmarshal(0x%02x) returns error %s, want error containing substring %s", data, err, wantErrorMsg)
+		}
+	}
+}
