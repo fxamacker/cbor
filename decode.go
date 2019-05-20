@@ -255,13 +255,12 @@ func (d *decodeState) parse(v reflect.Value) (err error) {
 			return d.parseSlice(t, count, v)
 		} else if v.Kind() == reflect.Array {
 			return d.parseArray(t, count, v)
-		} else {
-			hasSize := count >= 0
-			for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
-				d.skip()
-			}
-			return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
 		}
+		hasSize := count >= 0
+		for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
+			d.skip()
+		}
+		return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
 	case cborTypeMap:
 		valInt := int(val)
 		if valInt < 0 || uint64(valInt) != val {
@@ -284,13 +283,12 @@ func (d *decodeState) parse(v reflect.Value) (err error) {
 			return d.parseStruct(t, count, v)
 		} else if v.Kind() == reflect.Map {
 			return d.parseMap(t, count, v)
-		} else {
-			hasSize := count >= 0
-			for i := 0; (hasSize && i < count*2) || (!hasSize && !d.foundBreak()); i++ {
-				d.skip()
-			}
-			return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
 		}
+		hasSize := count >= 0
+		for i := 0; (hasSize && i < count*2) || (!hasSize && !d.foundBreak()); i++ {
+			d.skip()
+		}
+		return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
 	}
 	return nil
 }
