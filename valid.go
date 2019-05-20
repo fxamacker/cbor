@@ -17,7 +17,7 @@ type SyntaxError struct {
 
 func (e *SyntaxError) Error() string { return e.msg }
 
-// SemanticError is a descriptoin of a CBOR semantic error.
+// SemanticError is a description of a CBOR semantic error.
 type SemanticError struct {
 	msg string
 }
