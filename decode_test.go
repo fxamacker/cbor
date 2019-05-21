@@ -1097,6 +1097,26 @@ func TestValid(t *testing.T) {
 	}
 }
 
+func TestStructFieldNil(t *testing.T) {
+	type TestStruct struct {
+		I   int
+		PI  *int
+		PPI **int
+	}
+	var struc TestStruct
+	cborData, err := cbor.Marshal(struc, cbor.EncOptions{})
+	if err != nil {
+		t.Fatalf("Marshal(%+v) returns error %s", struc, err)
+	}
+	var struc2 TestStruct
+	err = cbor.Unmarshal(cborData, &struc2)
+	if err != nil {
+		t.Errorf("Unmarshal(%0x) returns error %s", cborData, err)
+	} else if !reflect.DeepEqual(struc, struc2) {
+		t.Errorf("Unmarshal(%0x) returns %+v, want %+v", cborData, struc2, struc)
+	}
+}
+
 func TestFuzzCrash1(t *testing.T) {
 	// Crash1: string/slice/map length in uint64 cast to int causes integer overflow.
 	hexData := "bbcf30303030303030cfd697829782"

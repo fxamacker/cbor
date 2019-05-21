@@ -651,15 +651,23 @@ func (d *decodeState) parseStruct(t cborType, count int, v reflect.Value) error 
 			d.skip()
 			continue
 		}
+		if d.data[d.offset] == 0xf6 || d.data[d.offset] == 0xf7 {
+			d.offset++
+			fillNil(cborTypePrimitives, fv)
+			continue
+		}
 		for fv.Kind() == reflect.Ptr {
 			if fv.IsNil() {
 				if !fv.CanSet() {
-					d.skip()
-					continue
+					break
 				}
 				fv.Set(reflect.New(fv.Type().Elem()))
 			}
 			fv = fv.Elem()
+		}
+		if !fv.IsValid() || !fv.CanSet() {
+			d.skip()
+			continue
 		}
 		if err := d.parse(fv); err != nil {
 			typeError, ok := err.(*UnmarshalTypeError)
