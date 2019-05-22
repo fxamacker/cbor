@@ -6,15 +6,13 @@
 
 # cbor  
 
-`cbor` is a [CBOR](http://tools.ietf.org/html/rfc7049) encoding and decoding package written in Go.  
-
-The goals of this package are: lightweight, idiomatic, and reasonably fast.  
+`cbor` is a lightweight, idiomatic, and fast [CBOR](http://tools.ietf.org/html/rfc7049) encoding and decoding package written in Go.  
 
 This package adds less than 400KB to the size of your binaries with no external dependencies.  
 
 `cbor` adopts `json` package API, supports struct field format tags under "cbor" key, and follows `json` struct fields visibility rules.  If you are productive with `json` package, it is very easy to use this package.  
 
-`cbor` strives to balance between fast performance and small binary.  It does not use `unsafe` package to avoid possible incompatibility with future Go releases.  It does not use code generation to keep binary small.  Instead, this package caches struct field types to improve struct encoding and decoding performance.  It bypasses `reflect` when decoding CBOR array/map into empty interface value.  It also uses `sync.Pool` to reuse transient objects.  See [benchmarks](#benchmarks).
+`cbor` strives to balance between performance and binary size.  In order to keep binary small, it does not use code generation.  Instead, this package caches struct field types to improve struct encoding and decoding performance.  It bypasses `reflect` when decoding CBOR array/map into empty interface value.  It also uses `sync.Pool` to reuse transient objects.  See [benchmarks](#benchmarks).
 
 ## Canonical CBOR Support
 
