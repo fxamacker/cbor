@@ -227,12 +227,13 @@ func encodeMap(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 		return encodeMapCanonical(e, v, opts)
 	}
 	n := encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(v.Len()))
-	for _, kv := range v.MapKeys() {
-		kn, err := encode(e, kv, opts)
+	iter := v.MapRange()
+	for iter.Next() {
+		kn, err := encode(e, iter.Key(), opts)
 		if err != nil {
 			return 0, err
 		}
-		en, err := encode(e, v.MapIndex(kv), opts)
+		en, err := encode(e, iter.Value(), opts)
 		if err != nil {
 			return 0, err
 		}
@@ -267,16 +268,16 @@ var byCanonicalPool = sync.Pool{}
 func newByCanonical(length int) *byCanonical {
 	v := byCanonicalPool.Get()
 	if v == nil {
-		return &byCanonical{pairs: make([]pair, length)}
+		return &byCanonical{pairs: make([]pair, 0, length)}
 	}
 	s := v.(*byCanonical)
 	if cap(s.pairs) < length {
 		// byCanonical object from the pool does not have enough capacity.
 		// Return it back to the pool and create a new one.
 		byCanonicalPool.Put(s)
-		return &byCanonical{pairs: make([]pair, length)}
+		return &byCanonical{pairs: make([]pair, 0, length)}
 	}
-	s.pairs = s.pairs[:length]
+	s.pairs = s.pairs[:0]
 	return s
 }
 
@@ -289,24 +290,22 @@ func encodeMapCanonical(e *encodeState, v reflect.Value, opts EncOptions) (int, 
 	pairEncodeState := newEncodeState() // accumulated cbor encoded map key-value pairs
 	pairs := newByCanonical(v.Len())    // for sorting keys
 
-	ks := v.MapKeys()
-	for i := 0; i < len(ks); i++ {
-		n1, err := encode(pairEncodeState, ks[i], opts)
+	iter := v.MapRange()
+	for iter.Next() {
+		n1, err := encode(pairEncodeState, iter.Key(), opts)
 		if err != nil {
 			returnEncodeState(pairEncodeState)
 			returnByCanonical(pairs)
 			return 0, err
 		}
-		n2, err := encode(pairEncodeState, v.MapIndex(ks[i]), opts)
+		n2, err := encode(pairEncodeState, iter.Value(), opts)
 		if err != nil {
 			returnEncodeState(pairEncodeState)
 			returnByCanonical(pairs)
 			return 0, err
 		}
-		pairs.pairs[i].keyLen = n1
-		pairs.pairs[i].pairLen = n1 + n2
+		pairs.pairs = append(pairs.pairs, pair{keyLen: n1, pairLen: n1 + n2})
 	}
-
 	b := pairEncodeState.Bytes()
 	for i, offset := 0, 0; i < len(pairs.pairs); i++ {
 		pairs.pairs[i].keyCBORData = b[offset : offset+pairs.pairs[i].keyLen]
