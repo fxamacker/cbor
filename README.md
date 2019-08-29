@@ -161,7 +161,7 @@ BenchmarkMarshal/Go_float64_to_CBOR_float-2                                     
 BenchmarkMarshal/Go_[]uint8_to_CBOR_byte_string-2                                  	20000000	       105 ns/op	      32 B/op	       1 allocs/op
 BenchmarkMarshal/Go_string_to_CBOR_text_string-2                                   	20000000	      95.0 ns/op	      48 B/op	       1 allocs/op
 BenchmarkMarshal/Go_[]int_to_CBOR_array-2                                          	 3000000	       599 ns/op	      32 B/op	       1 allocs/op
-BenchmarkMarshal/Go_map[string]string_to_CBOR_map-2                                	  500000	      3856 ns/op	     896 B/op	      29 allocs/op
+BenchmarkMarshal/Go_map[string]string_to_CBOR_map-2                                	  500000	      3276 ns/op	     576 B/op	      28 allocs/op
 BenchmarkMarshal/Go_cbor_test.strc_to_CBOR_map-2                                   	 2000000	       868 ns/op	      64 B/op	       1 allocs/op
 ```
 
