@@ -116,3 +116,143 @@ func ExampleDecoder() {
 	// {Age:6 Name:Rudy Owners:[Cindy] Male:true}
 	// {Age:2 Name:Duke Owners:[Norton] Male:true}
 }
+
+// ExampleEncoder_indefiniteLengthByteString encodes a stream of definite
+// length byte string ("chunks") as an indefinite length byte string.
+func ExampleEncoder_indefiniteLengthByteString() {
+	var buf bytes.Buffer
+	encoder := cbor.NewEncoder(&buf, cbor.EncOptions{})
+	// Start indefinite length byte string encoding.
+	if err := encoder.StartIndefiniteByteString(); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Encode definite length byte string.
+	if err := encoder.Encode([]byte{1, 2}); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Encode definite length byte string.
+	if err := encoder.Encode([3]byte{3, 4, 5}); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Close indefinite length byte string.
+	if err := encoder.EndIndefinite(); err != nil {
+		fmt.Println("error:", err)
+	}
+	fmt.Printf("%0x\n", buf.Bytes())
+	// Output:
+	// 5f42010243030405ff
+}
+
+// ExampleEncoder_indefiniteLengthTextString encodes a stream of definite
+// length text string ("chunks") as an indefinite length text string.
+func ExampleEncoder_indefiniteLengthTextString() {
+	var buf bytes.Buffer
+	encoder := cbor.NewEncoder(&buf, cbor.EncOptions{})
+	// Start indefinite length text string encoding.
+	if err := encoder.StartIndefiniteTextString(); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Encode definite length text string.
+	if err := encoder.Encode("strea"); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Encode definite length text string.
+	if err := encoder.Encode("ming"); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Close indefinite length text string.
+	if err := encoder.EndIndefinite(); err != nil {
+		fmt.Println("error:", err)
+	}
+	fmt.Printf("%0x\n", buf.Bytes())
+	// Output:
+	// 7f657374726561646d696e67ff
+}
+
+// ExampleEncoder_indefiniteLengthArray encodes a stream of elements as an
+// indefinite length array.  Encoder supports nested indefinite length values.
+func ExampleEncoder_indefiniteLengthArray() {
+	var buf bytes.Buffer
+	enc := cbor.NewEncoder(&buf, cbor.EncOptions{})
+	// Start indefinite length array encoding.
+	if err := enc.StartIndefiniteArray(); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Encode array element.
+	if err := enc.Encode(1); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Encode array element.
+	if err := enc.Encode([]int{2, 3}); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Start a nested indefinite length array as array element.
+	if err := enc.StartIndefiniteArray(); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Encode nested array element.
+	if err := enc.Encode(4); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Encode nested array element.
+	if err := enc.Encode(5); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Close nested indefinite length array.
+	if err := enc.EndIndefinite(); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Close outer indefinite length array.
+	if err := enc.EndIndefinite(); err != nil {
+		fmt.Println("error:", err)
+	}
+	fmt.Printf("%0x\n", buf.Bytes())
+	// Output:
+	// 9f018202039f0405ffff
+}
+
+// ExampleEncoder_indefiniteLengthMap encodes a stream of elements as an
+// indefinite length map.  Encoder supports nested indefinite length values.
+func ExampleEncoder_indefiniteLengthMap() {
+	var buf bytes.Buffer
+	enc := cbor.NewEncoder(&buf, cbor.EncOptions{Canonical: true})
+	// Start indefinite length map encoding.
+	if err := enc.StartIndefiniteMap(); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Encode map key.
+	if err := enc.Encode("a"); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Encode map value.
+	if err := enc.Encode(1); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Encode map key.
+	if err := enc.Encode("b"); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Start an indefinite length array as map value.
+	if err := enc.StartIndefiniteArray(); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Encoded array element.
+	if err := enc.Encode(2); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Encoded array element.
+	if err := enc.Encode(3); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Close indefinite length array.
+	if err := enc.EndIndefinite(); err != nil {
+		fmt.Println("error:", err)
+	}
+	// Close indefinite length map.
+	if err := enc.EndIndefinite(); err != nil {
+		fmt.Println("error:", err)
+	}
+	fmt.Printf("%0x\n", buf.Bytes())
+	// Output:
+	// bf61610161629f0203ffff
+}

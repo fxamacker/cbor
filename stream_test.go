@@ -225,7 +225,7 @@ func TestIndefiniteArray(t *testing.T) {
 func TestIndefiniteMap(t *testing.T) {
 	want := hexDecode("bf61610161629f0203ffff")
 	var w bytes.Buffer
-	encoder := cbor.NewEncoder(&w, cbor.EncOptions{})
+	encoder := cbor.NewEncoder(&w, cbor.EncOptions{Canonical: true})
 	if err := encoder.StartIndefiniteMap(); err != nil {
 		t.Fatalf("StartIndefiniteMap() returns error %v", err)
 	}
