@@ -86,7 +86,7 @@ var marshalTests = []marshalTest{
 	{hexDecode("3affffffff"), []interface{}{int64(-4294967296)}},
 	// byte string
 	{hexDecode("40"), []interface{}{[]byte{}}},
-	{hexDecode("4401020304"), []interface{}{[]byte{1, 2, 3, 4}}},
+	{hexDecode("4401020304"), []interface{}{[]byte{1, 2, 3, 4}, [...]byte{1, 2, 3, 4}}},
 	// text string
 	{hexDecode("60"), []interface{}{""}},
 	{hexDecode("6161"), []interface{}{"a"}},

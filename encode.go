@@ -175,6 +175,12 @@ func encodeFloat(e *encodeState, v reflect.Value, opts EncOptions) (int, error) 
 
 func encodeByteString(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 	n1 := encodeTypeAndAdditionalValue(e, byte(cborTypeByteString), uint64(v.Len()))
+	if v.Kind() == reflect.Array {
+		for i := 0; i < v.Len(); i++ {
+			e.WriteByte(byte(v.Index(i).Uint()))
+		}
+		return n1 + v.Len(), nil
+	}
 	n2, _ := e.Write(v.Bytes())
 	return n1 + n2, nil
 }
