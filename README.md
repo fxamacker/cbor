@@ -8,7 +8,7 @@
 
 `cbor` is a lightweight, idiomatic, and fast [CBOR](http://tools.ietf.org/html/rfc7049) encoding and decoding package written in Go.  
 
-This package adds less than 400KB to the size of your binaries with no external dependencies.  
+This package adds around 400KB to the size of your binaries with no external dependencies.  
 
 `cbor` adopts `json` package API, supports struct field format tags under "cbor" key, and follows `json` struct fields visibility rules.  If you are productive with `json` package, it is very easy to use this package.  
 
@@ -26,13 +26,13 @@ This package supports [RFC 7049 canonical CBOR encoding](https://tools.ietf.org/
 * Tested with [RFC 7049 test examples](https://tools.ietf.org/html/rfc7049#appendix-A).
 * ~90% code coverage.
 * Fuzz tested using [cbor-fuzz](https://gitHub.com/fxamacker/cbor-fuzz).
-* Decode indefinite-length bytes/string/array/map.
 * Decode slices, maps, and structs in-place.
 * Decode into struct with field name case-insensitive match.
 * Support struct field format tags under "cbor" key.
 * Encode anonymous struct fields by `json` package struct fields visibility rules.
 * Support [canonical CBOR encoding](#canonical-cbor-support) for map/struct.
 * Encode and decode nil slice/map/pointer/interface values correctly.
+* Encode and decode indefinite length bytes/string/array/map (["streaming"](https://tools.ietf.org/html/rfc7049#section-2.2)).
 
 ## Installation 
 
@@ -43,6 +43,8 @@ go get github.com/fxamacker/cbor
 ## Usage
 
 See [examples](example_test.go).
+
+Using decoder:
 
 ```
 // create a decoder
@@ -63,7 +65,11 @@ err = dec.Decode(&m)
 // decode into primitives
 var f float32
 err = dec.Decode(&f)
+```
 
+Using encoder:
+
+```
 // create an encoder with canonical CBOR encoding enabled
 enc := cbor.NewEncoder(writer, cbor.EncOptions{Canonical: true})
 
@@ -75,6 +81,36 @@ err = enc.Encode(m)
 
 // encode primitives
 err = enc.Encode(f)
+```
+
+Encoding indefinite length array:
+
+```
+enc := cbor.NewEncoder(writer, cbor.EncOptions{})
+
+// start indefinite length array encoding
+err = enc.StartIndefiniteArray()
+
+// encode array element
+err = enc.Encode(1)
+
+// encode array element
+err = enc.Encode([]int{2, 3})
+
+// start nested indefinite length array as array element
+err = enc.StartIndefiniteArray()
+
+// encode nested array element
+err = enc.Encode(4)
+
+// encode nested array element
+err = enc.Encode(5)
+
+// close nested indefinite length array
+err = enc.EndIndefinite()
+
+// close outer indefinite length array
+err = enc.EndIndefinite()
 ```
 
 ## API 
@@ -95,6 +131,11 @@ type EncOptions struct{ ... }
 type Encoder struct{ ... }
     func NewEncoder(w io.Writer, encOpts EncOptions) *Encoder
     func (enc *Encoder) Encode(v interface{}) error
+    func (enc *Encoder) StartIndefiniteByteString() error
+    func (enc *Encoder) StartIndefiniteTextString() error
+    func (enc *Encoder) StartIndefiniteArray() error
+    func (enc *Encoder) StartIndefiniteMap() error
+    func (enc *Encoder) EndIndefinite() error
 type InvalidUnmarshalError struct{ ... }
 type InvalidValueError struct{ ... }
 type SemanticError struct{ ... }
