@@ -115,3 +115,145 @@ func TestEncoder(t *testing.T) {
 		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want.Bytes())
 	}
 }
+
+func TestIndefiniteByteString(t *testing.T) {
+	want := hexDecode("5f42010243030405ff")
+	var w bytes.Buffer
+	encoder := cbor.NewEncoder(&w, cbor.EncOptions{})
+	if err := encoder.StartIndefiniteByteString(); err != nil {
+		t.Fatalf("StartIndefiniteByteString() returns error %v", err)
+	}
+	if err := encoder.Encode([]byte{1, 2}); err != nil {
+		t.Fatalf("Encode() returns error %v", err)
+	}
+	if err := encoder.Encode([3]byte{3, 4, 5}); err != nil {
+		t.Fatalf("Encode() returns error %v", err)
+	}
+	if err := encoder.EndIndefinite(); err != nil {
+		t.Fatalf("EndIndefinite() returns error %v", err)
+	}
+	if !bytes.Equal(w.Bytes(), want) {
+		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+	}
+}
+
+func TestIndefiniteByteStringError(t *testing.T) {
+	var w bytes.Buffer
+	encoder := cbor.NewEncoder(&w, cbor.EncOptions{})
+	if err := encoder.StartIndefiniteByteString(); err != nil {
+		t.Fatalf("StartIndefiniteByteString() returns error %v", err)
+	}
+	if err := encoder.Encode([]int{1, 2}); err == nil {
+		t.Errorf("Encode() expects error, got nil")
+	} else if err.Error() != "cbor: cannot encode item type slice for indefinite-length byte string" {
+		t.Errorf("Encode() error %v, want %s", err, "cbor: cannot encode item type slice for indefinite-length byte string")
+	}
+	if err := encoder.Encode("hello"); err == nil {
+		t.Errorf("Encode() expects error, got nil")
+	} else if err.Error() != "cbor: cannot encode item type string for indefinite-length byte string" {
+		t.Errorf("Encode() error %v, want %s", err, "cbor: cannot encode item type string for indefinite-length byte string")
+	}
+}
+
+func TestIndefiniteTextString(t *testing.T) {
+	want := hexDecode("7f657374726561646d696e67ff")
+	var w bytes.Buffer
+	encoder := cbor.NewEncoder(&w, cbor.EncOptions{})
+	if err := encoder.StartIndefiniteTextString(); err != nil {
+		t.Fatalf("StartIndefiniteTextString() returns error %v", err)
+	}
+	if err := encoder.Encode("strea"); err != nil {
+		t.Fatalf("Encode() returns error %v", err)
+	}
+	if err := encoder.Encode("ming"); err != nil {
+		t.Fatalf("Encode() returns error %v", err)
+	}
+	if err := encoder.EndIndefinite(); err != nil {
+		t.Fatalf("EndIndefinite() returns error %v", err)
+	}
+	if !bytes.Equal(w.Bytes(), want) {
+		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+	}
+}
+
+func TestIndefiniteTextStringError(t *testing.T) {
+	var w bytes.Buffer
+	encoder := cbor.NewEncoder(&w, cbor.EncOptions{})
+	if err := encoder.StartIndefiniteTextString(); err != nil {
+		t.Fatalf("StartIndefiniteTextString() returns error %v", err)
+	}
+	if err := encoder.Encode([]byte{1, 2}); err == nil {
+		t.Errorf("Encode() expects error, got nil")
+	} else if err.Error() != "cbor: cannot encode item type slice for indefinite-length text string" {
+		t.Errorf("Encode() error %v, want %s", err, "cbor: cannot encode item type slice for indefinite-length text string")
+	}
+}
+
+func TestIndefiniteArray(t *testing.T) {
+	want := hexDecode("9f018202039f0405ffff")
+	var w bytes.Buffer
+	encoder := cbor.NewEncoder(&w, cbor.EncOptions{})
+	if err := encoder.StartIndefiniteArray(); err != nil {
+		t.Fatalf("StartIndefiniteArray() returns error %v", err)
+	}
+	if err := encoder.Encode(1); err != nil {
+		t.Fatalf("Encode() returns error %v", err)
+	}
+	if err := encoder.Encode([]int{2, 3}); err != nil {
+		t.Fatalf("Encode() returns error %v", err)
+	}
+	if err := encoder.StartIndefiniteArray(); err != nil {
+		t.Fatalf("StartIndefiniteArray() returns error %v", err)
+	}
+	if err := encoder.Encode(4); err != nil {
+		t.Fatalf("Encode() returns error %v", err)
+	}
+	if err := encoder.Encode(5); err != nil {
+		t.Fatalf("Encode() returns error %v", err)
+	}
+	if err := encoder.EndIndefinite(); err != nil {
+		t.Fatalf("EndIndefinite() returns error %v", err)
+	}
+	if err := encoder.EndIndefinite(); err != nil {
+		t.Fatalf("EndIndefinite() returns error %v", err)
+	}
+	if !bytes.Equal(w.Bytes(), want) {
+		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+	}
+}
+
+func TestIndefiniteMap(t *testing.T) {
+	want := hexDecode("bf61610161629f0203ffff")
+	var w bytes.Buffer
+	encoder := cbor.NewEncoder(&w, cbor.EncOptions{})
+	if err := encoder.StartIndefiniteMap(); err != nil {
+		t.Fatalf("StartIndefiniteMap() returns error %v", err)
+	}
+	if err := encoder.Encode("a"); err != nil {
+		t.Fatalf("Encode() returns error %v", err)
+	}
+	if err := encoder.Encode(1); err != nil {
+		t.Fatalf("Encode() returns error %v", err)
+	}
+	if err := encoder.Encode("b"); err != nil {
+		t.Fatalf("Encode() returns error %v", err)
+	}
+	if err := encoder.StartIndefiniteArray(); err != nil {
+		t.Fatalf("StartIndefiniteArray() returns error %v", err)
+	}
+	if err := encoder.Encode(2); err != nil {
+		t.Fatalf("Encode() returns error %v", err)
+	}
+	if err := encoder.Encode(3); err != nil {
+		t.Fatalf("Encode() returns error %v", err)
+	}
+	if err := encoder.EndIndefinite(); err != nil {
+		t.Fatalf("EndIndefinite() returns error %v", err)
+	}
+	if err := encoder.EndIndefinite(); err != nil {
+		t.Fatalf("EndIndefinite() returns error %v", err)
+	}
+	if !bytes.Equal(w.Bytes(), want) {
+		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+	}
+}
