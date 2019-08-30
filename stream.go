@@ -10,10 +10,10 @@ import (
 )
 
 var cborIndefiniteHeader = map[cborType][]byte{
-	cborTypeByteString: []byte{0x5f},
-	cborTypeTextString: []byte{0x7f},
-	cborTypeArray:      []byte{0x9f},
-	cborTypeMap:        []byte{0xbf},
+	cborTypeByteString: {0x5f},
+	cborTypeTextString: {0x7f},
+	cborTypeArray:      {0x9f},
+	cborTypeMap:        {0xbf},
 }
 
 // Decoder reads and decodes CBOR values from an input stream.
