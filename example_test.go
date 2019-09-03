@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/fxamacker/cbor"
 )
@@ -27,6 +28,25 @@ func ExampleMarshal() {
 	fmt.Printf("%0x\n", b)
 	// Output:
 	// a46341676504644e616d656543616e6479664f776e65727382644d617279634a6f65644d616c65f4
+}
+
+func ExampleMarshal_time() {
+	tm, _ := time.Parse(time.RFC3339Nano, "2013-03-21T20:04:00Z")
+	// Encode time as string in RFC3339 format.
+	b, err := cbor.Marshal(tm, cbor.EncOptions{TimeRFC3339: true})
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	fmt.Printf("%0x\n", b)
+	// Encode time as numerical representation of seconds since January 1, 1970 UTC.
+	b, err = cbor.Marshal(tm, cbor.EncOptions{TimeRFC3339: false})
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	fmt.Printf("%0x\n", b)
+	// Output:
+	// 74323031332d30332d32315432303a30343a30305a
+	// 1a514b67b0
 }
 
 // This example uses Marshal to encode struct and map in canonical form.
@@ -64,6 +84,24 @@ func ExampleUnmarshal() {
 	fmt.Printf("%+v", animal)
 	// Output:
 	// {Age:4 Name:Candy Owners:[Mary Joe] Male:false}
+}
+
+func ExampleUnmarshal_time() {
+	cborRFC3339Time := hexDecode("74323031332d30332d32315432303a30343a30305a")
+	cborUnixTime := hexDecode("1a514b67b0")
+	tm := time.Time{}
+	if err := cbor.Unmarshal(cborRFC3339Time, &tm); err != nil {
+		fmt.Println("error:", err)
+	}
+	fmt.Printf("%+v\n", tm.UTC().Format(time.RFC3339Nano))
+	tm = time.Time{}
+	if err := cbor.Unmarshal(cborUnixTime, &tm); err != nil {
+		fmt.Println("error:", err)
+	}
+	fmt.Printf("%+v\n", tm.UTC().Format(time.RFC3339Nano))
+	// Output:
+	// 2013-03-21T20:04:00Z
+	// 2013-03-21T20:04:00Z
 }
 
 func ExampleEncoder() {

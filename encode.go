@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"sort"
 	"sync"
+	"time"
 )
 
 type encodeFunc func(e *encodeState, v reflect.Value, opts EncOptions) (int, error)
@@ -53,6 +54,10 @@ type EncOptions struct {
 	//     - If two keys have the same CBOR type and same length, the one with the
 	//       lower value in (byte-wise) lexical order sorts earlier.
 	Canonical bool
+	// TimeRFC3339 causes time.Time to be encoded as string in RFC3339 format;
+	// otherwise, time.Time is encoded as numerical representation of seconds
+	// since January 1, 1970 UTC.
+	TimeRFC3339 bool
 }
 
 // An encodeState encodes CBOR into a bytes.Buffer.
@@ -94,7 +99,7 @@ func encode(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 		return 1, nil
 	}
 
-	f := getEncodeFunc(v.Kind())
+	f := getEncodeFunc(v)
 	if f == nil {
 		return 0, &UnsupportedTypeError{v.Type()}
 	}
@@ -376,8 +381,25 @@ func encodeIntf(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 	return encode(e, v.Elem(), opts)
 }
 
-func getEncodeFunc(k reflect.Kind) encodeFunc {
-	switch k {
+func encodeTime(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+	t := v.Interface().(time.Time)
+	if t.IsZero() {
+		return e.Write(cborNil)
+	} else if opts.TimeRFC3339 {
+		return encodeStringInternal(e, t.Format(time.RFC3339Nano), opts)
+	} else {
+		t = t.UTC().Round(time.Microsecond)
+		secs, nsecs := t.Unix(), uint64(t.Nanosecond())
+		if nsecs == 0 {
+			return encodeInt(e, reflect.ValueOf(secs), opts)
+		}
+		f := float64(secs) + float64(nsecs)/1e9
+		return encodeFloat(e, reflect.ValueOf(f), opts)
+	}
+}
+
+func getEncodeFunc(v reflect.Value) encodeFunc {
+	switch v.Kind() {
 	case reflect.Bool:
 		return encodeBool
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -395,6 +417,9 @@ func getEncodeFunc(k reflect.Kind) encodeFunc {
 	case reflect.Map:
 		return encodeMap
 	case reflect.Struct:
+		if v.Type() == typeTime {
+			return encodeTime
+		}
 		return encodeStruct
 	case reflect.Ptr:
 		return encodePtr
@@ -450,6 +475,10 @@ func isEmptyValue(v reflect.Value) bool {
 // Pointer values encode as the value pointed to.
 //
 // Nil slice/map/pointer/interface values encode as CBOR nulls (type 7).
+//
+// time.Time values encode as text strings specified in RFC3339 when
+// EncOptions.TimeRFC3339 is true; otherwise, time.Time values encode as
+// numerical representation of seconds since January 1, 1970 UTC.
 //
 // Marshal supports format string stored under the "cbor" key in the struct
 // field's tag.  CBOR format string can specify the name of the field, "omitempty"

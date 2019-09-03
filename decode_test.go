@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/fxamacker/cbor"
 )
@@ -1189,5 +1190,55 @@ func TestFuzzCrash5(t *testing.T) {
 	}
 	if _, err := cbor.Marshal(intf, cbor.EncOptions{Canonical: true}); err != nil {
 		t.Errorf("Marshal(%v) returns error %s", intf, err)
+	}
+}
+
+func TestDecodeTime(t *testing.T) {
+	testCases := []struct {
+		name            string
+		cborRFC3339Time []byte
+		cborUnixTime    []byte
+		wantTime        time.Time
+	}{
+		{
+			name:            "zero time",
+			cborRFC3339Time: hexDecode("f6"),
+			cborUnixTime:    hexDecode("f6"),
+			wantTime:        time.Time{},
+		},
+		{
+			name:            "time without fractional seconds",
+			cborRFC3339Time: hexDecode("74323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    hexDecode("1a514b67b0"),
+			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+		},
+		{
+			name:            "time with fractional seconds",
+			cborRFC3339Time: hexDecode("76323031332d30332d32315432303a30343a30302e355a"),
+			cborUnixTime:    hexDecode("fb41d452d9ec200000"),
+			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00.5Z"),
+		},
+		{
+			name:            "time before January 1, 1970 UTC without fractional seconds",
+			cborRFC3339Time: hexDecode("74313936392d30332d32315432303a30343a30305a"),
+			cborUnixTime:    hexDecode("3a0177f2cf"),
+			wantTime:        parseTime(time.RFC3339Nano, "1969-03-21T20:04:00Z"),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tm := time.Now()
+			if err := cbor.Unmarshal(tc.cborRFC3339Time, &tm); err != nil {
+				t.Errorf("Unmarshal(0x%0x) returns error %s\n", tc.cborRFC3339Time, err)
+			} else if !tc.wantTime.Equal(tm) {
+				t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", tc.cborRFC3339Time, tm, tm, tc.wantTime, tc.wantTime)
+			}
+			tm = time.Now()
+			if err := cbor.Unmarshal(tc.cborUnixTime, &tm); err != nil {
+				t.Errorf("Unmarshal(0x%0x) returns error %s\n", tc.cborUnixTime, err)
+			} else if !tc.wantTime.Equal(tm) {
+				t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", tc.cborUnixTime, tm, tm, tc.wantTime, tc.wantTime)
+			}
+		})
 	}
 }

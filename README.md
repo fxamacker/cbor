@@ -8,7 +8,7 @@
 
 `cbor` is a lightweight, idiomatic, and fast [CBOR](http://tools.ietf.org/html/rfc7049) encoding and decoding package written in Go.  
 
-This package adds around 400KB to the size of your binaries with no external dependencies.  
+This package adds less than 450KB to the size of your binaries with no external dependencies.  
 
 `cbor` adopts `json` package API, supports struct field format tags under "cbor" key, and follows `json` struct fields visibility rules.  If you are productive with `json` package, it is very easy to use this package.  
 
@@ -33,6 +33,7 @@ This package supports [RFC 7049 canonical CBOR encoding](https://tools.ietf.org/
 * Support [canonical CBOR encoding](#canonical-cbor-support) for map/struct.
 * Encode and decode nil slice/map/pointer/interface values correctly.
 * Encode and decode indefinite length bytes/string/array/map (["streaming"](https://tools.ietf.org/html/rfc7049#section-2.2)).
+* Encode and decode time.Time as RFC 3339 formatted text string or Unix time.
 
 ## Installation 
 

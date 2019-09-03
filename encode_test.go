@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/fxamacker/cbor"
 )
@@ -1038,4 +1039,64 @@ func TestEncodeInterface(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestEncodeTime(t *testing.T) {
+	testCases := []struct {
+		name                string
+		tm                  time.Time
+		wantCborRFC3339Time []byte
+		wantCborUnixTime    []byte
+	}{
+		{
+			name:                "zero time",
+			tm:                  time.Time{},
+			wantCborRFC3339Time: hexDecode("f6"), // encode as nil
+			wantCborUnixTime:    hexDecode("f6"), // encode as nil
+		},
+		{
+			name:                "time without fractional seconds",
+			tm:                  parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			wantCborRFC3339Time: hexDecode("74323031332d30332d32315432303a30343a30305a"),
+			wantCborUnixTime:    hexDecode("1a514b67b0"), // encode as positive integer
+		},
+		{
+			name:                "time with fractional seconds",
+			tm:                  parseTime(time.RFC3339Nano, "2013-03-21T20:04:00.5Z"),
+			wantCborRFC3339Time: hexDecode("76323031332d30332d32315432303a30343a30302e355a"),
+			wantCborUnixTime:    hexDecode("fb41d452d9ec200000"), // encode as float
+		},
+		{
+			name:                "time before January 1, 1970 UTC without fractional seconds",
+			tm:                  parseTime(time.RFC3339Nano, "1969-03-21T20:04:00Z"),
+			wantCborRFC3339Time: hexDecode("74313936392d30332d32315432303a30343a30305a"),
+			wantCborUnixTime:    hexDecode("3a0177f2cf"), // encode as negative integer
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Encode time as string in RFC3339 format.
+			b, err := cbor.Marshal(tc.tm, cbor.EncOptions{TimeRFC3339: true})
+			if err != nil {
+				t.Errorf("Marshal(%+v) as string in RFC3339 format returns error %v", tc.tm, err)
+			} else if !bytes.Equal(b, tc.wantCborRFC3339Time) {
+				t.Errorf("Marshal(%+v) as string in RFC3339 format = %0x, want %0x", tc.tm, b, tc.wantCborRFC3339Time)
+			}
+			// Encode time as numerical representation of seconds since January 1, 1970 UTC.
+			b, err = cbor.Marshal(tc.tm, cbor.EncOptions{TimeRFC3339: false})
+			if err != nil {
+				t.Errorf("Marshal(%+v) as unix time returns error %v", tc.tm, err)
+			} else if !bytes.Equal(b, tc.wantCborUnixTime) {
+				t.Errorf("Marshal(%+v) as unix time = %0x, want %0x", tc.tm, b, tc.wantCborUnixTime)
+			}
+		})
+	}
+}
+
+func parseTime(layout string, value string) time.Time {
+	tm, err := time.Parse(layout, value)
+	if err != nil {
+		panic(err)
+	}
+	return tm
 }

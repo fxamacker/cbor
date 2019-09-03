@@ -11,7 +11,12 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
+)
+
+var (
+	typeTime = reflect.TypeOf(time.Time{})
 )
 
 type cborType uint8
@@ -169,6 +174,7 @@ func (d *decodeState) parse(v reflect.Value) (err error) {
 		return io.EOF
 	}
 
+	// Process cbor nil/undefined.
 	if d.data[d.offset] == 0xf6 || d.data[d.offset] == 0xf7 {
 		d.offset++
 		return fillNil(cborTypePrimitives, v)
@@ -757,9 +763,12 @@ func fillNil(t cborType, v reflect.Value) error {
 	case reflect.Slice, reflect.Map, reflect.Interface, reflect.Ptr:
 		v.Set(reflect.Zero(v.Type()))
 		return nil
-	default:
+	}
+	if v.Type() == typeTime {
+		v.Set(reflect.ValueOf(time.Time{}))
 		return nil
 	}
+	return nil
 }
 
 func fillPositiveInt(t cborType, val uint64, v reflect.Value) error {
@@ -783,9 +792,13 @@ func fillPositiveInt(t cborType, val uint64, v reflect.Value) error {
 		}
 		v.SetUint(val)
 		return nil
-	default:
-		return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
 	}
+	if v.Type() == typeTime {
+		t := time.Unix(int64(val), 0)
+		v.Set(reflect.ValueOf(t))
+		return nil
+	}
+	return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
 }
 
 func fillNegativeInt(t cborType, val int64, v reflect.Value) error {
@@ -800,9 +813,13 @@ func fillNegativeInt(t cborType, val int64, v reflect.Value) error {
 		}
 		v.SetInt(val)
 		return nil
-	default:
-		return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
 	}
+	if v.Type() == typeTime {
+		t := time.Unix(val, 0)
+		v.Set(reflect.ValueOf(t))
+		return nil
+	}
+	return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
 }
 
 func fillBool(t cborType, val bool, v reflect.Value) error {
@@ -829,9 +846,14 @@ func fillFloat(t cborType, val float64, v reflect.Value) error {
 		}
 		v.SetFloat(val)
 		return nil
-	default:
-		return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
 	}
+	if v.Type() == typeTime {
+		f1, f2 := math.Modf(val)
+		t := time.Unix(int64(f1), int64(f2*1e9))
+		v.Set(reflect.ValueOf(t))
+		return nil
+	}
+	return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
 }
 
 func fillByteString(t cborType, val []byte, v reflect.Value) error {
@@ -853,6 +875,14 @@ func fillTextString(t cborType, val []byte, v reflect.Value) error {
 	}
 	if v.Kind() == reflect.String {
 		v.SetString(string(val))
+		return nil
+	}
+	if v.Type() == typeTime {
+		t, err := time.Parse(time.RFC3339, string(val))
+		if err != nil {
+			return errors.New("cbor: cannot set " + string(val) + " for time.Time")
+		}
+		v.Set(reflect.ValueOf(t))
 		return nil
 	}
 	return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
@@ -948,6 +978,11 @@ func isHashableKind(k reflect.Kind) bool {
 // keys used by Marshal (either the struct field name or its tag), preferring an
 // exact match but also accepting a case-insensitive match.  Map keys which
 // don't have a corresponding struct field are ignored.
+//
+// To unmarshal a CBOR text string into a time.Time value, Unmarshal parses text
+// string formatted in RFC3339.  To unmarshal a CBOR integer/float into a
+// time.Time value, Unmarshal creates an unix time with integer/float as seconds
+// and fractional seconds since January 1, 1970 UTC.
 //
 // If a CBOR value is not appropriate for a given Go type, or if a CBOR number
 // overflows the Go type, Unmarshal skips that field and completes the
