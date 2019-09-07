@@ -4,36 +4,48 @@
 [![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/fxamacker/cbor)
 [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE)
 
-# cbor  
+# cbor - CBOR encoding and decoding in Go
 
-`cbor` is a lightweight, idiomatic, and fast [CBOR](http://tools.ietf.org/html/rfc7049) encoding and decoding package written in Go.  
+This library is designed to be:
+* __Easy__ -- idiomatic Go API (like encoding/json).
+* __Safe and reliable__ -- no `unsafe` pkg, test coverage at ~90%, fuzz tested, and uses RFC 7049 test vectors.
+* __Standards-compliant__ -- supports [RFC 7049](https://tools.ietf.org/html/rfc7049) and canonical CBOR encodings (both [RFC 7049](https://tools.ietf.org/html/rfc7049#section-3.9) and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)).
+* __Small and self-contained__ -- pkg compiles to under 0.5 MB with no external dependencies.
 
-This package adds less than 450KB to the size of your binaries with no external dependencies.  
+`cbor` balances speed, safety (no `unsafe` pkg) and compiled size.  To keep size small, it doesn't use code generation.  For speed, it caches struct field types, bypasses `reflect` when appropriate, and uses `sync.Pool` to reuse transient objects.  
 
-`cbor` adopts `json` package API, supports struct field format tags under "cbor" key, and follows `json` struct fields visibility rules.  If you are productive with `json` package, it is very easy to use this package.  
+## Size comparison
 
-`cbor` strives to balance between performance and binary size.  In order to keep binary small, it does not use code generation.  Instead, this package caches struct field types to improve struct encoding and decoding performance.  It bypasses `reflect` when decoding CBOR array/map into empty interface value.  It also uses `sync.Pool` to reuse transient objects.  See [benchmarks](#benchmarks).
+Program size comparison (linux_amd64, Go 1.12) doing the same CBOR encoding and decoding:
+- 2.7 MB program using fxamacker/cbor
+- 11.9 MB program using ugorji/go
 
-## Canonical CBOR Support
-
-This package supports [RFC 7049 canonical CBOR encoding](https://tools.ietf.org/html/rfc7049#section-3.9), and [CTAP2 canonical CBOR encoding](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).  CTAP2 canonical CBOR encoding is used by [CTAP](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html) and [WebAuthn](https://www.w3.org/TR/webauthn/) in [FIDO2](https://fidoalliance.org/fido2/) framework.
+Library size comparison (linux_amd64, Go 1.12):
+- 0.45 MB pkg -- fxamacker/cbor
+- 2.9 MB pkg -- ugorji/go without code generation (`go install --tags "notfastpath"`)
+- 5.7 MB pkg -- ugorji/go with code generation (default build)
 
 ## Features
 
 * Idiomatic API as in `json` package.
 * No external dependencies.
 * No use of `unsafe` package.
-* Tested with [RFC 7049 test examples](https://tools.ietf.org/html/rfc7049#appendix-A).
-* ~90% code coverage.
-* Fuzz tested using [cbor-fuzz](https://gitHub.com/fxamacker/cbor-fuzz).
+* Tested with [RFC 7049 test vectors](https://tools.ietf.org/html/rfc7049#appendix-A).
+* Test code coverage currently at ~90%, and fuzz tested using [cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).
 * Decode slices, maps, and structs in-place.
 * Decode into struct with field name case-insensitive match.
+* Support canonical CBOR encoding for map/struct.
 * Support struct field format tags under "cbor" key.
 * Encode anonymous struct fields by `json` package struct fields visibility rules.
-* Support [canonical CBOR encoding](#canonical-cbor-support) for map/struct.
 * Encode and decode nil slice/map/pointer/interface values correctly.
 * Encode and decode indefinite length bytes/string/array/map (["streaming"](https://tools.ietf.org/html/rfc7049#section-2.2)).
 * Encode and decode time.Time as RFC 3339 formatted text string or Unix time.
+
+## Standards 
+
+This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049), with minor [limitations](#limitations).
+
+It also supports canonical CBOR encodings (both [RFC 7049](https://tools.ietf.org/html/rfc7049#section-3.9) and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)).  CTAP2 canonical CBOR encoding is used by [CTAP](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html) and [WebAuthn](https://www.w3.org/TR/webauthn/) in [FIDO2](https://fidoalliance.org/fido2/) framework.
 
 ## Installation 
 
@@ -211,6 +223,8 @@ BenchmarkMarshal/Go_cbor_test.strc_to_CBOR_map-2                                
 
 * This package doesn't support CBOR tag encoding.
 * Decoder ignores CBOR tag and decodes tagged data following the tag.
+* Signed integer values incompatible with Go's int64 are not supported.
+* RFC 7049 test vectors with signed integer values incompatible with Go's int64 are skipped. For example, the signed integer result -18446744073709551616 is incompatible with Go's int64 data type (cannot be assigned without overflow).
 
 ## License 
 
