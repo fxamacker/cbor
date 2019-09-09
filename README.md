@@ -226,6 +226,10 @@ BenchmarkMarshal/Go_cbor_test.strc_to_CBOR_map-2                                
 * Signed integer values incompatible with Go's int64 are not supported.
 * RFC 7049 test vectors with signed integer values incompatible with Go's int64 are skipped. For example, the signed integer result -18446744073709551616 is incompatible with Go's int64 data type (cannot be assigned without overflow).
 
+## Versions and API changes
+
+This project uses [Semantic Versioning](https://semver.org), so the API is always backwards compatible unless the major version number changes.
+
 ## License 
 
 Copyright (c) 2019 [Faye Amacker](https://github.com/fxamacker)
