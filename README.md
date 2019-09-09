@@ -8,11 +8,15 @@
 
 This library is designed to be:
 * __Easy__ -- idiomatic Go API (like encoding/json).
-* __Safe and reliable__ -- no `unsafe` pkg, test coverage at ~90%, fuzz tested, and uses RFC 7049 test vectors.
+* __Safe and reliable__ -- no `unsafe` pkg, test coverage at ~90%, and 9+ hrs of fuzzing with RFC 7049 test vectors.
 * __Standards-compliant__ -- supports [RFC 7049](https://tools.ietf.org/html/rfc7049) and canonical CBOR encodings (both [RFC 7049](https://tools.ietf.org/html/rfc7049#section-3.9) and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)).
 * __Small and self-contained__ -- pkg compiles to under 0.5 MB with no external dependencies.
 
 `cbor` balances speed, safety (no `unsafe` pkg) and compiled size.  To keep size small, it doesn't use code generation.  For speed, it caches struct field types, bypasses `reflect` when appropriate, and uses `sync.Pool` to reuse transient objects.  
+
+## Current Status
+
+Sept 9, 2019: Current version (0.3) is expected to be promoted to 1.0 this month unless changes are requested by the Go community.  It passed 9+ hours of fuzzing and appears to be ready for production use on linux_amd64.
 
 ## Size comparison
 
@@ -31,7 +35,7 @@ Library size comparison (linux_amd64, Go 1.12):
 * No external dependencies.
 * No use of `unsafe` package.
 * Tested with [RFC 7049 test vectors](https://tools.ietf.org/html/rfc7049#appendix-A).
-* Test code coverage currently at ~90%, and fuzz tested using [cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).
+* Test coverage at ~90%, and fuzzed 9+ hours using [cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).
 * Decode slices, maps, and structs in-place.
 * Decode into struct with field name case-insensitive match.
 * Support canonical CBOR encoding for map/struct.
@@ -46,6 +50,48 @@ Library size comparison (linux_amd64, Go 1.12):
 This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049), with minor [limitations](#limitations).
 
 It also supports canonical CBOR encodings (both [RFC 7049](https://tools.ietf.org/html/rfc7049#section-3.9) and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)).  CTAP2 canonical CBOR encoding is used by [CTAP](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html) and [WebAuthn](https://www.w3.org/TR/webauthn/) in [FIDO2](https://fidoalliance.org/fido2/) framework.
+
+## Limitations
+
+* This package doesn't support CBOR tag encoding.
+* Decoder ignores CBOR tag and decodes tagged data following the tag.
+* Signed integer values incompatible with Go's int64 are not supported.
+* RFC 7049 test vectors with signed integer values incompatible with Go's int64 are skipped. For example, the signed integer result -18446744073709551616 is incompatible with Go's int64 data type (cannot be assigned without overflow).
+
+## Versions and API changes
+
+This project uses [Semantic Versioning](https://semver.org), so the API is always backwards compatible unless the major version number changes.
+
+## API 
+
+See [API docs](https://godoc.org/github.com/fxamacker/cbor) for more details.
+
+```
+package cbor // import "github.com/fxamacker/cbor"
+
+func Marshal(v interface{}, encOpts EncOptions) ([]byte, error)
+func Unmarshal(data []byte, v interface{}) error
+func Valid(data []byte) (rest []byte, err error)
+type Decoder struct{ ... }
+    func NewDecoder(r io.Reader) *Decoder
+    func (dec *Decoder) Decode(v interface{}) (err error)
+    func (dec *Decoder) NumBytesRead() int
+type EncOptions struct{ ... }
+type Encoder struct{ ... }
+    func NewEncoder(w io.Writer, encOpts EncOptions) *Encoder
+    func (enc *Encoder) Encode(v interface{}) error
+    func (enc *Encoder) StartIndefiniteByteString() error
+    func (enc *Encoder) StartIndefiniteTextString() error
+    func (enc *Encoder) StartIndefiniteArray() error
+    func (enc *Encoder) StartIndefiniteMap() error
+    func (enc *Encoder) EndIndefinite() error
+type InvalidUnmarshalError struct{ ... }
+type InvalidValueError struct{ ... }
+type SemanticError struct{ ... }
+type SyntaxError struct{ ... }
+type UnmarshalTypeError struct{ ... }
+type UnsupportedTypeError struct{ ... }
+```
 
 ## Installation 
 
@@ -126,37 +172,6 @@ err = enc.EndIndefinite()
 err = enc.EndIndefinite()
 ```
 
-## API 
-
-See [API docs](https://godoc.org/github.com/fxamacker/cbor).
-
-```
-package cbor // import "github.com/fxamacker/cbor"
-
-func Marshal(v interface{}, encOpts EncOptions) ([]byte, error)
-func Unmarshal(data []byte, v interface{}) error
-func Valid(data []byte) (rest []byte, err error)
-type Decoder struct{ ... }
-    func NewDecoder(r io.Reader) *Decoder
-    func (dec *Decoder) Decode(v interface{}) (err error)
-    func (dec *Decoder) NumBytesRead() int
-type EncOptions struct{ ... }
-type Encoder struct{ ... }
-    func NewEncoder(w io.Writer, encOpts EncOptions) *Encoder
-    func (enc *Encoder) Encode(v interface{}) error
-    func (enc *Encoder) StartIndefiniteByteString() error
-    func (enc *Encoder) StartIndefiniteTextString() error
-    func (enc *Encoder) StartIndefiniteArray() error
-    func (enc *Encoder) StartIndefiniteMap() error
-    func (enc *Encoder) EndIndefinite() error
-type InvalidUnmarshalError struct{ ... }
-type InvalidValueError struct{ ... }
-type SemanticError struct{ ... }
-type SyntaxError struct{ ... }
-type UnmarshalTypeError struct{ ... }
-type UnsupportedTypeError struct{ ... }
-```
-
 ## Benchmarks
 
 See [bench_test.go](bench_test.go).
@@ -218,17 +233,6 @@ BenchmarkMarshal/Go_[]int_to_CBOR_array-2                                       
 BenchmarkMarshal/Go_map[string]string_to_CBOR_map-2                                	  500000	      3276 ns/op	     576 B/op	      28 allocs/op
 BenchmarkMarshal/Go_cbor_test.strc_to_CBOR_map-2                                   	 2000000	       868 ns/op	      64 B/op	       1 allocs/op
 ```
-
-## Limitations
-
-* This package doesn't support CBOR tag encoding.
-* Decoder ignores CBOR tag and decodes tagged data following the tag.
-* Signed integer values incompatible with Go's int64 are not supported.
-* RFC 7049 test vectors with signed integer values incompatible with Go's int64 are skipped. For example, the signed integer result -18446744073709551616 is incompatible with Go's int64 data type (cannot be assigned without overflow).
-
-## Versions and API changes
-
-This project uses [Semantic Versioning](https://semver.org), so the API is always backwards compatible unless the major version number changes.
 
 ## License 
 
