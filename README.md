@@ -6,8 +6,10 @@
 
 # cbor - CBOR encoding and decoding in Go
 
+CBOR is a concise binary alternative to JSON.  This library makes CBOR easy to use in Go.
+
 This library is designed to be:
-* __Easy__ -- idiomatic Go API (like encoding/json).
+* __Easy__ -- idiomatic API, like `encoding/json`.
 * __Safe and reliable__ -- no `unsafe` pkg, test coverage at ~90%, and 9+ hrs of fuzzing with RFC 7049 test vectors.
 * __Standards-compliant__ -- supports [RFC 7049](https://tools.ietf.org/html/rfc7049) and canonical CBOR encodings (both [RFC 7049](https://tools.ietf.org/html/rfc7049#section-3.9) and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)).
 * __Small and self-contained__ -- pkg compiles to under 0.5 MB with no external dependencies.
