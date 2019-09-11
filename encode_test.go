@@ -1160,3 +1160,23 @@ func TestMarshalStructTag3(t *testing.T) {
 		t.Errorf("Marshal(%+v) = %v, want %v", v, b, want)
 	}
 }
+
+func TestMarshalStructTag4(t *testing.T) {
+	type strc struct {
+		A string `json:"x" cbor:"a"`
+		B string `json:"y" cbor:"b"`
+		C string `json:"-"`
+	}
+	v := strc{
+		A: "A",
+		B: "B",
+		C: "C",
+	}
+	want := hexDecode("a26161614161626142") // {"a":"A", "b":"B"}
+
+	if b, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true}); err != nil {
+		t.Errorf("Marshal(%+v) returns error %v", v, err)
+	} else if !bytes.Equal(b, want) {
+		t.Errorf("Marshal(%+v) = %v, want %v", v, b, want)
+	}
+}

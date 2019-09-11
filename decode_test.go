@@ -1308,3 +1308,24 @@ func TestUnmarshalStructTag3(t *testing.T) {
 		t.Errorf("Unmarshal(0x%0x) = %+v (%T), want %+v (%T)", cborData, v, v, want, want)
 	}
 }
+
+func TestUnmarshalStructTag4(t *testing.T) {
+	type strc struct {
+		A string `json:"x" cbor:"a"`
+		B string `json:"y" cbor:"b"`
+		C string `json:"-"`
+	}
+	want := strc{
+		A: "A",
+		B: "B",
+	}
+	cborData := hexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
+
+	var v strc
+	if err := cbor.Unmarshal(cborData, &v); err != nil {
+		t.Errorf("Unmarshal(0x%0x) returns error %v", cborData, err)
+	}
+	if !reflect.DeepEqual(v, want) {
+		t.Errorf("Unmarshal(0x%0x) = %+v (%T), want %+v (%T)", cborData, v, v, want, want)
+	}
+}
