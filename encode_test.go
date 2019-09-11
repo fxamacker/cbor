@@ -1100,3 +1100,63 @@ func parseTime(layout string, value string) time.Time {
 	}
 	return tm
 }
+
+func TestMarshalStructTag1(t *testing.T) {
+	type strc struct {
+		A string `cbor:"a"`
+		B string `cbor:"b"`
+		C string `cbor:"c"`
+	}
+	v := strc{
+		A: "A",
+		B: "B",
+		C: "C",
+	}
+	want := hexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
+
+	if b, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true}); err != nil {
+		t.Errorf("Marshal(%+v) returns error %v", v, err)
+	} else if !bytes.Equal(b, want) {
+		t.Errorf("Marshal(%+v) = %v, want %v", v, b, want)
+	}
+}
+
+func TestMarshalStructTag2(t *testing.T) {
+	type strc struct {
+		A string `json:"a"`
+		B string `json:"b"`
+		C string `json:"c"`
+	}
+	v := strc{
+		A: "A",
+		B: "B",
+		C: "C",
+	}
+	want := hexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
+
+	if b, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true}); err != nil {
+		t.Errorf("Marshal(%+v) returns error %v", v, err)
+	} else if !bytes.Equal(b, want) {
+		t.Errorf("Marshal(%+v) = %v, want %v", v, b, want)
+	}
+}
+
+func TestMarshalStructTag3(t *testing.T) {
+	type strc struct {
+		A string `json:"x" cbor:"a"`
+		B string `json:"y" cbor:"b"`
+		C string `json:"z"`
+	}
+	v := strc{
+		A: "A",
+		B: "B",
+		C: "C",
+	}
+	want := hexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
+
+	if b, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true}); err != nil {
+		t.Errorf("Marshal(%+v) returns error %v", v, err)
+	} else if !bytes.Equal(b, want) {
+		t.Errorf("Marshal(%+v) = %v, want %v", v, b, want)
+	}
+}

@@ -177,6 +177,12 @@ func getFields(typ reflect.Type) fields {
 				if tag == "-" {
 					continue
 				}
+				if tag == "" {
+					tag = f.Tag.Get("json")
+					if tag == "-" {
+						continue
+					}
+				}
 
 				idx := make([]int, len(fieldIdx)+1)
 				copy(idx, fieldIdx)

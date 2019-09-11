@@ -98,6 +98,29 @@ func TestDecoderUnmarshalTypeError(t *testing.T) {
 	}
 }
 
+func TestDecoderStructTag(t *testing.T) {
+	type strc struct {
+		A string `json:"x" cbor:"a"`
+		B string `json:"y" cbor:"b"`
+		C string `json:"z"`
+	}
+	want := strc{
+		A: "A",
+		B: "B",
+		C: "C",
+	}
+	cborData := hexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
+
+	var v strc
+	dec := cbor.NewDecoder(bytes.NewReader(cborData))
+	if err := dec.Decode(&v); err != nil {
+		t.Errorf("Decode() returns error %v", err)
+	}
+	if !reflect.DeepEqual(v, want) {
+		t.Errorf("Decode() = %+v (%T), want %+v (%T)", v, v, want, want)
+	}
+}
+
 func TestEncoder(t *testing.T) {
 	var want bytes.Buffer
 	var w bytes.Buffer
@@ -252,6 +275,29 @@ func TestIndefiniteMap(t *testing.T) {
 	}
 	if err := encoder.EndIndefinite(); err != nil {
 		t.Fatalf("EndIndefinite() returns error %v", err)
+	}
+	if !bytes.Equal(w.Bytes(), want) {
+		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+	}
+}
+
+func TestEncoderStructTag(t *testing.T) {
+	type strc struct {
+		A string `json:"x" cbor:"a"`
+		B string `json:"y" cbor:"b"`
+		C string `json:"z"`
+	}
+	v := strc{
+		A: "A",
+		B: "B",
+		C: "C",
+	}
+	want := hexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
+
+	var w bytes.Buffer
+	encoder := cbor.NewEncoder(&w, cbor.EncOptions{Canonical: true})
+	if err := encoder.Encode(v); err != nil {
+		t.Errorf("Encode(%+v) returns error %v", v, err)
 	}
 	if !bytes.Equal(w.Bytes(), want) {
 		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)

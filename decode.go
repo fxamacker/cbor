@@ -975,9 +975,14 @@ func isHashableKind(k reflect.Kind) bool {
 // entries.  Unmarshal stores key-value pairs from the CBOR map into Go map.
 //
 // To unmarshal a CBOR map into a struct, Unmarshal matches CBOR map keys to the
-// keys used by Marshal (either the struct field name or its tag), preferring an
-// exact match but also accepting a case-insensitive match.  Map keys which
-// don't have a corresponding struct field are ignored.
+// keys in the following priority:
+//
+//     1. "cbor" key in struct field tag,
+//     2. "json" key in struct field tag,
+//     3. struct field name.
+//
+// Unmarshal prefers an exact match but also accepts a case-insensitive match.
+// Map keys which don't have a corresponding struct field are ignored.
 //
 // To unmarshal a CBOR text string into a time.Time value, Unmarshal parses text
 // string formatted in RFC3339.  To unmarshal a CBOR integer/float into a

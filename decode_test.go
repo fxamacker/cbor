@@ -1242,3 +1242,69 @@ func TestDecodeTime(t *testing.T) {
 		})
 	}
 }
+
+func TestUnmarshalStructTag1(t *testing.T) {
+	type strc struct {
+		A string `cbor:"a"`
+		B string `cbor:"b"`
+		C string `cbor:"c"`
+	}
+	want := strc{
+		A: "A",
+		B: "B",
+		C: "C",
+	}
+	cborData := hexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
+
+	var v strc
+	if err := cbor.Unmarshal(cborData, &v); err != nil {
+		t.Errorf("Unmarshal(0x%0x) returns error %v", cborData, err)
+	}
+	if !reflect.DeepEqual(v, want) {
+		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
+	}
+}
+
+func TestUnmarshalStructTag2(t *testing.T) {
+	type strc struct {
+		A string `json:"a"`
+		B string `json:"b"`
+		C string `json:"c"`
+	}
+	want := strc{
+		A: "A",
+		B: "B",
+		C: "C",
+	}
+	cborData := hexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
+
+	var v strc
+	if err := cbor.Unmarshal(cborData, &v); err != nil {
+		t.Errorf("Unmarshal(0x%0x) returns error %v", cborData, err)
+	}
+	if !reflect.DeepEqual(v, want) {
+		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
+	}
+}
+
+func TestUnmarshalStructTag3(t *testing.T) {
+	type strc struct {
+		A string `json:"x" cbor:"a"`
+		B string `json:"y" cbor:"b"`
+		C string `json:"z"`
+	}
+	want := strc{
+		A: "A",
+		B: "B",
+		C: "C",
+	}
+	cborData := hexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
+
+	var v strc
+	if err := cbor.Unmarshal(cborData, &v); err != nil {
+		t.Errorf("Unmarshal(0x%0x) returns error %v", cborData, err)
+	}
+	if !reflect.DeepEqual(v, want) {
+		t.Errorf("Unmarshal(0x%0x) = %+v (%T), want %+v (%T)", cborData, v, v, want, want)
+	}
+}

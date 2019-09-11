@@ -41,7 +41,7 @@ Library size comparison (linux_amd64, Go 1.12):
 * Decode slices, maps, and structs in-place.
 * Decode into struct with field name case-insensitive match.
 * Support canonical CBOR encoding for map/struct.
-* Support struct field format tags under "cbor" key.
+* Support both "cbor" and "json" keys for struct field format tags.
 * Encode anonymous struct fields by `json` package struct fields visibility rules.
 * Encode and decode nil slice/map/pointer/interface values correctly.
 * Encode and decode indefinite length bytes/string/array/map (["streaming"](https://tools.ietf.org/html/rfc7049#section-2.2)).
