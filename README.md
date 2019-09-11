@@ -18,12 +18,12 @@ This library is designed to be:
 
 ## Current Status
 
-Sept 9, 2019: Current version (0.3) is expected to be promoted to 1.0 this month unless changes are requested by the Go community.  It passed 9+ hours of fuzzing and appears to be ready for production use on linux_amd64.
+Sept 11, 2019: Current version (0.4) is expected to be promoted to 1.0 this month unless changes are requested by the Go community.  It passed 10.5+ hours of fuzzing and appears to be ready for production use on linux_amd64.
 
 ## Size comparison
 
 Program size comparison (linux_amd64, Go 1.12) doing the same CBOR encoding and decoding:
-- 2.7 MB program using fxamacker/cbor
+- 2.6 MB program using fxamacker/cbor
 - 11.9 MB program using ugorji/go
 
 Library size comparison (linux_amd64, Go 1.12):
