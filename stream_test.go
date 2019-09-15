@@ -51,39 +51,38 @@ func TestDecoderUnmarshalTypeError(t *testing.T) {
 	var buf bytes.Buffer
 	for i := 0; i < 5; i++ {
 		for _, tc := range unmarshalTests {
-			buf.Write(tc.cborData)
+			for j := 0; j < len(tc.wrongTypes)*2; j++ {
+				buf.Write(tc.cborData)
+			}
 		}
 	}
 	decoder := cbor.NewDecoder(&buf)
 	bytesRead := 0
-	wrongType := true
 	for i := 0; i < 5; i++ {
 		for _, tc := range unmarshalTests {
-			if wrongType && len(tc.wrongTypes) > 0 {
-				wrongType = !wrongType
-				typ := tc.wrongTypes[0]
+			for _, typ := range tc.wrongTypes {
 				v := reflect.New(typ)
-				vPtr := v.Interface()
-				err := decoder.Decode(vPtr)
-				if err == nil {
-					t.Errorf("Unmarshal(0x%0x) returns %v (%T), want UnmarshalTypeError", tc.cborData, v.Elem().Interface(), v.Elem().Interface())
+				if err := decoder.Decode(v.Interface()); err == nil {
+					t.Errorf("Decode(0x%0x) returns %v (%T), want UnmarshalTypeError", tc.cborData, v.Elem().Interface(), v.Elem().Interface())
 				} else if _, ok := err.(*cbor.UnmarshalTypeError); !ok {
-					t.Errorf("Unmarshal(0x%0x) returns wrong error %s, want UnmarshalTypeError", tc.cborData, err.Error())
+					t.Errorf("Decode(0x%0x) returns wrong error %s, want UnmarshalTypeError", tc.cborData, err.Error())
 				}
-			} else {
-				wrongType = !wrongType
-				var v interface{}
-				if err := decoder.Decode(&v); err != nil {
+				bytesRead += len(tc.cborData)
+				if decoder.NumBytesRead() != bytesRead {
+					t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
+				}
+
+				var vi interface{}
+				if err := decoder.Decode(&vi); err != nil {
 					t.Errorf("Decode() returns error %v", err)
 				}
-				if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
-					t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+				if !reflect.DeepEqual(vi, tc.emptyInterfaceValue) {
+					t.Errorf("Decode() = %v (%T), want %v (%T)", vi, vi, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
 				}
-			}
-
-			bytesRead += len(tc.cborData)
-			if decoder.NumBytesRead() != bytesRead {
-				t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
+				bytesRead += len(tc.cborData)
+				if decoder.NumBytesRead() != bytesRead {
+					t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
+				}
 			}
 		}
 	}
@@ -136,6 +135,35 @@ func TestEncoder(t *testing.T) {
 	}
 	if !bytes.Equal(w.Bytes(), want.Bytes()) {
 		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want.Bytes())
+	}
+}
+
+func TestEncoderError(t *testing.T) {
+	testcases := []struct {
+		name         string
+		value        interface{}
+		wantErrorMsg string
+	}{
+		{"channel can't be marshalled", make(chan bool), "cbor: unsupported type: chan bool"},
+		{"function can't be marshalled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
+		{"complex can't be marshalled", complex(100, 8), "cbor: unsupported type: complex128"},
+	}
+	var w bytes.Buffer
+	encoder := cbor.NewEncoder(&w, cbor.EncOptions{})
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := encoder.Encode(&tc.value)
+			if err == nil {
+				t.Errorf("Encode(%v) doesn't return an error, want error %q", tc.value, tc.wantErrorMsg)
+			} else if _, ok := err.(*cbor.UnsupportedTypeError); !ok {
+				t.Errorf("Encode(%v) error type %T, want *cbor.UnsupportedTypeError", tc.value, err)
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("Encode(%v) error %s, want %s", tc.value, err, tc.wantErrorMsg)
+			}
+		})
+	}
+	if w.Len() != 0 {
+		t.Errorf("Encoder's writer has %d bytes of data, want empty data", w.Len())
 	}
 }
 
@@ -278,6 +306,20 @@ func TestIndefiniteMap(t *testing.T) {
 	}
 	if !bytes.Equal(w.Bytes(), want) {
 		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+	}
+}
+
+func TestIndefiniteLengthError(t *testing.T) {
+	var w bytes.Buffer
+	encoder := cbor.NewEncoder(&w, cbor.EncOptions{})
+	if err := encoder.StartIndefiniteByteString(); err != nil {
+		t.Fatalf("StartIndefiniteByteString() returns error %v", err)
+	}
+	if err := encoder.EndIndefinite(); err != nil {
+		t.Fatalf("EndIndefinite() returns error %v", err)
+	}
+	if err := encoder.EndIndefinite(); err == nil {
+		t.Fatalf("EndIndefinite() doesn't return error")
 	}
 }
 

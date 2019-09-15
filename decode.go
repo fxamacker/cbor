@@ -6,7 +6,6 @@ package cbor
 import (
 	"encoding/binary"
 	"errors"
-	"io"
 	"math"
 	"reflect"
 	"strconv"
@@ -169,9 +168,18 @@ func (d *decodeState) skip() {
 	}
 }
 
+// parse assumes data is well-formed, and does not perform bounds checking.
 func (d *decodeState) parse(v reflect.Value) (err error) {
-	if len(d.data) == d.offset {
-		return io.EOF
+	if v.Kind() == reflect.Interface && v.NumMethod() == 0 && v.IsNil() {
+		// nil interface
+		res, err := d.parseInterface()
+		if err != nil {
+			return err
+		}
+		if res != nil {
+			v.Set(reflect.ValueOf(res))
+		}
+		return nil
 	}
 
 	// Process cbor nil/undefined.
@@ -193,10 +201,7 @@ func (d *decodeState) parse(v reflect.Value) (err error) {
 	// Process byte/text string.
 	t := cborType(d.data[d.offset] & 0xE0)
 	if t == cborTypeByteString {
-		b, err := d.parseByteString()
-		if err != nil {
-			return err
-		}
+		b := d.parseByteString()
 		return fillByteString(t, b, v)
 	} else if t == cborTypeTextString {
 		b, err := d.parseTextString()
@@ -206,10 +211,7 @@ func (d *decodeState) parse(v reflect.Value) (err error) {
 		return fillTextString(t, b, v)
 	}
 
-	t, ai, val, err := d.getHeader()
-	if err != nil {
-		return err
-	}
+	t, ai, val := d.getHeader()
 
 	// Process other types.
 	switch t {
@@ -241,23 +243,11 @@ func (d *decodeState) parse(v reflect.Value) (err error) {
 		}
 	case cborTypeArray:
 		valInt := int(val)
-		if valInt < 0 || uint64(valInt) != val {
-			// Detect integer overflow
-			return errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
-		}
 		count := valInt
 		if ai == 31 {
 			count = -1
 		}
-		if isNilInterface(v) {
-			// >100% improvement in ns/op and less allocs/op with parseArrayInterface(), compared with parseArray().
-			arr, err := d.parseArrayInterface(t, count)
-			if err != nil {
-				return err
-			}
-			v.Set(reflect.ValueOf(arr))
-			return nil
-		} else if v.Kind() == reflect.Slice {
+		if v.Kind() == reflect.Slice {
 			return d.parseSlice(t, count, v)
 		} else if v.Kind() == reflect.Array {
 			return d.parseArray(t, count, v)
@@ -269,23 +259,11 @@ func (d *decodeState) parse(v reflect.Value) (err error) {
 		return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
 	case cborTypeMap:
 		valInt := int(val)
-		if valInt < 0 || uint64(valInt) != val {
-			// Detect integer overflow
-			return errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
-		}
 		count := valInt
 		if ai == 31 {
 			count = -1
 		}
-		if isNilInterface(v) {
-			// >100% improvement in ns/op and less allocs/op with parseMapInterface(), compared with parseMap().
-			m, err := d.parseMapInterface(t, count)
-			if err != nil {
-				return err
-			}
-			v.Set(reflect.ValueOf(m))
-			return nil
-		} else if v.Kind() == reflect.Struct {
+		if v.Kind() == reflect.Struct {
 			return d.parseStruct(t, count, v)
 		} else if v.Kind() == reflect.Map {
 			return d.parseMap(t, count, v)
@@ -299,11 +277,8 @@ func (d *decodeState) parse(v reflect.Value) (err error) {
 	return nil
 }
 
+// parseInterface assumes data is well-formed, and does not perform bounds checking.
 func (d *decodeState) parseInterface() (_ interface{}, err error) {
-	if len(d.data) == d.offset {
-		return nil, io.EOF
-	}
-
 	if d.data[d.offset] == 0xf6 || d.data[d.offset] == 0xf7 {
 		d.offset++
 		return nil, nil
@@ -312,7 +287,7 @@ func (d *decodeState) parseInterface() (_ interface{}, err error) {
 	// Process byte/text string.
 	t := cborType(d.data[d.offset] & 0xE0)
 	if t == cborTypeByteString {
-		return d.parseByteString()
+		return d.parseByteString(), nil
 	} else if t == cborTypeTextString {
 		b, err := d.parseTextString()
 		if err != nil {
@@ -321,10 +296,7 @@ func (d *decodeState) parseInterface() (_ interface{}, err error) {
 		return string(b), nil
 	}
 
-	t, ai, val, err := d.getHeader()
-	if err != nil {
-		return nil, err
-	}
+	t, ai, val := d.getHeader()
 
 	// Process other types.
 	switch t {
@@ -356,10 +328,6 @@ func (d *decodeState) parseInterface() (_ interface{}, err error) {
 		}
 	case cborTypeArray:
 		valInt := int(val)
-		if valInt < 0 || uint64(valInt) != val {
-			// Detect integer overflow
-			return nil, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
-		}
 		count := valInt
 		if ai == 31 {
 			count = -1
@@ -367,34 +335,26 @@ func (d *decodeState) parseInterface() (_ interface{}, err error) {
 		return d.parseArrayInterface(t, count)
 	case cborTypeMap:
 		valInt := int(val)
-		if valInt < 0 || uint64(valInt) != val {
-			// Detect integer overflow
-			return nil, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
-		}
 		count := valInt
 		if ai == 31 {
 			count = -1
 		}
 		return d.parseMapInterface(t, count)
 	}
-	panic("cbor: parseInterface() of type " + t.String() + " is not implemented")
+	return nil, nil
 }
 
 // parseByteString parses CBOR encoded byte string.  It returns a byte slice
 // pointing to a copy of parsed data.
-func (d *decodeState) parseByteString() ([]byte, error) {
-	val, isCopy, err := d.parseStringBuf(nil)
-	if err != nil {
-		return nil, err
-	}
-
+func (d *decodeState) parseByteString() []byte {
+	val, isCopy := d.parseStringBuf(nil)
 	if !isCopy {
 		// Make a copy of val so that GC can collect underlying data val points to.
 		copyVal := make([]byte, len(val))
 		copy(copyVal, val)
-		return copyVal, nil
+		return copyVal
 	}
-	return val, nil
+	return val
 }
 
 // parseTextString parses CBOR encoded text string.  It does not return a string
@@ -405,10 +365,7 @@ func (d *decodeState) parseByteString() ([]byte, error) {
 // compared with using parse(reflect.Value).  parse(reflect.Value) sets
 // reflect.Value with parsed string, while parseTextString() returns parsed string.
 func (d *decodeState) parseTextString() ([]byte, error) {
-	val, _, err := d.parseStringBuf(nil)
-	if err != nil {
-		return nil, err
-	}
+	val, _ := d.parseStringBuf(nil)
 
 	if !utf8.Valid(val) {
 		return nil, &SemanticError{"cbor: invalid UTF-8 string"}
@@ -417,18 +374,12 @@ func (d *decodeState) parseTextString() ([]byte, error) {
 	return val, nil
 }
 
-func (d *decodeState) parseStringBuf(p []byte) (_ []byte, isCopy bool, err error) {
-	t, ai, val, err := d.getHeader()
-	if err != nil {
-		return nil, false, err
-	}
+// parseStringBuf assumes data is well-formed, and does not perform bounds checking.
+func (d *decodeState) parseStringBuf(p []byte) (_ []byte, isCopy bool) {
+	t, ai, val := d.getHeader()
 
 	if t == cborTypeTag {
 		return d.parseStringBuf(p)
-	}
-
-	if t != cborTypeByteString && t != cborTypeTextString {
-		panic("cbor: expect byte/text string data, got " + t.String())
 	}
 
 	if ai == 31 {
@@ -437,30 +388,21 @@ func (d *decodeState) parseStringBuf(p []byte) (_ []byte, isCopy bool, err error
 			p = make([]byte, 0, 64)
 		}
 		for !d.foundBreak() {
-			if p, _, err = d.parseStringBuf(p); err != nil {
-				return nil, false, err
-			}
+			p, _ = d.parseStringBuf(p)
 		}
-		return p, true, nil
+		return p, true
 	}
 
 	// Process definite length string.
 	valInt := int(val)
-	if valInt < 0 || uint64(valInt) != val {
-		// Detect integer overflow
-		return nil, false, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
-	}
-	if len(d.data)-d.offset < valInt {
-		return nil, false, io.ErrUnexpectedEOF
-	}
 	oldOff, newOff := d.offset, d.offset+valInt
 	d.offset = newOff
 
 	if p != nil {
 		p = append(p, d.data[oldOff:newOff]...)
-		return p, true, nil
+		return p, true
 	}
-	return d.data[oldOff:newOff], false, nil
+	return d.data[oldOff:newOff], false
 }
 
 func (d *decodeState) parseArrayInterface(t cborType, count int) (_ []interface{}, err error) {
@@ -622,7 +564,11 @@ func (d *decodeState) parseStruct(t cborType, count int, v reflect.Value) error 
 		}
 		keyBytes, err := d.parseTextString()
 		if err != nil {
-			return err
+			if d.err == nil {
+				d.err = err
+			}
+			d.skip() // skip value
+			continue
 		}
 
 		var f *field
@@ -676,25 +622,22 @@ func (d *decodeState) parseStruct(t cborType, count int, v reflect.Value) error 
 			continue
 		}
 		if err := d.parse(fv); err != nil {
-			typeError, ok := err.(*UnmarshalTypeError)
-			if !ok {
-				return err
-			}
-			typeError.Struct = v.Type().String()
-			typeError.Field = string(keyBytes)
 			if d.err == nil {
-				d.err = typeError
+				if typeError, ok := err.(*UnmarshalTypeError); ok {
+					typeError.Struct = v.Type().String()
+					typeError.Field = string(keyBytes)
+					d.err = typeError
+				} else {
+					d.err = err
+				}
 			}
 		}
 	}
 	return d.err
 }
 
-func (d *decodeState) getHeader() (t cborType, ai byte, val uint64, err error) {
-	if len(d.data)-d.offset < 1 {
-		err = io.ErrUnexpectedEOF
-		return
-	}
+// getHeader assumes data is well-formed, and does not perform bounds checking.
+func (d *decodeState) getHeader() (t cborType, ai byte, val uint64) {
 	t = cborType(d.data[d.offset] & 0xE0)
 	ai = d.data[d.offset] & 0x1F
 	val = uint64(ai)
@@ -702,31 +645,15 @@ func (d *decodeState) getHeader() (t cborType, ai byte, val uint64, err error) {
 
 	switch ai {
 	case 24:
-		if len(d.data)-d.offset < 1 {
-			err = io.ErrUnexpectedEOF
-			return
-		}
 		val = uint64(d.data[d.offset])
 		d.offset++
 	case 25:
-		if len(d.data)-d.offset < 2 {
-			err = io.ErrUnexpectedEOF
-			return
-		}
 		val = uint64(binary.BigEndian.Uint16(d.data[d.offset : d.offset+2]))
 		d.offset += 2
 	case 26:
-		if len(d.data)-d.offset < 4 {
-			err = io.ErrUnexpectedEOF
-			return
-		}
 		val = uint64(binary.BigEndian.Uint32(d.data[d.offset : d.offset+4]))
 		d.offset += 4
 	case 27:
-		if len(d.data)-d.offset < 8 {
-			err = io.ErrUnexpectedEOF
-			return
-		}
 		val = binary.BigEndian.Uint64(d.data[d.offset : d.offset+8])
 		d.offset += 8
 	}
@@ -744,10 +671,8 @@ func (d *decodeState) numOfItemsUntilBreak() int {
 	return i
 }
 
+// foundBreak assumes data is well-formed, and does not perform bounds checking.
 func (d *decodeState) foundBreak() bool {
-	if len(d.data) == d.offset {
-		panic("cbor: unexpected EOF while searching for \"break\" code")
-	}
 	if d.data[d.offset] == 0xFF {
 		d.offset++
 		return true
@@ -756,9 +681,6 @@ func (d *decodeState) foundBreak() bool {
 }
 
 func fillNil(t cborType, v reflect.Value) error {
-	if isNilInterface(v) {
-		return nil
-	}
 	switch v.Kind() {
 	case reflect.Slice, reflect.Map, reflect.Interface, reflect.Ptr:
 		v.Set(reflect.Zero(v.Type()))
@@ -772,10 +694,6 @@ func fillNil(t cborType, v reflect.Value) error {
 }
 
 func fillPositiveInt(t cborType, val uint64, v reflect.Value) error {
-	if isNilInterface(v) {
-		v.Set(reflect.ValueOf(val))
-		return nil
-	}
 	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		if val > math.MaxInt64 {
@@ -802,10 +720,6 @@ func fillPositiveInt(t cborType, val uint64, v reflect.Value) error {
 }
 
 func fillNegativeInt(t cborType, val int64, v reflect.Value) error {
-	if isNilInterface(v) {
-		v.Set(reflect.ValueOf(val))
-		return nil
-	}
 	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		if v.OverflowInt(val) {
@@ -823,10 +737,6 @@ func fillNegativeInt(t cborType, val int64, v reflect.Value) error {
 }
 
 func fillBool(t cborType, val bool, v reflect.Value) error {
-	if isNilInterface(v) {
-		v.Set(reflect.ValueOf(val))
-		return nil
-	}
 	if v.Kind() == reflect.Bool {
 		v.SetBool(val)
 		return nil
@@ -835,10 +745,6 @@ func fillBool(t cborType, val bool, v reflect.Value) error {
 }
 
 func fillFloat(t cborType, val float64, v reflect.Value) error {
-	if isNilInterface(v) {
-		v.Set(reflect.ValueOf(val))
-		return nil
-	}
 	switch v.Kind() {
 	case reflect.Float32, reflect.Float64:
 		if v.OverflowFloat(val) {
@@ -857,10 +763,6 @@ func fillFloat(t cborType, val float64, v reflect.Value) error {
 }
 
 func fillByteString(t cborType, val []byte, v reflect.Value) error {
-	if isNilInterface(v) {
-		v.Set(reflect.ValueOf(val))
-		return nil
-	}
 	if v.Kind() == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8 {
 		v.SetBytes(val)
 		return nil
@@ -869,10 +771,6 @@ func fillByteString(t cborType, val []byte, v reflect.Value) error {
 }
 
 func fillTextString(t cborType, val []byte, v reflect.Value) error {
-	if isNilInterface(v) {
-		v.Set(reflect.ValueOf(string(val)))
-		return nil
-	}
 	if v.Kind() == reflect.String {
 		v.SetString(string(val))
 		return nil
@@ -906,10 +804,6 @@ func uint16ToFloat64(num uint16) float64 {
 
 	f := math.Float32frombits(bits)
 	return float64(f)
-}
-
-func isNilInterface(v reflect.Value) bool {
-	return v.Kind() == reflect.Interface && v.NumMethod() == 0 && v.IsNil()
 }
 
 func isImmutableKind(k reflect.Kind) bool {

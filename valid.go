@@ -24,7 +24,7 @@ type SemanticError struct {
 
 func (e *SemanticError) Error() string { return e.msg }
 
-// Valid checks whether data is a valid CBOR encoding.
+// Valid checks whether CBOR data is complete and well-formed.
 func Valid(data []byte) (rest []byte, err error) {
 	offset, _, err := checkValid(data, 0)
 	if err != nil {
@@ -141,13 +141,11 @@ func checkValidIndefinite(data []byte, off int, t cborType) (_ int, err error) {
 			return 0, io.ErrUnexpectedEOF
 		}
 		if data[off] == 0xFF {
-			return off + 1, nil
+			off++
+			break
 		}
 		var nextType cborType
 		if off, nextType, err = checkValid(data, off); err != nil {
-			if err == io.EOF {
-				err = io.ErrUnexpectedEOF
-			}
 			return 0, err
 		}
 		switch t {

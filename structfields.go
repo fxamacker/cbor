@@ -113,9 +113,6 @@ func getFieldNameOptionsFromTag(tag string) (string, string) {
 }
 
 func hasFieldOptionFromTag(options, key string) bool {
-	if len(options) == 0 {
-		return false
-	}
 	idx := strings.Index(options, key)
 	if idx == -1 {
 		return false

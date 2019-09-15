@@ -871,7 +871,6 @@ var invalidCBORUnmarshalTests = []struct {
 	{"indefinite-length map: no \"break\" code", []byte{0xbf, 0x01}, "unexpected EOF", false},
 	{"indefinite-length map: read \"break\" code before completing key-value pair", []byte{0xbf, 0x01, 0xff}, "cbor: unexpected \"break\" code", false},
 	{"indefinite-length map: invalid element", []byte{0xbf, 0x01, 0x1f}, "cbor: invalid additional information", true},
-	{"text string: invalid UTF-8 string", []byte{0x61, 0xfe}, "cbor: invalid UTF-8 string", false},
 }
 
 func TestInvalidCBORUnmarshal(t *testing.T) {
@@ -887,6 +886,25 @@ func TestInvalidCBORUnmarshal(t *testing.T) {
 				t.Errorf("Unmarshal(0x%0x) error %s, want %s", tc.cborData, err, tc.wantErrorMsg)
 			}
 		})
+	}
+}
+
+func TestInvalidUTF8TextString(t *testing.T) {
+	cborData := []byte{0x61, 0xfe}
+	wantErrorMsg := "cbor: invalid UTF-8 string"
+
+	var i interface{}
+	if err := cbor.Unmarshal(cborData, &i); err == nil {
+		t.Errorf("Unmarshal(0x%0x) expecting error, got nil", cborData)
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("Unmarshal(0x%0x) error %s, want %s", cborData, err, wantErrorMsg)
+	}
+
+	var s string
+	if err := cbor.Unmarshal(cborData, &s); err == nil {
+		t.Errorf("Unmarshal(0x%0x) expecting error, got nil", cborData)
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("Unmarshal(0x%0x) error %s, want %s", cborData, err, wantErrorMsg)
 	}
 }
 
@@ -979,7 +997,7 @@ func TestUnmarshalStructError1(t *testing.T) {
 }
 
 func TestUnmarshalStructError2(t *testing.T) {
-	// Unmarshal map key of integer type into struct
+	// Unmarshal integer and invalid UTF8 string as field name into struct
 	type strc struct {
 		A string `cbor:"a"`
 		B string `cbor:"b"`
@@ -988,9 +1006,10 @@ func TestUnmarshalStructError2(t *testing.T) {
 	want := strc{
 		A: "A",
 	}
-	cborData := hexDecode("a2010261616141") // {1:2, "a":"A"}
 
-	var v strc
+	// Unmarshal returns first error encountered, which is *cbor.UnmarshalTypeError (failed to unmarshal int into Go string)
+	cborData := hexDecode("a301026161614161fe6142") // {1:2, "a":"A", 0xfe: B}
+	v := strc{}
 	if err := cbor.Unmarshal(cborData, &v); err == nil {
 		t.Errorf("Unmarshal(0x%0x) doesn't return an error", cborData)
 	} else {
@@ -1006,6 +1025,38 @@ func TestUnmarshalStructError2(t *testing.T) {
 			if !strings.Contains(err.Error(), "cannot unmarshal positive integer into Go value of type string") {
 				t.Errorf("Unmarshal(0x%0x) returns error %s, want error containing %q", cborData, err.Error(), "cannot unmarshal positive integer into Go value of type string")
 			}
+		}
+	}
+	if !reflect.DeepEqual(v, want) {
+		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
+	}
+
+	// Unmarshal returns first error encountered, which is *cbor.SemanticError (invalid UTF8 string)
+	cborData = hexDecode("a361fe6142010261616141") // {0xfe: B, 1:2, "a":"A"}
+	v = strc{}
+	if err := cbor.Unmarshal(cborData, &v); err == nil {
+		t.Errorf("Unmarshal(0x%0x) doesn't return an error", cborData)
+	} else {
+		if _, ok := err.(*cbor.SemanticError); !ok {
+			t.Errorf("Unmarshal(0x%0x) returns wrong type of error %T, want (*cbor.SemanticError)", cborData, err)
+		} else if err.Error() != "cbor: invalid UTF-8 string" {
+			t.Errorf("Unmarshal(0x%0x) returns error %s, want error %q", cborData, err.Error(), "cbor: invalid UTF-8 string")
+		}
+	}
+	if !reflect.DeepEqual(v, want) {
+		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
+	}
+
+	// Unmarshal returns first error encountered, which is *cbor.SemanticError (invalid UTF8 string)
+	cborData = hexDecode("a3616261fe010261616141") // {"b": 0xfe, 1:2, "a":"A"}
+	v = strc{}
+	if err := cbor.Unmarshal(cborData, &v); err == nil {
+		t.Errorf("Unmarshal(0x%0x) doesn't return an error", cborData)
+	} else {
+		if _, ok := err.(*cbor.SemanticError); !ok {
+			t.Errorf("Unmarshal(0x%0x) returns wrong type of error %T, want (*cbor.SemanticError)", cborData, err)
+		} else if err.Error() != "cbor: invalid UTF-8 string" {
+			t.Errorf("Unmarshal(0x%0x) returns error %s, want error %q", cborData, err.Error(), "cbor: invalid UTF-8 string")
 		}
 	}
 	if !reflect.DeepEqual(v, want) {
@@ -1098,6 +1149,16 @@ func TestValid(t *testing.T) {
 	}
 }
 
+func TestSkipData(t *testing.T) {
+	cborData := hexDecode("850102031bffffffffffffffffc11a514b67b0") // [1, 2, 3, 18446744073709551615, 1363896240]
+	i := 0
+	if err := cbor.Unmarshal(cborData, &i); err == nil {
+		t.Errorf("Unmarshal(0x%0x) doesn't return error, want UnmarshalTypeError", cborData)
+	} else if _, ok := err.(*cbor.UnmarshalTypeError); !ok {
+		t.Errorf("Unmarshal(0x%0x) returns wrong type of error %T, want (*cbor.UnmarshalTypeError)", cborData, err)
+	}
+}
+
 func TestStructFieldNil(t *testing.T) {
 	type TestStruct struct {
 		I   int
@@ -1120,14 +1181,19 @@ func TestStructFieldNil(t *testing.T) {
 
 func TestFuzzCrash1(t *testing.T) {
 	// Crash1: string/slice/map length in uint64 cast to int causes integer overflow.
-	hexData := "bbcf30303030303030cfd697829782"
-	data := hexDecode(hexData)
-	var intf interface{}
+	hexData := []string{
+		"bbcf30303030303030cfd697829782",
+		"5bcf30303030303030cfd697829782",
+	}
 	wantErrorMsg := "is too large"
-	if err := cbor.Unmarshal(data, &intf); err == nil {
-		t.Errorf("Unmarshal(0x%02x) returns no error, want error containing substring %s", data, wantErrorMsg)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%02x) returns error %s, want error containing substring %s", data, err, wantErrorMsg)
+	for _, data := range hexData {
+		data := hexDecode(data)
+		var intf interface{}
+		if err := cbor.Unmarshal(data, &intf); err == nil {
+			t.Errorf("Unmarshal(0x%02x) returns no error, want error containing substring %s", data, wantErrorMsg)
+		} else if !strings.Contains(err.Error(), wantErrorMsg) {
+			t.Errorf("Unmarshal(0x%02x) returns error %s, want error containing substring %s", data, err, wantErrorMsg)
+		}
 	}
 }
 
@@ -1238,6 +1304,30 @@ func TestDecodeTime(t *testing.T) {
 				t.Errorf("Unmarshal(0x%0x) returns error %s\n", tc.cborUnixTime, err)
 			} else if !tc.wantTime.Equal(tm) {
 				t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", tc.cborUnixTime, tm, tm, tc.wantTime, tc.wantTime)
+			}
+		})
+	}
+}
+
+func TestDecodeTimeError(t *testing.T) {
+	testCases := []struct {
+		name         string
+		cborData     []byte
+		wantErrorMsg string
+	}{
+		{
+			name:         "invalid RFC3339 time string",
+			cborData:     hexDecode("7f657374726561646d696e67ff"),
+			wantErrorMsg: "cbor: cannot set streaming for time.Time",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tm := time.Now()
+			if err := cbor.Unmarshal(tc.cborData, &tm); err == nil {
+				t.Errorf("Unmarshal(0x%0x) doesn't return error, want error msg %s\n", tc.cborData, tc.wantErrorMsg)
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("Unmarshal(0x%0x) returns error %s, want %s", tc.cborData, err, tc.wantErrorMsg)
 			}
 		})
 	}

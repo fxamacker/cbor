@@ -34,12 +34,8 @@ func NewDecoder(r io.Reader) *Decoder {
 // the value pointed to by v.
 func (dec *Decoder) Decode(v interface{}) (err error) {
 	if len(dec.buf) == dec.off {
-		n, err := dec.read()
-		if err != nil && err != io.EOF {
+		if n, err := dec.read(); n == 0 {
 			return err
-		}
-		if n == 0 {
-			return io.EOF
 		}
 	}
 
@@ -50,12 +46,8 @@ func (dec *Decoder) Decode(v interface{}) (err error) {
 	if err != nil {
 		if err == io.ErrUnexpectedEOF {
 			// Need to read more data.
-			n, err := dec.read()
-			if err != nil && err != io.EOF {
+			if n, err := dec.read(); n == 0 {
 				return err
-			}
-			if n == 0 {
-				return io.ErrUnexpectedEOF
 			}
 			return dec.Decode(v)
 		}
@@ -122,25 +114,19 @@ func (enc *Encoder) Encode(v interface{}) error {
 		}
 	}
 
-	if err := enc.e.marshal(v, enc.opts); err != nil {
-		return err
+	err := enc.e.marshal(v, enc.opts)
+	if err == nil {
+		_, err = enc.e.WriteTo(enc.w)
 	}
-	if _, err := enc.e.WriteTo(enc.w); err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (enc *Encoder) startIndefinite(typ cborType) error {
-	header, ok := cborIndefiniteHeader[typ]
-	if !ok {
-		return errors.New("cbor: cannot encode indefinite length for " + typ.String())
+	_, err := enc.w.Write(cborIndefiniteHeader[typ])
+	if err == nil {
+		enc.indefiniteTypes = append(enc.indefiniteTypes, typ)
 	}
-	enc.indefiniteTypes = append(enc.indefiniteTypes, typ)
-	if _, err := enc.w.Write(header); err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // StartIndefiniteByteString starts byte string encoding of indefinite length.
@@ -176,9 +162,9 @@ func (enc *Encoder) EndIndefinite() error {
 	if len(enc.indefiniteTypes) == 0 {
 		return errors.New("cbor: cannot encode \"break\" code outside indefinite length values")
 	}
-	enc.indefiniteTypes = enc.indefiniteTypes[:len(enc.indefiniteTypes)-1]
-	if _, err := enc.w.Write([]byte{0xff}); err != nil {
-		return err
+	_, err := enc.w.Write([]byte{0xff})
+	if err == nil {
+		enc.indefiniteTypes = enc.indefiniteTypes[:len(enc.indefiniteTypes)-1]
 	}
-	return nil
+	return err
 }

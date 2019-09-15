@@ -242,6 +242,16 @@ var marshalTests = []marshalTest{
 	{hexDecode("fbc010666666666666"), []interface{}{float64(-4.1)}},
 }
 
+var exMarshalTests = []marshalTest{
+	{
+		// array of nils
+		hexDecode("83f6f6f6"),
+		[]interface{}{
+			[]interface{}{nil, nil, nil},
+		},
+	},
+}
+
 var marshalErrorTests = []marshalErrorTest{
 	{"channel can't be marshalled", make(chan bool), "cbor: unsupported type: chan bool"},
 	{"function can't be marshalled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
@@ -250,6 +260,7 @@ var marshalErrorTests = []marshalErrorTest{
 
 func TestMarshal(t *testing.T) {
 	testMarshal(t, marshalTests)
+	testMarshal(t, exMarshalTests)
 }
 
 func TestInvalidTypeMarshal(t *testing.T) {
