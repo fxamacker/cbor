@@ -67,6 +67,7 @@ func newEncodeState() *encodeState {
 	return encodeStatePool.Get().(*encodeState)
 }
 
+// returnEncodeState returns e to encodeStatePool.
 func returnEncodeState(e *encodeState) {
 	e.Reset()
 	encodeStatePool.Put(e)
