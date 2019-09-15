@@ -10,7 +10,7 @@ CBOR is a concise binary alternative to JSON.  This library makes CBOR easy to u
 
 This library is designed to be:
 * __Easy__ -- idiomatic API like `encoding/json`.
-* __Safe and reliable__ -- no `unsafe` pkg, test coverage at ~90%, and 10+ hrs of fuzzing with RFC 7049 test vectors.
+* __Safe and reliable__ -- no `unsafe` pkg, test coverage at 96%, and 10+ hrs of fuzzing with RFC 7049 test vectors.
 * __Standards-compliant__ -- supports [RFC 7049](https://tools.ietf.org/html/rfc7049) and canonical CBOR encodings (both [RFC 7049](https://tools.ietf.org/html/rfc7049#section-3.9) and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)).
 * __Small and self-contained__ -- pkg compiles to under 0.5 MB with no external dependencies.
 
@@ -18,7 +18,7 @@ This library is designed to be:
 
 ## Current Status
 
-Sept 11, 2019: Current version is expected to be released as 1.0 this month unless changes are requested by the Go community.  It passed 10+ hours of fuzzing and appears to be ready for production use on linux_amd64.
+Sept 15, 2019: Current version is expected to be released as 1.0 this month unless changes are requested by the Go community.  It passed 10+ hours of fuzzing and appears to be ready for production use on linux_amd64.
 
 ## Size comparison
 
@@ -27,7 +27,7 @@ Program size comparison (linux_amd64, Go 1.12) doing the same CBOR encoding and 
 - 11.9 MB program using ugorji/go
 
 Library size comparison (linux_amd64, Go 1.12):
-- 0.45 MB pkg -- fxamacker/cbor
+- 0.41 MB pkg -- fxamacker/cbor
 - 2.9 MB pkg -- ugorji/go without code generation (`go install --tags "notfastpath"`)
 - 5.7 MB pkg -- ugorji/go with code generation (default build)
 
@@ -37,7 +37,7 @@ Library size comparison (linux_amd64, Go 1.12):
 * No external dependencies.
 * No use of `unsafe` package.
 * Tested with [RFC 7049 test vectors](https://tools.ietf.org/html/rfc7049#appendix-A).
-* Test coverage at ~90%, and fuzzed 9+ hours using [cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).
+* Test coverage at 96%, and fuzzed 9+ hours using [cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).
 * Decode slices, maps, and structs in-place.
 * Decode into struct with field name case-insensitive match.
 * Support canonical CBOR encoding for map/struct.
