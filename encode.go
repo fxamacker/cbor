@@ -15,16 +15,6 @@ import (
 
 type encodeFunc func(e *encodeState, v reflect.Value, opts EncOptions) (int, error)
 
-// InvalidValueError is returned by Marshal when attempting to encode an
-// invalid value.
-type InvalidValueError struct {
-	value reflect.Value
-}
-
-func (e *InvalidValueError) Error() string {
-	return "cbor: invalid value: " + e.value.String()
-}
-
 // UnsupportedTypeError is returned by Marshal when attempting to encode an
 // unsupported value type.
 type UnsupportedTypeError struct {
@@ -83,11 +73,6 @@ func returnEncodeState(e *encodeState) {
 }
 
 func (e *encodeState) marshal(v interface{}, opts EncOptions) error {
-	if v == nil {
-		e.Write(cborNil)
-		return nil
-	}
-
 	_, err := encode(e, reflect.ValueOf(v), opts)
 	return err
 }
