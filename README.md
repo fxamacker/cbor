@@ -17,9 +17,9 @@ This library is designed to be:
 
 `cbor` balances speed, safety (no `unsafe` pkg) and compiled size.  To keep size small, it doesn't use code generation.  For speed, it caches struct field types, bypasses `reflect` when appropriate, and uses `sync.Pool` to reuse transient objects.  
 
-## Current Status
+## Current status
 
-Sept 15, 2019: Current version is expected to be released as 1.0 this month unless changes are requested by the Go community.  It passed 10+ hours of fuzzing and appears to be ready for production use on linux_amd64.
+Sept 29, 2019: `cbor` v1.0 is released for Go 1.12+.  It passed 10+ hours of fuzzing and is ready for production use on linux_amd64.
 
 ## Size comparison
 
@@ -38,7 +38,7 @@ Library size comparison (linux_amd64, Go 1.12):
 * No external dependencies.
 * No use of `unsafe` package.
 * Tested with [RFC 7049 test vectors](https://tools.ietf.org/html/rfc7049#appendix-A).
-* Test coverage at 96%, and fuzzed 9+ hours using [cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).
+* Test coverage at 96%, and fuzzed 10+ hours using [cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).
 * Decode slices, maps, and structs in-place.
 * Decode into struct with field name case-insensitive match.
 * Support canonical CBOR encoding for map/struct.
@@ -56,10 +56,8 @@ It also supports canonical CBOR encodings (both [RFC 7049](https://tools.ietf.or
 
 ## Limitations
 
-* This package doesn't support CBOR tag encoding.
-* Decoder ignores CBOR tag and decodes tagged data following the tag.
-* Signed integer values incompatible with Go's int64 are not supported.
-* RFC 7049 test vectors with signed integer values incompatible with Go's int64 are skipped. For example, the signed integer result -18446744073709551616 is incompatible with Go's int64 data type (cannot be assigned without overflow).
+* CBOR tags (type 6) are ignored.  Decoder simply decodes tagged data after ignoring the tags.
+* Signed integer values incompatible with Go's int64 are not supported.  So RFC 7049 test vectors incompatible with Go's int64 are skipped. For example, test result -18446744073709551616 can't fit into int64.
 
 ## Versions and API changes
 
@@ -89,7 +87,6 @@ type Encoder struct{ ... }
     func (enc *Encoder) StartIndefiniteMap() error
     func (enc *Encoder) EndIndefinite() error
 type InvalidUnmarshalError struct{ ... }
-type InvalidValueError struct{ ... }
 type SemanticError struct{ ... }
 type SyntaxError struct{ ... }
 type UnmarshalTypeError struct{ ... }
