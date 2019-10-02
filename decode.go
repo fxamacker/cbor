@@ -448,9 +448,6 @@ func (d *decodeState) parseSlice(t cborType, count int, v reflect.Value) error {
 
 func (d *decodeState) parseArray(t cborType, count int, v reflect.Value) error {
 	hasSize := count >= 0
-	if count == -1 {
-		count = d.numOfItemsUntilBreak()
-	}
 	i := 0
 	for ; i < v.Len() && ((hasSize && i < count) || (!hasSize && !d.foundBreak())); i++ {
 		if err := d.parse(v.Index(i)); err != nil {
@@ -598,28 +595,6 @@ func (d *decodeState) parseStruct(t cborType, count int, v reflect.Value) error 
 		fv, err := fieldByIndex(v, f.idx)
 		if err != nil {
 			return err
-		}
-		if !fv.IsValid() || !fv.CanSet() {
-			d.skip()
-			continue
-		}
-		if d.data[d.offset] == 0xf6 || d.data[d.offset] == 0xf7 {
-			d.offset++
-			fillNil(cborTypePrimitives, fv)
-			continue
-		}
-		for fv.Kind() == reflect.Ptr {
-			if fv.IsNil() {
-				if !fv.CanSet() {
-					break
-				}
-				fv.Set(reflect.New(fv.Type().Elem()))
-			}
-			fv = fv.Elem()
-		}
-		if !fv.IsValid() || !fv.CanSet() {
-			d.skip()
-			continue
 		}
 		if err := d.parse(fv); err != nil {
 			if d.err == nil {
