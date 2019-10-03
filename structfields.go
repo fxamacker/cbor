@@ -233,44 +233,28 @@ type structFields struct {
 }
 
 var (
-	structFieldsMu     sync.Mutex
-	cachedStructFields []structFields
+	cachedStructFields sync.Map
 )
 
 func getStructFields(t reflect.Type, canonical bool) fields {
-	flds := fields(nil)
+	v, _ := cachedStructFields.Load(t)
+	if v == nil {
+		flds := getFields(t)
 
-	structFieldsMu.Lock()
-	for i := 0; i < len(cachedStructFields); i++ {
-		if cachedStructFields[i].typ == t {
-			if canonical {
-				if len(cachedStructFields[i].fields) != len(cachedStructFields[i].canonicalFields) {
-					canonicalFields := make(fields, len(cachedStructFields[i].fields))
-					copy(canonicalFields, cachedStructFields[i].fields)
-					sort.Sort(byCanonicalRule{canonicalFields})
-					cachedStructFields[i].canonicalFields = canonicalFields
-				}
-				flds = cachedStructFields[i].canonicalFields
-			} else {
-				flds = cachedStructFields[i].fields
-			}
-			break
-		}
-	}
-	if flds == nil {
-		sfs := structFields{typ: t, fields: getFields(t)}
+		canonicalFields := make(fields, len(flds))
+		copy(canonicalFields, flds)
+		sort.Sort(byCanonicalRule{canonicalFields})
+
+		cachedStructFields.Store(t, structFields{typ: t, fields: flds, canonicalFields: canonicalFields})
+
 		if canonical {
-			canonicalFields := make(fields, len(sfs.fields))
-			copy(canonicalFields, sfs.fields)
-			sort.Sort(byCanonicalRule{canonicalFields})
-			sfs.canonicalFields = canonicalFields
-			flds = sfs.canonicalFields
-		} else {
-			flds = sfs.fields
+			return canonicalFields
 		}
-		cachedStructFields = append(cachedStructFields, sfs)
+		return flds
 	}
-	structFieldsMu.Unlock()
 
-	return flds
+	if canonical {
+		return v.(structFields).canonicalFields
+	}
+	return v.(structFields).fields
 }
