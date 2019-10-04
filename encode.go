@@ -5,6 +5,7 @@ package cbor
 
 import (
 	"bytes"
+	"encoding"
 	"encoding/binary"
 	"math"
 	"reflect"
@@ -32,6 +33,7 @@ var (
 	cborNan              = []byte{0xf9, 0x7e, 0x00}
 	cborPositiveInfinity = []byte{0xf9, 0x7c, 0x00}
 	cborNegativeInfinity = []byte{0xf9, 0xfc, 0x00}
+	typeBinaryMarshaler  = reflect.TypeOf((*encoding.BinaryMarshaler)(nil)).Elem()
 )
 
 // EncOptions specifies encoding options.
@@ -384,7 +386,29 @@ func encodeTime(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 	}
 }
 
+func encodeBinaryMarshalerType(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+	u, ok := v.Interface().(encoding.BinaryMarshaler)
+	if !ok {
+		pv := reflect.New(v.Type())
+		pv.Elem().Set(v)
+		u = pv.Interface().(encoding.BinaryMarshaler)
+	}
+	data, err := u.MarshalBinary()
+	if err != nil {
+		return 0, err
+	}
+	n1 := encodeTypeAndAdditionalValue(e, byte(cborTypeByteString), uint64(len(data)))
+	n2, _ := e.Write(data)
+	return n1 + n2, nil
+}
+
 func getEncodeFunc(v reflect.Value) encodeFunc {
+	if reflect.PtrTo(v.Type()).Implements(typeBinaryMarshaler) {
+		if v.Type() == typeTime {
+			return encodeTime
+		}
+		return encodeBinaryMarshalerType
+	}
 	switch v.Kind() {
 	case reflect.Bool:
 		return encodeBool
@@ -403,9 +427,6 @@ func getEncodeFunc(v reflect.Value) encodeFunc {
 	case reflect.Map:
 		return encodeMap
 	case reflect.Struct:
-		if v.Type() == typeTime {
-			return encodeTime
-		}
 		return encodeStruct
 	case reflect.Ptr:
 		return encodePtr
@@ -465,6 +486,8 @@ func isEmptyValue(v reflect.Value) bool {
 // time.Time values encode as text strings specified in RFC3339 when
 // EncOptions.TimeRFC3339 is true; otherwise, time.Time values encode as
 // numerical representation of seconds since January 1, 1970 UTC.
+//
+// Values implementing encoding.BinaryMarshaler encode as CBOR byte strings.
 //
 // Marshal supports format string stored under the "cbor" key in the struct
 // field's tag.  CBOR format string can specify the name of the field, "omitempty"

@@ -5,7 +5,10 @@ package cbor_test
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
+	"errors"
+	"fmt"
 	"math"
 	"reflect"
 	"strings"
@@ -1417,5 +1420,107 @@ func TestUnmarshalStructTag4(t *testing.T) {
 	}
 	if !reflect.DeepEqual(v, want) {
 		t.Errorf("Unmarshal(0x%0x) = %+v (%T), want %+v (%T)", cborData, v, v, want, want)
+	}
+}
+
+type number uint64
+
+func (n number) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, 8)
+	binary.BigEndian.PutUint64(data, uint64(n))
+	return
+}
+
+func (n *number) UnmarshalBinary(data []byte) (err error) {
+	if len(data) != 8 {
+		return errors.New("number:UnmarshalBinary: invalid length")
+	}
+	*n = number(binary.BigEndian.Uint64(data))
+	return
+}
+
+type stru struct {
+	a, b, c string
+}
+
+func (s *stru) MarshalBinary() ([]byte, error) {
+	return []byte(fmt.Sprintf("%s,%s,%s", s.a, s.b, s.c)), nil
+}
+
+func (s *stru) UnmarshalBinary(data []byte) (err error) {
+	ss := strings.Split(string(data), ",")
+	if len(ss) != 3 {
+		return errors.New("stru:UnmarshalBinary: invalid element count")
+	}
+	s.a, s.b, s.c = ss[0], ss[1], ss[2]
+	return
+}
+
+func TestBinaryUnmarshal(t *testing.T) {
+	testCases := []struct {
+		name         string
+		obj          interface{}
+		wantCborData []byte
+	}{
+		{
+			name:         "primitive obj",
+			obj:          number(1234567890),
+			wantCborData: hexDecode("4800000000499602d2"),
+		},
+		{
+			name:         "struct obj",
+			obj:          stru{a: "a", b: "b", c: "c"},
+			wantCborData: hexDecode("45612C622C63"),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := cbor.Marshal(tc.obj, cbor.EncOptions{})
+			if err != nil {
+				t.Errorf("Marshal(%+v) returns error %v\n", tc.obj, err)
+			}
+			if !bytes.Equal(b, tc.wantCborData) {
+				t.Errorf("Marshal(%+v) = 0x%0x, want 0x%0x", tc.obj, b, tc.wantCborData)
+			}
+			v := reflect.New(reflect.TypeOf(tc.obj))
+			if err := cbor.Unmarshal(b, v.Interface()); err != nil {
+				t.Errorf("Unmarshal() returns error %v\n", err)
+			}
+			if !reflect.DeepEqual(tc.obj, v.Elem().Interface()) {
+				t.Errorf("Marshal-Unmarshal return different values: %v, %v\n", tc.obj, v.Elem().Interface())
+			}
+		})
+	}
+}
+
+func TestBinaryUnmarshalError(t *testing.T) {
+	testCases := []struct {
+		name         string
+		typ          reflect.Type
+		cborData     []byte
+		wantErrorMsg string
+	}{
+		{
+			name:         "primitive type",
+			typ:          reflect.TypeOf(number(0)),
+			cborData:     hexDecode("44499602d2"),
+			wantErrorMsg: "number:UnmarshalBinary: invalid length",
+		},
+		{
+			name:         "struct type",
+			typ:          reflect.TypeOf(stru{}),
+			cborData:     hexDecode("47612C622C632C64"),
+			wantErrorMsg: "stru:UnmarshalBinary: invalid element count",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			v := reflect.New(tc.typ)
+			if err := cbor.Unmarshal(tc.cborData, v.Interface()); err == nil {
+				t.Errorf("Unmarshal(0x%0x) doesn't return error, want error msg %s\n", tc.cborData, tc.wantErrorMsg)
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("Unmarshal(0x%0x) returns error %s, want %s", tc.cborData, err, tc.wantErrorMsg)
+			}
+		})
 	}
 }

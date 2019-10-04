@@ -4,6 +4,7 @@
 package cbor
 
 import (
+	"encoding"
 	"encoding/binary"
 	"errors"
 	"math"
@@ -15,7 +16,8 @@ import (
 )
 
 var (
-	typeTime = reflect.TypeOf(time.Time{})
+	typeTime              = reflect.TypeOf(time.Time{})
+	typeBinaryUnmarshaler = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
 )
 
 type cborType uint8
@@ -738,6 +740,16 @@ func fillFloat(t cborType, val float64, v reflect.Value) error {
 }
 
 func fillByteString(t cborType, val []byte, v reflect.Value) error {
+	if reflect.PtrTo(v.Type()).Implements(typeBinaryUnmarshaler) {
+		pv := reflect.New(v.Type())
+		pv.Elem().Set(v)
+		u := pv.Interface().(encoding.BinaryUnmarshaler)
+		if err := u.UnmarshalBinary(val); err != nil {
+			return err
+		}
+		v.Set(pv.Elem())
+		return nil
+	}
 	if v.Kind() == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8 {
 		v.SetBytes(val)
 		return nil
@@ -857,6 +869,9 @@ func isHashableKind(k reflect.Kind) bool {
 // string formatted in RFC3339.  To unmarshal a CBOR integer/float into a
 // time.Time value, Unmarshal creates an unix time with integer/float as seconds
 // and fractional seconds since January 1, 1970 UTC.
+//
+// Unmarshal decodes a CBOR byte string into a value implementing
+// encoding.BinaryUnmarshaler.
 //
 // If a CBOR value is not appropriate for a given Go type, or if a CBOR number
 // overflows the Go type, Unmarshal skips that field and completes the
