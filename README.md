@@ -19,7 +19,7 @@ This library is designed to be:
 
 ## Current status
 
-Oct 7, 2019: `cbor` v1.1 is released for Go 1.12+.  It passed 10+ hours of fuzzing and is ready for production use on linux_amd64.
+Oct 7, 2019: `cbor` v1.1 is released.  It passed 10+ hours of fuzzing on linux_amd64 with Go 1.12.  
 
 ## Size comparison
 
