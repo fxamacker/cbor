@@ -19,7 +19,7 @@ This library is designed to be:
 
 ## Current status
 
-Sept 29, 2019: `cbor` v1.0 is released for Go 1.12+.  It passed 10+ hours of fuzzing and is ready for production use on linux_amd64.
+Oct 7, 2019: `cbor` v1.1 is released for Go 1.12+.  It passed 10+ hours of fuzzing and is ready for production use on linux_amd64.
 
 ## Size comparison
 
@@ -47,6 +47,7 @@ Library size comparison (linux_amd64, Go 1.12):
 * Encode and decode nil slice/map/pointer/interface values correctly.
 * Encode and decode indefinite length bytes/string/array/map (["streaming"](https://tools.ietf.org/html/rfc7049#section-2.2)).
 * Encode and decode time.Time as RFC 3339 formatted text string or Unix time.
+* Support encoding.BinaryMarshaler and encoding.BinaryUnmarshaler interfaces.
 
 ## Standards 
 
