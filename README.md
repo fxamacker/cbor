@@ -5,45 +5,49 @@
 [![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/fxamacker/cbor)
 [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE)
 
-# cbor - CBOR encoding and decoding in Go
+# fxamacker/cbor - CBOR library in Go    
 
-CBOR is a concise binary alternative to JSON.  This library makes CBOR easy to use.
+CBOR is a concise binary alternative to JSON, and is specified in RFC 7049.
 
-This library is designed to be:
+fxamacker/cbor is designed to be:
 * __Easy__ -- idiomatic API like `encoding/json`.
-* __Safe and reliable__ -- no `unsafe` pkg, test coverage at 96%, and 10+ hrs of fuzzing with RFC 7049 tests as seed.
-* __Standards-compliant__ -- supports [RFC 7049](https://tools.ietf.org/html/rfc7049) and canonical CBOR encodings (both [RFC 7049](https://tools.ietf.org/html/rfc7049#section-3.9) and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)).
-* __Small and self-contained__ -- pkg compiles to under 0.5 MB with no external dependencies.
+* __Safe and reliable__ -- no `unsafe` pkg, coverage at 96%, and 10+ hrs of [fuzzing](https://github.com/fxamacker/cbor-fuzz) before each release.
+* __Standards-compliant__ -- supports [CBOR](https://tools.ietf.org/html/rfc7049), including canonical CBOR encodings ([RFC 7049](https://tools.ietf.org/html/rfc7049#section-3.9) and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)).
+* __Small and self-contained__ -- compiles to under 0.5 MB and has no external dependencies.
 
-`cbor` balances speed, safety (no `unsafe` pkg) and compiled size.  To keep size small, it doesn't use code generation.  For speed, it caches struct field types, bypasses `reflect` when appropriate, and uses `sync.Pool` to reuse transient objects.  
+fxamacker/cbor balances speed, safety, and compiled size.  To keep size small, it avoids code generation.  For safety, it avoids Go's `unsafe`. For speed, it uses safe optimizations: cache struct metadata, bypass `reflect` when appropriate, use `sync.Pool` to reuse transient objects, and etc.  
 
 ## Current status
 
-Oct 7, 2019: `cbor` v1.1 is released.  It passed 10+ hours of fuzzing on linux_amd64 with Go 1.12.  
+Version 1.x has:
+* __Stable API__ -- won't make breaking API changes.  
+* __Stable requirements__ -- won't require newer than Go 1.12.  
+* __Passed 30+ hrs of fuzzing__ -- v1.1.1 on linux_amd64 using prior corpus and [RFC 7049 tests](https://tools.ietf.org/html/rfc7049#appendix-A) as seed.
 
-## Size comparison
+Oct 18, 2019: Released v1.1.1 to improve encoding speed: slice 50%, struct 30%, and map 14%.  
 
-Program size comparison (linux_amd64, Go 1.12) doing the same CBOR encoding and decoding:
-- 2.6 MB program using fxamacker/cbor
-- 11.9 MB program using ugorji/go
+## Size comparisons (compiled for linux_amd64)
 
-Library size comparison (linux_amd64, Go 1.12):
-- 0.42 MB pkg -- fxamacker/cbor
-- 2.9 MB pkg -- ugorji/go without code generation (`go install --tags "notfastpath"`)
-- 5.7 MB pkg -- ugorji/go with code generation (default build)
+![alt text](https://user-images.githubusercontent.com/33205765/67167109-9cd09680-f35b-11e9-9ded-be6bc9a77c1a.png "Library and program size comparison chart")
+
+Program sizes (doing the same CBOR encoding and decoding):
+* 2.7 MB program -- fxamacker/cbor v1.1.1
+* 10.7 MB program -- ugorji/go v1.1.7 (without code generation)
+* 11.9 MB program -- ugorji/go v1.1.7 (default build)
+
+Library sizes:
+* 0.43 MB pkg -- fxamacker/cbor v1.1.1
+* 2.9 MB pkg -- ugorji/go v1.1.7 (without code generation) 
+* 5.7 MB pkg -- ugorji/go v1.1.7 (default build)
 
 ## Features
 
-* Idiomatic API as in `json` package.
-* No external dependencies.
-* No use of `unsafe` package.
-* Tested with [RFC 7049 test vectors](https://tools.ietf.org/html/rfc7049#appendix-A).
-* Test coverage at 96%, and fuzzed 10+ hours using [cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).
+* Idiomatic API like `encoding/json`.
 * Decode slices, maps, and structs in-place.
 * Decode into struct with field name case-insensitive match.
 * Support canonical CBOR encoding for map/struct.
 * Support both "cbor" and "json" keys for struct field format tags.
-* Encode anonymous struct fields by `json` package struct fields visibility rules.
+* Encode anonymous struct fields by `encoding/json` package struct fields visibility rules.
 * Encode and decode nil slice/map/pointer/interface values correctly.
 * Encode and decode indefinite length bytes/string/array/map (["streaming"](https://tools.ietf.org/html/rfc7049#section-2.2)).
 * Encode and decode time.Time as RFC 3339 formatted text string or Unix time.
@@ -58,7 +62,12 @@ It also supports canonical CBOR encodings (both [RFC 7049](https://tools.ietf.or
 ## Limitations
 
 * CBOR tags (type 6) are ignored.  Decoder simply decodes tagged data after ignoring the tags.
-* Signed integer values incompatible with Go's int64 are not supported.  So RFC 7049 test vectors incompatible with Go's int64 are skipped. For example, test result -18446744073709551616 can't fit into int64.
+* Signed integer values too big for Go's int64 are not supported.  So RFC 7049 test data -18446744073709551616 is skipped.
+
+## System requirements
+
+* Go 1.12 (or newer)
+* Tested and fuzzed on linux_amd64, but it should work on other platforms.
 
 ## Versions and API changes
 
@@ -104,7 +113,7 @@ go get github.com/fxamacker/cbor
 
 See [examples](example_test.go).
 
-Using decoder:
+Decoding:
 
 ```
 // create a decoder
@@ -122,12 +131,12 @@ err = dec.Decode(&stru)
 var m map[string]string
 err = dec.Decode(&m)
 
-// decode into primitives
+// decode into primitive
 var f float32
 err = dec.Decode(&f)
 ```
 
-Using encoder:
+Encoding:
 
 ```
 // create an encoder with canonical CBOR encoding enabled
@@ -139,7 +148,7 @@ err = enc.Encode(stru)
 // encode map
 err = enc.Encode(m)
 
-// encode primitives
+// encode primitive
 err = enc.Encode(f)
 ```
 
@@ -166,10 +175,10 @@ err = enc.Encode(4)
 // encode nested array element
 err = enc.Encode(5)
 
-// close nested indefinite length array
+// end nested indefinite length array
 err = enc.EndIndefinite()
 
-// close outer indefinite length array
+// end indefinite length array
 err = enc.EndIndefinite()
 ```
 
@@ -177,7 +186,7 @@ err = enc.EndIndefinite()
 
 See [bench_test.go](bench_test.go).
 
-`Unmarshal` benchmarks are made on CBOR data representing the following values:
+Benchmarks use data representing the following values:
 
 * Boolean: `true`
 * Positive integer: `18446744073709551615`
@@ -188,11 +197,9 @@ See [bench_test.go](bench_test.go).
 * Array: `[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]`
 * Map: `{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}}`
 
-`Marshal` benchmarks are made on Go values representing the same values.
+Benchmarks show that decoding into struct is >56% faster than decoding into map, and encoding struct is >74% faster than encoding map.  
 
-Benchmarks shows that decoding into struct is >56% faster than decoding into map, and encoding struct is >74% faster than encoding map.  
-
-`Unmarshal` Benchmark | Time | Bytes | Allocs 
+Decoding Benchmark | Time | Memory | Allocs 
 --- | ---: | ---: | ---:
 BenchmarkUnmarshal/CBOR_bool_to_Go_interface_{}-2 | 119 ns/op | 16 B/op | 1 allocs/op
 BenchmarkUnmarshal/CBOR_bool_to_Go_bool-2 | 66.8 ns/op | 1 B/op | 1 allocs/op
@@ -213,7 +220,7 @@ BenchmarkUnmarshal/CBOR_map_to_Go_map[string]interface_{}-2 | 3857 ns/op | 964 B
 BenchmarkUnmarshal/CBOR_map_to_Go_map[string]string-2 | 2647 ns/op | 741 B/op | 5 allocs/op
 BenchmarkUnmarshal/CBOR_map_to_Go_struct-2 | 1672 ns/op| 208 B/op | 1 allocs/op
 
-`Marshal` Benchmark | Time | Bytes | Allocs 
+Encoding Benchmark | Time | Memory | Allocs 
 --- | ---: | ---: | ---:
 BenchmarkMarshal/Go_bool_to_CBOR_bool-2 | 75.0 ns/op	| 1 B/op | 1 allocs/op
 BenchmarkMarshal/Go_uint64_to_CBOR_positive_int-2 | 86.1 ns/op | 16 B/op | 1 allocs/op
