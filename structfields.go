@@ -32,11 +32,14 @@ func fieldByIndex(v reflect.Value, index []int) (reflect.Value, error) {
 }
 
 type field struct {
-	name      string
-	idx       []int
-	typ       reflect.Type
-	tagged    bool // used to choose dominant field (at the same level tagged fields dominate untagged fields)
-	omitempty bool // used to skip empty field
+	name        string
+	idx         []int
+	typ         reflect.Type
+	ef          encodeFunc
+	cborName    [64]byte
+	cborNameLen int
+	tagged      bool // used to choose dominant field (at the same level tagged fields dominate untagged fields)
+	omitempty   bool // used to skip empty field
 }
 
 type fields []field
@@ -195,7 +198,7 @@ func getFields(typ reflect.Type) fields {
 				}
 
 				if !f.Anonymous || ft.Kind() != reflect.Struct || len(tagFieldName) > 0 {
-					flds = append(flds, field{name: fieldName, idx: idx, typ: ft, tagged: tagged, omitempty: omitempty})
+					flds = append(flds, field{name: fieldName, idx: idx, typ: f.Type, tagged: tagged, omitempty: omitempty})
 					continue
 				}
 
@@ -233,28 +236,53 @@ type structFields struct {
 }
 
 var (
-	cachedStructFields sync.Map
+	cachedStructFields         sync.Map
+	cachedEncodingStructFields sync.Map
 )
 
-func getStructFields(t reflect.Type, canonical bool) fields {
-	v, _ := cachedStructFields.Load(t)
-	if v == nil {
-		flds := getFields(t)
-
-		canonicalFields := make(fields, len(flds))
-		copy(canonicalFields, flds)
-		sort.Sort(byCanonicalRule{canonicalFields})
-
-		cachedStructFields.Store(t, structFields{typ: t, fields: flds, canonicalFields: canonicalFields})
-
-		if canonical {
-			return canonicalFields
-		}
-		return flds
+func getStructFields(t reflect.Type) fields {
+	if v, _ := cachedStructFields.Load(t); v != nil {
+		return v.(fields)
 	}
+	flds := getFields(t)
+	cachedStructFields.Store(t, flds)
+	return flds
+}
+
+func getEncodingStructFields(t reflect.Type, canonical bool) fields {
+	if v, _ := cachedEncodingStructFields.Load(t); v != nil {
+		if canonical {
+			return v.(structFields).canonicalFields
+		}
+		return v.(structFields).fields
+	}
+
+	fldsOrig := getStructFields(t)
+	flds := make(fields, len(fldsOrig))
+	copy(flds, fldsOrig)
+	for i := 0; i < len(flds); i++ {
+		flds[i].ef = getEncodeFunc(flds[i].typ)
+		nameLen := len(flds[i].name)
+		if nameLen <= 23 {
+			flds[i].cborName[0] = byte(cborTypeTextString) | byte(nameLen)
+			copy(flds[i].cborName[1:], flds[i].name)
+			flds[i].cborNameLen = 1 + nameLen
+		} else if nameLen <= 62 {
+			flds[i].cborName[0] = byte(cborTypeTextString) | byte(24)
+			flds[i].cborName[1] = byte(nameLen)
+			copy(flds[i].cborName[2:], flds[i].name)
+			flds[i].cborNameLen = 2 + nameLen
+		}
+	}
+
+	canonicalFields := make(fields, len(flds))
+	copy(canonicalFields, flds)
+	sort.Sort(byCanonicalRule{canonicalFields})
+
+	cachedEncodingStructFields.Store(t, structFields{typ: t, fields: flds, canonicalFields: canonicalFields})
 
 	if canonical {
-		return v.(structFields).canonicalFields
+		return canonicalFields
 	}
-	return v.(structFields).fields
+	return flds
 }

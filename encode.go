@@ -33,8 +33,8 @@ var (
 	cborNan              = []byte{0xf9, 0x7e, 0x00}
 	cborPositiveInfinity = []byte{0xf9, 0x7c, 0x00}
 	cborNegativeInfinity = []byte{0xf9, 0xfc, 0x00}
-	typeBinaryMarshaler  = reflect.TypeOf((*encoding.BinaryMarshaler)(nil)).Elem()
 )
+var typeBinaryMarshaler = reflect.TypeOf((*encoding.BinaryMarshaler)(nil)).Elem()
 
 // EncOptions specifies encoding options.
 type EncOptions struct {
@@ -86,8 +86,7 @@ func encode(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 		e.Write(cborNil)
 		return 1, nil
 	}
-
-	f := getEncodeFunc(v)
+	f := getEncodeFunc(v.Type())
 	if f == nil {
 		return 0, &UnsupportedTypeError{v.Type()}
 	}
@@ -199,14 +198,16 @@ func encodeArray(e *encodeState, v reflect.Value, opts EncOptions) (int, error) 
 	if v.Type().Elem().Kind() == reflect.Uint8 {
 		return encodeByteString(e, v, opts)
 	}
-
+	f := getEncodeFunc(v.Type().Elem())
+	if f == nil {
+		return 0, &UnsupportedTypeError{v.Type()}
+	}
 	if v.Len() == 0 {
 		return encodeTypeAndAdditionalValue(e, byte(cborTypeArray), uint64(0)), nil
 	}
-
 	n := encodeTypeAndAdditionalValue(e, byte(cborTypeArray), uint64(v.Len()))
 	for i := 0; i < v.Len(); i++ {
-		n1, err := encode(e, v.Index(i), opts)
+		n1, err := f(e, v.Index(i), opts)
 		if err != nil {
 			return 0, err
 		}
@@ -216,27 +217,32 @@ func encodeArray(e *encodeState, v reflect.Value, opts EncOptions) (int, error) 
 }
 
 func encodeMap(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+	if opts.Canonical {
+		return encodeMapCanonical(e, v, opts)
+	}
+	kf := getEncodeFunc(v.Type().Key())
+	ef := getEncodeFunc(v.Type().Elem())
+	if kf == nil || ef == nil {
+		return 0, &UnsupportedTypeError{v.Type()}
+	}
 	if v.IsNil() {
 		return e.Write(cborNil)
 	}
 	if v.Len() == 0 {
 		return encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(0)), nil
 	}
-	if opts.Canonical {
-		return encodeMapCanonical(e, v, opts)
-	}
 	n := encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(v.Len()))
 	iter := v.MapRange()
 	for iter.Next() {
-		kn, err := encode(e, iter.Key(), opts)
+		n1, err := kf(e, iter.Key(), opts)
 		if err != nil {
 			return 0, err
 		}
-		en, err := encode(e, iter.Value(), opts)
+		n2, err := ef(e, iter.Value(), opts)
 		if err != nil {
 			return 0, err
 		}
-		n += kn + en
+		n += n1 + n2
 	}
 	return n, nil
 }
@@ -286,18 +292,29 @@ func returnByCanonical(s *byCanonical) {
 }
 
 func encodeMapCanonical(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+	kf := getEncodeFunc(v.Type().Key())
+	ef := getEncodeFunc(v.Type().Elem())
+	if kf == nil || ef == nil {
+		return 0, &UnsupportedTypeError{v.Type()}
+	}
+	if v.IsNil() {
+		return e.Write(cborNil)
+	}
+	if v.Len() == 0 {
+		return encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(0)), nil
+	}
 	pairEncodeState := newEncodeState() // accumulated cbor encoded map key-value pairs
 	pairs := newByCanonical(v.Len())    // for sorting keys
 
 	iter := v.MapRange()
 	for iter.Next() {
-		n1, err := encode(pairEncodeState, iter.Key(), opts)
+		n1, err := kf(pairEncodeState, iter.Key(), opts)
 		if err != nil {
 			returnEncodeState(pairEncodeState)
 			returnByCanonical(pairs)
 			return 0, err
 		}
-		n2, err := encode(pairEncodeState, iter.Value(), opts)
+		n2, err := ef(pairEncodeState, iter.Value(), opts)
 		if err != nil {
 			returnEncodeState(pairEncodeState)
 			returnByCanonical(pairs)
@@ -326,11 +343,14 @@ func encodeMapCanonical(e *encodeState, v reflect.Value, opts EncOptions) (int, 
 }
 
 func encodeStruct(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
-	flds := getStructFields(v.Type(), opts.Canonical)
+	flds := getEncodingStructFields(v.Type(), opts.Canonical)
 
 	kve := newEncodeState() // encode key-value pairs based on struct field tag options
 	kvcount := 0
 	for _, f := range flds {
+		if f.ef == nil {
+			return 0, &UnsupportedTypeError{v.Type()}
+		}
 		fv, err := fieldByIndex(v, f.idx)
 		if err != nil {
 			returnEncodeState(kve)
@@ -339,8 +359,12 @@ func encodeStruct(e *encodeState, v reflect.Value, opts EncOptions) (int, error)
 		if !fv.IsValid() || (f.omitempty && isEmptyValue(fv)) {
 			continue
 		}
-		encodeStringInternal(kve, f.name, opts)
-		_, err = encode(kve, fv, opts)
+		if f.cborNameLen > 0 {
+			kve.Write(f.cborName[:f.cborNameLen])
+		} else {
+			encodeStringInternal(kve, f.name, opts)
+		}
+		_, err = f.ef(kve, fv, opts)
 		if err != nil {
 			returnEncodeState(kve)
 			return 0, err
@@ -349,17 +373,10 @@ func encodeStruct(e *encodeState, v reflect.Value, opts EncOptions) (int, error)
 	}
 
 	n := encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(kvcount))
-	n1, _ := e.Write(kve.Bytes())
+	n1, err := e.Write(kve.Bytes())
 
 	returnEncodeState(kve)
-	return n + n1, nil
-}
-
-func encodePtr(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
-	if v.IsNil() {
-		return e.Write(cborNil)
-	}
-	return encode(e, v.Elem(), opts)
+	return n + n1, err
 }
 
 func encodeIntf(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
@@ -402,14 +419,26 @@ func encodeBinaryMarshalerType(e *encodeState, v reflect.Value, opts EncOptions)
 	return n1 + n2, nil
 }
 
-func getEncodeFunc(v reflect.Value) encodeFunc {
-	if reflect.PtrTo(v.Type()).Implements(typeBinaryMarshaler) {
-		if v.Type() == typeTime {
+func getEncodeIndirectValueFunc(f encodeFunc) encodeFunc {
+	return func(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+		for v.Kind() == reflect.Ptr && !v.IsNil() {
+			v = v.Elem()
+		}
+		if v.Kind() == reflect.Ptr && v.IsNil() {
+			return e.Write(cborNil)
+		}
+		return f(e, v, opts)
+	}
+}
+
+func getEncodeFunc(t reflect.Type) encodeFunc {
+	if reflect.PtrTo(t).Implements(typeBinaryMarshaler) {
+		if t == typeTime {
 			return encodeTime
 		}
 		return encodeBinaryMarshalerType
 	}
-	switch v.Kind() {
+	switch t.Kind() {
 	case reflect.Bool:
 		return encodeBool
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -429,7 +458,14 @@ func getEncodeFunc(v reflect.Value) encodeFunc {
 	case reflect.Struct:
 		return encodeStruct
 	case reflect.Ptr:
-		return encodePtr
+		for t.Kind() == reflect.Ptr {
+			t = t.Elem()
+		}
+		f := getEncodeFunc(t)
+		if f == nil {
+			return f
+		}
+		return getEncodeIndirectValueFunc(f)
 	case reflect.Interface:
 		return encodeIntf
 	default:

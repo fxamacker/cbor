@@ -548,7 +548,7 @@ func (d *decodeState) parseMap(t cborType, count int, v reflect.Value) error {
 }
 
 func (d *decodeState) parseStruct(t cborType, count int, v reflect.Value) error {
-	flds := getStructFields(v.Type(), false)
+	flds := getStructFields(v.Type())
 
 	hasSize := count >= 0
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
@@ -602,7 +602,7 @@ func (d *decodeState) parseStruct(t cborType, count int, v reflect.Value) error 
 			if d.err == nil {
 				if typeError, ok := err.(*UnmarshalTypeError); ok {
 					typeError.Struct = v.Type().String()
-					typeError.Field = string(keyBytes)
+					typeError.Field = f.name
 					d.err = typeError
 				} else {
 					d.err = err

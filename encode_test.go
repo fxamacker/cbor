@@ -254,6 +254,10 @@ var exMarshalTests = []marshalTest{
 
 var marshalErrorTests = []marshalErrorTest{
 	{"channel can't be marshalled", make(chan bool), "cbor: unsupported type: chan bool"},
+	{"slice of channel can't be marshalled", make([]chan bool, 10), "cbor: unsupported type: []chan bool"},
+	{"slice of pointer to channel can't be marshalled", make([]*chan bool, 10), "cbor: unsupported type: []*chan bool"},
+	{"map of channel can't be marshalled", make(map[string]chan bool), "cbor: unsupported type: map[string]chan bool"},
+	{"struct of channel can't be marshalled", struct{ Chan chan bool }{}, "cbor: unsupported type: struct { Chan chan bool }"},
 	{"function can't be marshalled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
 	{"complex can't be marshalled", complex(100, 8), "cbor: unsupported type: complex128"},
 }
@@ -268,13 +272,24 @@ func TestInvalidTypeMarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			b, err := cbor.Marshal(&tc.value, cbor.EncOptions{})
 			if err == nil {
-				t.Errorf("Marshal(%v) doesn't return an error, want error %q", tc.value, tc.wantErrorMsg)
+				t.Errorf("Marshal(%v, cbor.EncOptions{}) doesn't return an error, want error %q", tc.value, tc.wantErrorMsg)
 			} else if _, ok := err.(*cbor.UnsupportedTypeError); !ok {
-				t.Errorf("Marshal(%v) error type %T, want *cbor.UnsupportedTypeError", tc.value, err)
+				t.Errorf("Marshal(%v, cbor.EncOptions{}) error type %T, want *cbor.UnsupportedTypeError", tc.value, err)
 			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Marshal(%v) error %s, want %s", tc.value, err, tc.wantErrorMsg)
+				t.Errorf("Marshal(%v, cbor.EncOptions{}) error %s, want %s", tc.value, err, tc.wantErrorMsg)
 			} else if b != nil {
-				t.Errorf("Marshal(%v) = 0x%0x, want nil", tc.value, b)
+				t.Errorf("Marshal(%v, cbor.EncOptions{}) = 0x%0x, want nil", tc.value, b)
+			}
+
+			b, err = cbor.Marshal(&tc.value, cbor.EncOptions{Canonical: true})
+			if err == nil {
+				t.Errorf("Marshal(%v, cbor.EncOptions{Canonical: true}) doesn't return an error, want error %q", tc.value, tc.wantErrorMsg)
+			} else if _, ok := err.(*cbor.UnsupportedTypeError); !ok {
+				t.Errorf("Marshal(%v, cbor.EncOptions{Canonical: true}) error type %T, want *cbor.UnsupportedTypeError", tc.value, err)
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("Marshal(%v, cbor.EncOptions{Canonical: true}) error %s, want %s", tc.value, err, tc.wantErrorMsg)
+			} else if b != nil {
+				t.Errorf("Marshal(%v, cbor.EncOptions{Canonical: true}) = 0x%0x, want nil", tc.value, b)
 			}
 		})
 	}
@@ -522,10 +537,13 @@ func TestMarshalStructCanonical(t *testing.T) {
 func testMarshal(t *testing.T, testCases []marshalTest) {
 	for _, tc := range testCases {
 		for _, value := range tc.values {
+			if _, err := cbor.Marshal(value, cbor.EncOptions{}); err != nil {
+				t.Errorf("Marshal(%v, cbor.EncOptions{}) returns error %v", value, err)
+			}
 			if b, err := cbor.Marshal(value, cbor.EncOptions{Canonical: true}); err != nil {
-				t.Errorf("Marshal(%v) returns error %v", value, err)
+				t.Errorf("Marshal(%v, cbor.EncOptions{Canonical: true}) returns error %v", value, err)
 			} else if !bytes.Equal(b, tc.cborData) {
-				t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", value, b, tc.cborData)
+				t.Errorf("Marshal(%v, cbor.EncOptions{Canonical: true}) = 0x%0x, want 0x%0x", value, b, tc.cborData)
 			}
 		}
 	}
@@ -1184,6 +1202,26 @@ func TestMarshalStructTag4(t *testing.T) {
 		C: "C",
 	}
 	want := hexDecode("a26161614161626142") // {"a":"A", "b":"B"}
+
+	if b, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true}); err != nil {
+		t.Errorf("Marshal(%+v) returns error %v", v, err)
+	} else if !bytes.Equal(b, want) {
+		t.Errorf("Marshal(%+v) = %v, want %v", v, b, want)
+	}
+}
+
+func TestMarshalStructLongFieldName(t *testing.T) {
+	type strc struct {
+		A string `cbor:"a"`
+		B string `cbor:"abcdefghijklmnopqrstuvwxyz"`
+		C string `cbor:"abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmn"`
+	}
+	v := strc{
+		A: "A",
+		B: "B",
+		C: "C",
+	}
+	want := hexDecode("a361616141781a6162636465666768696a6b6c6d6e6f707172737475767778797a614278426162636465666768696a6b6c6d6e6f707172737475767778797a6162636465666768696a6b6c6d6e6f707172737475767778797a6162636465666768696a6b6c6d6e6143") // {"a":"A", "abcdefghijklmnopqrstuvwxyz":"B", "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmn":"C"}
 
 	if b, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true}); err != nil {
 		t.Errorf("Marshal(%+v) returns error %v", v, err)
