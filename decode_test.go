@@ -1276,19 +1276,19 @@ func TestDecodeTime(t *testing.T) {
 			wantTime:        time.Time{},
 		},
 		{
-			name:            "time without fractional seconds",
+			name:            "time without fractional seconds", // positive integer
 			cborRFC3339Time: hexDecode("74323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    hexDecode("1a514b67b0"),
 			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
-			name:            "time with fractional seconds",
+			name:            "time with fractional seconds", // float
 			cborRFC3339Time: hexDecode("76323031332d30332d32315432303a30343a30302e355a"),
 			cborUnixTime:    hexDecode("fb41d452d9ec200000"),
 			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00.5Z"),
 		},
 		{
-			name:            "time before January 1, 1970 UTC without fractional seconds",
+			name:            "time before January 1, 1970 UTC without fractional seconds", // negative integer
 			cborRFC3339Time: hexDecode("74313936392d30332d32315432303a30343a30305a"),
 			cborUnixTime:    hexDecode("3a0177f2cf"),
 			wantTime:        parseTime(time.RFC3339Nano, "1969-03-21T20:04:00Z"),
@@ -1322,6 +1322,11 @@ func TestDecodeTimeError(t *testing.T) {
 			name:         "invalid RFC3339 time string",
 			cborData:     hexDecode("7f657374726561646d696e67ff"),
 			wantErrorMsg: "cbor: cannot set streaming for time.Time",
+		},
+		{
+			name:         "byte string data cannot be decoded into time.Time",
+			cborData:     hexDecode("4f013030303030303030e03031ed3030"),
+			wantErrorMsg: "cbor: cannot unmarshal byte string into Go value of type time.Time",
 		},
 	}
 	for _, tc := range testCases {

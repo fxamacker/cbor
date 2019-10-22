@@ -740,7 +740,7 @@ func fillFloat(t cborType, val float64, v reflect.Value) error {
 }
 
 func fillByteString(t cborType, val []byte, v reflect.Value) error {
-	if reflect.PtrTo(v.Type()).Implements(typeBinaryUnmarshaler) {
+	if v.Type() != typeTime && reflect.PtrTo(v.Type()).Implements(typeBinaryUnmarshaler) {
 		pv := reflect.New(v.Type())
 		pv.Elem().Set(v)
 		u := pv.Interface().(encoding.BinaryUnmarshaler)

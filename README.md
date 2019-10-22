@@ -7,12 +7,12 @@
 
 # fxamacker/cbor - CBOR library in Go    
 
-CBOR is a concise binary alternative to JSON, and is specified in RFC 7049.
+CBOR is a concise binary alternative to JSON, and is specified in [RFC 7049](https://tools.ietf.org/html/rfc7049).
 
 fxamacker/cbor is designed to be:
 * __Easy__ -- idiomatic API like `encoding/json`.
 * __Safe and reliable__ -- no `unsafe` pkg, coverage at 96%, and 10+ hrs of [fuzzing](https://github.com/fxamacker/cbor-fuzz) before each release.
-* __Standards-compliant__ -- supports [CBOR](https://tools.ietf.org/html/rfc7049), including canonical CBOR encodings ([RFC 7049](https://tools.ietf.org/html/rfc7049#section-3.9) and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)).
+* __Standards-compliant__ -- supports [CBOR](https://tools.ietf.org/html/rfc7049), including [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#section-3.9) (RFC 7049 and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)).
 * __Small and self-contained__ -- compiles to under 0.5 MB and has no external dependencies.
 
 fxamacker/cbor balances speed, safety, and compiled size.  To keep size small, it avoids code generation.  For safety, it avoids Go's `unsafe`. For speed, it uses safe optimizations: cache struct metadata, bypass `reflect` when appropriate, use `sync.Pool` to reuse transient objects, and etc.  
@@ -21,7 +21,7 @@ fxamacker/cbor balances speed, safety, and compiled size.  To keep size small, i
 
 Version 1.x has:
 * __Stable API__ -- won't make breaking API changes.  
-* __Stable requirements__ -- won't require newer than Go 1.12.  
+* __Stable requirements__ -- will always support Go v1.12.  
 * __Passed 30+ hrs of fuzzing__ -- v1.1.1 on linux_amd64 using prior corpus and [RFC 7049 tests](https://tools.ietf.org/html/rfc7049#appendix-A) as seed.
 
 Oct 18, 2019: Released v1.1.1 to improve encoding speed: slice 50%, struct 30%, and map 14%.  
@@ -57,7 +57,7 @@ Library sizes:
 
 This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049), with minor [limitations](#limitations).
 
-It also supports canonical CBOR encodings (both [RFC 7049](https://tools.ietf.org/html/rfc7049#section-3.9) and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)).  CTAP2 canonical CBOR encoding is used by [CTAP](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html) and [WebAuthn](https://www.w3.org/TR/webauthn/) in [FIDO2](https://fidoalliance.org/fido2/) framework.
+It also supports [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#section-3.9) (both RFC 7049 and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)).  CTAP2 canonical CBOR encoding is used by [CTAP](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html) and [WebAuthn](https://www.w3.org/TR/webauthn/) in [FIDO2](https://fidoalliance.org/fido2/) framework.
 
 ## Limitations
 
