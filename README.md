@@ -22,21 +22,23 @@ fxamacker/cbor balances speed, safety, and compiled size.  To keep size small, i
 Version 1.x has:
 * __Stable API__ -- won't make breaking API changes.  
 * __Stable requirements__ -- will always support Go v1.12.  
-* __Passed 30+ hrs of fuzzing__ -- v1.1.1 on linux_amd64 using prior corpus and [RFC 7049 tests](https://tools.ietf.org/html/rfc7049#appendix-A) as seed.
+* __Passed fuzzing__ -- v1.1.2 passed 24+ hours of fuzzing ([cbor-fuzz](https://github.com/fxamacker/cbor-fuzz)) on linux_amd64 using prior corpus and [RFC 7049 tests](https://tools.ietf.org/html/rfc7049#appendix-A) as seed.
+
+Oct 23, 2019: Released v1.1.2 to prevent an inappropriate use of BinaryUnmarshaler.
 
 Oct 18, 2019: Released v1.1.1 to improve encoding speed: slice 50%, struct 30%, and map 14%.  
 
 ## Size comparisons (compiled for linux_amd64)
 
-![alt text](https://user-images.githubusercontent.com/33205765/67167109-9cd09680-f35b-11e9-9ded-be6bc9a77c1a.png "Library and program size comparison chart")
+![alt text](https://user-images.githubusercontent.com/33205765/67440381-bcb3c480-f5be-11e9-9302-a3677d91a266.png "Library and program size comparison chart")
 
 Program sizes (doing the same CBOR encoding and decoding):
-* 2.7 MB program -- fxamacker/cbor v1.1.1
+* 2.7 MB program -- fxamacker/cbor v1.1.2
 * 10.7 MB program -- ugorji/go v1.1.7 (without code generation)
 * 11.9 MB program -- ugorji/go v1.1.7 (default build)
 
 Library sizes:
-* 0.43 MB pkg -- fxamacker/cbor v1.1.1
+* 0.43 MB pkg -- fxamacker/cbor v1.1.2
 * 2.9 MB pkg -- ugorji/go v1.1.7 (without code generation) 
 * 5.7 MB pkg -- ugorji/go v1.1.7 (default build)
 
