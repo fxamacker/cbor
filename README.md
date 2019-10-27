@@ -22,14 +22,15 @@ fxamacker/cbor balances speed, safety, and compiled size.  To keep size small, i
 Version 1.x has:
 * __Stable API__ -- won't make breaking API changes.  
 * __Stable requirements__ -- will always support Go v1.12.  
-* __Passed fuzzing__ -- v1.1.2 passed 24+ hours of fuzzing ([cbor-fuzz](https://github.com/fxamacker/cbor-fuzz)) on linux_amd64 using prior corpus and [RFC 7049 tests](https://tools.ietf.org/html/rfc7049#appendix-A) as seed.
+* __Passed fuzzing__ -- v1.1.2 passed 24+ hours of ([cbor-fuzz](https://github.com/fxamacker/cbor-fuzz)) using prior corpus and [RFC 7049 tests](https://tools.ietf.org/html/rfc7049#appendix-A) as seed.
 
 Oct 23, 2019: Released v1.1.2 to prevent an inappropriate use of BinaryUnmarshaler.
 
 Oct 18, 2019: Released v1.1.1 to improve encoding speed: slice 50%, struct 30%, and map 14%.  
 
-## Size comparisons (compiled for linux_amd64)
-
+## Size comparisons
+Libraries and programs were compiled for linux_amd64 using Go 1.12.
+ 
 ![alt text](https://user-images.githubusercontent.com/33205765/67440381-bcb3c480-f5be-11e9-9302-a3677d91a266.png "Library and program size comparison chart")
 
 Program sizes (doing the same CBOR encoding and decoding):
@@ -64,7 +65,7 @@ It also supports [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#
 ## Limitations
 
 * CBOR tags (type 6) are ignored.  Decoder simply decodes tagged data after ignoring the tags.
-* Signed integer values too big for Go's int64 are not supported.  So RFC 7049 test data -18446744073709551616 is skipped.
+* CBOR negative int (type 1) that cannot fit into Go's int64 are not supported.  So RFC 7049 test data -18446744073709551616 is skipped.
 
 ## System requirements
 
