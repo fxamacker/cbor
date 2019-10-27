@@ -140,7 +140,7 @@ func BenchmarkMarshal(b *testing.B) {
 			}
 			b.Run(name, func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true}); err != nil {
+					if _, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
 						b.Fatal("Marshal:", err)
 					}
 				}
@@ -157,7 +157,7 @@ func BenchmarkEncode(b *testing.B) {
 				name = "Go " + reflect.TypeOf(v).Kind().String() + " to CBOR " + bm.name
 			}
 			b.Run(name, func(b *testing.B) {
-				encoder := cbor.NewEncoder(ioutil.Discard, cbor.EncOptions{Canonical: true})
+				encoder := cbor.NewEncoder(ioutil.Discard, cbor.EncOptions{})
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
 					if err := encoder.Encode(v); err != nil {
@@ -171,7 +171,7 @@ func BenchmarkEncode(b *testing.B) {
 
 func BenchmarkEncodeStream(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		encoder := cbor.NewEncoder(ioutil.Discard, cbor.EncOptions{Canonical: true})
+		encoder := cbor.NewEncoder(ioutil.Discard, cbor.EncOptions{})
 		for i := 0; i < rounds; i++ {
 			for _, bm := range encodeBenchmarks {
 				for _, v := range bm.values {
