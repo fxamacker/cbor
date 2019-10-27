@@ -22,7 +22,7 @@ fxamacker/cbor balances speed, safety, and compiled size.  To keep size small, i
 Version 1.x has:
 * __Stable API__ -- won't make breaking API changes.  
 * __Stable requirements__ -- will always support Go v1.12.  
-* __Passed fuzzing__ -- v1.1.2 passed 24+ hours of ([cbor-fuzz](https://github.com/fxamacker/cbor-fuzz)) using prior corpus and [RFC 7049 tests](https://tools.ietf.org/html/rfc7049#appendix-A) as seed.
+* __Passed fuzzing__ -- v1.1.2 passed 24+ hours of [cbor-fuzz](https://github.com/fxamacker/cbor-fuzz) using prior corpus and [RFC 7049 tests](https://tools.ietf.org/html/rfc7049#appendix-A) as seed.
 
 Oct 23, 2019: Released v1.1.2 to prevent an inappropriate use of BinaryUnmarshaler.
 
