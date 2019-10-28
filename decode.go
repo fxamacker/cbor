@@ -549,6 +549,7 @@ func (d *decodeState) parseMap(t cborType, count int, v reflect.Value) error {
 
 func (d *decodeState) parseStruct(t cborType, count int, v reflect.Value) error {
 	flds := getStructFields(v.Type())
+	foundFlds := make([]bool, len(flds))
 
 	hasSize := count >= 0
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
@@ -569,12 +570,14 @@ func (d *decodeState) parseStruct(t cborType, count int, v reflect.Value) error 
 			d.skip() // skip value
 			continue
 		}
+		keyLen := len(keyBytes)
 
 		var f *field
 		for i := 0; i < len(flds); i++ {
 			// Find field with exact match
-			if len(flds[i].name) == len(keyBytes) && flds[i].name == string(keyBytes) {
+			if !foundFlds[i] && len(flds[i].name) == keyLen && flds[i].name == string(keyBytes) {
 				f = &flds[i]
+				foundFlds[i] = true
 				break
 			}
 		}
@@ -582,8 +585,9 @@ func (d *decodeState) parseStruct(t cborType, count int, v reflect.Value) error 
 			keyString := string(keyBytes)
 			for i := 0; i < len(flds); i++ {
 				// Find field with case-insensitive match
-				if len(flds[i].name) == len(keyString) && strings.EqualFold(flds[i].name, keyString) {
+				if !foundFlds[i] && len(flds[i].name) == keyLen && strings.EqualFold(flds[i].name, keyString) {
 					f = &flds[i]
+					foundFlds[i] = true
 					break
 				}
 			}

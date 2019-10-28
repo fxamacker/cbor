@@ -200,7 +200,7 @@ Benchmarks use data representing the following values:
 * Array: `[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]`
 * Map: `{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}}`
 
-Benchmarks show that decoding into struct is >56% faster than decoding into map, and encoding struct is >64% faster than encoding map.  
+Benchmarks show that decoding into struct is >66% faster than decoding into map, and encoding struct is >64% faster than encoding map.  
 
 Decoding Benchmark | Time | Memory | Allocs 
 --- | ---: | ---: | ---:
@@ -221,7 +221,7 @@ BenchmarkUnmarshal/CBOR_array_to_Go_[]int-2 | 1025 ns/op | 272 B/op | 3 allocs/o
 BenchmarkUnmarshal/CBOR_map_to_Go_interface_{}-2 | 3043 ns/op | 1420 B/op | 30 allocs/op
 BenchmarkUnmarshal/CBOR_map_to_Go_map[string]interface_{}-2 | 3857 ns/op | 964 B/op | 19 allocs/op
 BenchmarkUnmarshal/CBOR_map_to_Go_map[string]string-2 | 2647 ns/op | 741 B/op | 5 allocs/op
-BenchmarkUnmarshal/CBOR_map_to_Go_struct-2 | 1672 ns/op| 208 B/op | 1 allocs/op
+BenchmarkUnmarshal/CBOR_map_to_Go_struct-2 | 1274 ns/op| 224 B/op | 2 allocs/op
 
 Encoding Benchmark | Time | Memory | Allocs 
 --- | ---: | ---: | ---:
