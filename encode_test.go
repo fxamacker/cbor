@@ -546,6 +546,12 @@ func testMarshal(t *testing.T, testCases []marshalTest) {
 				t.Errorf("Marshal(%v, cbor.EncOptions{Canonical: true}) = 0x%0x, want 0x%0x", value, b, tc.cborData)
 			}
 		}
+		r := cbor.RawMessage(tc.cborData)
+		if b, err := cbor.Marshal(r, cbor.EncOptions{}); err != nil {
+			t.Errorf("Marshal(%v, cbor.EncOptions{}) returns error %v", r, err)
+		} else if !bytes.Equal(b, r) {
+			t.Errorf("Marshal(%v, cbor.EncOptions{}) returns %v, want %v", r, b, r)
+		}
 	}
 }
 
@@ -1227,5 +1233,97 @@ func TestMarshalStructLongFieldName(t *testing.T) {
 		t.Errorf("Marshal(%+v) returns error %v", v, err)
 	} else if !bytes.Equal(b, want) {
 		t.Errorf("Marshal(%+v) = %v, want %v", v, b, want)
+	}
+}
+
+func TestMarshalRawMessageValue(t *testing.T) {
+	type (
+		T1 struct {
+			M cbor.RawMessage `cbor:",omitempty"`
+		}
+		T2 struct {
+			M *cbor.RawMessage `cbor:",omitempty"`
+		}
+	)
+
+	var (
+		rawNil   = cbor.RawMessage(nil)
+		rawEmpty = cbor.RawMessage([]byte{})
+		raw      = cbor.RawMessage([]byte{0x01})
+	)
+
+	tests := []struct {
+		obj  interface{}
+		want []byte
+	}{
+		// Test with nil RawMessage.
+		{rawNil, []byte{0xf6}},
+		{&rawNil, []byte{0xf6}},
+		{[]interface{}{rawNil}, []byte{0x81, 0xf6}},
+		{&[]interface{}{rawNil}, []byte{0x81, 0xf6}},
+		{[]interface{}{&rawNil}, []byte{0x81, 0xf6}},
+		{&[]interface{}{&rawNil}, []byte{0x81, 0xf6}},
+		{struct{ M cbor.RawMessage }{rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{&struct{ M cbor.RawMessage }{rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{struct{ M *cbor.RawMessage }{&rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{&struct{ M *cbor.RawMessage }{&rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{map[string]interface{}{"M": rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{&map[string]interface{}{"M": rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{map[string]interface{}{"M": &rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{&map[string]interface{}{"M": &rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{T1{rawNil}, []byte{0xa0}},
+		{T2{&rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{&T1{rawNil}, []byte{0xa0}},
+		{&T2{&rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+
+		// Test with empty, but non-nil, RawMessage.
+		{rawEmpty, []byte{0xf6}},
+		{&rawEmpty, []byte{0xf6}},
+		{[]interface{}{rawEmpty}, []byte{0x81, 0xf6}},
+		{&[]interface{}{rawEmpty}, []byte{0x81, 0xf6}},
+		{[]interface{}{&rawEmpty}, []byte{0x81, 0xf6}},
+		{&[]interface{}{&rawEmpty}, []byte{0x81, 0xf6}},
+		{struct{ M cbor.RawMessage }{rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{&struct{ M cbor.RawMessage }{rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{struct{ M *cbor.RawMessage }{&rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{&struct{ M *cbor.RawMessage }{&rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{map[string]interface{}{"M": rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{&map[string]interface{}{"M": rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{map[string]interface{}{"M": &rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{&map[string]interface{}{"M": &rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{T1{rawEmpty}, []byte{0xa0}},
+		{T2{&rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{&T1{rawEmpty}, []byte{0xa0}},
+		{&T2{&rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+
+		// Test with RawMessage with some data.
+		{raw, []byte{0x01}},
+		{&raw, []byte{0x01}},
+		{[]interface{}{raw}, []byte{0x81, 0x01}},
+		{&[]interface{}{raw}, []byte{0x81, 0x01}},
+		{[]interface{}{&raw}, []byte{0x81, 0x01}},
+		{&[]interface{}{&raw}, []byte{0x81, 0x01}},
+		{struct{ M cbor.RawMessage }{raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
+		{&struct{ M cbor.RawMessage }{raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
+		{struct{ M *cbor.RawMessage }{&raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
+		{&struct{ M *cbor.RawMessage }{&raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
+		{map[string]interface{}{"M": raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
+		{&map[string]interface{}{"M": raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
+		{map[string]interface{}{"M": &raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
+		{&map[string]interface{}{"M": &raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
+		{T1{raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
+		{T2{&raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
+		{&T1{raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
+		{&T2{&raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
+	}
+
+	for _, tc := range tests {
+		b, err := cbor.Marshal(tc.obj, cbor.EncOptions{})
+		if err != nil {
+			t.Errorf("Marshal(%+v) returns error %v", tc.obj, err)
+		}
+		if !bytes.Equal(b, tc.want) {
+			t.Errorf("Marshal(%+v) = 0x%0x, want 0x%0x", tc.obj, b, tc.want)
+		}
 	}
 }

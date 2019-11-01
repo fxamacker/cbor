@@ -345,3 +345,55 @@ func TestEncoderStructTag(t *testing.T) {
 		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
 	}
 }
+
+func TestRawMessage(t *testing.T) {
+	type strc struct {
+		A cbor.RawMessage  `cbor:"a"`
+		B *cbor.RawMessage `cbor:"b"`
+		C *cbor.RawMessage `cbor:"c"`
+	}
+	cborData := hexDecode("a361610161628202036163f6") // {"a": 1, "b": [2, 3], "c": nil},
+	r := cbor.RawMessage(hexDecode("820203"))
+	want := strc{
+		A: cbor.RawMessage([]byte{0x01}),
+		B: &r,
+	}
+	var v strc
+	if err := cbor.Unmarshal(cborData, &v); err != nil {
+		t.Fatalf("Unmarshal(0x%0x) returns error %s", cborData, err)
+	}
+	if !reflect.DeepEqual(v, want) {
+		t.Errorf("Unmarshal(0x%0x) returns v %v, want %v", cborData, v, want)
+	}
+	b, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true})
+	if err != nil {
+		t.Fatalf("Marshal(%+v) returns error %s\n", v, err)
+	}
+	if !bytes.Equal(b, cborData) {
+		t.Errorf("Marshal(%+v) = 0x%0x, want 0x%0x", v, b, cborData)
+	}
+}
+
+func TestNullRawMessage(t *testing.T) {
+	r := cbor.RawMessage(nil)
+	wantCborData := []byte{0xf6}
+	b, err := cbor.Marshal(r, cbor.EncOptions{})
+	if err != nil {
+		t.Errorf("Marshal(%+v) returns error %v\n", r, err)
+	}
+	if !bytes.Equal(b, wantCborData) {
+		t.Errorf("Marshal(%+v) = 0x%0x, want 0x%0x", r, b, wantCborData)
+	}
+}
+
+func TestEmptyRawMessage(t *testing.T) {
+	var r cbor.RawMessage
+	wantCborData := []byte{0xf6}
+	b, err := cbor.Marshal(r, cbor.EncOptions{})
+	if err != nil {
+		t.Errorf("Marshal(%+v) returns error %v\n", r, err)
+	}
+	if !bytes.Equal(b, wantCborData) {
+		t.Errorf("Marshal(%+v) = 0x%0x, want 0x%0x", r, b, wantCborData)
+	}
+}

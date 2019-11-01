@@ -34,7 +34,16 @@ var (
 	cborPositiveInfinity = []byte{0xf9, 0x7c, 0x00}
 	cborNegativeInfinity = []byte{0xf9, 0xfc, 0x00}
 )
-var typeBinaryMarshaler = reflect.TypeOf((*encoding.BinaryMarshaler)(nil)).Elem()
+var (
+	typeMarshaler       = reflect.TypeOf((*Marshaler)(nil)).Elem()
+	typeBinaryMarshaler = reflect.TypeOf((*encoding.BinaryMarshaler)(nil)).Elem()
+)
+
+// Marshaler is the interface implemented by types that can marshal themselves
+// into valid CBOR.
+type Marshaler interface {
+	MarshalCBOR() ([]byte, error)
+}
 
 // EncOptions specifies encoding options.
 type EncOptions struct {
@@ -419,6 +428,20 @@ func encodeBinaryMarshalerType(e *encodeState, v reflect.Value, opts EncOptions)
 	return n1 + n2, nil
 }
 
+func encodeMarshalerType(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+	u, ok := v.Interface().(Marshaler)
+	if !ok {
+		pv := reflect.New(v.Type())
+		pv.Elem().Set(v)
+		u = pv.Interface().(Marshaler)
+	}
+	data, err := u.MarshalCBOR()
+	if err != nil {
+		return 0, err
+	}
+	return e.Write(data)
+}
+
 func getEncodeIndirectValueFunc(f encodeFunc) encodeFunc {
 	return func(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 		for v.Kind() == reflect.Ptr && !v.IsNil() {
@@ -432,6 +455,9 @@ func getEncodeIndirectValueFunc(f encodeFunc) encodeFunc {
 }
 
 func getEncodeFunc(t reflect.Type) encodeFunc {
+	if reflect.PtrTo(t).Implements(typeMarshaler) {
+		return encodeMarshalerType
+	}
 	if reflect.PtrTo(t).Implements(typeBinaryMarshaler) {
 		if t == typeTime {
 			return encodeTime
@@ -523,7 +549,9 @@ func isEmptyValue(v reflect.Value) bool {
 // EncOptions.TimeRFC3339 is true; otherwise, time.Time values encode as
 // numerical representation of seconds since January 1, 1970 UTC.
 //
-// Values implementing encoding.BinaryMarshaler encode as CBOR byte strings.
+// If value implements the Marshaler interface, Marshal calls its MarshalCBOR
+// method.  If value implements encoding.BinaryMarshaler instead, Marhsal
+// calls its MarshalBinary method and encode it as CBOR byte string.
 //
 // Marshal supports format string stored under the "cbor" key in the struct
 // field's tag.  CBOR format string can specify the name of the field, "omitempty"

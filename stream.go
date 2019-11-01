@@ -16,6 +16,28 @@ var cborIndefiniteHeader = map[cborType][]byte{
 	cborTypeMap:        {0xbf},
 }
 
+// RawMessage is a raw encoded CBOR value. It implements Marshaler and
+// Unmarshaler interfaces and can be used to delay CBOR decoding or
+// precompute a CBOR encoding.
+type RawMessage []byte
+
+// MarshalCBOR returns m as the CBOR encoding of m.
+func (m RawMessage) MarshalCBOR() ([]byte, error) {
+	if len(m) == 0 {
+		return cborNil, nil
+	}
+	return m, nil
+}
+
+// UnmarshalCBOR sets *m to a copy of data.
+func (m *RawMessage) UnmarshalCBOR(data []byte) error {
+	if m == nil {
+		return errors.New("cbor.RawMessage: UnmarshalCBOR on nil pointer")
+	}
+	*m = append((*m)[0:0], data...)
+	return nil
+}
+
 // Decoder reads and decodes CBOR values from an input stream.
 type Decoder struct {
 	r         io.Reader

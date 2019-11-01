@@ -17,6 +17,7 @@ import (
 
 var (
 	typeTime              = reflect.TypeOf(time.Time{})
+	typeUnmarshaler       = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
 	typeBinaryUnmarshaler = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
 )
 
@@ -91,6 +92,14 @@ func (e *UnmarshalTypeError) Error() string {
 		s += " (" + e.errMsg + ")"
 	}
 	return s
+}
+
+// Unmarshaler is the interface implemented by types that can unmarshal a CBOR
+// representation of themselves.  The input can be assumed to be a valid encoding
+// of a CBOR value. UnmarshalCBOR must copy the CBOR data if it wishes to retain
+// the data after returning.
+type Unmarshaler interface {
+	UnmarshalCBOR([]byte) error
 }
 
 type decodeState struct {
@@ -184,20 +193,30 @@ func (d *decodeState) parse(v reflect.Value) (err error) {
 		return nil
 	}
 
-	// Process cbor nil/undefined.
-	if d.data[d.offset] == 0xf6 || d.data[d.offset] == 0xf7 {
-		d.offset++
-		return fillNil(cborTypePrimitives, v)
+	// Create new value for the pointer v to point to if CBOR value is not nil/undefined.
+	if d.data[d.offset] != 0xf6 && d.data[d.offset] != 0xf7 {
+		for v.Kind() == reflect.Ptr {
+			if v.IsNil() {
+				if !v.CanSet() {
+					return errors.New("cbor: cannot set new value for " + v.Type().String())
+				}
+				v.Set(reflect.New(v.Type().Elem()))
+			}
+			v = v.Elem()
+		}
 	}
 
-	for v.Kind() == reflect.Ptr {
-		if v.IsNil() {
-			if !v.CanSet() {
-				return errors.New("cbor: cannot set new value for " + v.Type().String())
-			}
-			v.Set(reflect.New(v.Type().Elem()))
+	if reflect.PtrTo(v.Type()).Implements(typeUnmarshaler) {
+		pv := reflect.New(v.Type())
+		pv.Elem().Set(v)
+		u := pv.Interface().(Unmarshaler)
+		start := d.offset
+		d.skip()
+		if err := u.UnmarshalCBOR(d.data[start:d.offset]); err != nil {
+			return err
 		}
-		v = v.Elem()
+		v.Set(pv.Elem())
+		return nil
 	}
 
 	// Process byte/text string.
@@ -231,6 +250,8 @@ func (d *decodeState) parse(v reflect.Value) (err error) {
 		switch ai {
 		case 20, 21:
 			return fillBool(t, ai == 21, v)
+		case 22, 23:
+			return fillNil(t, v)
 		case 24:
 			return fillPositiveInt(t, uint64(val), v)
 		case 25:
@@ -281,11 +302,6 @@ func (d *decodeState) parse(v reflect.Value) (err error) {
 
 // parseInterface assumes data is well-formed, and does not perform bounds checking.
 func (d *decodeState) parseInterface() (_ interface{}, err error) {
-	if d.data[d.offset] == 0xf6 || d.data[d.offset] == 0xf7 {
-		d.offset++
-		return nil, nil
-	}
-
 	// Process byte/text string.
 	t := cborType(d.data[d.offset] & 0xE0)
 	if t == cborTypeByteString {
@@ -316,6 +332,8 @@ func (d *decodeState) parseInterface() (_ interface{}, err error) {
 		switch ai {
 		case 20, 21:
 			return (ai == 21), nil
+		case 22, 23:
+			return nil, nil
 		case 24:
 			return uint64(val), nil
 		case 25:
@@ -873,6 +891,9 @@ func isHashableKind(k reflect.Kind) bool {
 // string formatted in RFC3339.  To unmarshal a CBOR integer/float into a
 // time.Time value, Unmarshal creates an unix time with integer/float as seconds
 // and fractional seconds since January 1, 1970 UTC.
+//
+// To unmarshal CBOR into a value implementing the Unmarshaler interface,
+// Unmarshal calls that value's UnmarshalCBOR method.
 //
 // Unmarshal decodes a CBOR byte string into a value implementing
 // encoding.BinaryUnmarshaler.
