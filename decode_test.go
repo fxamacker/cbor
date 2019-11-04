@@ -151,7 +151,7 @@ var unmarshalTests = []unmarshalTest{
 		[]interface{}{int16(-1000), int32(-1000), int64(-1000), int(-1000)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeFloat32, typeFloat64, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
-	//{"3bffffffffffffffff", int64(-18446744073709551616)}, // value overflows int64
+	//{"3bffffffffffffffff", int64(-18446744073709551616)}, // CBOR value -18446744073709551616 overflows Go's int64, see TestNegIntOverflow
 	// byte string
 	{
 		hexDecode("40"),
@@ -704,6 +704,25 @@ func TestUnmarshalFloat(t *testing.T) {
 			} else if !strings.Contains(err.Error(), "cannot unmarshal") {
 				t.Errorf("Unmarshal(0x%0x) returns error %s, want error containing %q", tc.cborData, err.Error(), "cannot unmarshal")
 			}
+		}
+	}
+}
+
+func TestNegIntOverflow(t *testing.T) {
+	testCases := []struct {
+		cborData []byte
+		v        interface{}
+	}{
+		{hexDecode("3bffffffffffffffff"), new(interface{})},
+		{hexDecode("3bffffffffffffffff"), new(int64)},
+	}
+	for _, tc := range testCases {
+		if err := cbor.Unmarshal(tc.cborData, tc.v); err == nil {
+			t.Errorf("Unmarshal(0x%0x) returns no error, %v (%T), want (*cbor.UnmarshalTypeError)", tc.cborData, tc.v, tc.v)
+		} else if _, ok := err.(*cbor.UnmarshalTypeError); !ok {
+			t.Errorf("Unmarshal(0x%0x) returns wrong error %T, want (*cbor.UnmarshalTypeError)", tc.cborData, err)
+		} else if !strings.Contains(err.Error(), "cannot unmarshal") {
+			t.Errorf("Unmarshal(0x%0x) returns error %s, want error containing %q", tc.cborData, err, "cannot unmarshal")
 		}
 	}
 }

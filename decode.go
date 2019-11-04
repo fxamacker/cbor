@@ -239,6 +239,9 @@ func (d *decodeState) parse(v reflect.Value) (err error) {
 	case cborTypePositiveInt:
 		return fillPositiveInt(t, val, v)
 	case cborTypeNegativeInt:
+		if val > math.MaxInt64 {
+			return &UnmarshalTypeError{Value: t.String(), Type: v.Type(), errMsg: "-1-" + strconv.FormatUint(val, 10) + " overflows Go's int64"}
+		}
 		nValue := int64(-1) ^ int64(val)
 		return fillNegativeInt(t, nValue, v)
 	case cborTypeTag:
@@ -321,6 +324,9 @@ func (d *decodeState) parseInterface() (_ interface{}, err error) {
 	case cborTypePositiveInt:
 		return val, nil
 	case cborTypeNegativeInt:
+		if val > math.MaxInt64 {
+			return nil, &UnmarshalTypeError{Value: t.String(), Type: reflect.TypeOf([]interface{}(nil)).Elem(), errMsg: "-1-" + strconv.FormatUint(val, 10) + " overflows Go's int64"}
+		}
 		nValue := int64(-1) ^ int64(val)
 		return nValue, nil
 	case cborTypeTag:
