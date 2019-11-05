@@ -1734,3 +1734,21 @@ func TestMarshalCBORError(t *testing.T) {
 		t.Errorf("Marshal(%+v) returns error %s, want %s", v, err, wantErrorMsg)
 	}
 }
+
+// Found at https://github.com/oasislabs/oasis-core/blob/master/go/common/cbor/cbor_test.go
+func TestOutOfMem1(t *testing.T) {
+	cborData := []byte("\x9b\x00\x00000000")
+	var f []byte
+	if err := cbor.Unmarshal(cborData, &f); err == nil {
+		t.Errorf("Unmarshal(0x%0x) doesn't return error", cborData)
+	}
+}
+
+// Found at https://github.com/oasislabs/oasis-core/blob/master/go/common/cbor/cbor_test.go
+func TestOutOfMem2(t *testing.T) {
+	cborData := []byte("\x9b\x00\x00\x81112233")
+	var f []byte
+	if err := cbor.Unmarshal(cborData, &f); err == nil {
+		t.Errorf("Unmarshal(0x%0x) doesn't return error", cborData)
+	}
+}
