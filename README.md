@@ -54,7 +54,9 @@ Library sizes:
 * Encode and decode nil slice/map/pointer/interface values correctly.
 * Encode and decode indefinite length bytes/string/array/map (["streaming"](https://tools.ietf.org/html/rfc7049#section-2.2)).
 * Encode and decode time.Time as RFC 3339 formatted text string or Unix time.
-* Support encoding.BinaryMarshaler and encoding.BinaryUnmarshaler interfaces.
+* v1.1 -- Support `encoding.BinaryMarshaler` and `encoding.BinaryUnmarshaler` interfaces.
+* v1.2 -- `cbor.RawMessage` can delay CBOR decoding or precompute CBOR encoding.
+* v1.2 -- User-defined types can have custom CBOR encoding and decoding by implementing `cbor.Marshaler` and `cbor.Unmarshaler` interfaces. 
 
 ## Standards 
 
@@ -65,7 +67,8 @@ It also supports [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#
 ## Limitations
 
 * CBOR tags (type 6) are ignored.  Decoder simply decodes tagged data after ignoring the tags.
-* CBOR negative int (type 1) that cannot fit into Go's int64 are not supported.  So RFC 7049 test data -18446744073709551616 is skipped.
+* CBOR negative int (type 1) that cannot fit into Go's int64 are not supported, such as RFC 7049 test data -18446744073709551616.  Decoding these values returns `cbor.UnmarshalTypeError`.
+* CBOR `undefined` value (0xf7) decodes to Go's `nil` value.  However, Go's `nil` value encodes to CBOR `Null` value (0xf6).
 
 ## System requirements
 
@@ -100,9 +103,12 @@ type Encoder struct{ ... }
     func (enc *Encoder) StartIndefiniteMap() error
     func (enc *Encoder) EndIndefinite() error
 type InvalidUnmarshalError struct{ ... }
+type Marshaler interface{ ... }
+type RawMessage []byte
 type SemanticError struct{ ... }
 type SyntaxError struct{ ... }
 type UnmarshalTypeError struct{ ... }
+type Unmarshaler interface{ ... }
 type UnsupportedTypeError struct{ ... }
 ```
 
@@ -234,6 +240,10 @@ BenchmarkMarshal/Go_string_to_CBOR_text-2 | 105 ns/op | 48 B/op | 1 allocs/op
 BenchmarkMarshal/Go_[]int_to_CBOR_array-2 | 561 ns/op | 32 B/op	| 1 allocs/op
 BenchmarkMarshal/Go_map[string]string_to_CBOR_map-2 | 2181 ns/op | 576 B/op | 28 allocs/op
 BenchmarkMarshal/Go_struct_to_CBOR_map-2 | 780 ns/op | 64 B/op | 1 allocs/op
+
+## Code of Conduct 
+
+This project has adopted the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).  Contact [faye.github@gmail.com](mailto:faye.github@gmail.com) with any questions or comments.
 
 ## License 
 
