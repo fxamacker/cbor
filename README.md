@@ -208,6 +208,10 @@ err = enc.EndIndefinite()
 
 ## Benchmarks
 
+Benchmarks data show:
+* decoding into struct is >66% faster than decoding into map.
+* encoding struct is >63% faster than encoding map.
+
 See [Benchmarks for fxamacker/cbor](BENCHMARKS.md).
 
 ## Code of Conduct 

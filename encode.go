@@ -455,6 +455,16 @@ func getEncodeIndirectValueFunc(f encodeFunc) encodeFunc {
 }
 
 func getEncodeFunc(t reflect.Type) encodeFunc {
+	if t.Kind() == reflect.Ptr {
+		for t.Kind() == reflect.Ptr {
+			t = t.Elem()
+		}
+		f := getEncodeFunc(t)
+		if f == nil {
+			return f
+		}
+		return getEncodeIndirectValueFunc(f)
+	}
 	if reflect.PtrTo(t).Implements(typeMarshaler) {
 		return encodeMarshalerType
 	}
@@ -483,15 +493,6 @@ func getEncodeFunc(t reflect.Type) encodeFunc {
 		return encodeMap
 	case reflect.Struct:
 		return encodeStruct
-	case reflect.Ptr:
-		for t.Kind() == reflect.Ptr {
-			t = t.Elem()
-		}
-		f := getEncodeFunc(t)
-		if f == nil {
-			return f
-		}
-		return getEncodeIndirectValueFunc(f)
 	case reflect.Interface:
 		return encodeIntf
 	default:

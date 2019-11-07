@@ -32,14 +32,15 @@ func fieldByIndex(v reflect.Value, index []int) (reflect.Value, error) {
 }
 
 type field struct {
-	name        string
-	idx         []int
-	typ         reflect.Type
-	ef          encodeFunc
-	cborName    [64]byte
-	cborNameLen int
-	tagged      bool // used to choose dominant field (at the same level tagged fields dominate untagged fields)
-	omitempty   bool // used to skip empty field
+	name          string
+	idx           []int
+	typ           reflect.Type
+	isUnmarshaler bool
+	ef            encodeFunc
+	cborName      [64]byte
+	cborNameLen   int
+	tagged        bool // used to choose dominant field (at the same level tagged fields dominate untagged fields)
+	omitempty     bool // used to skip empty field
 }
 
 type fields []field
@@ -245,6 +246,9 @@ func getStructFields(t reflect.Type) fields {
 		return v.(fields)
 	}
 	flds := getFields(t)
+	for i := 0; i < len(flds); i++ {
+		flds[i].isUnmarshaler = implementsUnmarshaler(flds[i].typ)
+	}
 	cachedStructFields.Store(t, flds)
 	return flds
 }
