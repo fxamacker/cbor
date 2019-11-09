@@ -37,10 +37,6 @@ Version 1.x has:
 
 Nov 05, 2019: Released v1.2 to add RawMessage type, Marshaler and Unmarshaler interfaces.
 
-Oct 23, 2019: Released v1.1.2 to prevent an inappropriate use of BinaryUnmarshaler.
-
-Oct 18, 2019: Released v1.1.1 to improve encoding speed: slice 50%, struct 30%, and map 14%.  
-
 ## Size Comparisons
 
 Libraries and programs were compiled for linux_amd64 using Go 1.12.
