@@ -7,15 +7,26 @@
 
 # fxamacker/cbor - CBOR library in Go    
 
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/57072051/68534996-13303b00-0301-11ea-81f9-7af3020b154f.png" alt="Image of design goals with checkboxes">
+</p>
+
 CBOR is a concise binary alternative to JSON, and is specified in [RFC 7049](https://tools.ietf.org/html/rfc7049).
 
-fxamacker/cbor is designed to be:
-* __Easy__ -- idiomatic API like `encoding/json`.
-* __Safe and reliable__ -- no `unsafe` pkg, coverage >95%, and 10+ hrs of [fuzzing](https://github.com/fxamacker/cbor-fuzz) before each release.
-* __Standards-compliant__ -- supports [CBOR](https://tools.ietf.org/html/rfc7049), including [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#section-3.9) (RFC 7049 and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)).
-* __Small and self-contained__ -- compiles to under 0.5 MB and has no external dependencies.
+This CBOR library makes using CBOR as easy as using Go's ```encoding/json```.
 
-fxamacker/cbor balances speed, safety, and compiled size.  To keep size small, it avoids code generation.  For safety, it avoids Go's `unsafe`. For speed, it uses safe optimizations: cache struct metadata, bypass `reflect` when appropriate, use `sync.Pool` to reuse transient objects, and etc.  
+It’s small enough for IoT projects.  And it prioritizes safety because software shouldn’t crash or get exploited while decoding malformed or malicious CBOR data.
+
+Install with ```go get github.com/fxamacker/cbor``` and use it like Go's ```encoding/json```.  It supports `` `json:"name"` `` keys!
+
+## Design Goals ##
+This CBOR library is designed to be:
+* __Easy__ -- idiomatic API like `encoding/json` to reduce learning curve.
+* __Safe and reliable__ -- no `unsafe` pkg, coverage >95%, passes [fuzzing](#fuzzing-and-code-coverage) before each release, and etc.
+* __Small and self-contained__ -- compiles to under 0.5 MB and has no external dependencies.
+* __Standards-compliant__ -- supports [CBOR](https://tools.ietf.org/html/rfc7049), including [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#section-3.9) (RFC 7049 and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)) with minor [limitations](#limitations).
+
+fxamacker/cbor balances speed, safety, and compiled size.  To keep size small, it avoids code generation.  For safety, it avoids Go's `unsafe`. For speed, it uses **safe optimizations**: cache struct metadata, bypass `reflect` when appropriate, use `sync.Pool` to reuse transient objects, and etc.  
 
 ## Current Status
 
@@ -24,11 +35,7 @@ Version 1.x has:
 * __Stable requirements__ -- will always support Go v1.12.  
 * __Passed fuzzing__ -- v1.2 passed 42 hours of [cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
 
-Nov 05, 2019: Released v1.2 to add RawMessage type, Marshaler and Unmarshaler interfaces.
-
-Oct 23, 2019: Released v1.1.2 to prevent an inappropriate use of BinaryUnmarshaler.
-
-Oct 18, 2019: Released v1.1.1 to improve encoding speed: slice 50%, struct 30%, and map 14%.  
+Nov 05, 2019: v1.2 adds RawMessage type, Marshaler and Unmarshaler interfaces.  Passed 42+ hrs of fuzzing.
 
 ## Size Comparisons
 
@@ -63,7 +70,7 @@ Library sizes:
 
 ## Fuzzing and Code Coverage
 
-Fuzzing uses [cbor-fuzz](https://github.com/fxamacker/cbor-fuzz) before each release.  Default corpus has:
+Each release passes coverage-guided fuzzing using [fxamacker/cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  Default corpus has:
 * 2 files related to WebAuthn (FIDO U2F key).
 * 17 files with [COSE examples (RFC 8152 Appendix B & C)](https://github.com/cose-wg/Examples/tree/master/RFC8152).
 * 82 files with [CBOR examples (RFC 7049 Appendix A) ](https://tools.ietf.org/html/rfc7049#appendix-A).
@@ -71,7 +78,9 @@ Fuzzing uses [cbor-fuzz](https://github.com/fxamacker/cbor-fuzz) before each rel
 
 Unit tests include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and etc.
 
-Code coverage is 97.8% (`go test -cover`) for cbor v1.2.
+Minimum code coverage is 95%.  Minimum fuzzing is 10 hours for each release but often longer (v1.2 passed 42+ hours.)
+
+Code coverage is 97.8% (`go test -cover`) for cbor v1.2 which is among the highest for libraries of this type.
 
 ## Standards 
 
@@ -82,7 +91,7 @@ It also supports [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#
 ## Limitations
 
 * CBOR tags (type 6) are ignored.  Decoder simply decodes tagged data after ignoring the tags.
-* CBOR negative int (type 1) that cannot fit into Go's int64 are not supported, such as RFC 7049 example -18446744073709551616.  Decoding these values returns `cbor.UnmarshalTypeError`.
+* CBOR negative int (type 1) that cannot fit into Go's int64 are not supported, such as RFC 7049 example -18446744073709551616.  Decoding these values returns `cbor.UnmarshalTypeError` like Go's `encoding/json`.
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  Use CBOR `Null` (0xf6) to round-trip with Go's `nil`.
 
 ## System Requirements
@@ -127,8 +136,7 @@ type Unmarshaler interface{ ... }
 type UnsupportedTypeError struct{ ... }
 ```
 
-## Installation 
-
+## Installation ##
 ```
 go get github.com/fxamacker/cbor
 ```
@@ -207,7 +215,6 @@ err = enc.EndIndefinite()
 ```
 
 ## Benchmarks
-
 Benchmarks data show:
 * decoding into struct is >66% faster than decoding into map.
 * encoding struct is >63% faster than encoding map.
@@ -217,6 +224,11 @@ See [Benchmarks for fxamacker/cbor](BENCHMARKS.md).
 ## Code of Conduct 
 
 This project has adopted the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).  Contact [faye.github@gmail.com](mailto:faye.github@gmail.com) with any questions or comments.
+
+## Disclaimers
+Phrases like "NO CRASHES" and "NO EXPLOITS" mean there are none known to the maintainer based on results of unit tests and fuzzing.  It doesn't imply the software is perfect or 100% invulnerable to all known and unknown attacks.
+
+Please read the license for additional disclaimers and terms.
 
 ## License 
 
