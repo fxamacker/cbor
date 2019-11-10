@@ -13,23 +13,24 @@
 
 CBOR is a concise binary alternative to JSON, and is specified in [RFC 7049](https://tools.ietf.org/html/rfc7049).
 
-This CBOR library is as easy as Go's ```encoding/json```.
+This CBOR library is as easy as Go's ```encoding/json```.  It can be used in a wide variety of projects.
 
-It’s small enough for IoT projects.  And it prioritizes safety because software shouldn’t crash or get exploited while decoding malformed or malicious CBOR data.
+This CBOR library is as easy as Go's ```encoding/json```.  It's a great fit for a wide variety of projects using CBOR.
+
+It’s small enough for IoT. And reliable enough for [WebAuthn (FIDO2) servers](https://github.com/fxamacker/webauthn).  It avoids crashes and exploits when decoding malicious CBOR data.
 
 Install with ```go get github.com/fxamacker/cbor``` and use it like Go's ```encoding/json```.  It supports `` `json:"name"` `` keys!
 
-## Design Goals ##
+## Design Goals 
 This CBOR library is designed to be:
 * __Easy__ -- idiomatic API like `encoding/json` to reduce learning curve.
 * __Safe and reliable__ -- no `unsafe` pkg, coverage >95%, passes [fuzzing](#fuzzing-and-code-coverage) before each release, and etc.
 * __Small and self-contained__ -- compiles to under 0.5 MB and has no external dependencies.
-* __Standards-compliant__ -- supports [CBOR](https://tools.ietf.org/html/rfc7049), including [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#section-3.9) (RFC 7049 and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)) with minor [limitations](#limitations).
+* __Standards-compliant__ -- supports [CBOR](https://tools.ietf.org/html/rfc7049), including [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#section-3.9) (RFC 7049 and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)) with minor [limitations](#limitations). Like `encoding/json`, negative numbers that can't fit into Go's int64 are not supported and etc.
 
 fxamacker/cbor balances speed, safety, and compiled size.  To keep size small, it avoids code generation.  For safety, it avoids Go's `unsafe`. For speed, it uses **safe optimizations**: cache struct metadata, bypass `reflect` when appropriate, use `sync.Pool` to reuse transient objects, and etc.  
 
 ## Current Status
-
 Version 1.x has:
 * __Stable API__ -- won't make breaking API changes.  
 * __Stable requirements__ -- will always support Go v1.12.  
@@ -37,8 +38,9 @@ Version 1.x has:
 
 Nov 05, 2019: v1.2 adds RawMessage type, Marshaler and Unmarshaler interfaces.  Passed 42+ hrs of fuzzing.
 
-## Size Comparisons
+[Next (v1.3)](https://github.com/fxamacker/cbor/milestone/2) will improve speed and simplify decoding COSE data (RFC 8152).
 
+## Size Comparisons
 Libraries and programs were compiled for linux_amd64 using Go 1.12.
  
 ![alt text](https://user-images.githubusercontent.com/33205765/68306684-9c304380-006f-11ea-8661-c87592bcaa51.png "Library and program size comparison chart")
@@ -54,7 +56,6 @@ Library sizes:
 * 5.7 MB pkg -- ugorji/go v1.1.7 (default build)
 
 ## Features
-
 * Idiomatic API like `encoding/json`.
 * Decode slices, maps, and structs in-place.
 * Decode into struct with field name case-insensitive match.
@@ -69,7 +70,6 @@ Library sizes:
 * v1.2 -- User-defined types can have custom CBOR encoding and decoding by implementing `cbor.Marshaler` and `cbor.Unmarshaler` interfaces. 
 
 ## Fuzzing and Code Coverage
-
 Each release passes coverage-guided fuzzing using [fxamacker/cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  Default corpus has:
 * 2 files related to WebAuthn (FIDO U2F key).
 * 17 files with [COSE examples (RFC 8152 Appendix B & C)](https://github.com/cose-wg/Examples/tree/master/RFC8152).
@@ -83,28 +83,23 @@ Minimum code coverage is 95%.  Minimum fuzzing is 10 hours for each release but 
 Code coverage is 97.8% (`go test -cover`) for cbor v1.2 which is among the highest for libraries of this type.
 
 ## Standards 
-
 This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049), with minor [limitations](#limitations).
 
 It also supports [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#section-3.9) (both RFC 7049 and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)).  CTAP2 canonical CBOR encoding is used by [CTAP](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html) and [WebAuthn](https://www.w3.org/TR/webauthn/) in [FIDO2](https://fidoalliance.org/fido2/) framework.
 
 ## Limitations
-
 * CBOR tags (type 6) are ignored.  Decoder simply decodes tagged data after ignoring the tags.
 * CBOR negative int (type 1) that cannot fit into Go's int64 are not supported, such as RFC 7049 example -18446744073709551616.  Decoding these values returns `cbor.UnmarshalTypeError` like Go's `encoding/json`.
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  Use CBOR `Null` (0xf6) to round-trip with Go's `nil`.
 
 ## System Requirements
-
 * Go 1.12 (or newer)
 * Tested and fuzzed on linux_amd64, but it should work on other platforms.
 
 ## Versions and API Changes
-
 This project uses [Semantic Versioning](https://semver.org), so the API is always backwards compatible unless the major version number changes.
 
 ## API 
-
 See [API docs](https://godoc.org/github.com/fxamacker/cbor) for more details.
 
 ```
@@ -136,13 +131,12 @@ type Unmarshaler interface{ ... }
 type UnsupportedTypeError struct{ ... }
 ```
 
-## Installation ##
+## Installation
 ```
 go get github.com/fxamacker/cbor
 ```
 
 ## Usage
-
 See [examples](example_test.go).
 
 Decoding:
@@ -222,11 +216,12 @@ Benchmarks data show:
 See [Benchmarks for fxamacker/cbor](BENCHMARKS.md).
 
 ## Code of Conduct 
-
 This project has adopted the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).  Contact [faye.github@gmail.com](mailto:faye.github@gmail.com) with any questions or comments.
 
-## Security Policy ##
+## Contributing
+Please refer to [How to Contribute](CONTRIBUTING.md).
 
+## Security Policy
 For v1, security fixes are provided only for the latest released version since the API won't break compatibility.
 
 To report security vulnerabilities, please email [faye.github@gmail.com](mailto:faye.github@gmail.com) and allow time for the problem to be resolved before reporting it to the public.
@@ -237,7 +232,6 @@ Phrases like "NO CRASHES" and "NO EXPLOITS" mean there are none known to the mai
 Please read the license for additional disclaimers and terms.
 
 ## License 
-
 Copyright (c) 2019 [Faye Amacker](https://github.com/fxamacker)
 
 Licensed under [MIT License](LICENSE)
