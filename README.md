@@ -13,7 +13,7 @@
 
 CBOR is a concise binary alternative to JSON, and is specified in [RFC 7049](https://tools.ietf.org/html/rfc7049).
 
-This CBOR library makes using CBOR as easy as using Go's ```encoding/json```.
+This CBOR library is as easy as Go's ```encoding/json```.
 
 It’s small enough for IoT projects.  And it prioritizes safety because software shouldn’t crash or get exploited while decoding malformed or malicious CBOR data.
 
@@ -224,6 +224,12 @@ See [Benchmarks for fxamacker/cbor](BENCHMARKS.md).
 ## Code of Conduct 
 
 This project has adopted the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).  Contact [faye.github@gmail.com](mailto:faye.github@gmail.com) with any questions or comments.
+
+## Security Policy ##
+
+For v1, security fixes are provided only for the latest released version since the API won't break compatibility.
+
+To report security vulnerabilities, please email [faye.github@gmail.com](mailto:faye.github@gmail.com) and allow time for the problem to be resolved before reporting it to the public.
 
 ## Disclaimers
 Phrases like "NO CRASHES" and "NO EXPLOITS" mean there are none known to the maintainer based on results of unit tests and fuzzing.  It doesn't imply the software is perfect or 100% invulnerable to all known and unknown attacks.
