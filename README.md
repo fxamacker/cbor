@@ -13,8 +13,6 @@
 
 CBOR is a concise binary alternative to JSON, and is specified in [RFC 7049](https://tools.ietf.org/html/rfc7049).
 
-This CBOR library is as easy as Go's ```encoding/json```.  It can be used in a wide variety of projects.
-
 This CBOR library is as easy as Go's ```encoding/json```.  It's a great fit for a wide variety of projects using CBOR.
 
 It’s small enough for IoT. And reliable enough for [WebAuthn (FIDO2) servers](https://github.com/fxamacker/webauthn).  It avoids crashes and exploits when decoding malicious CBOR data.
