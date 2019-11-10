@@ -13,7 +13,7 @@
 
 CBOR is a concise binary alternative to JSON, and is specified in [RFC 7049](https://tools.ietf.org/html/rfc7049).
 
-This CBOR library makes using CBOR as easy as using JSON.
+This CBOR library makes using CBOR as easy as using Go's ```encoding/json```.
 
 It’s small enough for IoT projects.  And it prioritizes safety because software shouldn’t crash or get exploited while decoding malformed or malicious CBOR data.
 
@@ -35,7 +35,7 @@ Version 1.x has:
 * __Stable requirements__ -- will always support Go v1.12.  
 * __Passed fuzzing__ -- v1.2 passed 42 hours of [cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
 
-Nov 05, 2019: Released v1.2 to add RawMessage type, Marshaler and Unmarshaler interfaces.
+Nov 05, 2019: v1.2 adds RawMessage type, Marshaler and Unmarshaler interfaces.  Passed 42+ hrs of fuzzing.
 
 ## Size Comparisons
 
