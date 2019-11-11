@@ -578,7 +578,7 @@ func (d *decodeState) parseMap(t cborType, count int, v reflect.Value) error {
 }
 
 func (d *decodeState) parseStruct(t cborType, count int, v reflect.Value) error {
-	flds := getStructFields(v.Type())
+	flds := getDecodingStructType(v.Type())
 	foundFlds := make([]bool, len(flds))
 
 	hasSize := count >= 0

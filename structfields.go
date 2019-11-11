@@ -4,6 +4,7 @@
 package cbor
 
 import (
+	"bytes"
 	"errors"
 	"reflect"
 	"sort"
@@ -33,12 +34,11 @@ func fieldByIndex(v reflect.Value, index []int) (reflect.Value, error) {
 
 type field struct {
 	name          string
+	cborName      []byte
 	idx           []int
 	typ           reflect.Type
-	isUnmarshaler bool
 	ef            encodeFunc
-	cborName      [64]byte
-	cborNameLen   int
+	isUnmarshaler bool
 	tagged        bool // used to choose dominant field (at the same level tagged fields dominate untagged fields)
 	omitempty     bool // used to skip empty field
 }
@@ -99,29 +99,21 @@ type byCanonicalRule struct {
 }
 
 func (s byCanonicalRule) Less(i, j int) bool {
-	if len(s.fields[i].name) != len(s.fields[j].name) {
-		return len(s.fields[i].name) < len(s.fields[j].name)
-	}
-	return s.fields[i].name <= s.fields[j].name
+	return bytes.Compare(s.fields[i].cborName, s.fields[j].cborName) <= 0
 }
 
-func getFieldNameOptionsFromTag(tag string) (string, string) {
+func getFieldNameAndOptionsFromTag(tag string) (name string, omitEmpty bool) {
 	if len(tag) == 0 {
-		return "", ""
+		return
 	}
-	commaIdx := strings.IndexByte(tag, byte(','))
-	if commaIdx == -1 {
-		return tag, ""
+	tokens := strings.Split(tag, ",")
+	name = tokens[0]
+	for _, s := range tokens[1:] {
+		if s == "omitempty" {
+			omitEmpty = true
+		}
 	}
-	return tag[:commaIdx], tag[commaIdx+1:]
-}
-
-func hasFieldOptionFromTag(options, key string) bool {
-	idx := strings.Index(options, key)
-	if idx == -1 {
-		return false
-	}
-	return idx+len(key) == len(options) || options[idx+len(key)] == ','
+	return
 }
 
 // getFields returns a list of visible fields of struct type typ following Go
@@ -190,8 +182,7 @@ func getFields(typ reflect.Type) fields {
 				idx[len(fieldIdx)] = i
 
 				tagged := len(tag) > 0
-				tagFieldName, tagOptions := getFieldNameOptionsFromTag(tag)
-				omitempty := hasFieldOptionFromTag(tagOptions, "omitempty")
+				tagFieldName, omitempty := getFieldNameAndOptionsFromTag(tag)
 
 				fieldName := tagFieldName
 				if tagFieldName == "" {
@@ -230,60 +221,57 @@ func getFields(typ reflect.Type) fields {
 	return visibleFields
 }
 
-type structFields struct {
+type encodingStructType struct {
 	typ             reflect.Type
 	fields          fields
 	canonicalFields fields
 }
 
 var (
-	cachedStructFields         sync.Map
-	cachedEncodingStructFields sync.Map
+	decodingStructTypeCache sync.Map
+	encodingStructTypeCache sync.Map
 )
 
-func getStructFields(t reflect.Type) fields {
-	if v, _ := cachedStructFields.Load(t); v != nil {
+func getDecodingStructType(t reflect.Type) fields {
+	if v, _ := decodingStructTypeCache.Load(t); v != nil {
 		return v.(fields)
 	}
 	flds := getFields(t)
 	for i := 0; i < len(flds); i++ {
 		flds[i].isUnmarshaler = implementsUnmarshaler(flds[i].typ)
 	}
-	cachedStructFields.Store(t, flds)
+	decodingStructTypeCache.Store(t, flds)
 	return flds
 }
 
-func getEncodingStructFields(t reflect.Type, canonical bool) fields {
-	if v, _ := cachedEncodingStructFields.Load(t); v != nil {
+func getEncodingStructType(t reflect.Type, canonical bool) fields {
+	if v, _ := encodingStructTypeCache.Load(t); v != nil {
 		if canonical {
-			return v.(structFields).canonicalFields
+			return v.(encodingStructType).canonicalFields
 		}
-		return v.(structFields).fields
+		return v.(encodingStructType).fields
 	}
 
-	fldsOrig := getStructFields(t)
-	flds := make(fields, len(fldsOrig))
-	copy(flds, fldsOrig)
+	flds := getFields(t)
+
+	es := getEncodeState()
 	for i := 0; i < len(flds); i++ {
 		flds[i].ef = getEncodeFunc(flds[i].typ)
-		nameLen := len(flds[i].name)
-		if nameLen <= 23 {
-			flds[i].cborName[0] = byte(cborTypeTextString) | byte(nameLen)
-			copy(flds[i].cborName[1:], flds[i].name)
-			flds[i].cborNameLen = 1 + nameLen
-		} else if nameLen <= 62 {
-			flds[i].cborName[0] = byte(cborTypeTextString) | byte(24)
-			flds[i].cborName[1] = byte(nameLen)
-			copy(flds[i].cborName[2:], flds[i].name)
-			flds[i].cborNameLen = 2 + nameLen
-		}
+
+		encodeTypeAndAdditionalValue(es, byte(cborTypeTextString), uint64(len(flds[i].name)))
+		flds[i].cborName = make([]byte, es.Len()+len(flds[i].name))
+		copy(flds[i].cborName, es.Bytes())
+		copy(flds[i].cborName[es.Len():], flds[i].name)
+
+		es.Reset()
 	}
+	putEncodeState(es)
 
 	canonicalFields := make(fields, len(flds))
 	copy(canonicalFields, flds)
 	sort.Sort(byCanonicalRule{canonicalFields})
 
-	cachedEncodingStructFields.Store(t, structFields{typ: t, fields: flds, canonicalFields: canonicalFields})
+	encodingStructTypeCache.Store(t, encodingStructType{typ: t, fields: flds, canonicalFields: canonicalFields})
 
 	if canonical {
 		return canonicalFields

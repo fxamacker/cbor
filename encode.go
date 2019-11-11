@@ -64,7 +64,7 @@ type EncOptions struct {
 // An encodeState encodes CBOR into a bytes.Buffer.
 type encodeState struct {
 	bytes.Buffer
-	scratch [64]byte
+	scratch [16]byte
 }
 
 // encodeStatePool caches unused encodeState objects for later reuse.
@@ -74,12 +74,12 @@ var encodeStatePool = sync.Pool{
 	},
 }
 
-func newEncodeState() *encodeState {
+func getEncodeState() *encodeState {
 	return encodeStatePool.Get().(*encodeState)
 }
 
-// returnEncodeState returns e to encodeStatePool.
-func returnEncodeState(e *encodeState) {
+// putEncodeState returns e to encodeStatePool.
+func putEncodeState(e *encodeState) {
 	e.Reset()
 	encodeStatePool.Put(e)
 }
@@ -279,7 +279,7 @@ func (v byCanonical) Less(i, j int) bool {
 
 var byCanonicalPool = sync.Pool{}
 
-func newByCanonical(length int) *byCanonical {
+func getByCanonical(length int) *byCanonical {
 	v := byCanonicalPool.Get()
 	if v == nil {
 		return &byCanonical{pairs: make([]pair, 0, length)}
@@ -295,7 +295,7 @@ func newByCanonical(length int) *byCanonical {
 	return s
 }
 
-func returnByCanonical(s *byCanonical) {
+func putByCanonical(s *byCanonical) {
 	s.pairs = s.pairs[:0]
 	byCanonicalPool.Put(s)
 }
@@ -312,21 +312,21 @@ func encodeMapCanonical(e *encodeState, v reflect.Value, opts EncOptions) (int, 
 	if v.Len() == 0 {
 		return encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(0)), nil
 	}
-	pairEncodeState := newEncodeState() // accumulated cbor encoded map key-value pairs
-	pairs := newByCanonical(v.Len())    // for sorting keys
+	pairEncodeState := getEncodeState() // accumulated cbor encoded map key-value pairs
+	pairs := getByCanonical(v.Len())    // for sorting keys
 
 	iter := v.MapRange()
 	for iter.Next() {
 		n1, err := kf(pairEncodeState, iter.Key(), opts)
 		if err != nil {
-			returnEncodeState(pairEncodeState)
-			returnByCanonical(pairs)
+			putEncodeState(pairEncodeState)
+			putByCanonical(pairs)
 			return 0, err
 		}
 		n2, err := ef(pairEncodeState, iter.Value(), opts)
 		if err != nil {
-			returnEncodeState(pairEncodeState)
-			returnByCanonical(pairs)
+			putEncodeState(pairEncodeState)
+			putByCanonical(pairs)
 			return 0, err
 		}
 		pairs.pairs = append(pairs.pairs, pair{keyLen: n1, pairLen: n1 + n2})
@@ -346,36 +346,34 @@ func encodeMapCanonical(e *encodeState, v reflect.Value, opts EncOptions) (int, 
 		n += n1
 	}
 
-	returnEncodeState(pairEncodeState)
-	returnByCanonical(pairs)
+	putEncodeState(pairEncodeState)
+	putByCanonical(pairs)
 	return n, nil
 }
 
 func encodeStruct(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
-	flds := getEncodingStructFields(v.Type(), opts.Canonical)
+	flds := getEncodingStructType(v.Type(), opts.Canonical)
 
-	kve := newEncodeState() // encode key-value pairs based on struct field tag options
+	kve := getEncodeState() // encode key-value pairs based on struct field tag options
 	kvcount := 0
-	for _, f := range flds {
-		if f.ef == nil {
+	for i := 0; i < len(flds); i++ {
+		if flds[i].ef == nil {
 			return 0, &UnsupportedTypeError{v.Type()}
 		}
-		fv, err := fieldByIndex(v, f.idx)
+		fv, err := fieldByIndex(v, flds[i].idx)
 		if err != nil {
-			returnEncodeState(kve)
+			putEncodeState(kve)
 			return 0, err
 		}
-		if !fv.IsValid() || (f.omitempty && isEmptyValue(fv)) {
+		if !fv.IsValid() || (flds[i].omitempty && isEmptyValue(fv)) {
 			continue
 		}
-		if f.cborNameLen > 0 {
-			kve.Write(f.cborName[:f.cborNameLen])
-		} else {
-			encodeStringInternal(kve, f.name, opts)
-		}
-		_, err = f.ef(kve, fv, opts)
+
+		kve.Write(flds[i].cborName)
+
+		_, err = flds[i].ef(kve, fv, opts)
 		if err != nil {
-			returnEncodeState(kve)
+			putEncodeState(kve)
 			return 0, err
 		}
 		kvcount++
@@ -384,7 +382,7 @@ func encodeStruct(e *encodeState, v reflect.Value, opts EncOptions) (int, error)
 	n := encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(kvcount))
 	n1, err := e.Write(kve.Bytes())
 
-	returnEncodeState(kve)
+	putEncodeState(kve)
 	return n + n1, err
 }
 
@@ -588,17 +586,17 @@ func isEmptyValue(v reflect.Value) bool {
 //
 // Marshal supports RFC 7049 and CTAP2 canonical CBOR encoding.
 func Marshal(v interface{}, encOpts EncOptions) ([]byte, error) {
-	e := newEncodeState()
+	e := getEncodeState()
 
 	err := e.marshal(v, encOpts)
 	if err != nil {
-		returnEncodeState(e)
+		putEncodeState(e)
 		return nil, err
 	}
 
 	buf := make([]byte, e.Len())
 	copy(buf, e.Bytes())
 
-	returnEncodeState(e)
+	putEncodeState(e)
 	return buf, nil
 }
