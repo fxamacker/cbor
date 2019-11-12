@@ -1213,16 +1213,6 @@ func TestValid(t *testing.T) {
 	}
 }
 
-func TestSkipData(t *testing.T) {
-	cborData := hexDecode("850102031bffffffffffffffffc11a514b67b0") // [1, 2, 3, 18446744073709551615, 1363896240]
-	i := 0
-	if err := cbor.Unmarshal(cborData, &i); err == nil {
-		t.Errorf("Unmarshal(0x%0x) doesn't return error, want UnmarshalTypeError", cborData)
-	} else if _, ok := err.(*cbor.UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%0x) returns wrong type of error %T, want (*cbor.UnmarshalTypeError)", cborData, err)
-	}
-}
-
 func TestStructFieldNil(t *testing.T) {
 	type TestStruct struct {
 		I   int
@@ -1320,6 +1310,23 @@ func TestFuzzCrash5(t *testing.T) {
 	}
 	if _, err := cbor.Marshal(intf, cbor.EncOptions{Canonical: true}); err != nil {
 		t.Errorf("Marshal(%v) returns error %s", intf, err)
+	}
+}
+
+func TestFuzzCrash6(t *testing.T) {
+	// Crash5: parsing nil into map key.
+	testData := [][]byte{
+		[]byte("\x82\xa1\xf60000"),
+		[]byte("\xa1\xf600"),
+	}
+	for _, data := range testData {
+		var intf interface{}
+		if err := cbor.Unmarshal(data, &intf); err != nil {
+			t.Fatalf("Unmarshal(0x%02x) returns error %s\n", data, err)
+		}
+		if _, err := cbor.Marshal(intf, cbor.EncOptions{Canonical: true}); err != nil {
+			t.Errorf("Marshal(%v) returns error %s", intf, err)
+		}
 	}
 }
 

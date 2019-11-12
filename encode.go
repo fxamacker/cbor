@@ -70,7 +70,9 @@ type encodeState struct {
 // encodeStatePool caches unused encodeState objects for later reuse.
 var encodeStatePool = sync.Pool{
 	New: func() interface{} {
-		return new(encodeState)
+		es := new(encodeState)
+		es.Grow(32) // TODO: make this configurable
+		return es
 	},
 }
 
@@ -175,12 +177,19 @@ func encodeFloat(e *encodeState, v reflect.Value, opts EncOptions) (int, error) 
 }
 
 func encodeByteString(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
-	n1 := encodeTypeAndAdditionalValue(e, byte(cborTypeByteString), uint64(v.Len()))
+	if v.Kind() == reflect.Slice && v.IsNil() {
+		return e.Write(cborNil)
+	}
+	len := v.Len()
+	if len == 0 {
+		return 1, e.WriteByte(byte(cborTypeByteString))
+	}
+	n1 := encodeTypeAndAdditionalValue(e, byte(cborTypeByteString), uint64(len))
 	if v.Kind() == reflect.Array {
-		for i := 0; i < v.Len(); i++ {
+		for i := 0; i < len; i++ {
 			e.WriteByte(byte(v.Index(i).Uint()))
 		}
-		return n1 + v.Len(), nil
+		return n1 + len, nil
 	}
 	n2, _ := e.Write(v.Bytes())
 	return n1 + n2, nil
@@ -196,26 +205,20 @@ func encodeStringInternal(e *encodeState, s string, opts EncOptions) (int, error
 	return n1 + n2, nil
 }
 
-func encodeSlice(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
-	if v.IsNil() {
-		return e.Write(cborNil)
-	}
-	return encodeArray(e, v, opts)
-}
-
 func encodeArray(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
-	if v.Type().Elem().Kind() == reflect.Uint8 {
-		return encodeByteString(e, v, opts)
-	}
 	f := getEncodeFunc(v.Type().Elem())
 	if f == nil {
 		return 0, &UnsupportedTypeError{v.Type()}
 	}
-	if v.Len() == 0 {
-		return encodeTypeAndAdditionalValue(e, byte(cborTypeArray), uint64(0)), nil
+	if v.Kind() == reflect.Slice && v.IsNil() {
+		return e.Write(cborNil)
 	}
-	n := encodeTypeAndAdditionalValue(e, byte(cborTypeArray), uint64(v.Len()))
-	for i := 0; i < v.Len(); i++ {
+	len := v.Len()
+	if len == 0 {
+		return 1, e.WriteByte(byte(cborTypeArray))
+	}
+	n := encodeTypeAndAdditionalValue(e, byte(cborTypeArray), uint64(len))
+	for i := 0; i < len; i++ {
 		n1, err := f(e, v.Index(i), opts)
 		if err != nil {
 			return 0, err
@@ -237,10 +240,11 @@ func encodeMap(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 	if v.IsNil() {
 		return e.Write(cborNil)
 	}
-	if v.Len() == 0 {
-		return encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(0)), nil
+	len := v.Len()
+	if len == 0 {
+		return 1, e.WriteByte(byte(cborTypeMap))
 	}
-	n := encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(v.Len()))
+	n := encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(len))
 	iter := v.MapRange()
 	for iter.Next() {
 		n1, err := kf(e, iter.Key(), opts)
@@ -310,7 +314,7 @@ func encodeMapCanonical(e *encodeState, v reflect.Value, opts EncOptions) (int, 
 		return e.Write(cborNil)
 	}
 	if v.Len() == 0 {
-		return encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(0)), nil
+		return 1, e.WriteByte(byte(cborTypeMap))
 	}
 	pairEncodeState := getEncodeState() // accumulated cbor encoded map key-value pairs
 	pairs := getByCanonical(v.Len())    // for sorting keys
@@ -492,10 +496,11 @@ func getEncodeFunc(t reflect.Type) encodeFunc {
 		return encodeFloat
 	case reflect.String:
 		return encodeString
-	case reflect.Array:
+	case reflect.Slice, reflect.Array:
+		if t.Elem().Kind() == reflect.Uint8 {
+			return encodeByteString
+		}
 		return encodeArray
-	case reflect.Slice:
-		return encodeSlice
 	case reflect.Map:
 		return encodeMap
 	case reflect.Struct:
