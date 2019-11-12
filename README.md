@@ -8,12 +8,12 @@
 # fxamacker/cbor - CBOR library in Go    
 
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/57072051/68534996-13303b00-0301-11ea-81f9-7af3020b154f.png" alt="Image of design goals with checkboxes">
+  <img src="https://user-images.githubusercontent.com/57072051/68631010-c1c5ae80-04ae-11ea-8124-dd007bd19800.png" alt="fxamacker/cbor text logo with checkboxes">
 </p>
 
 CBOR is a concise binary alternative to JSON, and is specified in [RFC 7049](https://tools.ietf.org/html/rfc7049).
 
-This CBOR library is as easy as Go's ```encoding/json```.  It's a great fit for a wide variety of projects using CBOR.
+This library makes encoding and decoding CBOR painless.  It's a great fit for a variety of projects using CBOR.
 
 It’s small enough for IoT. And reliable enough for [WebAuthn (FIDO2) servers](https://github.com/fxamacker/webauthn).  It avoids crashes and exploits when decoding malicious CBOR data.
 
@@ -21,37 +21,32 @@ Install with ```go get github.com/fxamacker/cbor``` and use it like Go's ```enco
 
 ## Design Goals 
 This CBOR library is designed to be:
-* __Easy__ -- idiomatic API like `encoding/json` to reduce learning curve.
-* __Safe and reliable__ -- no `unsafe` pkg, coverage >95%, passes [fuzzing](#fuzzing-and-code-coverage) before each release, and etc.
-* __Small and self-contained__ -- compiles to under 0.5 MB and has no external dependencies.
-* __Standards-compliant__ -- supports [CBOR](https://tools.ietf.org/html/rfc7049), including [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#section-3.9) (RFC 7049 and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)) with minor [limitations](#limitations). Like `encoding/json`, negative numbers that can't fit into Go's int64 are not supported and etc.
+* __Easy__ – idiomatic API like `encoding/json` to reduce learning curve.
+* __Small and self-contained__ – compiles to under 0.5 MB and has no external dependencies.
+* __Safe and reliable__ – no `unsafe` pkg, coverage >95%, [fuzz tested](#fuzzing-and-code-coverage), data validation to prevent crashes on malformed or malicious data.
 
-fxamacker/cbor balances speed, safety, and compiled size.  To keep size small, it avoids code generation.  For safety, it avoids Go's `unsafe`. For speed, it uses **safe optimizations**: cache struct metadata, bypass `reflect` when appropriate, use `sync.Pool` to reuse transient objects, and etc.  
+Competing factors are balanced:
+* __Speed__ vs __safety__ vs __size__ – to keep size small, avoid code generation. For safety, validate data and avoid Go's unsafe package.  For speed, use  safe optimizations: cache struct metadata, bypass reflect when appropriate, use sync.Pool to reuse transient objects, and etc.
+* __Standards compliance__ – support [CBOR](https://tools.ietf.org/html/rfc7049), including [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#section-3.9) (RFC 7049 and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)) with minor [limitations](#limitations). For example, negative numbers that can't fit into Go's int64 aren’t supported (like `encoding/json`.)
+
+Faster CBOR libraries exist. Choose this one if you value your time, program size, and reliability. There's practically no learning curve if you know `encoding/json`.
+
+Avoiding crashes caused by malformed or malicious CBOR data means fewer headaches.  See [Fuzzing and Coverage](#fuzzing-and-code-coverage).
 
 ## Current Status
 Version 1.x has:
-* __Stable API__ -- won't make breaking API changes.  
-* __Stable requirements__ -- will always support Go v1.12.  
-* __Passed fuzzing__ -- v1.2 passed 42 hours of [cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
+* __Stable API__ – won't make breaking API changes.  
+* __Stable requirements__ – will always support Go v1.12.  
+* __Passed fuzzing__ – v1.2 passed 42 hours of [cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
 
 Nov 05, 2019: v1.2 adds RawMessage type, Marshaler and Unmarshaler interfaces.  Passed 42+ hrs of fuzzing.
 
-[Next (v1.3)](https://github.com/fxamacker/cbor/milestone/2) will improve speed and simplify decoding COSE data (RFC 8152).
+[:rocket: Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) will improve speed, reduce memory use, and simplify decoding COSE data (RFC 8152).
 
 ## Size Comparisons
 Libraries and programs were compiled for linux_amd64 using Go 1.12.
  
 ![alt text](https://user-images.githubusercontent.com/33205765/68306684-9c304380-006f-11ea-8661-c87592bcaa51.png "Library and program size comparison chart")
-
-Program sizes (doing the same CBOR encoding and decoding):
-* 2.6 MB program -- fxamacker/cbor v1.2
-* 10.7 MB program -- ugorji/go v1.1.7 (without code generation)
-* 11.9 MB program -- ugorji/go v1.1.7 (default build)
-
-Library sizes:
-* 0.44 MB pkg -- fxamacker/cbor v1.2
-* 2.9 MB pkg -- ugorji/go v1.1.7 (without code generation) 
-* 5.7 MB pkg -- ugorji/go v1.1.7 (default build)
 
 ## Features
 * Idiomatic API like `encoding/json`.
@@ -207,7 +202,7 @@ err = enc.EndIndefinite()
 ```
 
 ## Benchmarks
-Benchmarks data show:
+Go structs are faster than maps:
 * decoding into struct is >66% faster than decoding into map.
 * encoding struct is >63% faster than encoding map.
 
