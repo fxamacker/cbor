@@ -1,21 +1,30 @@
-[![Build Status](https://travis-ci.com/fxamacker/cbor.svg?branch=master)](https://travis-ci.com/fxamacker/cbor)
-[![codecov](https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4)](https://codecov.io/gh/fxamacker/cbor)
-[![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor)
-[![Release](https://img.shields.io/github/release/fxamacker/cbor.svg?style=flat-square)](https://github.com/fxamacker/cbor/releases)
-[![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/fxamacker/cbor)
-[![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE)
-
-# fxamacker/cbor - CBOR library in Go    
-
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/57072051/68631010-c1c5ae80-04ae-11ea-8124-dd007bd19800.png" alt="fxamacker/cbor text logo with checkboxes">
+  <a href="https://github.com/fxamacker/cbor/releases"><img src="https://user-images.githubusercontent.com/57072051/68631010-c1c5ae80-04ae-11ea-8124-dd007bd19800.png" alt="CBOR library big picture"></a>
 </p>
 
+<p align="center">
+  <a href="https://travis-ci.com/fxamacker/cbor"><img src="https://travis-ci.com/fxamacker/cbor.svg?branch=master"></a>
+  <a href="https://codecov.io/gh/fxamacker/cbor"><img src="https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4"></a>
+  <a href="https://goreportcard.com/report/github.com/fxamacker/cbor"><img src="https://goreportcard.com/badge/github.com/fxamacker/cbor"></a>
+  <a href="https://github.com/fxamacker/cbor/releases"><img src="https://img.shields.io/github/release/fxamacker/cbor.svg?style=flat-square"></a>
+  <a href="http://godoc.org/github.com/fxamacker/cbor"><img src="(http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square"></a>
+  <a href="https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE"><img src="http://img.shields.io/badge/license-mit-blue.svg?style=flat-square"></a>
+<br><br>
+</p>
+
+<!-- [![Build Status](https://travis-ci.com/fxamacker/cbor.svg?branch=master)](https://travis-ci.com/fxamacker/cbor) -->
+<!-- [![codecov](https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4)](https://codecov.io/gh/fxamacker/cbor) -->
+<!-- [![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor) -->
+<!-- [![Release](https://img.shields.io/github/release/fxamacker/cbor.svg?style=flat-square)](https://github.com/fxamacker/cbor/releases) -->
+<!-- [![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/fxamacker/cbor) -->
+<!-- [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE) -->
+
+# CBOR library in Go
 CBOR is a concise binary alternative to JSON, and is specified in [RFC 7049](https://tools.ietf.org/html/rfc7049).
 
-This library makes encoding and decoding CBOR painless.  It's a great fit for a variety of projects using CBOR.
+This library makes encoding and decoding CBOR painless. There's practically no learning curve if you know `encoding/json`. 
 
-It’s small enough for IoT. And reliable enough for [WebAuthn (FIDO2) servers](https://github.com/fxamacker/webauthn).  It avoids crashes and exploits when decoding malicious CBOR data.
+It's a great fit for a variety of projects.  It’s small enough for IoT. And reliable enough for [WebAuthn (FIDO2) servers](https://github.com/fxamacker/webauthn).  With extensive tests, fuzzing, and data validation, it avoids crashing on malicious CBOR data.
 
 Install with ```go get github.com/fxamacker/cbor``` and use it like Go's ```encoding/json```.  It supports `` `json:"name"` `` keys!
 
@@ -26,18 +35,16 @@ This CBOR library is designed to be:
 * __Safe and reliable__ – no `unsafe` pkg, coverage >95%, [fuzz tested](#fuzzing-and-code-coverage), data validation to prevent crashes on malformed or malicious data.
 
 Competing factors are balanced:
-* __Speed__ vs __safety__ vs __size__ – to keep size small, avoid code generation. For safety, validate data and avoid Go's unsafe package.  For speed, use  safe optimizations: cache struct metadata, bypass reflect when appropriate, use sync.Pool to reuse transient objects, and etc.
+* __Speed__ vs __safety__ vs __size__ – to keep size small, avoid code generation. For safety, validate data and avoid Go's unsafe package.  For speed, use safe optimizations: cache struct metadata, bypass reflect when appropriate, use sync.Pool to reuse transient objects, and etc.
 * __Standards compliance__ – support [CBOR](https://tools.ietf.org/html/rfc7049), including [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#section-3.9) (RFC 7049 and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)) with minor [limitations](#limitations). For example, negative numbers that can't fit into Go's int64 aren’t supported (like `encoding/json`.)
 
-Faster CBOR libraries exist. Choose this one if you value your time, program size, and reliability. There's practically no learning curve if you know `encoding/json`.
-
-Avoiding crashes caused by malformed or malicious CBOR data means fewer headaches.  See [Fuzzing and Coverage](#fuzzing-and-code-coverage).
+Faster CBOR libraries exist. Choose this one if you value your time, program size, and reliability. Avoiding crashes caused by malformed or malicious CBOR data means fewer headaches.  See [Fuzzing and Coverage](#fuzzing-and-code-coverage).
 
 ## Current Status
 Version 1.x has:
 * __Stable API__ – won't make breaking API changes.  
 * __Stable requirements__ – will always support Go v1.12.  
-* __Passed fuzzing__ – v1.2 passed 42 hours of [cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
+* __Passed fuzzing__ – v1.2 passed 42+ hours of [cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
 
 Nov 05, 2019: v1.2 adds RawMessage type, Marshaler and Unmarshaler interfaces.  Passed 42+ hrs of fuzzing.
 
