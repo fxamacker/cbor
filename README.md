@@ -1,13 +1,23 @@
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/57072051/68631010-c1c5ae80-04ae-11ea-8124-dd007bd19800.png" alt="fxamacker/cbor text logo with checkboxes">
+  <a href="https://github.com/fxamacker/cbor/releases"><img src="https://user-images.githubusercontent.com/57072051/68631010-c1c5ae80-04ae-11ea-8124-dd007bd19800.png" alt="CBOR library big picture"></a>
 </p>
 
-[![Build Status](https://travis-ci.com/fxamacker/cbor.svg?branch=master)](https://travis-ci.com/fxamacker/cbor)
-[![codecov](https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4)](https://codecov.io/gh/fxamacker/cbor)
-[![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor)
-[![Release](https://img.shields.io/github/release/fxamacker/cbor.svg?style=flat-square)](https://github.com/fxamacker/cbor/releases)
-[![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/fxamacker/cbor)
-[![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE)
+<p align="center">
+  <a href="https://travis-ci.com/fxamacker/cbor"><img src="https://travis-ci.com/fxamacker/cbor.svg?branch=master"></a>
+  <a href="https://codecov.io/gh/fxamacker/cbor"><img src="https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4"></a>
+  <a href="https://goreportcard.com/report/github.com/fxamacker/cbor"><img src="https://goreportcard.com/badge/github.com/fxamacker/cbor"></a>
+  <a href="https://github.com/fxamacker/cbor/releases"><img src="https://img.shields.io/github/release/fxamacker/cbor.svg?style=flat-square"></a>
+  <a href="http://godoc.org/github.com/fxamacker/cbor"><img src="(http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square"></a>
+  <a href="https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE"><img src="http://img.shields.io/badge/license-mit-blue.svg?style=flat-square"></a>
+<br>
+</p>
+
+<!-- [![Build Status](https://travis-ci.com/fxamacker/cbor.svg?branch=master)](https://travis-ci.com/fxamacker/cbor) -->
+<!-- [![codecov](https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4)](https://codecov.io/gh/fxamacker/cbor) -->
+<!-- [![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor) -->
+<!-- [![Release](https://img.shields.io/github/release/fxamacker/cbor.svg?style=flat-square)](https://github.com/fxamacker/cbor/releases) -->
+<!-- [![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/fxamacker/cbor) -->
+<!-- [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE) -->
 
 # CBOR library in Go
 CBOR is a concise binary alternative to JSON, and is specified in [RFC 7049](https://tools.ietf.org/html/rfc7049).
