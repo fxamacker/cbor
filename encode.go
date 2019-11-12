@@ -360,19 +360,28 @@ func encodeStruct(e *encodeState, v reflect.Value, opts EncOptions) (int, error)
 		if flds[i].ef == nil {
 			return 0, &UnsupportedTypeError{v.Type()}
 		}
-		fv, err := fieldByIndex(v, flds[i].idx)
-		if err != nil {
-			putEncodeState(kve)
-			return 0, err
+		fv := v
+		ignore := false
+		for k, n := range flds[i].idx {
+			if k > 0 {
+				if fv.Kind() == reflect.Ptr && fv.Type().Elem().Kind() == reflect.Struct {
+					if fv.IsNil() {
+						// Null pointer to embedded struct
+						ignore = true
+						break
+					}
+					fv = fv.Elem()
+				}
+			}
+			fv = fv.Field(n)
 		}
-		if !fv.IsValid() || (flds[i].omitempty && isEmptyValue(fv)) {
+		if ignore || (flds[i].omitempty && isEmptyValue(fv)) {
 			continue
 		}
 
 		kve.Write(flds[i].cborName)
 
-		_, err = flds[i].ef(kve, fv, opts)
-		if err != nil {
+		if _, err := flds[i].ef(kve, fv, opts); err != nil {
 			putEncodeState(kve)
 			return 0, err
 		}

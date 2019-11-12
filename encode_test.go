@@ -418,6 +418,27 @@ func encodeCborHeader(t byte, n uint64) []byte {
 	}
 }
 
+func testMarshal(t *testing.T, testCases []marshalTest) {
+	for _, tc := range testCases {
+		for _, value := range tc.values {
+			if _, err := cbor.Marshal(value, cbor.EncOptions{}); err != nil {
+				t.Errorf("Marshal(%v, cbor.EncOptions{}) returns error %v", value, err)
+			}
+			if b, err := cbor.Marshal(value, cbor.EncOptions{Canonical: true}); err != nil {
+				t.Errorf("Marshal(%v, cbor.EncOptions{Canonical: true}) returns error %v", value, err)
+			} else if !bytes.Equal(b, tc.cborData) {
+				t.Errorf("Marshal(%v, cbor.EncOptions{Canonical: true}) = 0x%0x, want 0x%0x", value, b, tc.cborData)
+			}
+		}
+		r := cbor.RawMessage(tc.cborData)
+		if b, err := cbor.Marshal(r, cbor.EncOptions{}); err != nil {
+			t.Errorf("Marshal(%v, cbor.EncOptions{}) returns error %v", r, err)
+		} else if !bytes.Equal(b, r) {
+			t.Errorf("Marshal(%v, cbor.EncOptions{}) returns %v, want %v", r, b, r)
+		}
+	}
+}
+
 func TestMarshalStruct(t *testing.T) {
 	v1 := outer{
 		IntField:          123,
@@ -534,24 +555,43 @@ func TestMarshalStructCanonical(t *testing.T) {
 	}
 }
 
-func testMarshal(t *testing.T, testCases []marshalTest) {
-	for _, tc := range testCases {
-		for _, value := range tc.values {
-			if _, err := cbor.Marshal(value, cbor.EncOptions{}); err != nil {
-				t.Errorf("Marshal(%v, cbor.EncOptions{}) returns error %v", value, err)
-			}
-			if b, err := cbor.Marshal(value, cbor.EncOptions{Canonical: true}); err != nil {
-				t.Errorf("Marshal(%v, cbor.EncOptions{Canonical: true}) returns error %v", value, err)
-			} else if !bytes.Equal(b, tc.cborData) {
-				t.Errorf("Marshal(%v, cbor.EncOptions{Canonical: true}) = 0x%0x, want 0x%0x", value, b, tc.cborData)
-			}
+func TestMarshalNullPointerToEmbeddedStruct(t *testing.T) {
+	type (
+		T1 struct {
+			N int
 		}
-		r := cbor.RawMessage(tc.cborData)
-		if b, err := cbor.Marshal(r, cbor.EncOptions{}); err != nil {
-			t.Errorf("Marshal(%v, cbor.EncOptions{}) returns error %v", r, err)
-		} else if !bytes.Equal(b, r) {
-			t.Errorf("Marshal(%v, cbor.EncOptions{}) returns %v, want %v", r, b, r)
+		T2 struct {
+			*T1
 		}
+	)
+	v := T2{}
+	wantCborData := []byte{0xa0} // {}
+	cborData, err := cbor.Marshal(v, cbor.EncOptions{})
+	if err != nil {
+		t.Fatalf("Marshal(%v) returns error %v", v, err)
+	}
+	if !bytes.Equal(wantCborData, cborData) {
+		t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", v, cborData, wantCborData)
+	}
+}
+
+func TestMarshalNullPointerToStruct(t *testing.T) {
+	type (
+		T1 struct {
+			N int
+		}
+		T2 struct {
+			T *T1
+		}
+	)
+	v := T2{}
+	wantCborData := []byte{0xa1, 0x61, 0x54, 0xf6} // {T: nil}
+	cborData, err := cbor.Marshal(v, cbor.EncOptions{})
+	if err != nil {
+		t.Fatalf("Marshal(%v) returns error %v", v, err)
+	}
+	if !bytes.Equal(wantCborData, cborData) {
+		t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", v, cborData, wantCborData)
 	}
 }
 
