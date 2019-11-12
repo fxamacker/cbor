@@ -8,7 +8,7 @@
 # fxamacker/cbor - CBOR library in Go    
 
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/57072051/68616310-697cb580-048a-11ea-8611-e43c03e4aa13.png" alt="fxamacker/cbor text logo with checkboxes">
+  <img src="https://user-images.githubusercontent.com/57072051/68631010-c1c5ae80-04ae-11ea-8124-dd007bd19800.png" alt="fxamacker/cbor text logo with checkboxes">
 </p>
 
 CBOR is a concise binary alternative to JSON, and is specified in [RFC 7049](https://tools.ietf.org/html/rfc7049).
