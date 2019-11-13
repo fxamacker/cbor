@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/fxamacker/cbor/releases"><img src="https://user-images.githubusercontent.com/57072051/68631010-c1c5ae80-04ae-11ea-8124-dd007bd19800.png" alt="CBOR library big picture"></a>
+  <a href="https://github.com/fxamacker/cbor/releases"><img src="https://user-images.githubusercontent.com/57072051/68724388-f0ac5500-0580-11ea-840d-e853bb288459.png" alt="CBOR library big picture"></a>
 </p>
 
 <p align="center">
@@ -38,7 +38,9 @@ Competing factors are balanced:
 * __Speed__ vs __safety__ vs __size__ – to keep size small, avoid code generation. For safety, validate data and avoid Go's unsafe package.  For speed, use safe optimizations: cache struct metadata, bypass reflect when appropriate, use sync.Pool to reuse transient objects, and etc.
 * __Standards compliance__ – support [CBOR](https://tools.ietf.org/html/rfc7049), including [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#section-3.9) (RFC 7049 and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)) with minor [limitations](#limitations). For example, negative numbers that can't fit into Go's int64 aren’t supported (like `encoding/json`.)
 
-Faster CBOR libraries exist. Choose this one if you value your time, program size, and reliability. Avoiding crashes caused by malformed or malicious CBOR data means fewer headaches.  See [Fuzzing and Coverage](#fuzzing-and-code-coverage).
+Initial releases focus on features, testing, and fuzzing.  After that, new releases (like v1.3) will also improve speed without sacrificing reliability.
+
+Faster CBOR libraries will always exist. Choose this one if you value your time, program size, and reliability. Avoiding crashes caused by malformed or malicious CBOR data means fewer headaches.  See [Fuzzing and Coverage](#fuzzing-and-code-coverage).
 
 ## Current Status
 Version 1.x has:
