@@ -1367,3 +1367,26 @@ func TestMarshalRawMessageValue(t *testing.T) {
 		}
 	}
 }
+
+func TestCyclicDataStructure(t *testing.T) {
+	type Node struct {
+		V int   `cbor:"v"`
+		N *Node `cbor:"n,omitempty"`
+	}
+	v := Node{1, &Node{2, &Node{3, nil}}}                                                                                  // linked list: 1, 2, 3
+	wantCborData := []byte{0xa2, 0x61, 0x76, 0x01, 0x61, 0x6e, 0xa2, 0x61, 0x76, 0x02, 0x61, 0x6e, 0xa1, 0x61, 0x76, 0x03} // {v: 1, n: {v: 2, n: {v: 3}}}
+	cborData, err := cbor.Marshal(v, cbor.EncOptions{})
+	if err != nil {
+		t.Fatalf("Marshal(%v) returns error %s", v, err)
+	}
+	if !bytes.Equal(wantCborData, cborData) {
+		t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", v, cborData, wantCborData)
+	}
+	var v1 Node
+	if err = cbor.Unmarshal(cborData, &v1); err != nil {
+		t.Fatalf("Unmarshal(0x%0x) returns error %s", cborData, err)
+	}
+	if !reflect.DeepEqual(v, v1) {
+		t.Errorf("Unmarshal(0x%0x) returns %+v, want %+v", cborData, v1, v)
+	}
+}

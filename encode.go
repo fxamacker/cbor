@@ -205,9 +205,12 @@ func encodeStringInternal(e *encodeState, s string, opts EncOptions) (int, error
 	return n1 + n2, nil
 }
 
-func encodeArray(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
-	f := getEncodeFunc(v.Type().Elem())
-	if f == nil {
+type arrayEncoder struct {
+	f encodeFunc
+}
+
+func (ae arrayEncoder) encodeArray(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+	if ae.f == nil {
 		return 0, &UnsupportedTypeError{v.Type()}
 	}
 	if v.Kind() == reflect.Slice && v.IsNil() {
@@ -219,7 +222,7 @@ func encodeArray(e *encodeState, v reflect.Value, opts EncOptions) (int, error) 
 	}
 	n := encodeTypeAndAdditionalValue(e, byte(cborTypeArray), uint64(len))
 	for i := 0; i < len; i++ {
-		n1, err := f(e, v.Index(i), opts)
+		n1, err := ae.f(e, v.Index(i), opts)
 		if err != nil {
 			return 0, err
 		}
@@ -228,13 +231,15 @@ func encodeArray(e *encodeState, v reflect.Value, opts EncOptions) (int, error) 
 	return n, nil
 }
 
-func encodeMap(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+type mapEncoder struct {
+	kf, ef encodeFunc
+}
+
+func (me mapEncoder) encodeMap(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 	if opts.Canonical {
-		return encodeMapCanonical(e, v, opts)
+		return me.encodeMapCanonical(e, v, opts)
 	}
-	kf := getEncodeFunc(v.Type().Key())
-	ef := getEncodeFunc(v.Type().Elem())
-	if kf == nil || ef == nil {
+	if me.kf == nil || me.ef == nil {
 		return 0, &UnsupportedTypeError{v.Type()}
 	}
 	if v.IsNil() {
@@ -247,11 +252,11 @@ func encodeMap(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 	n := encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(len))
 	iter := v.MapRange()
 	for iter.Next() {
-		n1, err := kf(e, iter.Key(), opts)
+		n1, err := me.kf(e, iter.Key(), opts)
 		if err != nil {
 			return 0, err
 		}
-		n2, err := ef(e, iter.Value(), opts)
+		n2, err := me.ef(e, iter.Value(), opts)
 		if err != nil {
 			return 0, err
 		}
@@ -304,10 +309,8 @@ func putByCanonical(s *byCanonical) {
 	byCanonicalPool.Put(s)
 }
 
-func encodeMapCanonical(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
-	kf := getEncodeFunc(v.Type().Key())
-	ef := getEncodeFunc(v.Type().Elem())
-	if kf == nil || ef == nil {
+func (me mapEncoder) encodeMapCanonical(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+	if me.kf == nil || me.ef == nil {
 		return 0, &UnsupportedTypeError{v.Type()}
 	}
 	if v.IsNil() {
@@ -321,13 +324,13 @@ func encodeMapCanonical(e *encodeState, v reflect.Value, opts EncOptions) (int, 
 
 	iter := v.MapRange()
 	for iter.Next() {
-		n1, err := kf(pairEncodeState, iter.Key(), opts)
+		n1, err := me.kf(pairEncodeState, iter.Key(), opts)
 		if err != nil {
 			putEncodeState(pairEncodeState)
 			putByCanonical(pairs)
 			return 0, err
 		}
-		n2, err := ef(pairEncodeState, iter.Value(), opts)
+		n2, err := me.ef(pairEncodeState, iter.Value(), opts)
 		if err != nil {
 			putEncodeState(pairEncodeState)
 			putByCanonical(pairs)
@@ -356,14 +359,19 @@ func encodeMapCanonical(e *encodeState, v reflect.Value, opts EncOptions) (int, 
 }
 
 func encodeStruct(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
-	flds := getEncodingStructType(v.Type(), opts.Canonical)
+	structType := getEncodingStructType(v.Type())
+	if structType.err != nil {
+		return 0, structType.err
+	}
+
+	flds := structType.fields
+	if opts.Canonical {
+		flds = structType.canonicalFields
+	}
 
 	kve := getEncodeState() // encode key-value pairs based on struct field tag options
 	kvcount := 0
 	for i := 0; i < len(flds); i++ {
-		if flds[i].ef == nil {
-			return 0, &UnsupportedTypeError{v.Type()}
-		}
 		fv := v
 		ignore := false
 		for k, n := range flds[i].idx {
@@ -465,7 +473,7 @@ func getEncodeIndirectValueFunc(f encodeFunc) encodeFunc {
 	}
 }
 
-func getEncodeFunc(t reflect.Type) encodeFunc {
+func getEncodeFuncInternal(t reflect.Type) encodeFunc {
 	if t.Kind() == reflect.Ptr {
 		for t.Kind() == reflect.Ptr {
 			t = t.Elem()
@@ -500,9 +508,9 @@ func getEncodeFunc(t reflect.Type) encodeFunc {
 		if t.Elem().Kind() == reflect.Uint8 {
 			return encodeByteString
 		}
-		return encodeArray
+		return arrayEncoder{f: getEncodeFunc(t.Elem())}.encodeArray
 	case reflect.Map:
-		return encodeMap
+		return mapEncoder{kf: getEncodeFunc(t.Key()), ef: getEncodeFunc(t.Elem())}.encodeMap
 	case reflect.Struct:
 		return encodeStruct
 	case reflect.Interface:

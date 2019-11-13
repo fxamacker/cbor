@@ -149,6 +149,42 @@ func BenchmarkMarshal(b *testing.B) {
 	}
 }
 
+func BenchmarkMarshalCanonical(b *testing.B) {
+	for _, bm := range []struct {
+		name     string
+		cborData []byte
+		values   []interface{}
+	}{
+		{"map", hexDecode("ad616161416162614261636143616461446165614561666146616761476168614861696149616a614a616c614c616d614d616e614e"), []interface{}{map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}, strc{A: "A", B: "B", C: "C", D: "D", E: "E", F: "F", G: "G", H: "H", I: "I", J: "J", L: "L", M: "M", N: "N"}}},
+	} {
+		for _, v := range bm.values {
+			name := "Go " + reflect.TypeOf(v).String() + " to CBOR " + bm.name
+			if reflect.TypeOf(v).Kind() == reflect.Struct {
+				name = "Go " + reflect.TypeOf(v).Kind().String() + " to CBOR " + bm.name
+			}
+			b.Run(name, func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					if _, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
+						b.Fatal("Marshal:", err)
+					}
+				}
+			})
+			// Canonical encoding
+			name = "Go " + reflect.TypeOf(v).String() + " to CBOR " + bm.name + " canonical"
+			if reflect.TypeOf(v).Kind() == reflect.Struct {
+				name = "Go " + reflect.TypeOf(v).Kind().String() + " to CBOR " + bm.name + " canonical"
+			}
+			b.Run(name, func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					if _, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true}); err != nil {
+						b.Fatal("Marshal:", err)
+					}
+				}
+			})
+		}
+	}
+}
+
 func BenchmarkEncode(b *testing.B) {
 	for _, bm := range encodeBenchmarks {
 		for _, v := range bm.values {

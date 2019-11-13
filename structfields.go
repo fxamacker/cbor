@@ -4,12 +4,10 @@
 package cbor
 
 import (
-	"bytes"
 	"errors"
 	"reflect"
 	"sort"
 	"strings"
-	"sync"
 )
 
 // fieldByIndex returns the nested field corresponding to the index.  It
@@ -91,15 +89,6 @@ func (s byNameLevelAndTag) Less(i, j int) bool {
 		return s.fields[i].tagged
 	}
 	return i < j // Field i and j have the same name, depth, and tagged status. Nothing else matters.
-}
-
-// byCanonicalRule sorts fields by field name length and field name.
-type byCanonicalRule struct {
-	fields
-}
-
-func (s byCanonicalRule) Less(i, j int) bool {
-	return bytes.Compare(s.fields[i].cborName, s.fields[j].cborName) <= 0
 }
 
 func getFieldNameAndOptionsFromTag(tag string) (name string, omitEmpty bool) {
@@ -219,62 +208,4 @@ func getFields(typ reflect.Type) fields {
 	sort.Sort(byIndex{visibleFields})
 
 	return visibleFields
-}
-
-type encodingStructType struct {
-	typ             reflect.Type
-	fields          fields
-	canonicalFields fields
-}
-
-var (
-	decodingStructTypeCache sync.Map
-	encodingStructTypeCache sync.Map
-)
-
-func getDecodingStructType(t reflect.Type) fields {
-	if v, _ := decodingStructTypeCache.Load(t); v != nil {
-		return v.(fields)
-	}
-	flds := getFields(t)
-	for i := 0; i < len(flds); i++ {
-		flds[i].isUnmarshaler = implementsUnmarshaler(flds[i].typ)
-	}
-	decodingStructTypeCache.Store(t, flds)
-	return flds
-}
-
-func getEncodingStructType(t reflect.Type, canonical bool) fields {
-	if v, _ := encodingStructTypeCache.Load(t); v != nil {
-		if canonical {
-			return v.(encodingStructType).canonicalFields
-		}
-		return v.(encodingStructType).fields
-	}
-
-	flds := getFields(t)
-
-	es := getEncodeState()
-	for i := 0; i < len(flds); i++ {
-		flds[i].ef = getEncodeFunc(flds[i].typ)
-
-		encodeTypeAndAdditionalValue(es, byte(cborTypeTextString), uint64(len(flds[i].name)))
-		flds[i].cborName = make([]byte, es.Len()+len(flds[i].name))
-		copy(flds[i].cborName, es.Bytes())
-		copy(flds[i].cborName[es.Len():], flds[i].name)
-
-		es.Reset()
-	}
-	putEncodeState(es)
-
-	canonicalFields := make(fields, len(flds))
-	copy(canonicalFields, flds)
-	sort.Sort(byCanonicalRule{canonicalFields})
-
-	encodingStructTypeCache.Store(t, encodingStructType{typ: t, fields: flds, canonicalFields: canonicalFields})
-
-	if canonical {
-		return canonicalFields
-	}
-	return flds
 }

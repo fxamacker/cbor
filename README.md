@@ -213,7 +213,7 @@ err = enc.EndIndefinite()
 ## Benchmarks
 Go structs are faster than maps:
 * decoding into struct is >66% faster than decoding into map.
-* encoding struct is >63% faster than encoding map.
+* encoding struct is >67% faster than encoding map.
 
 See [Benchmarks for fxamacker/cbor](BENCHMARKS.md).
 
