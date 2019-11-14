@@ -39,6 +39,7 @@ type field struct {
 	isUnmarshaler bool
 	tagged        bool // used to choose dominant field (at the same level tagged fields dominate untagged fields)
 	omitempty     bool // used to skip empty field
+	keyasint      bool // used to encode/decode field name as int
 }
 
 type fields []field
@@ -91,7 +92,7 @@ func (s byNameLevelAndTag) Less(i, j int) bool {
 	return i < j // Field i and j have the same name, depth, and tagged status. Nothing else matters.
 }
 
-func getFieldNameAndOptionsFromTag(tag string) (name string, omitEmpty bool) {
+func getFieldNameAndOptionsFromTag(tag string) (name string, omitEmpty bool, keyAsInt bool) {
 	if len(tag) == 0 {
 		return
 	}
@@ -100,6 +101,8 @@ func getFieldNameAndOptionsFromTag(tag string) (name string, omitEmpty bool) {
 	for _, s := range tokens[1:] {
 		if s == "omitempty" {
 			omitEmpty = true
+		} else if s == "keyasint" {
+			keyAsInt = true
 		}
 	}
 	return
@@ -171,7 +174,7 @@ func getFields(typ reflect.Type) fields {
 				idx[len(fieldIdx)] = i
 
 				tagged := len(tag) > 0
-				tagFieldName, omitempty := getFieldNameAndOptionsFromTag(tag)
+				tagFieldName, omitempty, keyasint := getFieldNameAndOptionsFromTag(tag)
 
 				fieldName := tagFieldName
 				if tagFieldName == "" {
@@ -179,7 +182,7 @@ func getFields(typ reflect.Type) fields {
 				}
 
 				if !f.Anonymous || ft.Kind() != reflect.Struct || len(tagFieldName) > 0 {
-					flds = append(flds, field{name: fieldName, idx: idx, typ: f.Type, tagged: tagged, omitempty: omitempty})
+					flds = append(flds, field{name: fieldName, idx: idx, typ: f.Type, tagged: tagged, omitempty: omitempty, keyasint: keyasint})
 					continue
 				}
 

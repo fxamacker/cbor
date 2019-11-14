@@ -1072,7 +1072,7 @@ func TestUnmarshalStructError2(t *testing.T) {
 	}
 
 	// Unmarshal returns first error encountered, which is *cbor.UnmarshalTypeError (failed to unmarshal int into Go string)
-	cborData := hexDecode("a301026161614161fe6142") // {1:2, "a":"A", 0xfe: B}
+	cborData := hexDecode("a3fa47c35000026161614161fe6142") // {100000.0:2, "a":"A", 0xfe: B}
 	v := strc{}
 	if err := cbor.Unmarshal(cborData, &v); err == nil {
 		t.Errorf("Unmarshal(0x%0x) doesn't return an error", cborData)
@@ -1080,14 +1080,14 @@ func TestUnmarshalStructError2(t *testing.T) {
 		if typeError, ok := err.(*cbor.UnmarshalTypeError); !ok {
 			t.Errorf("Unmarshal(0x%0x) returns wrong type of error %T, want (*cbor.UnmarshalTypeError)", cborData, err)
 		} else {
-			if typeError.Value != "positive integer" {
-				t.Errorf("Unmarshal(0x%0x) (*cbor.UnmarshalTypeError).Value %s, want %s", cborData, typeError.Value, "positive integer")
+			if typeError.Value != "primitives" {
+				t.Errorf("Unmarshal(0x%0x) (*cbor.UnmarshalTypeError).Value %s, want %s", cborData, typeError.Value, "primitives")
 			}
 			if typeError.Type != typeString {
 				t.Errorf("Unmarshal(0x%0x) (*cbor.UnmarshalTypeError).Type %s, want %s", cborData, typeError.Type, typeString)
 			}
-			if !strings.Contains(err.Error(), "cannot unmarshal positive integer into Go value of type string") {
-				t.Errorf("Unmarshal(0x%0x) returns error %s, want error containing %q", cborData, err.Error(), "cannot unmarshal positive integer into Go value of type string")
+			if !strings.Contains(err.Error(), "cannot unmarshal primitives into Go value of type string") {
+				t.Errorf("Unmarshal(0x%0x) returns error %s, want error containing %q", cborData, err.Error(), "cannot unmarshal float into Go value of type string")
 			}
 		}
 	}
@@ -1785,5 +1785,20 @@ func TestCOSEExamples(t *testing.T) {
 		if err := cbor.Unmarshal(d, &v); err != nil {
 			t.Errorf("Unmarshal(0x%0x) returns error %s", d, err)
 		}
+	}
+}
+
+func TestUnmarshalStructKeyAsIntError(t *testing.T) {
+	type T1 struct {
+		F1 int `cbor:"1,keyasint"`
+	}
+	cborData := hexDecode("a13bffffffffffffffff01") // {1: -18446744073709551616}
+	var v T1
+	if err := cbor.Unmarshal(cborData, &v); err == nil {
+		t.Errorf("Unmarshal(0x%0x) returns no error, %v (%T), want (*cbor.UnmarshalTypeError)", cborData, v, v)
+	} else if _, ok := err.(*cbor.UnmarshalTypeError); !ok {
+		t.Errorf("Unmarshal(0x%0x) returns wrong error %T, want (*cbor.UnmarshalTypeError)", cborData, err)
+	} else if !strings.Contains(err.Error(), "cannot unmarshal") {
+		t.Errorf("Unmarshal(0x%0x) returns error %s, want error containing %q", cborData, err, "cannot unmarshal")
 	}
 }

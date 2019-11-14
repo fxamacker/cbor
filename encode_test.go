@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -1388,5 +1389,70 @@ func TestCyclicDataStructure(t *testing.T) {
 	}
 	if !reflect.DeepEqual(v, v1) {
 		t.Errorf("Unmarshal(0x%0x) returns %+v, want %+v", cborData, v1, v)
+	}
+}
+
+func TestMarshalUnmarshalStructKeyAsInt(t *testing.T) {
+	type T struct {
+		F1 int `cbor:"1,keyasint"`
+		F2 int `cbor:"2"`
+		F3 int `cbor:"-3,keyasint"`
+	}
+	v1 := T{F1: 1, F2: 2, F3: 3}
+	want := hexDecode("a301012203613202") // {1: 1, -3: 3, "2": 2}
+
+	b, err := cbor.Marshal(v1, cbor.EncOptions{Canonical: true})
+	if err != nil {
+		t.Errorf("Marshal(%+v) returns error %s", v1, err)
+	}
+	if !bytes.Equal(b, want) {
+		t.Errorf("Marshal(%+v) = 0x%0x, want 0x%0x", v1, b, want)
+	}
+
+	var v2 T
+	if err := cbor.Unmarshal(b, &v2); err != nil {
+		t.Errorf("Unmarshal(0x%0x) returns error %s", b, err)
+	}
+	if !reflect.DeepEqual(v1, v2) {
+		t.Errorf("Unmarshal(0x%0x) returns %+v, want %+v", b, v2, v1)
+	}
+}
+
+func TestMarshalStructKeyAsIntNumError(t *testing.T) {
+	type T1 struct {
+		F1 int `cbor:"2.0,keyasint"`
+	}
+	type T2 struct {
+		F1 int `cbor:"-18446744073709551616,keyasint"`
+	}
+	testCases := []struct {
+		name         string
+		obj          interface{}
+		wantErrorMsg string
+	}{
+		{
+			name:         "float as key",
+			obj:          T1{},
+			wantErrorMsg: "parsing \"2.0\": invalid syntax",
+		},
+		{
+			name:         "out of range int as key",
+			obj:          T2{},
+			wantErrorMsg: "parsing \"-18446744073709551616\": value out of range",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := cbor.Marshal(tc.obj, cbor.EncOptions{})
+			if err == nil {
+				t.Errorf("Marshal(%+v, cbor.EncOptions{}) doesn't return an error, want error %q", tc.obj, tc.wantErrorMsg)
+			} else if _, ok := err.(*strconv.NumError); !ok {
+				t.Errorf("Marshal(%v, cbor.EncOptions{}) error type %T, want *strconv.NumError", tc.obj, err)
+			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+				t.Errorf("Marshal(%v, cbor.EncOptions{}) error %s, want %s", tc.obj, err, tc.wantErrorMsg)
+			} else if b != nil {
+				t.Errorf("Marshal(%v, cbor.EncOptions{}) = 0x%0x, want nil", tc.obj, b)
+			}
+		})
 	}
 }

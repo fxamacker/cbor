@@ -583,20 +583,38 @@ func (d *decodeState) parseStruct(t cborType, count int, v reflect.Value) error 
 
 	hasSize := count >= 0
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
+		var keyBytes []byte
+		var err error
 		t := cborType(d.data[d.offset] & 0xE0)
-		if t != cborTypeTextString {
+		if t == cborTypeTextString {
+			keyBytes, err = d.parseTextString()
+			if err != nil {
+				if d.err == nil {
+					d.err = err
+				}
+				d.skip() // skip value
+				continue
+			}
+		} else if t == cborTypePositiveInt || t == cborTypeNegativeInt {
+			v, err := d.parseInterface()
+			if err != nil {
+				if d.err == nil {
+					d.err = err
+				}
+				d.skip() // skip value
+				continue
+			}
+			switch n := v.(type) {
+			case int64:
+				keyBytes = []byte(strconv.Itoa(int(n)))
+			case uint64:
+				keyBytes = []byte(strconv.Itoa(int(n)))
+			}
+		} else {
 			if d.err == nil {
 				d.err = &UnmarshalTypeError{Value: t.String(), Type: reflect.TypeOf(""), errMsg: "map key is of type " + t.String() + " and cannot be used to match struct " + v.Type().String() + " field name"}
 			}
 			d.skip() // skip key
-			d.skip() // skip value
-			continue
-		}
-		keyBytes, err := d.parseTextString()
-		if err != nil {
-			if d.err == nil {
-				d.err = err
-			}
 			d.skip() // skip value
 			continue
 		}

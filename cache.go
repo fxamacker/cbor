@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"reflect"
 	"sort"
+	"strconv"
 	"sync"
 )
 
@@ -50,23 +51,46 @@ func getEncodingStructType(t reflect.Type) encodingStructType {
 	var err error
 	es := getEncodeState()
 	for i := 0; i < len(flds); i++ {
-		ef := getEncodeFunc(flds[i].typ)
-		if ef == nil {
-			if err == nil {
-				err = &UnsupportedTypeError{t}
-			}
+		// Get field's encodeFunc
+		flds[i].ef = getEncodeFunc(flds[i].typ)
+		if flds[i].ef == nil {
+			err = &UnsupportedTypeError{t}
+			break
 		}
-		flds[i].ef = ef
 
-		encodeTypeAndAdditionalValue(es, byte(cborTypeTextString), uint64(len(flds[i].name)))
-		flds[i].cborName = make([]byte, es.Len()+len(flds[i].name))
-		copy(flds[i].cborName, es.Bytes())
-		copy(flds[i].cborName[es.Len():], flds[i].name)
-
-		es.Reset()
+		// Encode field name
+		if flds[i].keyasint {
+			nameAsInt, numErr := strconv.Atoi(flds[i].name)
+			if numErr != nil {
+				err = numErr
+				break
+			}
+			if nameAsInt >= 0 {
+				encodeTypeAndAdditionalValue(es, byte(cborTypePositiveInt), uint64(nameAsInt))
+			} else {
+				n := nameAsInt*(-1) - 1
+				encodeTypeAndAdditionalValue(es, byte(cborTypeNegativeInt), uint64(n))
+			}
+			flds[i].cborName = make([]byte, es.Len())
+			copy(flds[i].cborName, es.Bytes())
+			es.Reset()
+		} else {
+			encodeTypeAndAdditionalValue(es, byte(cborTypeTextString), uint64(len(flds[i].name)))
+			flds[i].cborName = make([]byte, es.Len()+len(flds[i].name))
+			n := copy(flds[i].cborName, es.Bytes())
+			copy(flds[i].cborName[n:], flds[i].name)
+			es.Reset()
+		}
 	}
 	putEncodeState(es)
 
+	if err != nil {
+		structType := encodingStructType{err: err}
+		encodingStructTypeCache.Store(t, structType)
+		return structType
+	}
+
+	// Sort fields by canonical order
 	canonicalFields := make(fields, len(flds))
 	copy(canonicalFields, flds)
 	sort.Sort(byCanonicalRule{canonicalFields})

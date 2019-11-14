@@ -221,13 +221,27 @@ func BenchmarkEncodeStream(b *testing.B) {
 }
 
 func BenchmarkDecodeCOSE(b *testing.B) {
-	cborData := hexDecode("a50102032620012158205af8047e9085ef79ec321280c7b95844d707d7fe4d73cd648f044c619ee74f6b22582036bb8c00768e90858012dc3831e15a389072bbdbe7e2e19155db9e1197655edf")
+	type coseKey struct {
+		Kty    int             `cbor:"1,keyasint"`
+		Alg    int             `cbor:"3,keyasint"`
+		CrvOrN cbor.RawMessage `cbor:"-1,keyasint"`
+		XOrE   cbor.RawMessage `cbor:"-2,keyasint"`
+		Y      cbor.RawMessage `cbor:"-3,keyasint"`
+	}
+
+	// Data from https://www.w3.org/TR/webauthn/#sec-attested-credential-data example 2, COSE_Key-encoded ES256 (P-256 curve) in EC2 format.
+	cborData := hexDecode("a501020326200121582065eda5a12577c2bae829437fe338701a10aaa375e1bb5b5de108de439c08551d2258201e52ed75701163f7f9e40ddf9f341b3dc9ba860af7e0ca7ca7e9eecd0084d19c")
 	for _, ctor := range []func() interface{}{
 		func() interface{} { return new(interface{}) },
 		func() interface{} { return new(map[interface{}]interface{}) },
 		func() interface{} { return new(map[int]interface{}) },
+		func() interface{} { return new(coseKey) },
 	} {
-		name := "COSE to Go " + reflect.TypeOf(ctor()).Elem().String()
+		t := reflect.TypeOf(ctor()).Elem()
+		name := "COSE to Go " + t.String()
+		if t.Kind() == reflect.Struct {
+			name = "COSE to Go " + t.Kind().String()
+		}
 		b.Run(name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				v := ctor()
