@@ -43,7 +43,7 @@ Version 1.x has:
 [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) has faster speed :rocket:, uses less memory, and simplifies decoding of COSE data (RFC 8152).
 
 ## Design Goals 
-This CBOR library was created for my [WebAuthn (FIDO2) server library](https://github.com/fxamacker/webauthn), because existing CBOR libraries didn't meet certain criteria.  This library improved to become a good fit for many other projects.
+This CBOR library was created for my [WebAuthn (FIDO2) server library](https://github.com/fxamacker/webauthn), because existing CBOR libraries didn't meet certain criteria.  This library became a good fit for many other projects.
 
 This library is designed to be:
 * __Easy__ – idiomatic API like `encoding/json` to reduce learning curve.
