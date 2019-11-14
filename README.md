@@ -20,9 +20,9 @@
 <!-- [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE) -->
 
 # CBOR library in Go
-CBOR is a concise binary alternative to JSON, and is specified in [RFC 7049](https://tools.ietf.org/html/rfc7049).
+This library encodes and decodes CBOR ([RFC 7049](https://tools.ietf.org/html/rfc7049)).  CBOR is a concise binary alternative to JSON.
 
-This library encodes and decodes CBOR.  If you know Go's `encoding/json`, you already know how to use this.
+:thumbsup: If you know Go's `encoding/json`, you already know how to use this library.
 
 :atom: It compiles to less than 0.5 MB and has no external dependencies.
 
