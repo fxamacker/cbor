@@ -576,8 +576,12 @@ func isEmptyValue(v reflect.Value) bool {
 //
 // Marshal supports format string stored under the "cbor" key in the struct
 // field's tag.  CBOR format string can specify the name of the field, "omitempty"
-// option, and special case "-" for field omission.  if "cbor" key is absent,
-// Marshal uses "json" key.
+// and "keyasint" options, and special case "-" for field omission.  If "cbor"
+// key is absent, Marshal uses "json" key.
+//
+// Struct field name is treated as integer if it has "keyasint" option in
+// its format string.  The format string must specify an integer as its
+// field name.
 //
 // Anonymous struct fields are usually marshalled as if their exported fields
 // were fields in the outer struct.  Marshal follows the same struct fields
