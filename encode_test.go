@@ -1394,27 +1394,44 @@ func TestCyclicDataStructure(t *testing.T) {
 
 func TestMarshalUnmarshalStructKeyAsInt(t *testing.T) {
 	type T struct {
-		F1 int `cbor:"1,keyasint"`
-		F2 int `cbor:"2"`
-		F3 int `cbor:"-3,keyasint"`
+		F1 int `cbor:"1,omitempty,keyasint"`
+		F2 int `cbor:"2,omitempty"`
+		F3 int `cbor:"-3,omitempty,keyasint"`
 	}
-	v1 := T{F1: 1, F2: 2, F3: 3}
-	want := hexDecode("a301012203613202") // {1: 1, -3: 3, "2": 2}
+	testCases := []struct {
+		name         string
+		obj          interface{}
+		wantCborData []byte
+	}{
+		{
+			"Zero value struct",
+			T{},
+			hexDecode("a0"), // {}
+		},
+		{
+			"Initialized value struct",
+			T{F1: 1, F2: 2, F3: 3},
+			hexDecode("a301012203613202"), // {1: 1, -3: 3, "2": 2}
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := cbor.Marshal(tc.obj, cbor.EncOptions{Canonical: true})
+			if err != nil {
+				t.Errorf("Marshal(%+v) returns error %s", tc.obj, err)
+			}
+			if !bytes.Equal(b, tc.wantCborData) {
+				t.Errorf("Marshal(%+v) = 0x%0x, want 0x%0x", tc.obj, b, tc.wantCborData)
+			}
 
-	b, err := cbor.Marshal(v1, cbor.EncOptions{Canonical: true})
-	if err != nil {
-		t.Errorf("Marshal(%+v) returns error %s", v1, err)
-	}
-	if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%+v) = 0x%0x, want 0x%0x", v1, b, want)
-	}
-
-	var v2 T
-	if err := cbor.Unmarshal(b, &v2); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %s", b, err)
-	}
-	if !reflect.DeepEqual(v1, v2) {
-		t.Errorf("Unmarshal(0x%0x) returns %+v, want %+v", b, v2, v1)
+			var v2 T
+			if err := cbor.Unmarshal(b, &v2); err != nil {
+				t.Errorf("Unmarshal(0x%0x) returns error %s", b, err)
+			}
+			if !reflect.DeepEqual(tc.obj, v2) {
+				t.Errorf("Unmarshal(0x%0x) returns %+v, want %+v", b, v2, tc.obj)
+			}
+		})
 	}
 }
 
@@ -1452,6 +1469,78 @@ func TestMarshalStructKeyAsIntNumError(t *testing.T) {
 				t.Errorf("Marshal(%v, cbor.EncOptions{}) error %s, want %s", tc.obj, err, tc.wantErrorMsg)
 			} else if b != nil {
 				t.Errorf("Marshal(%v, cbor.EncOptions{}) = 0x%0x, want nil", tc.obj, b)
+			}
+		})
+	}
+}
+
+func TestMarshalUnmarshalStructToArray(t *testing.T) {
+	type T1 struct {
+		M int `cbor:",omitempty"`
+	}
+	type T2 struct {
+		N int `cbor:",omitempty"`
+		O int `cbor:",omitempty"`
+	}
+	type T struct {
+		_   struct{} `cbor:",toarray"`
+		A   int      `cbor:",omitempty"`
+		B   T1       // nested struct
+		T1           // embedded struct
+		*T2          // embedded struct
+	}
+	testCases := []struct {
+		name         string
+		obj          T
+		wantCborData []byte
+	}{
+		{
+			"Zero value struct (test omitempty)",
+			T{},
+			hexDecode("8500a000f6f6"), // [0, {}, 0, nil, nil]
+		},
+		{
+			"Initialized struct",
+			T{A: 24, B: T1{M: 1}, T1: T1{M: 2}, T2: &T2{N: 3, O: 4}},
+			hexDecode("851818a1614d01020304"), // [24, {M: 1}, 2, 3, 4]
+		},
+		{
+			"Null pointer to embedded struct",
+			T{A: 24, B: T1{M: 1}, T1: T1{M: 2}},
+			hexDecode("851818a1614d0102f6f6"), // [24, {M: 1}, 2, nil, nil]
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := cbor.Marshal(tc.obj, cbor.EncOptions{})
+			if err != nil {
+				t.Errorf("Marshal(%+v) returns error %s", tc.obj, err)
+			}
+			if !bytes.Equal(b, tc.wantCborData) {
+				t.Errorf("Marshal(%+v) = 0x%0x, want 0x%0x", tc.obj, b, tc.wantCborData)
+			}
+
+			// Cannonical setting should be ignored for struct to array encoding
+			b, err = cbor.Marshal(tc.obj, cbor.EncOptions{Canonical: true})
+			if err != nil {
+				t.Errorf("Marshal(%+v) returns error %s", tc.obj, err)
+			}
+			if !bytes.Equal(b, tc.wantCborData) {
+				t.Errorf("Marshal(%+v) = 0x%0x, want 0x%0x", tc.obj, b, tc.wantCborData)
+			}
+
+			var v2 T
+			if err := cbor.Unmarshal(b, &v2); err != nil {
+				t.Errorf("Unmarshal(0x%0x) returns error %s", b, err)
+			}
+			if tc.obj.T2 == nil {
+				if !reflect.DeepEqual(*(v2.T2), T2{}) {
+					t.Errorf("Unmarshal(0x%0x) returns %+v, want %+v", b, v2, tc.obj)
+				}
+				v2.T2 = nil
+			}
+			if !reflect.DeepEqual(tc.obj, v2) {
+				t.Errorf("Unmarshal(0x%0x) returns %+v, want %+v", b, v2, tc.obj)
 			}
 		})
 	}

@@ -279,6 +279,8 @@ func (d *decodeState) parse(v reflect.Value, isUnmarshaler bool) (err error) {
 			return d.parseSlice(t, count, v)
 		} else if v.Kind() == reflect.Array {
 			return d.parseArray(t, count, v)
+		} else if v.Kind() == reflect.Struct {
+			return d.parseStructFromArray(t, count, v)
 		}
 		hasSize := count >= 0
 		for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
@@ -292,7 +294,7 @@ func (d *decodeState) parse(v reflect.Value, isUnmarshaler bool) (err error) {
 			count = -1
 		}
 		if v.Kind() == reflect.Struct {
-			return d.parseStruct(t, count, v)
+			return d.parseStructFromMap(t, count, v)
 		} else if v.Kind() == reflect.Map {
 			return d.parseMap(t, count, v)
 		}
@@ -577,9 +579,43 @@ func (d *decodeState) parseMap(t cborType, count int, v reflect.Value) error {
 	return nil
 }
 
-func (d *decodeState) parseStruct(t cborType, count int, v reflect.Value) error {
-	flds := getDecodingStructType(v.Type())
-	foundFlds := make([]bool, len(flds))
+func (d *decodeState) parseStructFromArray(t cborType, count int, v reflect.Value) error {
+	structType := getDecodingStructType(v.Type())
+
+	if !structType.toArray {
+		return &UnmarshalTypeError{Value: t.String(), Type: v.Type(), errMsg: "cannot decode CBOR array to struct without toarray option"}
+	}
+
+	hasSize := count >= 0
+	if count == -1 {
+		count = d.numOfItemsUntilBreak() // peek ahead to get array size to verify that array size matches number of fields
+	}
+	if count != len(structType.fields) {
+		return &UnmarshalTypeError{Value: t.String(), Type: v.Type(), errMsg: "cannot decode CBOR array to struct with different number of elements"}
+	}
+	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
+		fv, err := fieldByIndex(v, structType.fields[i].idx)
+		if err != nil {
+			return err
+		}
+		if err := d.parse(fv, structType.fields[i].isUnmarshaler); err != nil {
+			if d.err == nil {
+				if typeError, ok := err.(*UnmarshalTypeError); ok {
+					typeError.Struct = v.Type().String()
+					typeError.Field = structType.fields[i].name
+					d.err = typeError
+				} else {
+					d.err = err
+				}
+			}
+		}
+	}
+	return d.err
+}
+
+func (d *decodeState) parseStructFromMap(t cborType, count int, v reflect.Value) error {
+	structType := getDecodingStructType(v.Type())
+	foundFlds := make([]bool, len(structType.fields))
 
 	hasSize := count >= 0
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
@@ -621,20 +657,20 @@ func (d *decodeState) parseStruct(t cborType, count int, v reflect.Value) error 
 		keyLen := len(keyBytes)
 
 		var f *field
-		for i := 0; i < len(flds); i++ {
+		for i := 0; i < len(structType.fields); i++ {
 			// Find field with exact match
-			if !foundFlds[i] && len(flds[i].name) == keyLen && flds[i].name == string(keyBytes) {
-				f = &flds[i]
+			if !foundFlds[i] && len(structType.fields[i].name) == keyLen && structType.fields[i].name == string(keyBytes) {
+				f = &structType.fields[i]
 				foundFlds[i] = true
 				break
 			}
 		}
 		if f == nil {
 			keyString := string(keyBytes)
-			for i := 0; i < len(flds); i++ {
+			for i := 0; i < len(structType.fields); i++ {
 				// Find field with case-insensitive match
-				if !foundFlds[i] && len(flds[i].name) == keyLen && strings.EqualFold(flds[i].name, keyString) {
-					f = &flds[i]
+				if !foundFlds[i] && len(structType.fields[i].name) == keyLen && strings.EqualFold(structType.fields[i].name, keyString) {
+					f = &structType.fields[i]
 					foundFlds[i] = true
 					break
 				}

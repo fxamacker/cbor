@@ -96,29 +96,34 @@ func getFieldNameAndOptionsFromTag(tag string) (name string, omitEmpty bool, key
 	if len(tag) == 0 {
 		return
 	}
-	tokens := strings.Split(tag, ",")
-	name = tokens[0]
-	for _, s := range tokens[1:] {
-		if s == "omitempty" {
-			omitEmpty = true
-		} else if s == "keyasint" {
-			keyAsInt = true
-		}
+	idx := strings.Index(tag, ",")
+	if idx == -1 {
+		return tag, false, false
+	}
+	if idx > 0 {
+		name = tag[:idx]
+		tag = tag[idx:]
+	}
+	ss := ",omitempty"
+	if idx = strings.Index(tag, ss); idx >= 0 && (len(tag) == idx+len(ss) || tag[idx+len(ss)] == ',') {
+		omitEmpty = true
+	}
+	ss = ",keyasint"
+	if idx = strings.Index(tag, ss); idx >= 0 && (len(tag) == idx+len(ss) || tag[idx+len(ss)] == ',') {
+		keyAsInt = true
 	}
 	return
 }
 
 // getFields returns a list of visible fields of struct type typ following Go
 // visibility rules for struct fields.
-func getFields(typ reflect.Type) fields {
+func getFields(typ reflect.Type) (flds fields, structOptions string) {
 	// Inspired by Go JSON encoding package's typeFields() function in encoding/json/encode.go.
 
 	var current map[reflect.Type][][]int // key: struct type, value: field index of this struct type at the same level
 	next := map[reflect.Type][][]int{typ: nil}
 
 	visited := map[reflect.Type]bool{} // Inspected struct type at less nested levels.
-
-	var flds fields
 
 	for len(next) > 0 {
 		current, next = next, map[reflect.Type][][]int{}
@@ -155,6 +160,12 @@ func getFields(typ reflect.Type) fields {
 					// Nonexportable anonymous field of struct type can contain exportable fields for serialization.
 				} else if !exportable {
 					// Nonexportable fields are ignored.
+					if f.Name == "_" {
+						tag := f.Tag.Get("cbor")
+						if tag != "-" {
+							structOptions = tag
+						}
+					}
 					continue
 				}
 
@@ -210,5 +221,5 @@ func getFields(typ reflect.Type) fields {
 
 	sort.Sort(byIndex{visibleFields})
 
-	return visibleFields
+	return visibleFields, structOptions
 }

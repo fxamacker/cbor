@@ -358,10 +358,41 @@ func (me mapEncoder) encodeMapCanonical(e *encodeState, v reflect.Value, opts En
 	return n, nil
 }
 
+func encodeStructToArray(e *encodeState, v reflect.Value, opts EncOptions, flds fields) (int, error) {
+	n := encodeTypeAndAdditionalValue(e, byte(cborTypeArray), uint64(len(flds)))
+FieldLoop:
+	for i := 0; i < len(flds); i++ {
+		fv := v
+		for k, n := range flds[i].idx {
+			if k > 0 {
+				if fv.Kind() == reflect.Ptr && fv.Type().Elem().Kind() == reflect.Struct {
+					if fv.IsNil() {
+						// Write nil for null pointer to embedded struct
+						e.Write(cborNil)
+						continue FieldLoop
+					}
+					fv = fv.Elem()
+				}
+			}
+			fv = fv.Field(n)
+		}
+		n1, err := flds[i].ef(e, fv, opts)
+		if err != nil {
+			return 0, err
+		}
+		n += n1
+	}
+	return n, nil
+}
+
 func encodeStruct(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 	structType := getEncodingStructType(v.Type())
 	if structType.err != nil {
 		return 0, structType.err
+	}
+
+	if structType.toArray {
+		return encodeStructToArray(e, v, opts, structType.fields)
 	}
 
 	flds := structType.fields
@@ -371,23 +402,22 @@ func encodeStruct(e *encodeState, v reflect.Value, opts EncOptions) (int, error)
 
 	kve := getEncodeState() // encode key-value pairs based on struct field tag options
 	kvcount := 0
+FieldLoop:
 	for i := 0; i < len(flds); i++ {
 		fv := v
-		ignore := false
 		for k, n := range flds[i].idx {
 			if k > 0 {
 				if fv.Kind() == reflect.Ptr && fv.Type().Elem().Kind() == reflect.Struct {
 					if fv.IsNil() {
 						// Null pointer to embedded struct
-						ignore = true
-						break
+						continue FieldLoop
 					}
 					fv = fv.Elem()
 				}
 			}
 			fv = fv.Field(n)
 		}
-		if ignore || (flds[i].omitempty && isEmptyValue(fv)) {
+		if flds[i].omitempty && isEmptyValue(fv) {
 			continue
 		}
 
@@ -582,6 +612,11 @@ func isEmptyValue(v reflect.Value) bool {
 // Struct field name is treated as integer if it has "keyasint" option in
 // its format string.  The format string must specify an integer as its
 // field name.
+//
+// Special struct field "_" is used to specify struct level options, such as
+// "toarray". "toarray" option enables Go struct to be encoded as CBOR array.
+// "omitempty" is disabled by "toarray" to ensure that the same number
+// of elements are encoded every time.
 //
 // Anonymous struct fields are usually marshalled as if their exported fields
 // were fields in the outer struct.  Marshal follows the same struct fields

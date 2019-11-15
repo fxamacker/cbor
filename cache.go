@@ -5,13 +5,21 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 )
+
+type decodingStructType struct {
+	fields  fields
+	err     error
+	toArray bool
+}
 
 type encodingStructType struct {
 	fields          fields
 	canonicalFields fields
 	err             error
+	toArray         bool
 }
 
 // byCanonicalRule sorts fields by field name length and field name.
@@ -24,21 +32,33 @@ func (s byCanonicalRule) Less(i, j int) bool {
 }
 
 var (
-	decodingStructTypeCache sync.Map // map[reflect.Type]fields
+	decodingStructTypeCache sync.Map // map[reflect.Type]decodingStructType
 	encodingStructTypeCache sync.Map // map[reflect.Type]encodingStructType
 	encodingTypeCache       sync.Map // map[reflect.Type]encodeFunc
 )
 
-func getDecodingStructType(t reflect.Type) fields {
+func structToArray(tag string) bool {
+	s := ",toarray"
+	idx := strings.Index(tag, s)
+	return idx >= 0 && (len(tag) == idx+len(s) || tag[idx+len(s)] == ',')
+}
+
+func getDecodingStructType(t reflect.Type) decodingStructType {
 	if v, _ := decodingStructTypeCache.Load(t); v != nil {
-		return v.(fields)
+		return v.(decodingStructType)
 	}
-	flds := getFields(t)
+
+	flds, structOptions := getFields(t)
+
+	toArray := structToArray(structOptions)
+
 	for i := 0; i < len(flds); i++ {
 		flds[i].isUnmarshaler = implementsUnmarshaler(flds[i].typ)
 	}
-	decodingStructTypeCache.Store(t, flds)
-	return flds
+
+	structType := decodingStructType{fields: flds, toArray: toArray}
+	decodingStructTypeCache.Store(t, structType)
+	return structType
 }
 
 func getEncodingStructType(t reflect.Type) encodingStructType {
@@ -46,7 +66,9 @@ func getEncodingStructType(t reflect.Type) encodingStructType {
 		return v.(encodingStructType)
 	}
 
-	flds := getFields(t)
+	flds, structOptions := getFields(t)
+
+	toArray := structToArray(structOptions)
 
 	var err error
 	es := getEncodeState()
@@ -95,7 +117,7 @@ func getEncodingStructType(t reflect.Type) encodingStructType {
 	copy(canonicalFields, flds)
 	sort.Sort(byCanonicalRule{canonicalFields})
 
-	structType := encodingStructType{fields: flds, canonicalFields: canonicalFields, err: err}
+	structType := encodingStructType{fields: flds, canonicalFields: canonicalFields, toArray: toArray}
 	encodingStructTypeCache.Store(t, structType)
 	return structType
 }

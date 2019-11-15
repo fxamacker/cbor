@@ -1802,3 +1802,109 @@ func TestUnmarshalStructKeyAsIntError(t *testing.T) {
 		t.Errorf("Unmarshal(0x%0x) returns error %s, want error containing %q", cborData, err, "cannot unmarshal")
 	}
 }
+
+func TestUnmarshalArrayToStruct(t *testing.T) {
+	type T struct {
+		_ struct{} `cbor:",toarray"`
+		A int
+		B int
+		C int
+	}
+	testCases := []struct {
+		name     string
+		cborData []byte
+	}{
+		{"definite length array", hexDecode("83010203")},
+		{"indefinite length array", hexDecode("9f010203ff")},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var v T
+			if err := cbor.Unmarshal(tc.cborData, &v); err != nil {
+				t.Errorf("Unmarshal(0x%0x) returns error %s", tc.cborData, err)
+			}
+		})
+	}
+}
+
+func TestUnmarshalArrayToStructNoToArrayOptionError(t *testing.T) {
+	type T struct {
+		A int
+		B int
+		C int
+	}
+	cborData := hexDecode("83010203")
+	var v T
+	if err := cbor.Unmarshal(cborData, &v); err == nil {
+		t.Errorf("Unmarshal(0x%0x) returns no error, %v (%T), want (*cbor.UnmarshalTypeError)", cborData, v, v)
+	} else if _, ok := err.(*cbor.UnmarshalTypeError); !ok {
+		t.Errorf("Unmarshal(0x%0x) returns wrong error %T, want (*cbor.UnmarshalTypeError)", cborData, err)
+	} else if !strings.Contains(err.Error(), "cannot unmarshal") {
+		t.Errorf("Unmarshal(0x%0x) returns error %s, want error containing %q", cborData, err, "cannot unmarshal")
+	}
+}
+
+func TestUnmarshalArrayToStructWrongSizeError(t *testing.T) {
+	type T struct {
+		_ struct{} `cbor:",toarray"`
+		A int
+		B int
+		C int
+	}
+	cborData := hexDecode("820102")
+	var v T
+	if err := cbor.Unmarshal(cborData, &v); err == nil {
+		t.Errorf("Unmarshal(0x%0x) returns no error, %v (%T), want (*cbor.UnmarshalTypeError)", cborData, v, v)
+	} else if _, ok := err.(*cbor.UnmarshalTypeError); !ok {
+		t.Errorf("Unmarshal(0x%0x) returns wrong error %T, want (*cbor.UnmarshalTypeError)", cborData, err)
+	} else if !strings.Contains(err.Error(), "cannot unmarshal") {
+		t.Errorf("Unmarshal(0x%0x) returns error %s, want error containing %q", cborData, err, "cannot unmarshal")
+	}
+}
+
+func TestUnmarshalArrayToStructWrongFieldTypeError(t *testing.T) {
+	type T struct {
+		_ struct{} `cbor:",toarray"`
+		A int
+		B int
+		C string
+	}
+	testCases := []struct {
+		name        string
+		cborData    []byte
+		wantErroMsg string
+	}{
+		{"wrong field type", hexDecode("83010203"), "cannot unmarshal"},
+		{"invalid UTF-8 string", hexDecode("83010261fe"), "cbor: invalid UTF-8 string"},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var v T
+			if err := cbor.Unmarshal(tc.cborData, &v); err == nil {
+				t.Errorf("Unmarshal(0x%0x) returns no error, %v (%T), want (*cbor.UnmarshalTypeError)", tc.cborData, v, v)
+			} else if !strings.Contains(err.Error(), tc.wantErroMsg) {
+				t.Errorf("Unmarshal(0x%0x) returns error %s, want error containing %q", tc.cborData, err, tc.wantErroMsg)
+			}
+		})
+	}
+}
+
+func TestUnmarshalArrayToStructCannotSetEmbeddedPointerError(t *testing.T) {
+	type (
+		s1 struct{ x, X int }
+		S2 struct{ y, Y int }
+		S  struct {
+			_ struct{} `cbor:",toarray"`
+			*s1
+			*S2
+		}
+	)
+	cborData := []byte{0x82, 0x02, 0x04} // {2, 4}
+	var v1 S
+	err := cbor.Unmarshal(cborData, &v1)
+	if err == nil {
+		t.Errorf("Unmarshal(%0x) doesn't return error.  want error: 'cannot set embedded pointer to unexported struct'", cborData)
+	} else if !strings.Contains(err.Error(), "cannot set embedded pointer to unexported struct") {
+		t.Errorf("Unmarshal(%0x) returns error '%s'.  want error: 'cannot set embedded pointer to unexported struct'", cborData, err)
+	}
+}
