@@ -22,15 +22,15 @@
 # CBOR library in Go
 This library encodes and decodes CBOR ([RFC 7049](https://tools.ietf.org/html/rfc7049)).  CBOR is a concise binary alternative to JSON.
 
-:thumbsup: If you know Go's `encoding/json`, you already know how to use this library.
+:thumbsup: If you know Go's `encoding/json`, you already know how to use this library.  Existing structs don't require changes.  Go's struct tags like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` both work as expected.
 
-:atom: It compiles to less than 0.5 MB and has no external dependencies.
+:atom: Your programs won't bloat.  This library compiles to under 0.5 MB, has no external dependencies, and no code gen.
 
 :lock: It avoids crashes on malicious CBOR data by using extensive tests, coverage-guided fuzzing, and data validation.
 
 :rocket: Starting in v1.3, faster speed became a high priority.  Faster libraries will always exist.  However, choose this one if you value your time, program size, and system reliability.
 
-Install with ```go get github.com/fxamacker/cbor``` and use it like Go's ```encoding/json```.  It supports `` `json:"name"` `` keys!
+Install with ```go get github.com/fxamacker/cbor``` and use it like Go's ```encoding/json```.
 
 ## Current Status
 Version 1.x has:
@@ -65,10 +65,10 @@ Libraries and programs were compiled for linux_amd64 using Go 1.12.
 
 ## Features
 * Idiomatic API like `encoding/json`.
+* Support "cbor" and "json" keys in Go's struct tags.
 * Decode slices, maps, and structs in-place.
 * Decode into struct with field name case-insensitive match.
 * Support canonical CBOR encoding for map/struct.
-* Support "cbor" and "json" keys for struct field format tags.
 * Encode anonymous struct fields by `encoding/json` package struct fields visibility rules.
 * Encode and decode nil slice/map/pointer/interface values correctly.
 * Encode and decode indefinite length bytes/string/array/map (["streaming"](https://tools.ietf.org/html/rfc7049#section-2.2)).
