@@ -22,15 +22,21 @@
 # CBOR library in Go
 This library encodes and decodes CBOR ([RFC 7049](https://tools.ietf.org/html/rfc7049)).  CBOR is a concise binary alternative to JSON.
 
-:thumbsup: If you know Go's `encoding/json`, you already know how to use this library.  Existing structs don't require changes.  Go's struct tags like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` both work as expected.
+:hourglass_flowing_sand: This library saves time. It has idiomatic API like Go's `encoding/json`.  Existing structs don't require changes.  Go's struct tags like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` work as expected.
 
 :atom: Your programs won't bloat.  This library compiles to under 0.5 MB, has no external dependencies, and no code gen.
 
 :lock: It avoids crashes on malicious CBOR data by using extensive tests, coverage-guided fuzzing, and data validation.
 
-:rocket: Starting in v1.3, faster speed became a high priority.  Faster libraries will always exist.  However, choose this one if you value your time, program size, and system reliability.
+:rocket: Starting in v1.3, faster speed became a high priority.  Faster libraries will always exist, but speed is only one factor.  Choose this library if you value your time, program size, and system reliability.
 
 Install with ```go get github.com/fxamacker/cbor``` and use it like Go's ```encoding/json```.
+
+<div align="center">
+
+:small_orange_diamond: [Design Goals](#design-goals) :small_orange_diamond: [Features](#features) :small_orange_diamond: [Standards](#standards) :small_orange_diamond: [Fuzzing and Coverage](#fuzzing-and-code-coverage) :small_orange_diamond: [API](#api) :small_orange_diamond: [Security Policy](#security-policy) :small_orange_diamond: [License](#license) :small_orange_diamond:
+
+</div>
 
 ## Current Status
 Version 1.x has:
@@ -40,7 +46,7 @@ Version 1.x has:
 
 [Release v1.2](https://github.com/fxamacker/cbor/releases) (Nov 05, 2019) adds RawMessage type, Marshaler and Unmarshaler interfaces.  Passed 42+ hrs of fuzzing.
 
-[Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) has faster speed :rocket:, uses less memory, and simplifies decoding of COSE data (RFC 8152).
+[Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) has faster speed :rocket:, uses less memory, adds `toarray` struct tag for more compact struct data, and simplifies decoding of COSE data (RFC 8152).
 
 ## Design Goals 
 This CBOR library was created for my [WebAuthn (FIDO2) server library](https://github.com/fxamacker/webauthn), because existing CBOR libraries didn't meet certain criteria.  This library became a good fit for many other projects.
@@ -99,6 +105,8 @@ It also supports [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#
 * CBOR tags (type 6) are ignored.  Decoder simply decodes tagged data after ignoring the tags.
 * CBOR negative int (type 1) that cannot fit into Go's int64 are not supported, such as RFC 7049 example -18446744073709551616.  Decoding these values returns `cbor.UnmarshalTypeError` like Go's `encoding/json`.
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  Use CBOR `Null` (0xf6) to round-trip with Go's `nil`.
+
+:mega: CBOR tags (type 6) is being considered for a future release. Please let me know if this feature is important to you.
 
 ## System Requirements
 * Go 1.12 (or newer)
@@ -235,7 +243,7 @@ For v1, security fixes are provided only for the latest released version since t
 To report security vulnerabilities, please email [faye.github@gmail.com](mailto:faye.github@gmail.com) and allow time for the problem to be resolved before reporting it to the public.
 
 ## Disclaimers
-Phrases like "no crashes" and "no exploits" mean there are none known to the maintainer based on results of unit tests and coverage-based fuzzing.  It doesn't imply the software is 100% bug-free or 100% invulnerable to all known and unknown attacks.
+Phrases like "no crashes" mean there are none known to the maintainer based on results of unit tests and coverage-based fuzzing.  It doesn't imply the software is 100% bug-free or 100% invulnerable to all known and unknown attacks.
 
 Please read the license for additional disclaimers and terms.
 
