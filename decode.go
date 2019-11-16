@@ -125,6 +125,19 @@ func (d *decodeState) value(v interface{}) error {
 	}
 
 	rv = rv.Elem()
+
+	if rv.Kind() == reflect.Interface && rv.NumMethod() == 0 && rv.IsNil() {
+		// Fast path to decode to empty interface without calling implementsUnmarshaler.
+		res, err := d.parseInterface()
+		if err != nil {
+			return err
+		}
+		if res != nil {
+			rv.Set(reflect.ValueOf(res))
+		}
+		return nil
+	}
+
 	return d.parse(rv, implementsUnmarshaler(rv.Type()))
 }
 
