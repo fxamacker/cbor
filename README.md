@@ -20,9 +20,9 @@
 <!-- [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE) -->
 
 # CBOR library in Go
-This library encodes and decodes CBOR ([RFC 7049](https://tools.ietf.org/html/rfc7049)).  CBOR is a concise binary alternative to JSON.
+This library encodes and decodes [CBOR](CBOR.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049)), a concise binary alternative to JSON and other data formats. 
 
-:hourglass_flowing_sand: This library saves time. It has idiomatic API like Go's `encoding/json`.  Existing structs don't require changes.  Go's struct tags like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` work as expected.
+:hourglass_flowing_sand: If you used [Go](https://golang.org)'s `encoding/json`, you already know how to use this library.  Existing structs don't require changes.  Go struct tags like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` work as expected.
 
 :atom: Your programs won't bloat.  This library compiles to under 0.5 MB, has no external dependencies, and no code gen.
 
@@ -34,7 +34,7 @@ Install with ```go get github.com/fxamacker/cbor``` and use it like Go's ```enco
 
 <div align="center">
 
-:small_orange_diamond: [Design Goals](#design-goals) :small_orange_diamond: [Features](#features) :small_orange_diamond: [Standards](#standards) :small_orange_diamond: [Fuzzing and Coverage](#fuzzing-and-code-coverage) :small_orange_diamond: [API](#api) :small_orange_diamond: [Security Policy](#security-policy) :small_orange_diamond: [License](#license) :small_orange_diamond:
+:small_orange_diamond: [Design Goals](#design-goals) :small_orange_diamond: [Features](#features) :small_orange_diamond: [Standards](#standards) :small_orange_diamond: [Fuzzing and Coverage](#fuzzing-and-code-coverage) :small_orange_diamond: [API](#api) :small_orange_diamond: [Security Policy](#security-policy) :small_orange_diamond:
 
 </div>
 
@@ -46,7 +46,7 @@ Version 1.x has:
 
 [Release v1.2](https://github.com/fxamacker/cbor/releases) (Nov 05, 2019) adds RawMessage type, Marshaler and Unmarshaler interfaces.  Passed 42+ hrs of fuzzing.
 
-[Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) has faster speed :rocket:, uses less memory, adds `toarray` struct tag for more compact struct data, and simplifies decoding of COSE data (RFC 8152).
+[Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) is faster :rocket: and uses less memory :recycle:. New `toarray` struct tag allows more compact struct data.  Maps with int keys can encode and decode to structs, which makes using COSE (RFC 8152) data faster and easier.
 
 ## Design Goals 
 This CBOR library was created for my [WebAuthn (FIDO2) server library](https://github.com/fxamacker/webauthn), because existing CBOR libraries didn't meet certain criteria.  This library became a good fit for many other projects.
@@ -77,11 +77,14 @@ Libraries and programs were compiled for linux_amd64 using Go 1.12.
 * Support canonical CBOR encoding for map/struct.
 * Encode anonymous struct fields by `encoding/json` package struct fields visibility rules.
 * Encode and decode nil slice/map/pointer/interface values correctly.
-* Encode and decode indefinite length bytes/string/array/map (["streaming"](https://tools.ietf.org/html/rfc7049#section-2.2)).
 * Encode and decode time.Time as RFC 3339 formatted text string or Unix time.
+* Encode and decode indefinite length bytes/string/array/map (["streaming"](https://tools.ietf.org/html/rfc7049#section-2.2)).
 * :tada: v1.1 -- Support `encoding.BinaryMarshaler` and `encoding.BinaryUnmarshaler` interfaces.
 * :tada: v1.2 -- `cbor.RawMessage` can delay CBOR decoding or precompute CBOR encoding.
 * :tada: v1.2 -- User-defined types can have custom CBOR encoding and decoding by implementing `cbor.Marshaler` and `cbor.Unmarshaler` interfaces. 
+* :truck: [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- Encode and decode struct to array (using `toarray` struct tag) for more compact data
+* :truck: [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- Encode and decode maps with int keys to structs. This makes encoding and decoding COSE data (RFC 8152) much faster and simpler.
+* :balloon: Milestone v1.4 -- Maybe add support CBOR tags (major type 6.)
 
 ## Fuzzing and Code Coverage
 Each release passes coverage-guided fuzzing using [fxamacker/cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  Default corpus has:
@@ -106,7 +109,7 @@ It also supports [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#
 * CBOR negative int (type 1) that cannot fit into Go's int64 are not supported, such as RFC 7049 example -18446744073709551616.  Decoding these values returns `cbor.UnmarshalTypeError` like Go's `encoding/json`.
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  Use CBOR `Null` (0xf6) to round-trip with Go's `nil`.
 
-:mega: CBOR tags (type 6) is being considered for a future release. Please let me know if this feature is important to you.
+:balloon: CBOR tags (type 6) is being considered for a future release. Please let me know if this feature is important to you.
 
 ## System Requirements
 * Go 1.12 (or newer)
@@ -151,9 +154,10 @@ type UnsupportedTypeError struct{ ... }
 ```
 go get github.com/fxamacker/cbor
 ```
+For production, use a tagged release to benefit from longer fuzz tests.
 
 ## Usage
-See [examples](example_test.go).
+Data validation prevents crashes and resource exhaustion attacks from malformed CBOR data.  Use `io.LimitReader` with this library to limit size of large CBOR data.
 
 Decoding:
 
@@ -224,6 +228,8 @@ err = enc.EndIndefinite()
 err = enc.EndIndefinite()
 ```
 
+More [examples](example_test.go).
+
 ## Benchmarks
 In this library, Go structs are faster than maps:
 * decoding into struct is >66% faster than decoding into map.
@@ -251,3 +257,10 @@ Please read the license for additional disclaimers and terms.
 Copyright (c) 2019 [Faye Amacker](https://github.com/fxamacker)
 
 Licensed under [MIT License](LICENSE)
+
+<hr>
+<div align="center">
+
+:small_orange_diamond: [Design Goals](#design-goals) :small_orange_diamond: [Features](#features) :small_orange_diamond: [Standards](#standards) :small_orange_diamond: [Fuzzing and Coverage](#fuzzing-and-code-coverage) :small_orange_diamond: [API](#api) :small_orange_diamond: [Security Policy](#security-policy) :small_orange_diamond:
+
+</div>
