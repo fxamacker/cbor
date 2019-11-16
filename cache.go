@@ -11,15 +11,16 @@ import (
 
 type decodingStructType struct {
 	fields  fields
-	err     error
 	toArray bool
 }
 
 type encodingStructType struct {
-	fields          fields
-	canonicalFields fields
-	err             error
-	toArray         bool
+	fields            fields
+	canonicalFields   fields
+	err               error
+	toArray           bool
+	omitEmpty         bool
+	hasAnonymousField bool
 }
 
 // byCanonicalRule sorts fields by field name length and field name.
@@ -71,6 +72,8 @@ func getEncodingStructType(t reflect.Type) encodingStructType {
 	toArray := structToArray(structOptions)
 
 	var err error
+	var omitEmpty bool
+	var hasAnonymousField bool
 	es := getEncodeState()
 	for i := 0; i < len(flds); i++ {
 		// Get field's encodeFunc
@@ -103,6 +106,16 @@ func getEncodingStructType(t reflect.Type) encodingStructType {
 			copy(flds[i].cborName[n:], flds[i].name)
 			es.Reset()
 		}
+
+		// Check if field is from embedded struct
+		if !hasAnonymousField && len(flds[i].idx) > 1 {
+			hasAnonymousField = true
+		}
+
+		// Check if field can be omitted when empty
+		if !omitEmpty && flds[i].omitempty {
+			omitEmpty = true
+		}
 	}
 	putEncodeState(es)
 
@@ -117,7 +130,7 @@ func getEncodingStructType(t reflect.Type) encodingStructType {
 	copy(canonicalFields, flds)
 	sort.Sort(byCanonicalRule{canonicalFields})
 
-	structType := encodingStructType{fields: flds, canonicalFields: canonicalFields, toArray: toArray}
+	structType := encodingStructType{fields: flds, canonicalFields: canonicalFields, toArray: toArray, omitEmpty: omitEmpty, hasAnonymousField: hasAnonymousField}
 	encodingStructTypeCache.Store(t, structType)
 	return structType
 }

@@ -385,6 +385,24 @@ FieldLoop:
 	return n, nil
 }
 
+func encodeFixedLengthStruct(e *encodeState, v reflect.Value, opts EncOptions, flds fields) (int, error) {
+	n := encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(len(flds)))
+
+	for i := 0; i < len(flds); i++ {
+		n1, _ := e.Write(flds[i].cborName)
+
+		fv := v.Field(flds[i].idx[0])
+		n2, err := flds[i].ef(e, fv, opts)
+		if err != nil {
+			return 0, err
+		}
+
+		n += n1 + n2
+	}
+
+	return n, nil
+}
+
 func encodeStruct(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 	structType := getEncodingStructType(v.Type())
 	if structType.err != nil {
@@ -398,6 +416,10 @@ func encodeStruct(e *encodeState, v reflect.Value, opts EncOptions) (int, error)
 	flds := structType.fields
 	if opts.Canonical {
 		flds = structType.canonicalFields
+	}
+
+	if !structType.hasAnonymousField && !structType.omitEmpty {
+		return encodeFixedLengthStruct(e, v, opts, flds)
 	}
 
 	kve := getEncodeState() // encode key-value pairs based on struct field tag options
