@@ -328,48 +328,45 @@ func (me mapEncoder) encodeMap(e *encodeState, v reflect.Value, opts EncOptions)
 	return n, nil
 }
 
-type pair struct {
-	keyCBORData, pairCBORData []byte
-	keyLen, pairLen           int
+type keyValue struct {
+	keyCBORData, keyValueCBORData []byte
+	keyLen, keyValueLen           int
 }
 
-type byCanonical struct {
-	pairs []pair
+type byCanonicalKeyValues []keyValue
+
+func (x byCanonicalKeyValues) Len() int {
+	return len(x)
 }
 
-func (v byCanonical) Len() int {
-	return len(v.pairs)
+func (x byCanonicalKeyValues) Swap(i, j int) {
+	x[i], x[j] = x[j], x[i]
 }
 
-func (v byCanonical) Swap(i, j int) {
-	v.pairs[i], v.pairs[j] = v.pairs[j], v.pairs[i]
+func (x byCanonicalKeyValues) Less(i, j int) bool {
+	return bytes.Compare(x[i].keyCBORData, x[j].keyCBORData) <= 0
 }
 
-func (v byCanonical) Less(i, j int) bool {
-	return bytes.Compare(v.pairs[i].keyCBORData, v.pairs[j].keyCBORData) <= 0
-}
+var keyValuePool = sync.Pool{}
 
-var byCanonicalPool = sync.Pool{}
-
-func getByCanonical(length int) *byCanonical {
-	v := byCanonicalPool.Get()
+func getKeyValues(length int) []keyValue {
+	v := keyValuePool.Get()
 	if v == nil {
-		return &byCanonical{pairs: make([]pair, 0, length)}
+		return make([]keyValue, 0, length)
 	}
-	s := v.(*byCanonical)
-	if cap(s.pairs) < length {
-		// byCanonical object from the pool does not have enough capacity.
+	x := v.([]keyValue)
+	if cap(x) < length {
+		// []keyValue from the pool does not have enough capacity.
 		// Return it back to the pool and create a new one.
-		byCanonicalPool.Put(s)
-		return &byCanonical{pairs: make([]pair, 0, length)}
+		keyValuePool.Put(x)
+		return make([]keyValue, 0, length)
 	}
-	s.pairs = s.pairs[:0]
-	return s
+	return x
 }
 
-func putByCanonical(s *byCanonical) {
-	s.pairs = s.pairs[:0]
-	byCanonicalPool.Put(s)
+func putKeyValues(x []keyValue) {
+	x = x[:0]
+	keyValuePool.Put(x)
 }
 
 func (me mapEncoder) encodeMapCanonical(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
@@ -382,42 +379,43 @@ func (me mapEncoder) encodeMapCanonical(e *encodeState, v reflect.Value, opts En
 	if v.Len() == 0 {
 		return 1, e.WriteByte(byte(cborTypeMap))
 	}
-	pairEncodeState := getEncodeState() // accumulated cbor encoded map key-value pairs
-	pairs := getByCanonical(v.Len())    // for sorting keys
 
+	kve := getEncodeState()      // accumulated cbor encoded key-values
+	kvs := getKeyValues(v.Len()) // for sorting keys
 	iter := v.MapRange()
 	for iter.Next() {
-		n1, err := me.kf(pairEncodeState, iter.Key(), opts)
+		n1, err := me.kf(kve, iter.Key(), opts)
 		if err != nil {
-			putEncodeState(pairEncodeState)
-			putByCanonical(pairs)
+			putEncodeState(kve)
+			putKeyValues(kvs)
 			return 0, err
 		}
-		n2, err := me.ef(pairEncodeState, iter.Value(), opts)
+		n2, err := me.ef(kve, iter.Value(), opts)
 		if err != nil {
-			putEncodeState(pairEncodeState)
-			putByCanonical(pairs)
+			putEncodeState(kve)
+			putKeyValues(kvs)
 			return 0, err
 		}
-		pairs.pairs = append(pairs.pairs, pair{keyLen: n1, pairLen: n1 + n2})
-	}
-	b := pairEncodeState.Bytes()
-	for i, offset := 0, 0; i < len(pairs.pairs); i++ {
-		pairs.pairs[i].keyCBORData = b[offset : offset+pairs.pairs[i].keyLen]
-		pairs.pairs[i].pairCBORData = b[offset : offset+pairs.pairs[i].pairLen]
-		offset += pairs.pairs[i].pairLen
+		kvs = append(kvs, keyValue{keyLen: n1, keyValueLen: n1 + n2})
 	}
 
-	sort.Sort(pairs)
+	b := kve.Bytes()
+	for i, offset := 0, 0; i < len(kvs); i++ {
+		kvs[i].keyCBORData = b[offset : offset+kvs[i].keyLen]
+		kvs[i].keyValueCBORData = b[offset : offset+kvs[i].keyValueLen]
+		offset += kvs[i].keyValueLen
+	}
 
-	n := encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(len(pairs.pairs)))
-	for i := 0; i < len(pairs.pairs); i++ {
-		n1, _ := e.Write(pairs.pairs[i].pairCBORData)
+	sort.Sort(byCanonicalKeyValues(kvs))
+
+	n := encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(len(kvs)))
+	for i := 0; i < len(kvs); i++ {
+		n1, _ := e.Write(kvs[i].keyValueCBORData)
 		n += n1
 	}
 
-	putEncodeState(pairEncodeState)
-	putByCanonical(pairs)
+	putEncodeState(kve)
+	putKeyValues(kvs)
 	return n, nil
 }
 
