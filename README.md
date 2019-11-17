@@ -32,14 +32,6 @@ This CBOR library balances competing factors:   __Easy__ vs __Small__ vs __Safe_
 
 :rocket: It is fast (since v1.3) by using safe optimizations.  Faster libraries will always exist, but speed is only one factor.  
 
-<!--
-:rocket: It is fast by using safe optimizations (especially since v1.3.)  Faster libraries will always exist, but speed is only one factor.  Choose this library if you value your time, program size, and system reliability.
-
-:rocket: Release v1.3 is faster because of safe optimizations.  Faster libraries will always exist, but speed is only one factor.  Choose this library if you value your time, program size, and system reliability.
-
-:rocket: Starting in v1.3, faster speed became a high priority.  Faster libraries will always exist, but speed is only one factor.  Choose this library if you value your time, program size, and system reliability.
--->
-
 Choose this library if you value your time, program size, and system reliability. 
 
 Install with ```go get github.com/fxamacker/cbor``` and use it like Go's ```encoding/json```.
