@@ -20,7 +20,7 @@
 <!-- [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE) -->
 
 # CBOR library in Go
-This library encodes and decodes [CBOR](CBOR.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049)), a concise binary alternative to JSON and other data formats. This library is reliable and balances competing qualities: easy, small, safe, and fast.
+This library encodes and decodes [CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049)), a concise binary alternative to JSON and other data formats. This library is reliable and balances competing qualities: easy, small, safe, and fast.
 
 :hourglass_flowing_sand: It's easy and saves time by having same API as [Go](https://golang.org)'s [`encoding/json`](https://golang.org/pkg/encoding/json/) when possible.  Existing structs don't require changes.  Go struct tags like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` work as expected.
 
