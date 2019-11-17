@@ -49,7 +49,7 @@ Recent activity:
 * [x] [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- faster encoding and decoding.
 * [x] [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- add struct to/from CBOR array (using `toarray` struct tag) for more compact data.
 * [x] [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- add struct to/from CBOR map with int keys. Simplifies using COSE data (RFC 8152).
-* [ ] Milestone v1.4 -- :balloon: (maybe) Add support CBOR tags (major type 6.)
+* [ ] Milestone v1.4 -- :balloon: (maybe) Add support for CBOR tags (major type 6.)
 
 ## Design Goals 
 This CBOR library was created for my [WebAuthn (FIDO2) server library](https://github.com/fxamacker/webauthn), because existing CBOR libraries didn't meet certain criteria.  This library became a good fit for many other projects.
