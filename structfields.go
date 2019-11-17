@@ -4,31 +4,10 @@
 package cbor
 
 import (
-	"errors"
 	"reflect"
 	"sort"
 	"strings"
 )
-
-// fieldByIndex returns the nested field corresponding to the index.  It
-// allocates pointer to struct field if it is nil and settable.
-// reflect.Value.FieldByIndex() panics at nil pointer to unexported anonymous
-// field.  This function returns error.
-func fieldByIndex(v reflect.Value, index []int) (reflect.Value, error) {
-	for _, i := range index {
-		if v.Kind() == reflect.Ptr && v.Type().Elem().Kind() == reflect.Struct {
-			if v.IsNil() {
-				if !v.CanSet() {
-					return reflect.Value{}, errors.New("cbor: cannot set embedded pointer to unexported struct: " + v.Type().String())
-				}
-				v.Set(reflect.New(v.Type().Elem()))
-			}
-			v = v.Elem()
-		}
-		v = v.Field(i)
-	}
-	return v, nil
-}
 
 type field struct {
 	name          string
@@ -90,29 +69,6 @@ func (s byNameLevelAndTag) Less(i, j int) bool {
 		return s.fields[i].tagged
 	}
 	return i < j // Field i and j have the same name, depth, and tagged status. Nothing else matters.
-}
-
-func getFieldNameAndOptionsFromTag(tag string) (name string, omitEmpty bool, keyAsInt bool) {
-	if len(tag) == 0 {
-		return
-	}
-	idx := strings.Index(tag, ",")
-	if idx == -1 {
-		return tag, false, false
-	}
-	if idx > 0 {
-		name = tag[:idx]
-		tag = tag[idx:]
-	}
-	ss := ",omitempty"
-	if idx = strings.Index(tag, ss); idx >= 0 && (len(tag) == idx+len(ss) || tag[idx+len(ss)] == ',') {
-		omitEmpty = true
-	}
-	ss = ",keyasint"
-	if idx = strings.Index(tag, ss); idx >= 0 && (len(tag) == idx+len(ss) || tag[idx+len(ss)] == ',') {
-		keyAsInt = true
-	}
-	return
 }
 
 // getFields returns a list of visible fields of struct type typ following Go
@@ -222,4 +178,27 @@ func getFields(typ reflect.Type) (flds fields, structOptions string) {
 	sort.Sort(byIndex{visibleFields})
 
 	return visibleFields, structOptions
+}
+
+func getFieldNameAndOptionsFromTag(tag string) (name string, omitEmpty bool, keyAsInt bool) {
+	if len(tag) == 0 {
+		return
+	}
+	idx := strings.Index(tag, ",")
+	if idx == -1 {
+		return tag, false, false
+	}
+	if idx > 0 {
+		name = tag[:idx]
+		tag = tag[idx:]
+	}
+	ss := ",omitempty"
+	if idx = strings.Index(tag, ss); idx >= 0 && (len(tag) == idx+len(ss) || tag[idx+len(ss)] == ',') {
+		omitEmpty = true
+	}
+	ss = ",keyasint"
+	if idx = strings.Index(tag, ss); idx >= 0 && (len(tag) == idx+len(ss) || tag[idx+len(ss)] == ',') {
+		keyAsInt = true
+	}
+	return
 }

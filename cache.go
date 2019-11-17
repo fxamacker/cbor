@@ -14,6 +14,24 @@ type decodingStructType struct {
 	toArray bool
 }
 
+func getDecodingStructType(t reflect.Type) decodingStructType {
+	if v, _ := decodingStructTypeCache.Load(t); v != nil {
+		return v.(decodingStructType)
+	}
+
+	flds, structOptions := getFields(t)
+
+	toArray := structToArray(structOptions)
+
+	for i := 0; i < len(flds); i++ {
+		flds[i].isUnmarshaler = implementsUnmarshaler(flds[i].typ)
+	}
+
+	structType := decodingStructType{fields: flds, toArray: toArray}
+	decodingStructTypeCache.Store(t, structType)
+	return structType
+}
+
 type encodingStructType struct {
 	fields            fields
 	canonicalFields   fields
@@ -37,30 +55,6 @@ var (
 	encodingStructTypeCache sync.Map // map[reflect.Type]encodingStructType
 	encodingTypeCache       sync.Map // map[reflect.Type]encodeFunc
 )
-
-func structToArray(tag string) bool {
-	s := ",toarray"
-	idx := strings.Index(tag, s)
-	return idx >= 0 && (len(tag) == idx+len(s) || tag[idx+len(s)] == ',')
-}
-
-func getDecodingStructType(t reflect.Type) decodingStructType {
-	if v, _ := decodingStructTypeCache.Load(t); v != nil {
-		return v.(decodingStructType)
-	}
-
-	flds, structOptions := getFields(t)
-
-	toArray := structToArray(structOptions)
-
-	for i := 0; i < len(flds); i++ {
-		flds[i].isUnmarshaler = implementsUnmarshaler(flds[i].typ)
-	}
-
-	structType := decodingStructType{fields: flds, toArray: toArray}
-	decodingStructTypeCache.Store(t, structType)
-	return structType
-}
 
 func getEncodingStructType(t reflect.Type) encodingStructType {
 	if v, _ := encodingStructTypeCache.Load(t); v != nil {
@@ -142,4 +136,10 @@ func getEncodeFunc(t reflect.Type) encodeFunc {
 	f := getEncodeFuncInternal(t)
 	encodingTypeCache.Store(t, f)
 	return f
+}
+
+func structToArray(tag string) bool {
+	s := ",toarray"
+	idx := strings.Index(tag, s)
+	return idx >= 0 && (len(tag) == idx+len(s) || tag[idx+len(s)] == ',')
 }

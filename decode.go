@@ -15,46 +15,91 @@ import (
 	"unicode/utf8"
 )
 
-var (
-	typeTime              = reflect.TypeOf(time.Time{})
-	typeUnmarshaler       = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
-	typeBinaryUnmarshaler = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
-)
+// Unmarshal parses the CBOR-encoded data and stores the result in the value
+// pointed to by v.  If v is nil or not a pointer, Unmarshal returns an error.
+//
+// Unmarshal uses the inverse of the encodings that Marshal uses, allocating
+// maps, slices, and pointers as necessary, with the following additional rules:
+//
+// To unmarshal CBOR into a pointer, Unmarshal first handles the case of the
+// CBOR being the CBOR literal null.  In that case, Unmarshal sets the pointer
+// to nil.  Otherwise, Unmarshal unmarshals the CBOR into the value pointed at
+// by the pointer.  If the pointer is nil, Unmarshal allocates a new value for
+// it to point to.
+//
+// To unmarshal CBOR into an interface value, Unmarshal stores one of these in
+// the interface value:
+//
+//     bool, for CBOR booleans
+//     uint64, for CBOR positive integers
+//     int64, for CBOR negative integers
+//     float64, for CBOR floating points
+//     []byte, for CBOR byte strings
+//     string, for CBOR text strings
+//     []interface{}, for CBOR arrays
+//     map[interface{}]interface{}, for CBOR maps
+//     nil, for CBOR null
+//
+// To unmarshal a CBOR array into a slice, Unmarshal allocates a new slice only
+// if the CBOR array is empty or slice capacity is less than CBOR array length.
+// Otherwise Unmarshal reuses the existing slice, overwriting existing elements.
+// Unmarshal sets the slice length to CBOR array length.
+//
+// To ummarshal a CBOR array into a Go array, Unmarshal decodes CBOR array
+// elements into corresponding Go array elements.  If the Go array is smaller
+// than the CBOR array, the additional CBOR array elements are discarded.  If
+// the CBOR array is smaller than the Go array, the additional Go array elements
+// are set to zero values.
+//
+// To unmarshal a CBOR map into a map, Unmarshal allocates a new map only if the
+// map is nil.  Otherwise Unmarshal reuses the existing map, keeping existing
+// entries.  Unmarshal stores key-value pairs from the CBOR map into Go map.
+//
+// To unmarshal a CBOR map into a struct, Unmarshal matches CBOR map keys to the
+// keys in the following priority:
+//
+//     1. "cbor" key in struct field tag,
+//     2. "json" key in struct field tag,
+//     3. struct field name.
+//
+// Unmarshal prefers an exact match but also accepts a case-insensitive match.
+// Map keys which don't have a corresponding struct field are ignored.
+//
+// To unmarshal a CBOR text string into a time.Time value, Unmarshal parses text
+// string formatted in RFC3339.  To unmarshal a CBOR integer/float into a
+// time.Time value, Unmarshal creates an unix time with integer/float as seconds
+// and fractional seconds since January 1, 1970 UTC.
+//
+// To unmarshal CBOR into a value implementing the Unmarshaler interface,
+// Unmarshal calls that value's UnmarshalCBOR method.
+//
+// Unmarshal decodes a CBOR byte string into a value implementing
+// encoding.BinaryUnmarshaler.
+//
+// If a CBOR value is not appropriate for a given Go type, or if a CBOR number
+// overflows the Go type, Unmarshal skips that field and completes the
+// unmarshalling as best as it can.  If no more serious errors are encountered,
+// unmarshal returns an UnmarshalTypeError describing the earliest such error.
+// In any case, it's not guaranteed that all the remaining fields following the
+// problematic one will be unmarshaled into the target object.
+//
+// The CBOR null value unmarshals into a slice/map/pointer/interface by setting
+// that Go value to nil.  Because null is often used to mean "not present",
+// unmarshalling a CBOR null into any other Go type has no effect on the value
+// produces no error.
+//
+// Unmarshal ignores CBOR tag data and parses tagged data following CBOR tag.
+func Unmarshal(data []byte, v interface{}) error {
+	d := decodeState{data: data}
+	return d.value(v)
+}
 
-type cborType uint8
-
-const (
-	cborTypePositiveInt cborType = 0x00
-	cborTypeNegativeInt cborType = 0x20
-	cborTypeByteString  cborType = 0x40
-	cborTypeTextString  cborType = 0x60
-	cborTypeArray       cborType = 0x80
-	cborTypeMap         cborType = 0xA0
-	cborTypeTag         cborType = 0xC0
-	cborTypePrimitives  cborType = 0xE0
-)
-
-func (t cborType) String() string {
-	switch t {
-	case cborTypePositiveInt:
-		return "positive integer"
-	case cborTypeNegativeInt:
-		return "negative integer"
-	case cborTypeByteString:
-		return "byte string"
-	case cborTypeTextString:
-		return "UTF-8 text string"
-	case cborTypeArray:
-		return "array"
-	case cborTypeMap:
-		return "map"
-	case cborTypeTag:
-		return "tag"
-	case cborTypePrimitives:
-		return "primitives"
-	default:
-		return "Invalid type " + strconv.Itoa(int(t))
-	}
+// Unmarshaler is the interface implemented by types that can unmarshal a CBOR
+// representation of themselves.  The input can be assumed to be a valid encoding
+// of a CBOR value. UnmarshalCBOR must copy the CBOR data if it wishes to retain
+// the data after returning.
+type Unmarshaler interface {
+	UnmarshalCBOR([]byte) error
 }
 
 // InvalidUnmarshalError describes an invalid argument passed to Unmarshal.
@@ -94,24 +139,10 @@ func (e *UnmarshalTypeError) Error() string {
 	return s
 }
 
-// Unmarshaler is the interface implemented by types that can unmarshal a CBOR
-// representation of themselves.  The input can be assumed to be a valid encoding
-// of a CBOR value. UnmarshalCBOR must copy the CBOR data if it wishes to retain
-// the data after returning.
-type Unmarshaler interface {
-	UnmarshalCBOR([]byte) error
-}
-
 type decodeState struct {
 	data   []byte
 	offset int // next read offset in data
 	err    error
-}
-
-func (d *decodeState) reset(data []byte) {
-	d.data = data
-	d.offset = 0
-	d.err = nil
 }
 
 func (d *decodeState) value(v interface{}) error {
@@ -141,55 +172,39 @@ func (d *decodeState) value(v interface{}) error {
 	return d.parse(rv, implementsUnmarshaler(rv.Type()))
 }
 
-// skip moves data offset to the next item.  skip assumes data is well-formed,
-// and does not perform bounds checking.
-func (d *decodeState) skip() {
-	t := cborType(d.data[d.offset] & 0xE0)
-	ai := d.data[d.offset] & 0x1F
-	val := uint64(ai)
-	d.offset++
+type cborType uint8
 
-	switch ai {
-	case 24:
-		val = uint64(d.data[d.offset])
-		d.offset++
-	case 25:
-		val = uint64(binary.BigEndian.Uint16(d.data[d.offset : d.offset+2]))
-		d.offset += 2
-	case 26:
-		val = uint64(binary.BigEndian.Uint32(d.data[d.offset : d.offset+4]))
-		d.offset += 4
-	case 27:
-		val = binary.BigEndian.Uint64(d.data[d.offset : d.offset+8])
-		d.offset += 8
-	}
+const (
+	cborTypePositiveInt cborType = 0x00
+	cborTypeNegativeInt cborType = 0x20
+	cborTypeByteString  cborType = 0x40
+	cborTypeTextString  cborType = 0x60
+	cborTypeArray       cborType = 0x80
+	cborTypeMap         cborType = 0xA0
+	cborTypeTag         cborType = 0xC0
+	cborTypePrimitives  cborType = 0xE0
+)
 
-	if ai == 31 {
-		switch t {
-		case cborTypeByteString, cborTypeTextString, cborTypeArray, cborTypeMap:
-			for true {
-				if d.data[d.offset] == 0xFF {
-					d.offset++
-					return
-				}
-				d.skip()
-			}
-		}
-	}
-
+func (t cborType) String() string {
 	switch t {
-	case cborTypeByteString, cborTypeTextString:
-		d.offset += int(val)
+	case cborTypePositiveInt:
+		return "positive integer"
+	case cborTypeNegativeInt:
+		return "negative integer"
+	case cborTypeByteString:
+		return "byte string"
+	case cborTypeTextString:
+		return "UTF-8 text string"
 	case cborTypeArray:
-		for i := 0; i < int(val); i++ {
-			d.skip()
-		}
+		return "array"
 	case cborTypeMap:
-		for i := 0; i < int(val)*2; i++ {
-			d.skip()
-		}
+		return "map"
 	case cborTypeTag:
-		d.skip()
+		return "tag"
+	case cborTypePrimitives:
+		return "primitives"
+	default:
+		return "Invalid type " + strconv.Itoa(int(t))
 	}
 }
 
@@ -714,6 +729,58 @@ func (d *decodeState) parseStructFromMap(t cborType, count int, v reflect.Value)
 	return d.err
 }
 
+// skip moves data offset to the next item.  skip assumes data is well-formed,
+// and does not perform bounds checking.
+func (d *decodeState) skip() {
+	t := cborType(d.data[d.offset] & 0xE0)
+	ai := d.data[d.offset] & 0x1F
+	val := uint64(ai)
+	d.offset++
+
+	switch ai {
+	case 24:
+		val = uint64(d.data[d.offset])
+		d.offset++
+	case 25:
+		val = uint64(binary.BigEndian.Uint16(d.data[d.offset : d.offset+2]))
+		d.offset += 2
+	case 26:
+		val = uint64(binary.BigEndian.Uint32(d.data[d.offset : d.offset+4]))
+		d.offset += 4
+	case 27:
+		val = binary.BigEndian.Uint64(d.data[d.offset : d.offset+8])
+		d.offset += 8
+	}
+
+	if ai == 31 {
+		switch t {
+		case cborTypeByteString, cborTypeTextString, cborTypeArray, cborTypeMap:
+			for true {
+				if d.data[d.offset] == 0xFF {
+					d.offset++
+					return
+				}
+				d.skip()
+			}
+		}
+	}
+
+	switch t {
+	case cborTypeByteString, cborTypeTextString:
+		d.offset += int(val)
+	case cborTypeArray:
+		for i := 0; i < int(val); i++ {
+			d.skip()
+		}
+	case cborTypeMap:
+		for i := 0; i < int(val)*2; i++ {
+			d.skip()
+		}
+	case cborTypeTag:
+		d.skip()
+	}
+}
+
 // getHeader assumes data is well-formed, and does not perform bounds checking.
 func (d *decodeState) getHeader() (t cborType, ai byte, val uint64) {
 	t = cborType(d.data[d.offset] & 0xE0)
@@ -757,6 +824,18 @@ func (d *decodeState) foundBreak() bool {
 	}
 	return false
 }
+
+func (d *decodeState) reset(data []byte) {
+	d.data = data
+	d.offset = 0
+	d.err = nil
+}
+
+var (
+	typeTime              = reflect.TypeOf(time.Time{})
+	typeUnmarshaler       = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
+	typeBinaryUnmarshaler = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
+)
 
 func fillNil(t cborType, v reflect.Value) error {
 	switch v.Kind() {
@@ -922,81 +1001,22 @@ func implementsUnmarshaler(t reflect.Type) bool {
 	return reflect.PtrTo(t).Implements(typeUnmarshaler)
 }
 
-// Unmarshal parses the CBOR-encoded data and stores the result in the value
-// pointed to by v.  If v is nil or not a pointer, Unmarshal returns an error.
-//
-// Unmarshal uses the inverse of the encodings that Marshal uses, allocating
-// maps, slices, and pointers as necessary, with the following additional rules:
-//
-// To unmarshal CBOR into a pointer, Unmarshal first handles the case of the
-// CBOR being the CBOR literal null.  In that case, Unmarshal sets the pointer
-// to nil.  Otherwise, Unmarshal unmarshals the CBOR into the value pointed at
-// by the pointer.  If the pointer is nil, Unmarshal allocates a new value for
-// it to point to.
-//
-// To unmarshal CBOR into an interface value, Unmarshal stores one of these in
-// the interface value:
-//
-//     bool, for CBOR booleans
-//     uint64, for CBOR positive integers
-//     int64, for CBOR negative integers
-//     float64, for CBOR floating points
-//     []byte, for CBOR byte strings
-//     string, for CBOR text strings
-//     []interface{}, for CBOR arrays
-//     map[interface{}]interface{}, for CBOR maps
-//     nil, for CBOR null
-//
-// To unmarshal a CBOR array into a slice, Unmarshal allocates a new slice only
-// if the CBOR array is empty or slice capacity is less than CBOR array length.
-// Otherwise Unmarshal reuses the existing slice, overwriting existing elements.
-// Unmarshal sets the slice length to CBOR array length.
-//
-// To ummarshal a CBOR array into a Go array, Unmarshal decodes CBOR array
-// elements into corresponding Go array elements.  If the Go array is smaller
-// than the CBOR array, the additional CBOR array elements are discarded.  If
-// the CBOR array is smaller than the Go array, the additional Go array elements
-// are set to zero values.
-//
-// To unmarshal a CBOR map into a map, Unmarshal allocates a new map only if the
-// map is nil.  Otherwise Unmarshal reuses the existing map, keeping existing
-// entries.  Unmarshal stores key-value pairs from the CBOR map into Go map.
-//
-// To unmarshal a CBOR map into a struct, Unmarshal matches CBOR map keys to the
-// keys in the following priority:
-//
-//     1. "cbor" key in struct field tag,
-//     2. "json" key in struct field tag,
-//     3. struct field name.
-//
-// Unmarshal prefers an exact match but also accepts a case-insensitive match.
-// Map keys which don't have a corresponding struct field are ignored.
-//
-// To unmarshal a CBOR text string into a time.Time value, Unmarshal parses text
-// string formatted in RFC3339.  To unmarshal a CBOR integer/float into a
-// time.Time value, Unmarshal creates an unix time with integer/float as seconds
-// and fractional seconds since January 1, 1970 UTC.
-//
-// To unmarshal CBOR into a value implementing the Unmarshaler interface,
-// Unmarshal calls that value's UnmarshalCBOR method.
-//
-// Unmarshal decodes a CBOR byte string into a value implementing
-// encoding.BinaryUnmarshaler.
-//
-// If a CBOR value is not appropriate for a given Go type, or if a CBOR number
-// overflows the Go type, Unmarshal skips that field and completes the
-// unmarshalling as best as it can.  If no more serious errors are encountered,
-// unmarshal returns an UnmarshalTypeError describing the earliest such error.
-// In any case, it's not guaranteed that all the remaining fields following the
-// problematic one will be unmarshaled into the target object.
-//
-// The CBOR null value unmarshals into a slice/map/pointer/interface by setting
-// that Go value to nil.  Because null is often used to mean "not present",
-// unmarshalling a CBOR null into any other Go type has no effect on the value
-// produces no error.
-//
-// Unmarshal ignores CBOR tag data and parses tagged data following CBOR tag.
-func Unmarshal(data []byte, v interface{}) error {
-	d := decodeState{data: data}
-	return d.value(v)
+// fieldByIndex returns the nested field corresponding to the index.  It
+// allocates pointer to struct field if it is nil and settable.
+// reflect.Value.FieldByIndex() panics at nil pointer to unexported anonymous
+// field.  This function returns error.
+func fieldByIndex(v reflect.Value, index []int) (reflect.Value, error) {
+	for _, i := range index {
+		if v.Kind() == reflect.Ptr && v.Type().Elem().Kind() == reflect.Struct {
+			if v.IsNil() {
+				if !v.CanSet() {
+					return reflect.Value{}, errors.New("cbor: cannot set embedded pointer to unexported struct: " + v.Type().String())
+				}
+				v.Set(reflect.New(v.Type().Elem()))
+			}
+			v = v.Elem()
+		}
+		v = v.Field(i)
+	}
+	return v, nil
 }

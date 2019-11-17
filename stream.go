@@ -9,35 +9,6 @@ import (
 	"reflect"
 )
 
-var cborIndefiniteHeader = map[cborType][]byte{
-	cborTypeByteString: {0x5f},
-	cborTypeTextString: {0x7f},
-	cborTypeArray:      {0x9f},
-	cborTypeMap:        {0xbf},
-}
-
-// RawMessage is a raw encoded CBOR value. It implements Marshaler and
-// Unmarshaler interfaces and can be used to delay CBOR decoding or
-// precompute a CBOR encoding.
-type RawMessage []byte
-
-// MarshalCBOR returns m as the CBOR encoding of m.
-func (m RawMessage) MarshalCBOR() ([]byte, error) {
-	if len(m) == 0 {
-		return cborNil, nil
-	}
-	return m, nil
-}
-
-// UnmarshalCBOR sets *m to a copy of data.
-func (m *RawMessage) UnmarshalCBOR(data []byte) error {
-	if m == nil {
-		return errors.New("cbor.RawMessage: UnmarshalCBOR on nil pointer")
-	}
-	*m = append((*m)[0:0], data...)
-	return nil
-}
-
 // Decoder reads and decodes CBOR values from an input stream.
 type Decoder struct {
 	r         io.Reader
@@ -78,6 +49,11 @@ func (dec *Decoder) Decode(v interface{}) (err error) {
 	return nil
 }
 
+// NumBytesRead returns the number of bytes read.
+func (dec *Decoder) NumBytesRead() int {
+	return dec.bytesRead
+}
+
 func (dec *Decoder) read() (int, error) {
 	// Copy unread data over read data and reset off to 0.
 	if dec.off > 0 {
@@ -98,11 +74,6 @@ func (dec *Decoder) read() (int, error) {
 	n, err := dec.r.Read(dec.buf[len(dec.buf):cap(dec.buf)])
 	dec.buf = dec.buf[0 : len(dec.buf)+n]
 	return n, err
-}
-
-// NumBytesRead returns the number of bytes read.
-func (dec *Decoder) NumBytesRead() int {
-	return dec.bytesRead
 }
 
 // Encoder writes CBOR values to an output stream.
@@ -139,14 +110,6 @@ func (enc *Encoder) Encode(v interface{}) error {
 	err := enc.e.marshal(v, enc.opts)
 	if err == nil {
 		_, err = enc.e.WriteTo(enc.w)
-	}
-	return err
-}
-
-func (enc *Encoder) startIndefinite(typ cborType) error {
-	_, err := enc.w.Write(cborIndefiniteHeader[typ])
-	if err == nil {
-		enc.indefiniteTypes = append(enc.indefiniteTypes, typ)
 	}
 	return err
 }
@@ -189,4 +152,41 @@ func (enc *Encoder) EndIndefinite() error {
 		enc.indefiniteTypes = enc.indefiniteTypes[:len(enc.indefiniteTypes)-1]
 	}
 	return err
+}
+
+var cborIndefiniteHeader = map[cborType][]byte{
+	cborTypeByteString: {0x5f},
+	cborTypeTextString: {0x7f},
+	cborTypeArray:      {0x9f},
+	cborTypeMap:        {0xbf},
+}
+
+func (enc *Encoder) startIndefinite(typ cborType) error {
+	_, err := enc.w.Write(cborIndefiniteHeader[typ])
+	if err == nil {
+		enc.indefiniteTypes = append(enc.indefiniteTypes, typ)
+	}
+	return err
+}
+
+// RawMessage is a raw encoded CBOR value. It implements Marshaler and
+// Unmarshaler interfaces and can be used to delay CBOR decoding or
+// precompute a CBOR encoding.
+type RawMessage []byte
+
+// MarshalCBOR returns m as the CBOR encoding of m.
+func (m RawMessage) MarshalCBOR() ([]byte, error) {
+	if len(m) == 0 {
+		return cborNil, nil
+	}
+	return m, nil
+}
+
+// UnmarshalCBOR sets *m to a copy of data.
+func (m *RawMessage) UnmarshalCBOR(data []byte) error {
+	if m == nil {
+		return errors.New("cbor.RawMessage: UnmarshalCBOR on nil pointer")
+	}
+	*m = append((*m)[0:0], data...)
+	return nil
 }
