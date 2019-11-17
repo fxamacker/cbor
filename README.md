@@ -22,13 +22,25 @@
 # CBOR library in Go
 This library encodes and decodes [CBOR](CBOR.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049)), a concise binary alternative to JSON and other data formats. 
 
-:hourglass_flowing_sand: If you used [Go](https://golang.org)'s `encoding/json`, you already know how to use this library.  Existing structs don't require changes.  Go struct tags like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` work as expected.
+This CBOR library balances competing factors:   __Easy__ vs __Small__ vs __Safe__ vs __Fast__.
+
+:hourglass_flowing_sand: If you used [Go](https://golang.org)'s [`encoding/json`](https://golang.org/pkg/encoding/json/), you already know how to use this library.  Existing structs don't require changes.  Go struct tags like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` work as expected.
 
 :atom: Your programs won't bloat.  This library compiles to under 0.5 MB, has no external dependencies, and no code gen.
 
-:lock: It avoids crashes on malicious CBOR data by using extensive tests, coverage-guided fuzzing, and data validation.
+:lock: It prevents crashes on malicious CBOR data by using extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's [`unsafe`](https://golang.org/pkg/unsafe/) package.
+
+:rocket: It is fast (since v1.3) by using safe optimizations.  Faster libraries will always exist, but speed is only one factor.  
+
+<!--
+:rocket: It is fast by using safe optimizations (especially since v1.3.)  Faster libraries will always exist, but speed is only one factor.  Choose this library if you value your time, program size, and system reliability.
+
+:rocket: Release v1.3 is faster because of safe optimizations.  Faster libraries will always exist, but speed is only one factor.  Choose this library if you value your time, program size, and system reliability.
 
 :rocket: Starting in v1.3, faster speed became a high priority.  Faster libraries will always exist, but speed is only one factor.  Choose this library if you value your time, program size, and system reliability.
+-->
+
+Choose this library if you value your time, program size, and system reliability. 
 
 Install with ```go get github.com/fxamacker/cbor``` and use it like Go's ```encoding/json```.
 
@@ -44,15 +56,18 @@ Version 1.x has:
 * __Stable requirements__ – will always support Go v1.12.  
 * __Passed fuzzing__ – v1.2 passed 42+ hours of coverage-guided fuzzing.  See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
 
-[Release v1.2](https://github.com/fxamacker/cbor/releases) (Nov 05, 2019) adds RawMessage type, Marshaler and Unmarshaler interfaces.  Passed 42+ hrs of fuzzing.
-
-[Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) is faster :rocket: and uses less memory :recycle:. New `toarray` struct tag allows more compact struct data.  Maps with int keys can encode and decode to structs, which makes using COSE (RFC 8152) data faster and easier.
+Recent activity:
+* [x] [Release v1.2](https://github.com/fxamacker/cbor/releases) -- add RawMessage type, Marshaler and Unmarshaler interfaces.  Passed 42+ hrs of fuzzing.
+* [x] [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- faster encoding and decoding.
+* [x] [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- add struct to/from CBOR array (using `toarray` struct tag) for more compact data.
+* [x] [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- add struct to/from CBOR map with int keys. Simplifies using COSE data (RFC 8152).
+* [ ] Milestone v1.4 -- :balloon: (maybe) Add support CBOR tags (major type 6.)
 
 ## Design Goals 
 This CBOR library was created for my [WebAuthn (FIDO2) server library](https://github.com/fxamacker/webauthn), because existing CBOR libraries didn't meet certain criteria.  This library became a good fit for many other projects.
 
 This library is designed to be:
-* __Easy__ – idiomatic API like `encoding/json` to reduce learning curve.
+* __Easy__ – idiomatic API like `encoding/json` with identical API when possible.
 * __Small and self-contained__ – compiles to under 0.5 MB and has no external dependencies.
 * __Safe and reliable__ – no `unsafe` pkg, coverage >95%, coverage-guided fuzzing, and data validation to avoid crashes on malformed or malicious data.
 
@@ -82,8 +97,8 @@ Libraries and programs were compiled for linux_amd64 using Go 1.12.
 * :tada: v1.1 -- Support `encoding.BinaryMarshaler` and `encoding.BinaryUnmarshaler` interfaces.
 * :tada: v1.2 -- `cbor.RawMessage` can delay CBOR decoding or precompute CBOR encoding.
 * :tada: v1.2 -- User-defined types can have custom CBOR encoding and decoding by implementing `cbor.Marshaler` and `cbor.Unmarshaler` interfaces. 
-* :truck: [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- Encode and decode struct to array (using `toarray` struct tag) for more compact data
-* :truck: [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- Encode and decode maps with int keys to structs. This makes encoding and decoding COSE data (RFC 8152) much faster and simpler.
+* :truck: [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- add struct to/from CBOR array (using `toarray` struct tag) for more compact data
+* :truck: [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- add struct to/from CBOR map with int keys. This makes encoding and decoding COSE data (RFC 8152) much faster and simpler.
 * :balloon: Milestone v1.4 -- Maybe add support CBOR tags (major type 6.)
 
 ## Fuzzing and Code Coverage
@@ -108,6 +123,8 @@ It also supports [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#
 * CBOR tags (type 6) are ignored.  Decoder simply decodes tagged data after ignoring the tags.
 * CBOR negative int (type 1) that cannot fit into Go's int64 are not supported, such as RFC 7049 example -18446744073709551616.  Decoding these values returns `cbor.UnmarshalTypeError` like Go's `encoding/json`.
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  Use CBOR `Null` (0xf6) to round-trip with Go's `nil`.
+
+:warning: Like Go's `encoding/json`, data validation requires reading the entire message to prevent partially filled (corrupted) data. This library also prevents crashes and resource exhaustion attacks from malicious CBOR data. Use Go's `io.LimitReader` when decoding very large data to limit size.
 
 :balloon: CBOR tags (type 6) is being considered for a future release. Please let me know if this feature is important to you.
 
@@ -154,10 +171,11 @@ type UnsupportedTypeError struct{ ... }
 ```
 go get github.com/fxamacker/cbor
 ```
-For production, use a tagged release to benefit from longer fuzz tests.
+[Released versions](https://github.com/fxamacker/cbor/releases) benefit from longer fuzz tests.
 
 ## Usage
-Data validation prevents crashes and resource exhaustion attacks from malformed CBOR data.  Use `io.LimitReader` with this library to limit size of large CBOR data.
+:warning: Like Go's `encoding/json`, data validation requires reading the entire message to prevent partially filled (corrupted) data. This library also prevents crashes and resource exhaustion attacks from malicious CBOR data. Use Go's `io.LimitReader` when decoding very large data to limit size.
+
 
 Decoding:
 
