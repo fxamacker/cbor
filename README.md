@@ -98,7 +98,7 @@ Libraries and programs were compiled for linux_amd64 using Go 1.12.
 * :tada: v1.2 -- `cbor.RawMessage` can delay CBOR decoding or precompute CBOR encoding.
 * :tada: v1.2 -- User-defined types can have custom CBOR encoding and decoding by implementing `cbor.Marshaler` and `cbor.Unmarshaler` interfaces. 
 * :truck: [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- add struct to/from CBOR array (using `toarray` struct tag) for more compact data
-* :truck: [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- add struct to/from CBOR map with int keys. This makes encoding and decoding COSE data (RFC 8152) much faster and simpler.
+* :truck: [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- add struct to/from CBOR map with int keys. Simplifies using COSE data (RFC 8152).
 * :balloon: Milestone v1.4 -- Maybe add support CBOR tags (major type 6.)
 
 ## Fuzzing and Code Coverage
