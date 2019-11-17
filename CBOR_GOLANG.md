@@ -22,7 +22,7 @@ COSE is a protocol using CBOR for basic security services. COSE is defined in ([
 COSE describes how to create and process signatures, message authentication codes, and encryption using CBOR for serialization.  COSE specification also describes how to represent cryptographic keys using CBOR.  COSE is used by WebAuthn.
 
 ## CWT
-CBOR Web Token (CWT) is defined in [RFC 8392](http://tools.ietf.org/html/rfc8392).  CWT is based on COSE and was derived in part from JSON Web Token (JWT).  CWT is a compact means of representing security claims between two parties.
+CBOR Web Token (CWT) is defined in [RFC 8392](http://tools.ietf.org/html/rfc8392).  CWT is based on COSE and was derived in part from JSON Web Token (JWT).  CWT is a compact way to securely represent claims to be transferred between two parties.
 
 ## WebAuthn
 [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn) (Web Authentication) is a web standard for authenticating users to web-based apps and services. It's a core component of FIDO2, the successor of FIDO U2F legacy protocol.
