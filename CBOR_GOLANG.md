@@ -5,7 +5,9 @@
 </div>
 
 # CBOR
-[CBOR](https://en.wikipedia.org/wiki/CBOR) is a data format designed for small code size and small message size. CBOR is defined in [RFC 7049 Concise Binary Object Representation](https://tools.ietf.org/html/rfc7049).
+[CBOR](https://en.wikipedia.org/wiki/CBOR) is a data format designed to allow small code size and small message size. CBOR is defined in [RFC 7049 Concise Binary Object Representation](https://tools.ietf.org/html/rfc7049), an [IETF](http://ietf.org/) Internet Standards Document.
+
+CBOR is also designed to be stable for decades, be extensible without need for version negotiation, and not require a schema.
 
 While JSON uses text, CBOR uses binary. CDDL can be used to express CBOR (and JSON) in an easy and unambiguous way.  CDDL is defined in (RFC 8610 Concise Data Definition Language).
 
@@ -18,6 +20,9 @@ __[fxamacker/cbor](https://github.com/fxamacker/cbor)__ is a library (written in
 COSE is a protocol using CBOR for basic security services. COSE is defined in ([RFC 8152 CBOR Object Signing and Encryption](https://tools.ietf.org/html/rfc8152)).
 
 COSE describes how to create and process signatures, message authentication codes, and encryption using CBOR for serialization.  COSE specification also describes how to represent cryptographic keys using CBOR.  COSE is used by WebAuthn.
+
+## CWT
+CBOR Web Token (CWT) is defined in [RFC 8392](http://tools.ietf.org/html/rfc8392).  CWT is based on COSE and was derived in part from JSON Web Token (JWT).  CWT is a compact way to securely represent claims to be transferred between two parties.
 
 ## WebAuthn
 [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn) (Web Authentication) is a web standard for authenticating users to web-based apps and services. It's a core component of FIDO2, the successor of FIDO U2F legacy protocol.
