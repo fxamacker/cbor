@@ -9,6 +9,12 @@ import (
 	"sync"
 )
 
+var (
+	decodingStructTypeCache sync.Map // map[reflect.Type]decodingStructType
+	encodingStructTypeCache sync.Map // map[reflect.Type]encodingStructType
+	encodeFuncCache         sync.Map // map[reflect.Type]encodeFunc
+)
+
 type decodingStructType struct {
 	fields  fields
 	toArray bool
@@ -21,7 +27,7 @@ func getDecodingStructType(t reflect.Type) decodingStructType {
 
 	flds, structOptions := getFields(t)
 
-	toArray := structToArray(structOptions)
+	toArray := hasToArrayOption(structOptions)
 
 	for i := 0; i < len(flds); i++ {
 		flds[i].isUnmarshaler = implementsUnmarshaler(flds[i].typ)
@@ -41,20 +47,14 @@ type encodingStructType struct {
 	hasAnonymousField bool
 }
 
-// byCanonicalRule sorts fields by field name length and field name.
-type byCanonicalRule struct {
+// byCanonical sorts fields by CBOR encoded field name.
+type byCanonical struct {
 	fields
 }
 
-func (s byCanonicalRule) Less(i, j int) bool {
-	return bytes.Compare(s.fields[i].cborName, s.fields[j].cborName) <= 0
+func (x byCanonical) Less(i, j int) bool {
+	return bytes.Compare(x.fields[i].cborName, x.fields[j].cborName) <= 0
 }
-
-var (
-	decodingStructTypeCache sync.Map // map[reflect.Type]decodingStructType
-	encodingStructTypeCache sync.Map // map[reflect.Type]encodingStructType
-	encodingTypeCache       sync.Map // map[reflect.Type]encodeFunc
-)
 
 func getEncodingStructType(t reflect.Type) encodingStructType {
 	if v, _ := encodingStructTypeCache.Load(t); v != nil {
@@ -63,12 +63,12 @@ func getEncodingStructType(t reflect.Type) encodingStructType {
 
 	flds, structOptions := getFields(t)
 
-	toArray := structToArray(structOptions)
+	toArray := hasToArrayOption(structOptions)
 
 	var err error
 	var omitEmpty bool
 	var hasAnonymousField bool
-	es := getEncodeState()
+	e := getEncodeState()
 	for i := 0; i < len(flds); i++ {
 		// Get field's encodeFunc
 		flds[i].ef = getEncodeFunc(flds[i].typ)
@@ -78,27 +78,29 @@ func getEncodingStructType(t reflect.Type) encodingStructType {
 		}
 
 		// Encode field name
-		if flds[i].keyasint {
-			nameAsInt, numErr := strconv.Atoi(flds[i].name)
-			if numErr != nil {
-				err = numErr
-				break
-			}
-			if nameAsInt >= 0 {
-				encodeTypeAndAdditionalValue(es, byte(cborTypePositiveInt), uint64(nameAsInt))
+		if !toArray {
+			if flds[i].keyAsInt {
+				nameAsInt, numErr := strconv.Atoi(flds[i].name)
+				if numErr != nil {
+					err = numErr
+					break
+				}
+				if nameAsInt >= 0 {
+					encodeTypeAndAdditionalValue(e, byte(cborTypePositiveInt), uint64(nameAsInt))
+				} else {
+					n := nameAsInt*(-1) - 1
+					encodeTypeAndAdditionalValue(e, byte(cborTypeNegativeInt), uint64(n))
+				}
+				flds[i].cborName = make([]byte, e.Len())
+				copy(flds[i].cborName, e.Bytes())
+				e.Reset()
 			} else {
-				n := nameAsInt*(-1) - 1
-				encodeTypeAndAdditionalValue(es, byte(cborTypeNegativeInt), uint64(n))
+				encodeTypeAndAdditionalValue(e, byte(cborTypeTextString), uint64(len(flds[i].name)))
+				flds[i].cborName = make([]byte, e.Len()+len(flds[i].name))
+				n := copy(flds[i].cborName, e.Bytes())
+				copy(flds[i].cborName[n:], flds[i].name)
+				e.Reset()
 			}
-			flds[i].cborName = make([]byte, es.Len())
-			copy(flds[i].cborName, es.Bytes())
-			es.Reset()
-		} else {
-			encodeTypeAndAdditionalValue(es, byte(cborTypeTextString), uint64(len(flds[i].name)))
-			flds[i].cborName = make([]byte, es.Len()+len(flds[i].name))
-			n := copy(flds[i].cborName, es.Bytes())
-			copy(flds[i].cborName[n:], flds[i].name)
-			es.Reset()
 		}
 
 		// Check if field is from embedded struct
@@ -107,11 +109,11 @@ func getEncodingStructType(t reflect.Type) encodingStructType {
 		}
 
 		// Check if field can be omitted when empty
-		if !omitEmpty && flds[i].omitempty {
+		if !omitEmpty && flds[i].omitEmpty {
 			omitEmpty = true
 		}
 	}
-	putEncodeState(es)
+	putEncodeState(e)
 
 	if err != nil {
 		structType := encodingStructType{err: err}
@@ -122,7 +124,7 @@ func getEncodingStructType(t reflect.Type) encodingStructType {
 	// Sort fields by canonical order
 	canonicalFields := make(fields, len(flds))
 	copy(canonicalFields, flds)
-	sort.Sort(byCanonicalRule{canonicalFields})
+	sort.Sort(byCanonical{canonicalFields})
 
 	structType := encodingStructType{fields: flds, canonicalFields: canonicalFields, toArray: toArray, omitEmpty: omitEmpty, hasAnonymousField: hasAnonymousField}
 	encodingStructTypeCache.Store(t, structType)
@@ -130,15 +132,15 @@ func getEncodingStructType(t reflect.Type) encodingStructType {
 }
 
 func getEncodeFunc(t reflect.Type) encodeFunc {
-	if v, _ := encodingTypeCache.Load(t); v != nil {
+	if v, _ := encodeFuncCache.Load(t); v != nil {
 		return v.(encodeFunc)
 	}
 	f := getEncodeFuncInternal(t)
-	encodingTypeCache.Store(t, f)
+	encodeFuncCache.Store(t, f)
 	return f
 }
 
-func structToArray(tag string) bool {
+func hasToArrayOption(tag string) bool {
 	s := ",toarray"
 	idx := strings.Index(tag, s)
 	return idx >= 0 && (len(tag) == idx+len(s) || tag[idx+len(s)] == ',')

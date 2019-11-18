@@ -34,8 +34,8 @@ func (dec *Decoder) Decode(v interface{}) (err error) {
 
 	dec.d.reset(dec.buf[dec.off:])
 	err = dec.d.value(v)
-	dec.off += dec.d.offset
-	dec.bytesRead += dec.d.offset
+	dec.off += dec.d.off
+	dec.bytesRead += dec.d.off
 	if err != nil {
 		if err == io.ErrUnexpectedEOF {
 			// Need to read more data.
@@ -78,10 +78,10 @@ func (dec *Decoder) read() (int, error) {
 
 // Encoder writes CBOR values to an output stream.
 type Encoder struct {
-	w               io.Writer
-	opts            EncOptions
-	e               encodeState
-	indefiniteTypes []cborType
+	w          io.Writer
+	opts       EncOptions
+	e          encodeState
+	indefTypes []cborType
 }
 
 // NewEncoder returns a new encoder that writes to w.
@@ -91,18 +91,18 @@ func NewEncoder(w io.Writer, encOpts EncOptions) *Encoder {
 
 // Encode writes the CBOR encoding of v to the stream.
 func (enc *Encoder) Encode(v interface{}) error {
-	if len(enc.indefiniteTypes) > 0 && v != nil {
-		indefiniteType := enc.indefiniteTypes[len(enc.indefiniteTypes)-1]
-		if indefiniteType == cborTypeTextString {
-			vKind := reflect.TypeOf(v).Kind()
-			if vKind != reflect.String {
-				return errors.New("cbor: cannot encode item type " + vKind.String() + " for indefinite-length text string")
+	if len(enc.indefTypes) > 0 && v != nil {
+		indefType := enc.indefTypes[len(enc.indefTypes)-1]
+		if indefType == cborTypeTextString {
+			k := reflect.TypeOf(v).Kind()
+			if k != reflect.String {
+				return errors.New("cbor: cannot encode item type " + k.String() + " for indefinite-length text string")
 			}
-		} else if indefiniteType == cborTypeByteString {
-			vType := reflect.TypeOf(v)
-			vKind := vType.Kind()
-			if (vKind != reflect.Array && vKind != reflect.Slice) || vType.Elem().Kind() != reflect.Uint8 {
-				return errors.New("cbor: cannot encode item type " + vKind.String() + " for indefinite-length byte string")
+		} else if indefType == cborTypeByteString {
+			t := reflect.TypeOf(v)
+			k := t.Kind()
+			if (k != reflect.Array && k != reflect.Slice) || t.Elem().Kind() != reflect.Uint8 {
+				return errors.New("cbor: cannot encode item type " + k.String() + " for indefinite-length byte string")
 			}
 		}
 	}
@@ -144,17 +144,17 @@ func (enc *Encoder) StartIndefiniteMap() error {
 
 // EndIndefinite closes last opened indefinite length value.
 func (enc *Encoder) EndIndefinite() error {
-	if len(enc.indefiniteTypes) == 0 {
+	if len(enc.indefTypes) == 0 {
 		return errors.New("cbor: cannot encode \"break\" code outside indefinite length values")
 	}
 	_, err := enc.w.Write([]byte{0xff})
 	if err == nil {
-		enc.indefiniteTypes = enc.indefiniteTypes[:len(enc.indefiniteTypes)-1]
+		enc.indefTypes = enc.indefTypes[:len(enc.indefTypes)-1]
 	}
 	return err
 }
 
-var cborIndefiniteHeader = map[cborType][]byte{
+var cborIndefHeader = map[cborType][]byte{
 	cborTypeByteString: {0x5f},
 	cborTypeTextString: {0x7f},
 	cborTypeArray:      {0x9f},
@@ -162,9 +162,9 @@ var cborIndefiniteHeader = map[cborType][]byte{
 }
 
 func (enc *Encoder) startIndefinite(typ cborType) error {
-	_, err := enc.w.Write(cborIndefiniteHeader[typ])
+	_, err := enc.w.Write(cborIndefHeader[typ])
 	if err == nil {
-		enc.indefiniteTypes = append(enc.indefiniteTypes, typ)
+		enc.indefTypes = append(enc.indefTypes, typ)
 	}
 	return err
 }

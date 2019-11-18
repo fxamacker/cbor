@@ -149,9 +149,9 @@ type encodeState struct {
 // encodeStatePool caches unused encodeState objects for later reuse.
 var encodeStatePool = sync.Pool{
 	New: func() interface{} {
-		es := new(encodeState)
-		es.Grow(32) // TODO: make this configurable
-		return es
+		e := new(encodeState)
+		e.Grow(32) // TODO: make this configurable
+		return e
 	},
 }
 
@@ -243,16 +243,16 @@ func encodeByteString(e *encodeState, v reflect.Value, opts EncOptions) (int, er
 	if v.Kind() == reflect.Slice && v.IsNil() {
 		return e.Write(cborNil)
 	}
-	len := v.Len()
-	if len == 0 {
+	slen := v.Len()
+	if slen == 0 {
 		return 1, e.WriteByte(byte(cborTypeByteString))
 	}
-	n1 := encodeTypeAndAdditionalValue(e, byte(cborTypeByteString), uint64(len))
+	n1 := encodeTypeAndAdditionalValue(e, byte(cborTypeByteString), uint64(slen))
 	if v.Kind() == reflect.Array {
-		for i := 0; i < len; i++ {
+		for i := 0; i < slen; i++ {
 			e.WriteByte(byte(v.Index(i).Uint()))
 		}
-		return n1 + len, nil
+		return n1 + slen, nil
 	}
 	n2, _ := e.Write(v.Bytes())
 	return n1 + n2, nil
@@ -279,12 +279,12 @@ func (ae arrayEncoder) encodeArray(e *encodeState, v reflect.Value, opts EncOpti
 	if v.Kind() == reflect.Slice && v.IsNil() {
 		return e.Write(cborNil)
 	}
-	len := v.Len()
-	if len == 0 {
+	alen := v.Len()
+	if alen == 0 {
 		return 1, e.WriteByte(byte(cborTypeArray))
 	}
-	n := encodeTypeAndAdditionalValue(e, byte(cborTypeArray), uint64(len))
-	for i := 0; i < len; i++ {
+	n := encodeTypeAndAdditionalValue(e, byte(cborTypeArray), uint64(alen))
+	for i := 0; i < alen; i++ {
 		n1, err := ae.f(e, v.Index(i), opts)
 		if err != nil {
 			return 0, err
@@ -308,11 +308,11 @@ func (me mapEncoder) encodeMap(e *encodeState, v reflect.Value, opts EncOptions)
 	if v.IsNil() {
 		return e.Write(cborNil)
 	}
-	len := v.Len()
-	if len == 0 {
+	mlen := v.Len()
+	if mlen == 0 {
 		return 1, e.WriteByte(byte(cborTypeMap))
 	}
-	n := encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(len))
+	n := encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(mlen))
 	iter := v.MapRange()
 	for iter.Next() {
 		n1, err := me.kf(e, iter.Key(), opts)
@@ -400,10 +400,10 @@ func (me mapEncoder) encodeMapCanonical(e *encodeState, v reflect.Value, opts En
 	}
 
 	b := kve.Bytes()
-	for i, offset := 0, 0; i < len(kvs); i++ {
-		kvs[i].keyCBORData = b[offset : offset+kvs[i].keyLen]
-		kvs[i].keyValueCBORData = b[offset : offset+kvs[i].keyValueLen]
-		offset += kvs[i].keyValueLen
+	for i, off := 0, 0; i < len(kvs); i++ {
+		kvs[i].keyCBORData = b[off : off+kvs[i].keyLen]
+		kvs[i].keyValueCBORData = b[off : off+kvs[i].keyValueLen]
+		off += kvs[i].keyValueLen
 	}
 
 	sort.Sort(byCanonicalKeyValues(kvs))
@@ -500,7 +500,7 @@ FieldLoop:
 			}
 			fv = fv.Field(n)
 		}
-		if flds[i].omitempty && isEmptyValue(fv) {
+		if flds[i].omitEmpty && isEmptyValue(fv) {
 			continue
 		}
 
@@ -513,11 +513,11 @@ FieldLoop:
 		kvcount++
 	}
 
-	n := encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(kvcount))
-	n1, err := e.Write(kve.Bytes())
+	n1 := encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(kvcount))
+	n2, err := e.Write(kve.Bytes())
 
 	putEncodeState(kve)
-	return n + n1, err
+	return n1 + n2, err
 }
 
 func encodeIntf(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
@@ -545,13 +545,13 @@ func encodeTime(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 }
 
 func encodeBinaryMarshalerType(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
-	u, ok := v.Interface().(encoding.BinaryMarshaler)
+	m, ok := v.Interface().(encoding.BinaryMarshaler)
 	if !ok {
 		pv := reflect.New(v.Type())
 		pv.Elem().Set(v)
-		u = pv.Interface().(encoding.BinaryMarshaler)
+		m = pv.Interface().(encoding.BinaryMarshaler)
 	}
-	data, err := u.MarshalBinary()
+	data, err := m.MarshalBinary()
 	if err != nil {
 		return 0, err
 	}
@@ -561,13 +561,13 @@ func encodeBinaryMarshalerType(e *encodeState, v reflect.Value, opts EncOptions)
 }
 
 func encodeMarshalerType(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
-	u, ok := v.Interface().(Marshaler)
+	m, ok := v.Interface().(Marshaler)
 	if !ok {
 		pv := reflect.New(v.Type())
 		pv.Elem().Set(v)
-		u = pv.Interface().(Marshaler)
+		m = pv.Interface().(Marshaler)
 	}
-	data, err := u.MarshalCBOR()
+	data, err := m.MarshalCBOR()
 	if err != nil {
 		return 0, err
 	}

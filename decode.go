@@ -140,9 +140,9 @@ func (e *UnmarshalTypeError) Error() string {
 }
 
 type decodeState struct {
-	data   []byte
-	offset int // next read offset in data
-	err    error
+	data []byte
+	off  int // next read offset in data
+	err  error
 }
 
 func (d *decodeState) value(v interface{}) error {
@@ -151,7 +151,7 @@ func (d *decodeState) value(v interface{}) error {
 		return &InvalidUnmarshalError{reflect.TypeOf(v)}
 	}
 
-	if _, err := Valid(d.data[d.offset:]); err != nil {
+	if _, err := Valid(d.data[d.off:]); err != nil {
 		return err
 	}
 
@@ -159,12 +159,12 @@ func (d *decodeState) value(v interface{}) error {
 
 	if rv.Kind() == reflect.Interface && rv.NumMethod() == 0 && rv.IsNil() {
 		// Fast path to decode to empty interface without calling implementsUnmarshaler.
-		res, err := d.parseInterface()
+		iv, err := d.parseInterface()
 		if err != nil {
 			return err
 		}
-		if res != nil {
-			rv.Set(reflect.ValueOf(res))
+		if iv != nil {
+			rv.Set(reflect.ValueOf(iv))
 		}
 		return nil
 	}
@@ -212,18 +212,18 @@ func (t cborType) String() string {
 func (d *decodeState) parse(v reflect.Value, isUnmarshaler bool) (err error) {
 	if v.Kind() == reflect.Interface && v.NumMethod() == 0 && v.IsNil() {
 		// nil interface
-		res, err := d.parseInterface()
+		iv, err := d.parseInterface()
 		if err != nil {
 			return err
 		}
-		if res != nil {
-			v.Set(reflect.ValueOf(res))
+		if iv != nil {
+			v.Set(reflect.ValueOf(iv))
 		}
 		return nil
 	}
 
 	// Create new value for the pointer v to point to if CBOR value is not nil/undefined.
-	if d.data[d.offset] != 0xf6 && d.data[d.offset] != 0xf7 {
+	if d.data[d.off] != 0xf6 && d.data[d.off] != 0xf7 {
 		for v.Kind() == reflect.Ptr {
 			if v.IsNil() {
 				if !v.CanSet() {
@@ -242,15 +242,15 @@ func (d *decodeState) parse(v reflect.Value, isUnmarshaler bool) (err error) {
 		}
 		if v1.Kind() == reflect.Ptr && !v1.IsNil() {
 			if u, ok := v1.Interface().(Unmarshaler); ok {
-				start := d.offset
+				start := d.off
 				d.skip()
-				return u.UnmarshalCBOR(d.data[start:d.offset])
+				return u.UnmarshalCBOR(d.data[start:d.off])
 			}
 		}
 	}
 
 	// Process byte/text string.
-	t := cborType(d.data[d.offset] & 0xE0)
+	t := cborType(d.data[d.off] & 0xE0)
 	if t == cborTypeByteString {
 		b := d.parseByteString()
 		return fillByteString(t, b, v)
@@ -338,7 +338,7 @@ func (d *decodeState) parse(v reflect.Value, isUnmarshaler bool) (err error) {
 // parseInterface assumes data is well-formed, and does not perform bounds checking.
 func (d *decodeState) parseInterface() (_ interface{}, err error) {
 	// Process byte/text string.
-	t := cborType(d.data[d.offset] & 0xE0)
+	t := cborType(d.data[d.off] & 0xE0)
 	if t == cborTypeByteString {
 		return d.parseByteString(), nil
 	} else if t == cborTypeTextString {
@@ -385,15 +385,13 @@ func (d *decodeState) parseInterface() (_ interface{}, err error) {
 			return f, nil
 		}
 	case cborTypeArray:
-		valInt := int(val)
-		count := valInt
+		count := int(val)
 		if ai == 31 {
 			count = -1
 		}
 		return d.parseArrayInterface(t, count)
 	case cborTypeMap:
-		valInt := int(val)
-		count := valInt
+		count := int(val)
 		if ai == 31 {
 			count = -1
 		}
@@ -452,9 +450,8 @@ func (d *decodeState) parseStringBuf(p []byte) (_ []byte, isCopy bool) {
 	}
 
 	// Process definite length string.
-	valInt := int(val)
-	oldOff, newOff := d.offset, d.offset+valInt
-	d.offset = newOff
+	oldOff, newOff := d.off, d.off+int(val)
+	d.off = newOff
 
 	if p != nil {
 		p = append(p, d.data[oldOff:newOff]...)
@@ -541,9 +538,9 @@ func (d *decodeState) parseMapInterface(t cborType, count int) (_ map[interface{
 		if k, err = d.parseInterface(); err != nil {
 			return nil, err
 		}
-		keyKind := reflect.ValueOf(k).Kind()
-		if !isHashableKind(keyKind) {
-			return nil, errors.New("cbor: invalid map key type: " + keyKind.String())
+		kkind := reflect.ValueOf(k).Kind()
+		if !isHashableKind(kkind) {
+			return nil, errors.New("cbor: invalid map key type: " + kkind.String())
 		}
 		if e, err = d.parseInterface(); err != nil {
 			return nil, err
@@ -643,13 +640,13 @@ func (d *decodeState) parseStructFromArray(t cborType, count int, v reflect.Valu
 
 func (d *decodeState) parseStructFromMap(t cborType, count int, v reflect.Value) error {
 	structType := getDecodingStructType(v.Type())
-	foundFlds := make([]bool, len(structType.fields))
 
+	foundFldIdx := make([]bool, len(structType.fields))
 	hasSize := count >= 0
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
 		var keyBytes []byte
 		var err error
-		t := cborType(d.data[d.offset] & 0xE0)
+		t := cborType(d.data[d.off] & 0xE0)
 		if t == cborTypeTextString {
 			keyBytes, err = d.parseTextString()
 			if err != nil {
@@ -660,7 +657,7 @@ func (d *decodeState) parseStructFromMap(t cborType, count int, v reflect.Value)
 				continue
 			}
 		} else if t == cborTypePositiveInt || t == cborTypeNegativeInt {
-			v, err := d.parseInterface()
+			iv, err := d.parseInterface()
 			if err != nil {
 				if d.err == nil {
 					d.err = err
@@ -668,7 +665,7 @@ func (d *decodeState) parseStructFromMap(t cborType, count int, v reflect.Value)
 				d.skip() // skip value
 				continue
 			}
-			switch n := v.(type) {
+			switch n := iv.(type) {
 			case int64:
 				keyBytes = []byte(strconv.Itoa(int(n)))
 			case uint64:
@@ -687,9 +684,9 @@ func (d *decodeState) parseStructFromMap(t cborType, count int, v reflect.Value)
 		var f *field
 		for i := 0; i < len(structType.fields); i++ {
 			// Find field with exact match
-			if !foundFlds[i] && len(structType.fields[i].name) == keyLen && structType.fields[i].name == string(keyBytes) {
+			if !foundFldIdx[i] && len(structType.fields[i].name) == keyLen && structType.fields[i].name == string(keyBytes) {
 				f = &structType.fields[i]
-				foundFlds[i] = true
+				foundFldIdx[i] = true
 				break
 			}
 		}
@@ -697,9 +694,9 @@ func (d *decodeState) parseStructFromMap(t cborType, count int, v reflect.Value)
 			keyString := string(keyBytes)
 			for i := 0; i < len(structType.fields); i++ {
 				// Find field with case-insensitive match
-				if !foundFlds[i] && len(structType.fields[i].name) == keyLen && strings.EqualFold(structType.fields[i].name, keyString) {
+				if !foundFldIdx[i] && len(structType.fields[i].name) == keyLen && strings.EqualFold(structType.fields[i].name, keyString) {
 					f = &structType.fields[i]
-					foundFlds[i] = true
+					foundFldIdx[i] = true
 					break
 				}
 			}
@@ -732,32 +729,32 @@ func (d *decodeState) parseStructFromMap(t cborType, count int, v reflect.Value)
 // skip moves data offset to the next item.  skip assumes data is well-formed,
 // and does not perform bounds checking.
 func (d *decodeState) skip() {
-	t := cborType(d.data[d.offset] & 0xE0)
-	ai := d.data[d.offset] & 0x1F
+	t := cborType(d.data[d.off] & 0xE0)
+	ai := d.data[d.off] & 0x1F
 	val := uint64(ai)
-	d.offset++
+	d.off++
 
 	switch ai {
 	case 24:
-		val = uint64(d.data[d.offset])
-		d.offset++
+		val = uint64(d.data[d.off])
+		d.off++
 	case 25:
-		val = uint64(binary.BigEndian.Uint16(d.data[d.offset : d.offset+2]))
-		d.offset += 2
+		val = uint64(binary.BigEndian.Uint16(d.data[d.off : d.off+2]))
+		d.off += 2
 	case 26:
-		val = uint64(binary.BigEndian.Uint32(d.data[d.offset : d.offset+4]))
-		d.offset += 4
+		val = uint64(binary.BigEndian.Uint32(d.data[d.off : d.off+4]))
+		d.off += 4
 	case 27:
-		val = binary.BigEndian.Uint64(d.data[d.offset : d.offset+8])
-		d.offset += 8
+		val = binary.BigEndian.Uint64(d.data[d.off : d.off+8])
+		d.off += 8
 	}
 
 	if ai == 31 {
 		switch t {
 		case cborTypeByteString, cborTypeTextString, cborTypeArray, cborTypeMap:
 			for true {
-				if d.data[d.offset] == 0xFF {
-					d.offset++
+				if d.data[d.off] == 0xFF {
+					d.off++
 					return
 				}
 				d.skip()
@@ -767,7 +764,7 @@ func (d *decodeState) skip() {
 
 	switch t {
 	case cborTypeByteString, cborTypeTextString:
-		d.offset += int(val)
+		d.off += int(val)
 	case cborTypeArray:
 		for i := 0; i < int(val); i++ {
 			d.skip()
@@ -783,43 +780,43 @@ func (d *decodeState) skip() {
 
 // getHeader assumes data is well-formed, and does not perform bounds checking.
 func (d *decodeState) getHeader() (t cborType, ai byte, val uint64) {
-	t = cborType(d.data[d.offset] & 0xE0)
-	ai = d.data[d.offset] & 0x1F
+	t = cborType(d.data[d.off] & 0xE0)
+	ai = d.data[d.off] & 0x1F
 	val = uint64(ai)
-	d.offset++
+	d.off++
 
 	switch ai {
 	case 24:
-		val = uint64(d.data[d.offset])
-		d.offset++
+		val = uint64(d.data[d.off])
+		d.off++
 	case 25:
-		val = uint64(binary.BigEndian.Uint16(d.data[d.offset : d.offset+2]))
-		d.offset += 2
+		val = uint64(binary.BigEndian.Uint16(d.data[d.off : d.off+2]))
+		d.off += 2
 	case 26:
-		val = uint64(binary.BigEndian.Uint32(d.data[d.offset : d.offset+4]))
-		d.offset += 4
+		val = uint64(binary.BigEndian.Uint32(d.data[d.off : d.off+4]))
+		d.off += 4
 	case 27:
-		val = binary.BigEndian.Uint64(d.data[d.offset : d.offset+8])
-		d.offset += 8
+		val = binary.BigEndian.Uint64(d.data[d.off : d.off+8])
+		d.off += 8
 	}
 	return
 }
 
 func (d *decodeState) numOfItemsUntilBreak() int {
-	savedOff := d.offset
+	savedOff := d.off
 	i := 0
 	for !d.foundBreak() {
 		d.skip()
 		i++
 	}
-	d.offset = savedOff
+	d.off = savedOff
 	return i
 }
 
 // foundBreak assumes data is well-formed, and does not perform bounds checking.
 func (d *decodeState) foundBreak() bool {
-	if d.data[d.offset] == 0xFF {
-		d.offset++
+	if d.data[d.off] == 0xFF {
+		d.off++
 		return true
 	}
 	return false
@@ -827,7 +824,7 @@ func (d *decodeState) foundBreak() bool {
 
 func (d *decodeState) reset(data []byte) {
 	d.data = data
-	d.offset = 0
+	d.off = 0
 	d.err = nil
 }
 
@@ -869,8 +866,8 @@ func fillPositiveInt(t cborType, val uint64, v reflect.Value) error {
 		return nil
 	}
 	if v.Type() == typeTime {
-		t := time.Unix(int64(val), 0)
-		v.Set(reflect.ValueOf(t))
+		tm := time.Unix(int64(val), 0)
+		v.Set(reflect.ValueOf(tm))
 		return nil
 	}
 	return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
@@ -886,8 +883,8 @@ func fillNegativeInt(t cborType, val int64, v reflect.Value) error {
 		return nil
 	}
 	if v.Type() == typeTime {
-		t := time.Unix(val, 0)
-		v.Set(reflect.ValueOf(t))
+		tm := time.Unix(val, 0)
+		v.Set(reflect.ValueOf(tm))
 		return nil
 	}
 	return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
@@ -912,8 +909,8 @@ func fillFloat(t cborType, val float64, v reflect.Value) error {
 	}
 	if v.Type() == typeTime {
 		f1, f2 := math.Modf(val)
-		t := time.Unix(int64(f1), int64(f2*1e9))
-		v.Set(reflect.ValueOf(t))
+		tm := time.Unix(int64(f1), int64(f2*1e9))
+		v.Set(reflect.ValueOf(tm))
 		return nil
 	}
 	return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
@@ -942,11 +939,11 @@ func fillTextString(t cborType, val []byte, v reflect.Value) error {
 		return nil
 	}
 	if v.Type() == typeTime {
-		t, err := time.Parse(time.RFC3339, string(val))
+		tm, err := time.Parse(time.RFC3339, string(val))
 		if err != nil {
 			return errors.New("cbor: cannot set " + string(val) + " for time.Time")
 		}
-		v.Set(reflect.ValueOf(t))
+		v.Set(reflect.ValueOf(tm))
 		return nil
 	}
 	return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}

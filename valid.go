@@ -68,11 +68,11 @@ func checkValid(data []byte, off int) (_ int, t cborType, err error) {
 			// Detect integer overflow
 			return 0, 0, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
 		}
-		elementCount := 1
+		count := 1
 		if t == cborTypeMap {
-			elementCount = 2
+			count = 2
 		}
-		for j := 0; j < elementCount; j++ {
+		for j := 0; j < count; j++ {
 			for i := 0; i < valInt; i++ {
 				if off, _, err = checkValid(data, off); err != nil {
 					return 0, 0, err
