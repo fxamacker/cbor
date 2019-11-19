@@ -179,10 +179,10 @@ go get github.com/fxamacker/cbor
 
 Like `encoding/json`:
 
-* cbor.Unmarshal uses []byte
 * cbor.Marshal uses []byte
-* cbor.Decoder uses io.Reader
+* cbor.Unmarshal uses []byte
 * cbor.Encoder uses io.Writer
+* cbor.Decoder uses io.Reader
 
 __Example decoding CWT (CBOR Web Token)__ using `keyasint` and `toarray` struct tags
 ```
