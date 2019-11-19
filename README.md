@@ -177,6 +177,13 @@ go get github.com/fxamacker/cbor
 ## Usage
 :point_right: Like Go's `encoding/json`, data validation checks the entire message to prevent partially filled (corrupted) data. This library also prevents crashes and resource exhaustion attacks from malicious CBOR data. Use Go's `io.LimitReader` when decoding very large data to limit size.
 
+Like `encoding/json`:
+
+* cbor.Unmarshal uses []byte
+* cbor.Marshal uses []byte
+* cbor.Decoder uses io.Reader
+* cbor.Encoder uses io.Writer
+
 __Example decoding CWT (CBOR Web Token)__ using `keyasint` and `toarray` struct tags
 ```
 // Example from RFC 8392 A.3. Example Signed CWT
