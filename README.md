@@ -42,11 +42,13 @@ Install with ```go get github.com/fxamacker/cbor``` and use it like Go's ```enco
 
 ## Current Status
 Version 1.x has:
+
 * __Stable API__ – won't make breaking API changes.  
 * __Stable requirements__ – will always support Go v1.12.  
 * __Passed fuzzing__ – v1.2 passed 42+ hours of coverage-guided fuzzing.  See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
 
 Recent activity:
+
 * [x] [Release v1.2](https://github.com/fxamacker/cbor/releases) -- add RawMessage type, Marshaler and Unmarshaler interfaces.  Passed 42+ hrs of fuzzing.
 * [x] [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- faster encoding and decoding.
 * [x] [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- add struct to/from CBOR array (`toarray` struct tag) for more compact data.
@@ -57,11 +59,13 @@ Recent activity:
 This CBOR library was created for my [WebAuthn (FIDO2) server library](https://github.com/fxamacker/webauthn), because existing CBOR libraries didn't meet certain criteria.  This library became a good fit for many other projects.
 
 This library is designed to be:
+
 * __Easy__ – idiomatic API like `encoding/json` with identical API when possible.
 * __Small and self-contained__ – compiles to under 0.5 MB and has no external dependencies.
 * __Safe and reliable__ – no `unsafe` pkg, coverage >95%, coverage-guided fuzzing, and data validation to avoid crashes on malformed or malicious data.
 
 Competing factors are balanced:
+
 * __Speed__ vs __safety__ vs __size__ – to keep size small, avoid code generation. For safety, validate data and avoid Go's unsafe package.  For speed, use safe optimizations: cache struct metadata, bypass reflect when appropriate, use sync.Pool to reuse transient objects, and etc.
 * __Standards compliance__ – support [CBOR](https://tools.ietf.org/html/rfc7049), including [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#section-3.9) (RFC 7049 and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)) with minor [limitations](#limitations). For example, negative numbers that can't fit into Go's int64 aren’t supported (like `encoding/json`.)
 
@@ -75,6 +79,7 @@ Libraries and programs were compiled for linux_amd64 using Go 1.12.
 ![alt text](https://user-images.githubusercontent.com/33205765/68306684-9c304380-006f-11ea-8661-c87592bcaa51.png "Library and program size comparison chart")
 
 ## Features
+
 * Idiomatic API like `encoding/json`.
 * Support "cbor" and "json" keys in Go's struct tags. If both are specified, then "cbor" is used.
 * Encode using smallest CBOR integer sizes for more compact data serialization.
@@ -93,7 +98,9 @@ Libraries and programs were compiled for linux_amd64 using Go 1.12.
 * :balloon: Milestone v1.4 -- Maybe add support for CBOR tags (major type 6.)
 
 ## Fuzzing and Code Coverage
+
 Each release passes coverage-guided fuzzing using [fxamacker/cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  Default corpus has:
+
 * 2 files related to WebAuthn (FIDO U2F key).
 * 17 files with [COSE examples (RFC 8152 Appendix B & C)](https://github.com/cose-wg/Examples/tree/master/RFC8152).
 * 82 files with [CBOR examples (RFC 7049 Appendix A) ](https://tools.ietf.org/html/rfc7049#appendix-A).
@@ -105,7 +112,7 @@ Minimum code coverage is 95%.  Minimum fuzzing is 10 hours for each release but 
 
 Code coverage is 97.8% (`go test -cover`) for cbor v1.2 which is among the highest for libraries of this type.
 
-## Standards 
+## Standards
 This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049), with minor [limitations](#limitations).
 
 It also supports [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#section-3.9) (both RFC 7049 and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)).  CTAP2 canonical CBOR encoding is used by [CTAP](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html) and [WebAuthn](https://www.w3.org/TR/webauthn/) in [FIDO2](https://fidoalliance.org/fido2/) framework.
@@ -114,6 +121,7 @@ It also supports [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#
 :balloon: CBOR tags (type 6) is being considered for a future release. Please let me know if this feature is important to you.
 
 Current limitations:
+
 * CBOR tags (type 6) are ignored.  Decoder simply decodes tagged data after ignoring the tags.
 * CBOR negative int (type 1) that cannot fit into Go's int64 are not supported, such as RFC 7049 example -18446744073709551616.  Decoding these values returns `cbor.UnmarshalTypeError` like Go's `encoding/json`.
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  Use CBOR `Null` (0xf6) to round-trip with Go's `nil`.
@@ -121,6 +129,7 @@ Current limitations:
 Like Go's `encoding/json`, data validation checks the entire message to prevent partially filled (corrupted) data. This library also prevents crashes and resource exhaustion attacks from malicious CBOR data. Use Go's `io.LimitReader` when decoding very large data to limit size.
 
 ## System Requirements
+
 * Go 1.12 (or newer)
 * Tested and fuzzed on linux_amd64, but it should work on other platforms.
 
@@ -168,8 +177,93 @@ go get github.com/fxamacker/cbor
 ## Usage
 :point_right: Like Go's `encoding/json`, data validation checks the entire message to prevent partially filled (corrupted) data. This library also prevents crashes and resource exhaustion attacks from malicious CBOR data. Use Go's `io.LimitReader` when decoding very large data to limit size.
 
+Like `encoding/json`:
 
-Decoding:
+* cbor.Marshal uses []byte
+* cbor.Unmarshal uses []byte
+* cbor.Encoder uses io.Writer
+* cbor.Decoder uses io.Reader
+
+__Decoding CWT (CBOR Web Token)__ using `keyasint` and `toarray` struct tags:
+```
+// Signed CWT is defined in RFC 8392
+type signedCWT struct {
+	_           struct{} `cbor:",toarray"`
+	Protected   []byte
+	Unprotected coseHeader
+	Payload     []byte
+	Signature   []byte
+}
+
+// Part of COSE header definition
+type coseHeader struct {
+	Alg int    `cbor:"1,keyasint,omitempty"`
+	Kid []byte `cbor:"4,keyasint,omitempty"`
+	IV  []byte `cbor:"5,keyasint,omitempty"`
+}
+
+// data is []byte containing signed CWT
+
+var v signedCWT
+if err := cbor.Unmarshal(data, &v); err != nil {
+	return err
+}
+```
+
+__Encoding CWT (CBOR Web Token)__ using `keyasint` and `toarray` struct tags:
+```
+// Use signedCWT struct defined in "Decoding CWT" example.
+
+var v signedCWT
+...
+if data, err := cbor.Marshal(v); err != nil {
+	return err
+}
+```
+
+__Decoding SenML__ using `keyasint` struct tag:
+```
+// RFC 8428 says, "The data is structured as a single array that 
+// contains a series of SenML Records that can each contain fields"
+
+type SenMLRecord struct {
+	BaseName    string  `cbor:"-2,keyasint,omitempty"`
+	BaseTime    float64 `cbor:"-3,keyasint,omitempty"`
+	BaseUnit    string  `cbor:"-4,keyasint,omitempty"`
+	BaseValue   float64 `cbor:"-5,keyasint,omitempty"`
+	BaseSum     float64 `cbor:"-6,keyasint,omitempty"`
+	BaseVersion int     `cbor:"-1,keyasint,omitempty"`
+	Name        string  `cbor:"0,keyasint,omitempty"`
+	Unit        string  `cbor:"1,keyasint,omitempty"`
+	Value       float64 `cbor:"2,keyasint,omitempty"`
+	ValueS      string  `cbor:"3,keyasint,omitempty"`
+	ValueB      bool    `cbor:"4,keyasint,omitempty"`
+	ValueD      []byte  `cbor:"8,keyasint,omitempty"`
+	Sum         float64 `cbor:"5,keyasint,omitempty"`
+	Time        int     `cbor:"6,keyasint,omitempty"`
+	UpdateTime  float64 `cbor:"7,keyasint,omitempty"`
+}
+
+// data is a []byte containing SenML
+
+var v []SenMLRecord
+if err := cbor.Unmarshal(data, &v); err != nil {
+	return err
+}
+```
+
+__Encoding SenML__ using `keyasint` struct tag:
+```
+// use SenMLRecord struct defined in "Decoding SenML" example
+
+var v []SenMLRecord
+...
+if data, err := cbor.Marshal(v); err != nil {
+	return err
+}
+```
+
+__Decoding__:
 
 ```
 // create a decoder
@@ -192,7 +286,7 @@ var f float32
 err = dec.Decode(&f)
 ```
 
-Encoding:
+__Encoding__:
 
 ```
 // create an encoder with canonical CBOR encoding enabled
@@ -208,7 +302,7 @@ err = enc.Encode(m)
 err = enc.Encode(f)
 ```
 
-Encoding indefinite length array:
+__Encoding indefinite length array__:
 
 ```
 enc := cbor.NewEncoder(writer, cbor.EncOptions{})
@@ -242,6 +336,7 @@ More [examples](example_test.go).
 
 ## Benchmarks
 In this library, Go structs are faster than maps:
+
 * decoding into struct is >66% faster than decoding into map.
 * encoding struct is >67% faster than encoding map.
 
