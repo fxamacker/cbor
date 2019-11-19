@@ -177,20 +177,21 @@ go get github.com/fxamacker/cbor
 ## Usage
 :point_right: Like Go's `encoding/json`, data validation checks the entire message to prevent partially filled (corrupted) data. This library also prevents crashes and resource exhaustion attacks from malicious CBOR data. Use Go's `io.LimitReader` when decoding very large data to limit size.
 
-__Example decoding CWT (CBOR Web Token)__ using `toarray` struct tag
+__Example decoding CWT (CBOR Web Token)__ using `keyasint` and `toarray` struct tags
 ```
 // Example from RFC 8392 A.3. Example Signed CWT
 
 // Partial COSE header definition
+// fxamacker/cbor v1.3 has "keyasint" struct tag
 type coseHeader struct {
-  Alg int    `cbor:"1,keyasint"`
+	Alg int    `cbor:"1,keyasint"`
 	Kid []byte `cbor:"4,keyasint"`
 	IV  []byte `cbor:"5,keyasint"`
 }
 
 // fxamacker/cbor v1.3 has "toarray" struct tag
 type signedCWT struct {
-  _           struct{} `cbor:",toarray"`
+	_           struct{} `cbor:",toarray"`
 	Protected   []byte
 	Unprotected coseHeader
 	Payload     []byte
