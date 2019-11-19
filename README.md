@@ -184,19 +184,9 @@ Like `encoding/json`:
 * cbor.Encoder uses io.Writer
 * cbor.Decoder uses io.Reader
 
-__Example decoding CWT (CBOR Web Token)__ using `keyasint` and `toarray` struct tags
+__Decoding CWT (CBOR Web Token)__ using `keyasint` and `toarray` struct tags:
 ```
-// Example from RFC 8392 A.3. Example Signed CWT
-
-// Partial COSE header definition
-// fxamacker/cbor v1.3 has "keyasint" struct tag
-type coseHeader struct {
-	Alg int    `cbor:"1,keyasint"`
-	Kid []byte `cbor:"4,keyasint"`
-	IV  []byte `cbor:"5,keyasint"`
-}
-
-// fxamacker/cbor v1.3 has "toarray" struct tag
+// Signed CWT is defined in RFC 8392
 type signedCWT struct {
 	_           struct{} `cbor:",toarray"`
 	Protected   []byte
@@ -205,23 +195,37 @@ type signedCWT struct {
 	Signature   []byte
 }
 
-// When cborData is []byte containing a signed CWT
-// it can be decoded into signedCTW struct easily
-  
-var v signedCWT
-if err := cbor.Unmarshal(cborData, &v); err != nil {
-  t.Fatal("Unmarshal:", err)
+// Part of COSE header definition
+type coseHeader struct {
+	Alg int    `cbor:"1,keyasint,omitempty"`
+	Kid []byte `cbor:"4,keyasint,omitempty"`
+	IV  []byte `cbor:"5,keyasint,omitempty"`
 }
 
-// That's it!  You get fast decoding and easy-to-use struct.
+// data is []byte containing signed CWT
+
+var v signedCWT
+if err := cbor.Unmarshal(data, &v); err != nil {
+	return err
+}
 ```
 
-__Example decoding SenML__ using `keyasint` struct tag
+__Encoding CWT (CBOR Web Token)__ using `keyasint` and `toarray` struct tags:
+```
+// Use signedCWT struct defined in "Decoding CWT" example.
+
+var v signedCWT
+...
+if data, err := cbor.Marshal(v); err != nil {
+	return err
+}
+```
+
+__Decoding SenML__ using `keyasint` struct tag:
 ```
 // RFC 8428 says, "The data is structured as a single array that 
 // contains a series of SenML Records that can each contain fields"
 
-// fxamacker/cbor v1.3 has "keyasint" struct tag
 type SenMLRecord struct {
 	BaseName    string  `cbor:"-2,keyasint,omitempty"`
 	BaseTime    float64 `cbor:"-3,keyasint,omitempty"`
@@ -240,18 +244,26 @@ type SenMLRecord struct {
 	UpdateTime  float64 `cbor:"7,keyasint,omitempty"`
 }
 
-// When cborData is a []byte containing SenML, 
-// it can easily be decoded into a []SenMLRecord.
+// data is a []byte containing SenML
 
 var v []SenMLRecord
-if err := cbor.Unmarshal(cborData, &v); err != nil {
-	t.Fatal("Unmarshal:", err)
+if err := cbor.Unmarshal(data, &v); err != nil {
+	return err
 }
-
-// That's it!  You get fast decoding and easy-to-use []SenMLRecord.
 ```
 
-Decoding:
+__Encoding SenML__ using `keyasint` struct tag:
+```
+// use SenMLRecord struct defined in "Decoding SenML" example
+
+var v []SenMLRecord
+...
+if data, err := cbor.Marshal(v); err != nil {
+	return err
+}
+```
+
+__Decoding__:
 
 ```
 // create a decoder
@@ -274,7 +286,7 @@ var f float32
 err = dec.Decode(&f)
 ```
 
-Encoding:
+__Encoding__:
 
 ```
 // create an encoder with canonical CBOR encoding enabled
@@ -290,7 +302,7 @@ err = enc.Encode(m)
 err = enc.Encode(f)
 ```
 
-Encoding indefinite length array:
+__Encoding indefinite length array__:
 
 ```
 enc := cbor.NewEncoder(writer, cbor.EncOptions{})
