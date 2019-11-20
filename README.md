@@ -1,23 +1,12 @@
-<p align="center">
-  <a href="https://github.com/fxamacker/cbor/releases"><img src="https://user-images.githubusercontent.com/57072051/68724388-f0ac5500-0580-11ea-840d-e853bb288459.png" alt="CBOR library big picture"></a>
-</p>
+<!-- removed centered image and badges to avoid rendering issues on go.dev  -->
 
-<p align="center">
-  <a href="https://travis-ci.com/fxamacker/cbor"><img src="https://travis-ci.com/fxamacker/cbor.svg?branch=master"></a>
-  <a href="https://codecov.io/gh/fxamacker/cbor"><img src="https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4"></a>
-  <a href="https://goreportcard.com/report/github.com/fxamacker/cbor"><img src="https://goreportcard.com/badge/github.com/fxamacker/cbor"></a>
-  <a href="https://github.com/fxamacker/cbor/releases"><img src="https://img.shields.io/github/release/fxamacker/cbor.svg?style=flat-square"></a>
-  <a href="http://godoc.org/github.com/fxamacker/cbor"><img src="(http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square"></a>
-  <a href="https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE"><img src="http://img.shields.io/badge/license-mit-blue.svg?style=flat-square"></a>
-<br><br>
-</p>
+[![CBOR Library in Go/Golang](https://user-images.githubusercontent.com/57072051/69205741-78a9d600-0b10-11ea-9b7b-0fefcb56c613.png)](https://github.com/fxamacker/cbor/releases)
 
-<!-- [![Build Status](https://travis-ci.com/fxamacker/cbor.svg?branch=master)](https://travis-ci.com/fxamacker/cbor) -->
-<!-- [![codecov](https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4)](https://codecov.io/gh/fxamacker/cbor) -->
-<!-- [![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor) -->
-<!-- [![Release](https://img.shields.io/github/release/fxamacker/cbor.svg?style=flat-square)](https://github.com/fxamacker/cbor/releases) -->
-<!-- [![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/fxamacker/cbor) -->
-<!-- [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE) -->
+[![Build Status](https://travis-ci.com/fxamacker/cbor.svg?branch=master)](https://travis-ci.com/fxamacker/cbor)
+[![codecov](https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4)](https://codecov.io/gh/fxamacker/cbor)
+[![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor)
+[![Release](https://img.shields.io/github/release/fxamacker/cbor.svg?style=flat-square)](https://github.com/fxamacker/cbor/releases)
+[![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE)
 
 # CBOR library in Go
 __This library encodes and decodes [CBOR](CBOR.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049))__, a binary data format inspired by JSON and MessagePack. CBOR is used by other [IETF](https://www.ietf.org) Internet Standards such as COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)) and CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)).
@@ -36,7 +25,7 @@ Install with ```go get github.com/fxamacker/cbor``` and use it like Go's ```enco
 
 <div align="center">
 
-:small_orange_diamond: [Design Goals](#design-goals) :small_orange_diamond: [Features](#features) :small_orange_diamond: [Standards](#standards) :small_orange_diamond: [Fuzzing and Coverage](#fuzzing-and-code-coverage) :small_orange_diamond: [API](#api) :small_orange_diamond: [Security Policy](#security-policy) :small_orange_diamond:
+:small_orange_diamond: [Design Goals](#design-goals) :small_orange_diamond: [Features](#features) :small_orange_diamond: [Standards](#standards) :small_orange_diamond: [Fuzzing and Coverage](#fuzzing-and-code-coverage) :small_orange_diamond: [Usage](#usage) :small_orange_diamond: [Security Policy](#security-policy) :small_orange_diamond:
 
 </div>
 
@@ -137,7 +126,9 @@ Like Go's `encoding/json`, data validation checks the entire message to prevent 
 This project uses [Semantic Versioning](https://semver.org), so the API is always backwards compatible unless the major version number changes.
 
 ## API 
-See [API docs](https://godoc.org/github.com/fxamacker/cbor) for more details.
+The API is the same as `encoding/json` when possible.
+
+In addition to the API, the `keyasint` and `toarray` struct tags are worth knowing.  They can reduce programming effort, improve system performance, and reduce the size of serialized data.  
 
 ```
 package cbor // import "github.com/fxamacker/cbor"
@@ -167,6 +158,7 @@ type UnmarshalTypeError struct{ ... }
 type Unmarshaler interface{ ... }
 type UnsupportedTypeError struct{ ... }
 ```
+See [API docs](https://godoc.org/github.com/fxamacker/cbor) for more details.
 
 ## Installation
 ```
@@ -183,6 +175,8 @@ Like `encoding/json`:
 * cbor.Unmarshal uses []byte
 * cbor.Encoder uses io.Writer
 * cbor.Decoder uses io.Reader
+
+The `keyasint` and `toarray` struct tags can reduce programming effort, improve system performance, and reduce the size of serialized data.
 
 __Decoding CWT (CBOR Web Token)__ using `keyasint` and `toarray` struct tags:
 ```
@@ -366,6 +360,7 @@ Licensed under [MIT License](LICENSE)
 <hr>
 <div align="center">
 
-:small_orange_diamond: [Design Goals](#design-goals) :small_orange_diamond: [Features](#features) :small_orange_diamond: [Standards](#standards) :small_orange_diamond: [Fuzzing and Coverage](#fuzzing-and-code-coverage) :small_orange_diamond: [API](#api) :small_orange_diamond: [Security Policy](#security-policy) :small_orange_diamond:
+:small_orange_diamond: [Design Goals](#design-goals) :small_orange_diamond: [Features](#features) :small_orange_diamond: [Standards](#standards) :small_orange_diamond: [Fuzzing and Coverage](#fuzzing-and-code-coverage) :small_orange_diamond: [Usage](#usage) :small_orange_diamond: [Security Policy](#security-policy) :small_orange_diamond:
+
 
 </div>
