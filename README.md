@@ -39,7 +39,7 @@ Version 1.x has:
 
 * __Stable API__ – won't make breaking API changes.  
 * __Stable requirements__ – will always support Go v1.12.  
-* __Passed fuzzing__ – v1.2 passed 42+ hours of coverage-guided fuzzing.  See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
+* __Passed fuzzing__ – v1.3 passed 72+ hours of coverage-guided fuzzing.  See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
 
 Recent activity:
 
@@ -337,10 +337,20 @@ err = enc.EndIndefinite()
 More [examples](example_test.go).
 
 ## Benchmarks
-In this library, Go structs are faster than maps:
 
-* decoding into struct is >66% faster than decoding into map.
-* encoding struct is >67% faster than encoding map.
+Go structs are faster than maps with string keys:
+* decoding into struct is >31% faster than decoding into map.
+* encoding struct is >33% faster than encoding map.
+
+Go structs with `keyasint` struct tag are faster than maps with integer keys:
+* decoding into struct is >25% faster than decoding into map.
+* encoding struct is >31% faster than encoding map.
+
+Go structs with `toarray` struct tag are faster than slice:
+* decoding into struct is >15% faster than decoding into slice.
+* encoding struct is >10% faster than encoding slice.
+
+Doing your own benchmarks is highly recommended.  Use your most common message sizes and data types.
 
 See [Benchmarks for fxamacker/cbor](BENCHMARKS.md).
 
