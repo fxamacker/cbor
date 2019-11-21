@@ -105,9 +105,9 @@ Each release passes coverage-guided fuzzing using [fxamacker/cbor-fuzz](https://
 
 Unit tests include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and etc.
 
-Minimum code coverage is 95%.  Minimum fuzzing is 10 hours for each release but often longer (v1.2 passed 42+ hours.)
+Minimum code coverage is 95%.  Minimum fuzzing is 10 hours for each release but often longer (v1.3 passed 72+ hours.)
 
-Code coverage is 97.8% (`go test -cover`) for cbor v1.2 which is among the highest for libraries of this type.
+Code coverage is 97.8% (`go test -cover`) for cbor v1.3 which is among the highest for libraries of this type.
 
 ## Standards
 This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049), with minor [limitations](#limitations).
