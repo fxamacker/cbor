@@ -5,8 +5,8 @@ See [bench_test.go](bench_test.go).
 Benchmarks:
 * [Go builtin types](#go-builtin-types)
 * [Go structs](#go-structs)
-* [Go structs with "keyasint" struct tag](#go-structs-with-"keyasint"-struct-tag)
-* [Go structs with "toarray" struct tag](#go-structs-with-"toarray"-struct-tag)
+* [Go structs with "keyasint" struct tag](#go-structs-with-keyasint-struct-tag)
+* [Go structs with "toarray" struct tag](#go-structs-with-toarray-struct-tag)
 * [COSE data](#cose-data)
 * [CWT claims data](#cwt-claims-data)
 * [SenML data](#SenML-data)
@@ -99,7 +99,7 @@ Benchmarks use struct (with keyasint struct tag) and map[int]interface{} represe
 }
 ```
 
-Struct type with keyasint struct tag is used here to handle CBOR map with integer keys.
+Struct type with keyasint struct tag is used to handle CBOR map with integer keys.
 
 ```
 type T struct {
@@ -141,7 +141,7 @@ Benchmarks use struct (with toarray struct tag) and []interface{} representing t
 ]
 ```
 
-Struct type with toarray struct tag is used here to handle CBOR array.
+Struct type with toarray struct tag is used to handle CBOR array.
 
 ```
 type T struct {
