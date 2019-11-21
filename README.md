@@ -47,7 +47,7 @@ Recent activity:
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- faster encoding and decoding.
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- add struct to/from CBOR array (`toarray` struct tag) for more compact data.
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- add struct to/from CBOR map with int keys (`keyasint` struct tag). Simplifies using COSE, etc.
-* [ ] Milestone v1.4 -- 🎈 (maybe) Add support for CBOR tags (major type 6.)
+* [ ] [Milestone v1.4](https://github.com/fxamacker/cbor/milestone/3) -- 🎈 (maybe) Add support for CBOR tags (major type 6.)
 
 ## Design Goals 
 This CBOR library was created for my [WebAuthn (FIDO2) server library](https://github.com/fxamacker/webauthn), because existing CBOR libraries didn't meet certain criteria.  This library became a good fit for many other projects.
@@ -92,7 +92,7 @@ Doing your own comparisons is highly recommended.  Use your most common message 
 * v1.2 -- User-defined types can have custom CBOR encoding and decoding by implementing `cbor.Marshaler` and `cbor.Unmarshaler` interfaces. 
 * v1.3 -- add struct to/from CBOR array (`toarray` struct tag) for more compact data
 * v1.3 -- add struct to/from CBOR map with int keys (`keyasint` struct tag). Simplifies using COSE, etc.
-* Milestone v1.4 -- Maybe add support for CBOR tags (major type 6.)
+* [Milestone v1.4](https://github.com/fxamacker/cbor/milestone/3) -- (maybe) 🎈 add support for CBOR tags (major type 6.)
 
 ## Fuzzing and Code Coverage
 
