@@ -1,42 +1,36 @@
-<p align="center">
-  <a href="https://github.com/fxamacker/cbor/releases"><img src="https://user-images.githubusercontent.com/57072051/68724388-f0ac5500-0580-11ea-840d-e853bb288459.png" alt="CBOR library big picture"></a>
-</p>
+<!-- removed centered image and badges to avoid rendering issues on go.dev  -->
+<!-- removed github emojis like :lock: and :rocket: to avoid potential rendering issues on go.dev  -->
 
-<p align="center">
-  <a href="https://travis-ci.com/fxamacker/cbor"><img src="https://travis-ci.com/fxamacker/cbor.svg?branch=master"></a>
-  <a href="https://codecov.io/gh/fxamacker/cbor"><img src="https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4"></a>
-  <a href="https://goreportcard.com/report/github.com/fxamacker/cbor"><img src="https://goreportcard.com/badge/github.com/fxamacker/cbor"></a>
-  <a href="https://github.com/fxamacker/cbor/releases"><img src="https://img.shields.io/github/release/fxamacker/cbor.svg?style=flat-square"></a>
-  <a href="http://godoc.org/github.com/fxamacker/cbor"><img src="(http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square"></a>
-  <a href="https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE"><img src="http://img.shields.io/badge/license-mit-blue.svg?style=flat-square"></a>
-<br><br>
-</p>
-
-<!-- [![Build Status](https://travis-ci.com/fxamacker/cbor.svg?branch=master)](https://travis-ci.com/fxamacker/cbor) -->
-<!-- [![codecov](https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4)](https://codecov.io/gh/fxamacker/cbor) -->
-<!-- [![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor) -->
-<!-- [![Release](https://img.shields.io/github/release/fxamacker/cbor.svg?style=flat-square)](https://github.com/fxamacker/cbor/releases) -->
-<!-- [![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/fxamacker/cbor) -->
-<!-- [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE) -->
+[![CBOR Library in Go/Golang](https://user-images.githubusercontent.com/57072051/69258148-c874b580-0b81-11ea-982d-e44b21f3a0fe.png)](https://github.com/fxamacker/cbor/releases)
 
 # CBOR library in Go
-__This library encodes and decodes [CBOR](CBOR.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049))__, a binary data format inspired by JSON and MessagePack. CBOR is used by other [IETF](https://www.ietf.org) Internet Standards such as COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)) and CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)).
+This library encodes and decodes CBOR.  It's been fuzz tested since v0.1 and got faster in v1.3.
 
-__Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: easy, small, fast, and reliable.
+[![Build Status](https://travis-ci.com/fxamacker/cbor.svg?branch=master)](https://travis-ci.com/fxamacker/cbor)
+[![codecov](https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4)](https://codecov.io/gh/fxamacker/cbor)
+[![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor)
+[![Release](https://img.shields.io/github/release/fxamacker/cbor.svg?style=flat-square)](https://github.com/fxamacker/cbor/releases)
+[![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE)
 
-:hourglass_flowing_sand: It's easy and saves time.  It has the same API as [Go](https://golang.org)'s [`encoding/json`](https://golang.org/pkg/encoding/json/) when possible.  Existing structs don't require changes.  Go struct tags like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` work as expected.
+__What is CBOR__?  [CBOR](CBOR.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049)) is a binary data format inspired by JSON and MessagePack.  CBOR is used in [IETF](https://www.ietf.org) Internet Standards such as COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)) and CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)). WebAuthn also uses CBOR.
 
-:atom: It's small and self-contained.  It compiles to under 0.5 MB, has no external dependencies, and no code gen.
+__Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: small, fast, reliable and easy. 
 
-:lock: It's safe and reliable. It prevents crashes on malicious CBOR data by using extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's [`unsafe`](https://golang.org/pkg/unsafe/) package.
+* __Small__ and self-contained.  It compiles to under 0.5 MB, has no external dependencies, and no code gen.
 
-:rocket: It's fast (esp. since v1.3). It soley uses safe optimizations.  Faster libraries will always exist, but speed is only one factor.  Choose this library if you value your time, program size, and system reliability. 
+* __Fast__ (esp. since v1.3). It soley uses safe optimizations.  Faster libraries will always exist, but speed is only one factor.  Choose this library if you value your time, program size, and system reliability. 
+
+* __Reliable__ and safe. It prevents crashes on malicious CBOR data by using extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's [`unsafe`](https://golang.org/pkg/unsafe/) package.
+
+* __Easy__ and saves time.  It has the same API as [Go](https://golang.org)'s [`encoding/json`](https://golang.org/pkg/encoding/json/) when possible.  Existing structs don't require changes.  Go struct tags like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` work as expected.
+
+New struct tags like __`keyasint`__ and __`toarray`__ make CBOR, COSE, CWT, and SenML very easy to use.
 
 Install with ```go get github.com/fxamacker/cbor``` and use it like Go's ```encoding/json```.
 
 <div align="center">
 
-:small_orange_diamond: [Design Goals](#design-goals) :small_orange_diamond: [Features](#features) :small_orange_diamond: [Standards](#standards) :small_orange_diamond: [Fuzzing and Coverage](#fuzzing-and-code-coverage) :small_orange_diamond: [API](#api) :small_orange_diamond: [Security Policy](#security-policy) :small_orange_diamond:
+• [Design Goals](#design-goals) • [Comparisons](#comparisons)  • [Features](#features) • [Standards](#standards) • [Fuzzing](#fuzzing-and-code-coverage) • [Usage](#usage) • [Security Policy](#security-policy) •
 
 </div>
 
@@ -50,10 +44,10 @@ Version 1.x has:
 Recent activity:
 
 * [x] [Release v1.2](https://github.com/fxamacker/cbor/releases) -- add RawMessage type, Marshaler and Unmarshaler interfaces.  Passed 42+ hrs of fuzzing.
-* [x] [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- faster encoding and decoding.
-* [x] [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- add struct to/from CBOR array (`toarray` struct tag) for more compact data.
-* [x] [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- add struct to/from CBOR map with int keys (`keyasint` struct tag). Simplifies using COSE data.
-* [ ] Milestone v1.4 -- :balloon: (maybe) Add support for CBOR tags (major type 6.)
+* [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- faster encoding and decoding.
+* [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- add struct to/from CBOR array (`toarray` struct tag) for more compact data.
+* [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- add struct to/from CBOR map with int keys (`keyasint` struct tag). Simplifies using COSE, etc.
+* [ ] [Milestone v1.4](https://github.com/fxamacker/cbor/milestone/3) -- 🎈 (maybe) Add support for CBOR tags (major type 6.)
 
 ## Design Goals 
 This CBOR library was created for my [WebAuthn (FIDO2) server library](https://github.com/fxamacker/webauthn), because existing CBOR libraries didn't meet certain criteria.  This library became a good fit for many other projects.
@@ -73,10 +67,13 @@ Initial releases focus on features, testing, and fuzzing.  After that, new relea
 
 All releases prioritize reliability to avoid crashes on decoding malformed CBOR data. See [Fuzzing and Coverage](#fuzzing-and-code-coverage).
 
-## Size Comparisons
-Libraries and programs were compiled for linux_amd64 using Go 1.12.
- 
-![alt text](https://user-images.githubusercontent.com/33205765/68306684-9c304380-006f-11ea-8661-c87592bcaa51.png "Library and program size comparison chart")
+## Comparisons
+
+![alt text](https://user-images.githubusercontent.com/57072051/69281068-3e424680-0bad-11ea-97ab-730b3d3069af.png "CBOR library and program size comparison chart")
+
+Additional comparisons may be added here from time to time (esp. speed comparisons!)
+
+Doing your own comparisons is highly recommended.  Use your most common message sizes and data types.
 
 ## Features
 
@@ -90,12 +87,12 @@ Libraries and programs were compiled for linux_amd64 using Go 1.12.
 * Encode and decode nil slice/map/pointer/interface values correctly.
 * Encode and decode time.Time as RFC 3339 formatted text string or Unix time.
 * Encode and decode indefinite length bytes/string/array/map (["streaming"](https://tools.ietf.org/html/rfc7049#section-2.2)).
-* :tada: v1.1 -- Support `encoding.BinaryMarshaler` and `encoding.BinaryUnmarshaler` interfaces.
-* :tada: v1.2 -- `cbor.RawMessage` can delay CBOR decoding or precompute CBOR encoding.
-* :tada: v1.2 -- User-defined types can have custom CBOR encoding and decoding by implementing `cbor.Marshaler` and `cbor.Unmarshaler` interfaces. 
-* :truck: [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- add struct to/from CBOR array (`toarray` struct tag) for more compact data
-* :truck: [Milestone v1.3](https://github.com/fxamacker/cbor/milestone/2) -- add struct to/from CBOR map with int keys (`keyasint` struct tag). Simplifies using COSE data.
-* :balloon: Milestone v1.4 -- Maybe add support for CBOR tags (major type 6.)
+* v1.1 -- Support `encoding.BinaryMarshaler` and `encoding.BinaryUnmarshaler` interfaces.
+* v1.2 -- `cbor.RawMessage` can delay CBOR decoding or precompute CBOR encoding.
+* v1.2 -- User-defined types can have custom CBOR encoding and decoding by implementing `cbor.Marshaler` and `cbor.Unmarshaler` interfaces. 
+* v1.3 -- add struct to/from CBOR array (`toarray` struct tag) for more compact data
+* v1.3 -- add struct to/from CBOR map with int keys (`keyasint` struct tag). Simplifies using COSE, etc.
+* [Milestone v1.4](https://github.com/fxamacker/cbor/milestone/3) -- (maybe) 🎈 add support for CBOR tags (major type 6.)
 
 ## Fuzzing and Code Coverage
 
@@ -118,7 +115,7 @@ This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/h
 It also supports [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#section-3.9) (both RFC 7049 and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)).  CTAP2 canonical CBOR encoding is used by [CTAP](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html) and [WebAuthn](https://www.w3.org/TR/webauthn/) in [FIDO2](https://fidoalliance.org/fido2/) framework.
 
 ## Limitations
-:balloon: CBOR tags (type 6) is being considered for a future release. Please let me know if this feature is important to you.
+🎈 CBOR tags (type 6) is being considered for a future release. Please let me know if this feature is important to you.
 
 Current limitations:
 
@@ -137,7 +134,9 @@ Like Go's `encoding/json`, data validation checks the entire message to prevent 
 This project uses [Semantic Versioning](https://semver.org), so the API is always backwards compatible unless the major version number changes.
 
 ## API 
-See [API docs](https://godoc.org/github.com/fxamacker/cbor) for more details.
+The API is the same as `encoding/json` when possible.
+
+In addition to the API, the `keyasint` and `toarray` struct tags are worth knowing.  They can reduce programming effort, improve system performance, and reduce the size of serialized data.  
 
 ```
 package cbor // import "github.com/fxamacker/cbor"
@@ -167,6 +166,7 @@ type UnmarshalTypeError struct{ ... }
 type Unmarshaler interface{ ... }
 type UnsupportedTypeError struct{ ... }
 ```
+See [API docs](https://godoc.org/github.com/fxamacker/cbor) for more details.
 
 ## Installation
 ```
@@ -175,7 +175,7 @@ go get github.com/fxamacker/cbor
 [Released versions](https://github.com/fxamacker/cbor/releases) benefit from longer fuzz tests.
 
 ## Usage
-:point_right: Like Go's `encoding/json`, data validation checks the entire message to prevent partially filled (corrupted) data. This library also prevents crashes and resource exhaustion attacks from malicious CBOR data. Use Go's `io.LimitReader` when decoding very large data to limit size.
+👉 Like Go's `encoding/json`, data validation checks the entire message to prevent partially filled (corrupted) data. This library also prevents crashes and resource exhaustion attacks from malicious CBOR data. Use Go's `io.LimitReader` when decoding very large data to limit size.
 
 Like `encoding/json`:
 
@@ -183,6 +183,8 @@ Like `encoding/json`:
 * cbor.Unmarshal uses []byte
 * cbor.Encoder uses io.Writer
 * cbor.Decoder uses io.Reader
+
+The `keyasint` and `toarray` struct tags can reduce programming effort, improve system performance, and reduce the size of serialized data.
 
 __Decoding CWT (CBOR Web Token)__ using `keyasint` and `toarray` struct tags:
 ```
@@ -366,6 +368,6 @@ Licensed under [MIT License](LICENSE)
 <hr>
 <div align="center">
 
-:small_orange_diamond: [Design Goals](#design-goals) :small_orange_diamond: [Features](#features) :small_orange_diamond: [Standards](#standards) :small_orange_diamond: [Fuzzing and Coverage](#fuzzing-and-code-coverage) :small_orange_diamond: [API](#api) :small_orange_diamond: [Security Policy](#security-policy) :small_orange_diamond:
+• [Design Goals](#design-goals) • [Comparisons](#comparisons)  • [Features](#features) • [Standards](#standards) • [Fuzzing](#fuzzing-and-code-coverage) • [Usage](#usage) • [Security Policy](#security-policy) •
 
 </div>
