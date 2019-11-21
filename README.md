@@ -30,7 +30,7 @@ Install with ```go get github.com/fxamacker/cbor``` and use it like Go's ```enco
 
 <div align="center">
 
-⟡ [Design Goals](#design-goals) ⟡ [Comparisons](#comparisons)  ⟡ [Features](#features) ⟡ [Standards](#standards) ⟡ [Fuzzing](#fuzzing-and-code-coverage) ⟡ [Usage](#usage) ⟡ [Security Policy](#security-policy) ⟡
+• [Design Goals](#design-goals) • [Comparisons](#comparisons)  • [Features](#features) • [Standards](#standards) • [Fuzzing](#fuzzing-and-code-coverage) • [Usage](#usage) • [Security Policy](#security-policy) •
 
 </div>
 
@@ -368,6 +368,6 @@ Licensed under [MIT License](LICENSE)
 <hr>
 <div align="center">
 
-⟡ [Design Goals](#design-goals) ⟡ [Comparisons](#comparisons)  ⟡ [Features](#features) ⟡ [Standards](#standards) ⟡ [Fuzzing](#fuzzing-and-code-coverage) ⟡ [Usage](#usage) ⟡ [Security Policy](#security-policy) ⟡
+• [Design Goals](#design-goals) • [Comparisons](#comparisons)  • [Features](#features) • [Standards](#standards) • [Fuzzing](#fuzzing-and-code-coverage) • [Usage](#usage) • [Security Policy](#security-policy) •
 
 </div>
