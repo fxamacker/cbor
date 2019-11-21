@@ -14,20 +14,84 @@ import (
 
 const rounds = 100
 
-type strc struct {
-	A string `cbor:"a"`
-	B string `cbor:"b"`
-	C string `cbor:"c"`
-	D string `cbor:"d"`
-	E string `cbor:"e"`
-	F string `cbor:"f"`
-	G string `cbor:"g"`
-	H string `cbor:"h"`
-	I string `cbor:"i"`
-	J string `cbor:"j"`
-	L string `cbor:"l"`
-	M string `cbor:"m"`
-	N string `cbor:"n"`
+type claims struct {
+	Iss string `cbor:"1,keyasint"`
+	Sub string `cbor:"2,keyasint"`
+	Aud string `cbor:"3,keyasint"`
+	Exp int    `cbor:"4,keyasint"`
+	Nbf int    `cbor:"5,keyasint"`
+	Iat int    `cbor:"6,keyasint"`
+	Cti []byte `cbor:"7,keyasint"`
+}
+
+type coseKey struct {
+	Kty       int             `cbor:"1,keyasint,omitempty"`
+	Kid       []byte          `cbor:"2,keyasint,omitempty"`
+	Alg       int             `cbor:"3,keyasint,omitempty"`
+	KeyOpts   int             `cbor:"4,keyasint,omitempty"`
+	IV        []byte          `cbor:"5,keyasint,omitempty"`
+	CrvOrNOrK cbor.RawMessage `cbor:"-1,keyasint,omitempty"` // K for symmetric keys, Crv for elliptic curve keys, N for RSA modulus
+	XOrE      cbor.RawMessage `cbor:"-2,keyasint,omitempty"` // X for curve x-coordinate, E for RSA public exponent
+	Y         cbor.RawMessage `cbor:"-3,keyasint,omitempty"` // Y for curve y-cooridate
+	D         []byte          `cbor:"-4,keyasint,omitempty"`
+}
+
+type attestationObject struct {
+	AuthnData []byte          `cbor:"authData"`
+	Fmt       string          `cbor:"fmt"`
+	AttStmt   cbor.RawMessage `cbor:"attStmt"`
+}
+
+type SenMLRecord struct {
+	BaseName    string  `cbor:"-2,keyasint,omitempty"`
+	BaseTime    float64 `cbor:"-3,keyasint,omitempty"`
+	BaseUnit    string  `cbor:"-4,keyasint,omitempty"`
+	BaseValue   float64 `cbor:"-5,keyasint,omitempty"`
+	BaseSum     float64 `cbor:"-6,keyasint,omitempty"`
+	BaseVersion int     `cbor:"-1,keyasint,omitempty"`
+	Name        string  `cbor:"0,keyasint,omitempty"`
+	Unit        string  `cbor:"1,keyasint,omitempty"`
+	Time        int     `cbor:"6,keyasint,omitempty"`
+	UpdateTime  float64 `cbor:"7,keyasint,omitempty"`
+	Value       float64 `cbor:"2,keyasint,omitempty"`
+	ValueS      string  `cbor:"3,keyasint,omitempty"`
+	ValueB      bool    `cbor:"4,keyasint,omitempty"`
+	ValueD      []byte  `cbor:"8,keyasint,omitempty"`
+	Sum         float64 `cbor:"5,keyasint,omitempty"`
+}
+
+type T1 struct {
+	T    bool
+	Ui   uint
+	I    int
+	F    float64
+	B    []byte
+	S    string
+	Slci []int
+	Mss  map[string]string
+}
+
+type T2 struct {
+	T    bool              `cbor:"1,keyasint"`
+	Ui   uint              `cbor:"2,keyasint"`
+	I    int               `cbor:"3,keyasint"`
+	F    float64           `cbor:"4,keyasint"`
+	B    []byte            `cbor:"5,keyasint"`
+	S    string            `cbor:"6,keyasint"`
+	Slci []int             `cbor:"7,keyasint"`
+	Mss  map[string]string `cbor:"8,keyasint"`
+}
+
+type T3 struct {
+	_    struct{} `cbor:",toarray"`
+	T    bool
+	Ui   uint
+	I    int
+	F    float64
+	B    []byte
+	S    string
+	Slci []int
+	Mss  map[string]string
 }
 
 var decodeBenchmarks = []struct {
@@ -45,8 +109,8 @@ var decodeBenchmarks = []struct {
 	{"text indef len", hexDecode("7f61546168616561206171617561696163616b612061626172616f6177616e61206166616f61786120616a6175616d617061736120616f61766165617261206174616861656120616c6161617a617961206164616f6167ff"), []reflect.Type{typeIntf, typeString}}, // "The quick brown fox jumps over the lazy dog"
 	{"array", hexDecode("981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a"), []reflect.Type{typeIntf, typeIntSlice}},                                                                                                                          // []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}
 	{"array indef len", hexDecode("9f0102030405060708090a0b0c0d0e0f101112131415161718181819181aff"), []reflect.Type{typeIntf, typeIntSlice}},                                                                                                                // []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}
-	{"map", hexDecode("ad616161416162614261636143616461446165614561666146616761476168614861696149616a614a616c614c616d614d616e614e"), []reflect.Type{typeIntf, typeMapStringIntf, typeMapStringString, reflect.TypeOf(strc{})}},                              // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}}
-	{"map indef len", hexDecode("bf616161416162614261636143616461446165614561666146616761476168614861696149616a614a616b614b616c614c616d614d616e614eff"), []reflect.Type{typeIntf, typeMapStringIntf, typeMapStringString, reflect.TypeOf(strc{})}},          // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}}
+	{"map", hexDecode("ad616161416162614261636143616461446165614561666146616761476168614861696149616a614a616c614c616d614d616e614e"), []reflect.Type{typeIntf, typeMapStringIntf, typeMapStringString}},                                                      // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}}
+	{"map indef len", hexDecode("bf616161416162614261636143616461446165614561666146616761476168614861696149616a614a616b614b616c614c616d614d616e614eff"), []reflect.Type{typeIntf, typeMapStringIntf, typeMapStringString}},                                  // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}}
 }
 
 var encodeBenchmarks = []struct {
@@ -61,7 +125,7 @@ var encodeBenchmarks = []struct {
 	{"bytes", hexDecode("581a0102030405060708090a0b0c0d0e0f101112131415161718191a"), []interface{}{[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}}},
 	{"text", hexDecode("782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"), []interface{}{"The quick brown fox jumps over the lazy dog"}},
 	{"array", hexDecode("981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a"), []interface{}{[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}}},
-	{"map", hexDecode("ad616161416162614261636143616461446165614561666146616761476168614861696149616a614a616c614c616d614d616e614e"), []interface{}{map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}, strc{A: "A", B: "B", C: "C", D: "D", E: "E", F: "F", G: "G", H: "H", I: "I", J: "J", L: "L", M: "M", N: "N"}}},
+	{"map", hexDecode("ad616161416162614261636143616461446165614561666146616761476168614861696149616a614a616c614c616d614d616e614e"), []interface{}{map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}}},
 }
 
 func BenchmarkUnmarshal(b *testing.B) {
@@ -81,6 +145,60 @@ func BenchmarkUnmarshal(b *testing.B) {
 			})
 		}
 	}
+	// Unmarshal CBOR map with string key
+	cborData := hexDecode("a86154f56255691bffffffffffffffff61493903e76146fbc0106666666666666142581a0102030405060708090a0b0c0d0e0f101112131415161718191a6153782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6764536c6369981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a634d7373ad6163614361656145616661466167614761686148616e614e616d614d61616141616261426164614461696149616a614a616c614c")
+	b.Run("CBOR map to Go map[string]interface{}", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			var v map[string]interface{}
+			if err := cbor.Unmarshal(cborData, &v); err != nil {
+				b.Fatal("Unmarshal:", err)
+			}
+		}
+	})
+	b.Run("CBOR map to Go struct", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			var v T1
+			if err := cbor.Unmarshal(cborData, &v); err != nil {
+				b.Fatal("Unmarshal:", err)
+			}
+		}
+	})
+	// Unmarshal CBOR map with integer key, such as COSE Key and SenML.
+	cborData = hexDecode("a801f5021bffffffffffffffff033903e704fbc01066666666666605581a0102030405060708090a0b0c0d0e0f101112131415161718191a06782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6707981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a08ad61646144616661466167614761686148616d614d616e614e6161614161626142616361436165614561696149616a614a616c614c")
+	b.Run("CBOR map to Go map[int]interface{}", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			var v map[int]interface{}
+			if err := cbor.Unmarshal(cborData, &v); err != nil {
+				b.Fatal("Unmarshal:", err)
+			}
+		}
+	})
+	b.Run("CBOR map to Go struct keyasint", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			var v T2
+			if err := cbor.Unmarshal(cborData, &v); err != nil {
+				b.Fatal("Unmarshal:", err)
+			}
+		}
+	})
+	// Unmarshal CBOR array of known sequence of data types, such as signed/maced/encrypted CWT
+	cborData = hexDecode("88f51bffffffffffffffff3903e7fbc010666666666666581a0102030405060708090a0b0c0d0e0f101112131415161718191a782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67981a0102030405060708090a0b0c0d0e0f101112131415161718181819181aad616261426163614361646144616561456166614661696149616e614e616161416167614761686148616a614a616c614c616d614d")
+	b.Run("CBOR array to Go []interface{}", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			var v []interface{}
+			if err := cbor.Unmarshal(cborData, &v); err != nil {
+				b.Fatal("Unmarshal:", err)
+			}
+		}
+	})
+	b.Run("CBOR array to Go struct toarray", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			var v T3
+			if err := cbor.Unmarshal(cborData, &v); err != nil {
+				b.Fatal("Unmarshal:", err)
+			}
+		}
+	})
 }
 
 func BenchmarkDecode(b *testing.B) {
@@ -147,9 +265,132 @@ func BenchmarkMarshal(b *testing.B) {
 			})
 		}
 	}
+	// Marshal map[string]interface{} to CBOR map
+	m1 := map[string]interface{}{
+		"T":    true,
+		"Ui":   uint(18446744073709551615),
+		"I":    -1000,
+		"F":    -4.1,
+		"B":    []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
+		"S":    "The quick brown fox jumps over the lazy dog",
+		"Slci": []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
+		"Mss":  map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"},
+	}
+	// Marshal struct to CBOR map
+	v1 := T1{
+		T:    true,
+		Ui:   18446744073709551615,
+		I:    -1000,
+		F:    -4.1,
+		B:    []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
+		S:    "The quick brown fox jumps over the lazy dog",
+		Slci: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
+		Mss:  map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"},
+	}
+	b.Run("Go map[string]interface{} to CBOR map", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			if _, err := cbor.Marshal(m1, cbor.EncOptions{}); err != nil {
+				b.Fatal("Marshal:", err)
+			}
+		}
+	})
+	b.Run("Go struct to CBOR map", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			if _, err := cbor.Marshal(v1, cbor.EncOptions{}); err != nil {
+				b.Fatal("Marshal:", err)
+			}
+		}
+	})
+	// Marshal map[int]interface{} to CBOR map
+	m2 := map[int]interface{}{
+		1: true,
+		2: uint(18446744073709551615),
+		3: -1000,
+		4: -4.1,
+		5: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
+		6: "The quick brown fox jumps over the lazy dog",
+		7: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
+		8: map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"},
+	}
+	// Marshal struct keyasint, such as COSE Key and SenML
+	v2 := T2{
+		T:    true,
+		Ui:   18446744073709551615,
+		I:    -1000,
+		F:    -4.1,
+		B:    []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
+		S:    "The quick brown fox jumps over the lazy dog",
+		Slci: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
+		Mss:  map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"},
+	}
+	b.Run("Go map[int]interface{} to CBOR map", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			if _, err := cbor.Marshal(m2, cbor.EncOptions{}); err != nil {
+				b.Fatal("Marshal:", err)
+			}
+		}
+	})
+	b.Run("Go struct keyasint to CBOR map", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			if _, err := cbor.Marshal(v2, cbor.EncOptions{}); err != nil {
+				b.Fatal("Marshal:", err)
+			}
+		}
+	})
+	// Marshal []interface to CBOR array.
+	slc := []interface{}{
+		true,
+		uint(18446744073709551615),
+		-1000,
+		-4.1,
+		[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
+		"The quick brown fox jumps over the lazy dog",
+		[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
+		map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"},
+	}
+	// Marshal struct toarray to CBOR array, such as signed/maced/encrypted CWT.
+	v3 := T3{
+		T:    true,
+		Ui:   18446744073709551615,
+		I:    -1000,
+		F:    -4.1,
+		B:    []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
+		S:    "The quick brown fox jumps over the lazy dog",
+		Slci: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
+		Mss:  map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"},
+	}
+	b.Run("Go []interface{} to CBOR map", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			if _, err := cbor.Marshal(slc, cbor.EncOptions{}); err != nil {
+				b.Fatal("Marshal:", err)
+			}
+		}
+	})
+	b.Run("Go struct toarray to CBOR array", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			if _, err := cbor.Marshal(v3, cbor.EncOptions{}); err != nil {
+				b.Fatal("Marshal:", err)
+			}
+		}
+	})
 }
 
 func BenchmarkMarshalCanonical(b *testing.B) {
+	type strc struct {
+		A string `cbor:"a"`
+		B string `cbor:"b"`
+		C string `cbor:"c"`
+		D string `cbor:"d"`
+		E string `cbor:"e"`
+		F string `cbor:"f"`
+		G string `cbor:"g"`
+		H string `cbor:"h"`
+		I string `cbor:"i"`
+		J string `cbor:"j"`
+		L string `cbor:"l"`
+		M string `cbor:"m"`
+		N string `cbor:"n"`
+	}
 	for _, bm := range []struct {
 		name     string
 		cborData []byte
@@ -220,32 +461,21 @@ func BenchmarkEncodeStream(b *testing.B) {
 	}
 }
 
-func BenchmarkDecodeCOSE(b *testing.B) {
-	type coseKey struct {
-		Kty    int             `cbor:"1,keyasint"`
-		Alg    int             `cbor:"3,keyasint"`
-		CrvOrN cbor.RawMessage `cbor:"-1,keyasint"`
-		XOrE   cbor.RawMessage `cbor:"-2,keyasint"`
-		Y      cbor.RawMessage `cbor:"-3,keyasint"`
+func BenchmarkUnmarshalCOSE(b *testing.B) {
+	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.2
+	testCases := []struct {
+		name     string
+		cborData []byte
+	}{
+		{"128-Bit Symmetric Key", hexDecode("a42050231f4c4d4d3051fdc2ec0a3851d5b3830104024c53796d6d6574726963313238030a")},
+		{"256-Bit Symmetric Key", hexDecode("a4205820403697de87af64611c1d32a05dab0fe1fcb715a86ab435f1ec99192d795693880104024c53796d6d6574726963323536030a")},
+		{"ECDSA P256 256-Bit Key", hexDecode("a72358206c1382765aec5358f117733d281c1c7bdc39884d04a45a1e6c67c858bc206c1922582060f7f1a780d8a783bfb7a2dd6b2796e8128dbbcef9d3d168db9529971a36e7b9215820143329cce7868e416927599cf65a34f3ce2ffda55a7eca69ed8919a394d42f0f2001010202524173796d6d657472696345434453413235360326")},
 	}
-
-	// Data from https://www.w3.org/TR/webauthn/#sec-attested-credential-data example 2, COSE_Key-encoded ES256 (P-256 curve) in EC2 format.
-	cborData := hexDecode("a501020326200121582065eda5a12577c2bae829437fe338701a10aaa375e1bb5b5de108de439c08551d2258201e52ed75701163f7f9e40ddf9f341b3dc9ba860af7e0ca7ca7e9eecd0084d19c")
-	for _, ctor := range []func() interface{}{
-		func() interface{} { return new(interface{}) },
-		func() interface{} { return new(map[interface{}]interface{}) },
-		func() interface{} { return new(map[int]interface{}) },
-		func() interface{} { return new(coseKey) },
-	} {
-		t := reflect.TypeOf(ctor()).Elem()
-		name := "COSE to Go " + t.String()
-		if t.Kind() == reflect.Struct {
-			name = "COSE to Go " + t.Kind().String()
-		}
-		b.Run(name, func(b *testing.B) {
+	for _, tc := range testCases {
+		b.Run(tc.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				v := ctor()
-				if err := cbor.Unmarshal(cborData, v); err != nil {
+				var v coseKey
+				if err := cbor.Unmarshal(tc.cborData, &v); err != nil {
 					b.Fatal("Unmarshal:", err)
 				}
 			}
@@ -253,31 +483,102 @@ func BenchmarkDecodeCOSE(b *testing.B) {
 	}
 }
 
-func BenchmarkDecodeWebAuthn(b *testing.B) {
-	type attestationObject struct {
-		AuthnData []byte          `cbor:"authData"`
-		Fmt       string          `cbor:"fmt"`
-		AttStmt   cbor.RawMessage `cbor:"attStmt"`
+func BenchmarkMarshalCOSE(b *testing.B) {
+	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.2
+	testCases := []struct {
+		name     string
+		cborData []byte
+	}{
+		{"128-Bit Symmetric Key", hexDecode("a42050231f4c4d4d3051fdc2ec0a3851d5b3830104024c53796d6d6574726963313238030a")},
+		{"256-Bit Symmetric Key", hexDecode("a4205820403697de87af64611c1d32a05dab0fe1fcb715a86ab435f1ec99192d795693880104024c53796d6d6574726963323536030a")},
+		{"ECDSA P256 256-Bit Key", hexDecode("a72358206c1382765aec5358f117733d281c1c7bdc39884d04a45a1e6c67c858bc206c1922582060f7f1a780d8a783bfb7a2dd6b2796e8128dbbcef9d3d168db9529971a36e7b9215820143329cce7868e416927599cf65a34f3ce2ffda55a7eca69ed8919a394d42f0f2001010202524173796d6d657472696345434453413235360326")},
 	}
-	cborData := hexDecode("a363666d74686669646f2d7532666761747453746d74a26373696758483046022100e7ab373cfbd99fcd55fd59b0f6f17fef5b77a20ddec3db7f7e4d55174e366236022100828336b4822125fb56541fb14a8a273876acd339395ec2dad95cf41c1dd2a9ae637835638159024e3082024a30820132a0030201020204124a72fe300d06092a864886f70d01010b0500302e312c302a0603550403132359756269636f2055324620526f6f742043412053657269616c203435373230303633313020170d3134303830313030303030305a180f32303530303930343030303030305a302c312a302806035504030c2159756269636f205532462045452053657269616c203234393431343937323135383059301306072a8648ce3d020106082a8648ce3d030107034200043d8b1bbd2fcbf6086e107471601468484153c1c6d3b4b68a5e855e6e40757ee22bcd8988bf3befd7cdf21cb0bf5d7a150d844afe98103c6c6607d9faae287c02a33b3039302206092b0601040182c40a020415312e332e362e312e342e312e34313438322e312e313013060b2b0601040182e51c020101040403020520300d06092a864886f70d01010b05000382010100a14f1eea0076f6b8476a10a2be72e60d0271bb465b2dfbfc7c1bd12d351989917032631d795d097fa30a26a325634e85721bc2d01a86303f6bc075e5997319e122148b0496eec8d1f4f94cf4110de626c289443d1f0f5bbb239ca13e81d1d5aa9df5af8e36126475bfc23af06283157252762ff68879bcf0ef578d55d67f951b4f32b63c8aea5b0f99c67d7d814a7ff5a6f52df83e894a3a5d9c8b82e7f8bc8daf4c80175ff8972fda79333ec465d806eacc948f1bab22045a95558a48c20226dac003d41fbc9e05ea28a6bb5e10a49de060a0a4f6a2676a34d68c4abe8c61874355b9027e828ca9e064b002d62e8d8cf0744921753d35e3c87c5d5779453e7768617574684461746158c449960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976341000000000000000000000000000000000000000000408903fd7dfd2c9770e98cae0123b13a2c27828a106349bc6277140e7290b7e9eb7976aa3c04ed347027caf7da3a2fa76304751c02208acfc4e7fc6c7ebbc375c8a5010203262001215820ad7f7992c335b90d882b2802061b97a4fabca7e2ee3e7a51e728b8055e4eb9c7225820e0966ba7005987fece6f0e0e13447aa98cec248e4000a594b01b74c1cb1d40b3")
-	for _, ctor := range []func() interface{}{
-		func() interface{} { return new(interface{}) },
-		func() interface{} { return new(map[interface{}]interface{}) },
-		func() interface{} { return new(map[string]interface{}) },
-		func() interface{} { return new(attestationObject) },
-	} {
-		t := reflect.TypeOf(ctor()).Elem()
-		name := "atten object to Go " + t.String()
-		if t.Kind() == reflect.Struct {
-			name = "atten object to Go " + t.Kind().String()
+	for _, tc := range testCases {
+		var v coseKey
+		if err := cbor.Unmarshal(tc.cborData, &v); err != nil {
+			b.Fatal("Unmarshal:", err)
 		}
-		b.Run(name, func(b *testing.B) {
+		b.Run(tc.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				v := ctor()
-				if err := cbor.Unmarshal(cborData, v); err != nil {
-					b.Fatal("Unmarshal:", err)
+				if _, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
+					b.Fatal("Marshal:", err)
 				}
 			}
 		})
+	}
+}
+
+func BenchmarkUnmarshalCWTClaims(b *testing.B) {
+	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.1
+	cborData := hexDecode("a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b71")
+	for i := 0; i < b.N; i++ {
+		var v claims
+		if err := cbor.Unmarshal(cborData, &v); err != nil {
+			b.Fatal("Unmarshal:", err)
+		}
+	}
+}
+
+func BenchmarkMarshalCWTClaims(b *testing.B) {
+	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.1
+	cborData := hexDecode("a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b71")
+	var v claims
+	if err := cbor.Unmarshal(cborData, &v); err != nil {
+		b.Fatal("Unmarshal:", err)
+	}
+	for i := 0; i < b.N; i++ {
+		if _, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
+			b.Fatal("Unmarshal:", err)
+		}
+	}
+}
+
+func BenchmarkUnmarshalSenML(b *testing.B) {
+	// Data from https://tools.ietf.org/html/rfc8428#section-6
+	cborData := hexDecode("87a721781b75726e3a6465763a6f773a3130653230373361303130383030363a22fb41d303a15b00106223614120050067766f6c7461676501615602fb405e066666666666a3006763757272656e74062402fb3ff3333333333333a3006763757272656e74062302fb3ff4cccccccccccda3006763757272656e74062202fb3ff6666666666666a3006763757272656e74062102f93e00a3006763757272656e74062002fb3ff999999999999aa3006763757272656e74060002fb3ffb333333333333")
+	for i := 0; i < b.N; i++ {
+		var v []SenMLRecord
+		if err := cbor.Unmarshal(cborData, &v); err != nil {
+			b.Fatal("Unmarshal:", err)
+		}
+	}
+}
+
+func BenchmarkMarshalSenML(b *testing.B) {
+	// Data from https://tools.ietf.org/html/rfc8428#section-6
+	cborData := hexDecode("87a721781b75726e3a6465763a6f773a3130653230373361303130383030363a22fb41d303a15b00106223614120050067766f6c7461676501615602fb405e066666666666a3006763757272656e74062402fb3ff3333333333333a3006763757272656e74062302fb3ff4cccccccccccda3006763757272656e74062202fb3ff6666666666666a3006763757272656e74062102f93e00a3006763757272656e74062002fb3ff999999999999aa3006763757272656e74060002fb3ffb333333333333")
+	var v []SenMLRecord
+	if err := cbor.Unmarshal(cborData, &v); err != nil {
+		b.Fatal("Unmarshal:", err)
+	}
+	for i := 0; i < b.N; i++ {
+		if _, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
+			b.Fatal("Unmarshal:", err)
+		}
+	}
+}
+
+func BenchmarkUnmarshalWebAuthn(b *testing.B) {
+	// Data generated from Yubico security key
+	cborData := hexDecode("a363666d74686669646f2d7532666761747453746d74a26373696758483046022100e7ab373cfbd99fcd55fd59b0f6f17fef5b77a20ddec3db7f7e4d55174e366236022100828336b4822125fb56541fb14a8a273876acd339395ec2dad95cf41c1dd2a9ae637835638159024e3082024a30820132a0030201020204124a72fe300d06092a864886f70d01010b0500302e312c302a0603550403132359756269636f2055324620526f6f742043412053657269616c203435373230303633313020170d3134303830313030303030305a180f32303530303930343030303030305a302c312a302806035504030c2159756269636f205532462045452053657269616c203234393431343937323135383059301306072a8648ce3d020106082a8648ce3d030107034200043d8b1bbd2fcbf6086e107471601468484153c1c6d3b4b68a5e855e6e40757ee22bcd8988bf3befd7cdf21cb0bf5d7a150d844afe98103c6c6607d9faae287c02a33b3039302206092b0601040182c40a020415312e332e362e312e342e312e34313438322e312e313013060b2b0601040182e51c020101040403020520300d06092a864886f70d01010b05000382010100a14f1eea0076f6b8476a10a2be72e60d0271bb465b2dfbfc7c1bd12d351989917032631d795d097fa30a26a325634e85721bc2d01a86303f6bc075e5997319e122148b0496eec8d1f4f94cf4110de626c289443d1f0f5bbb239ca13e81d1d5aa9df5af8e36126475bfc23af06283157252762ff68879bcf0ef578d55d67f951b4f32b63c8aea5b0f99c67d7d814a7ff5a6f52df83e894a3a5d9c8b82e7f8bc8daf4c80175ff8972fda79333ec465d806eacc948f1bab22045a95558a48c20226dac003d41fbc9e05ea28a6bb5e10a49de060a0a4f6a2676a34d68c4abe8c61874355b9027e828ca9e064b002d62e8d8cf0744921753d35e3c87c5d5779453e7768617574684461746158c449960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976341000000000000000000000000000000000000000000408903fd7dfd2c9770e98cae0123b13a2c27828a106349bc6277140e7290b7e9eb7976aa3c04ed347027caf7da3a2fa76304751c02208acfc4e7fc6c7ebbc375c8a5010203262001215820ad7f7992c335b90d882b2802061b97a4fabca7e2ee3e7a51e728b8055e4eb9c7225820e0966ba7005987fece6f0e0e13447aa98cec248e4000a594b01b74c1cb1d40b3")
+	for i := 0; i < b.N; i++ {
+		var v attestationObject
+		if err := cbor.Unmarshal(cborData, &v); err != nil {
+			b.Fatal("Unmarshal:", err)
+		}
+	}
+}
+
+func BenchmarkMarshalWebAuthn(b *testing.B) {
+	// Data generated from Yubico security key
+	cborData := hexDecode("a363666d74686669646f2d7532666761747453746d74a26373696758483046022100e7ab373cfbd99fcd55fd59b0f6f17fef5b77a20ddec3db7f7e4d55174e366236022100828336b4822125fb56541fb14a8a273876acd339395ec2dad95cf41c1dd2a9ae637835638159024e3082024a30820132a0030201020204124a72fe300d06092a864886f70d01010b0500302e312c302a0603550403132359756269636f2055324620526f6f742043412053657269616c203435373230303633313020170d3134303830313030303030305a180f32303530303930343030303030305a302c312a302806035504030c2159756269636f205532462045452053657269616c203234393431343937323135383059301306072a8648ce3d020106082a8648ce3d030107034200043d8b1bbd2fcbf6086e107471601468484153c1c6d3b4b68a5e855e6e40757ee22bcd8988bf3befd7cdf21cb0bf5d7a150d844afe98103c6c6607d9faae287c02a33b3039302206092b0601040182c40a020415312e332e362e312e342e312e34313438322e312e313013060b2b0601040182e51c020101040403020520300d06092a864886f70d01010b05000382010100a14f1eea0076f6b8476a10a2be72e60d0271bb465b2dfbfc7c1bd12d351989917032631d795d097fa30a26a325634e85721bc2d01a86303f6bc075e5997319e122148b0496eec8d1f4f94cf4110de626c289443d1f0f5bbb239ca13e81d1d5aa9df5af8e36126475bfc23af06283157252762ff68879bcf0ef578d55d67f951b4f32b63c8aea5b0f99c67d7d814a7ff5a6f52df83e894a3a5d9c8b82e7f8bc8daf4c80175ff8972fda79333ec465d806eacc948f1bab22045a95558a48c20226dac003d41fbc9e05ea28a6bb5e10a49de060a0a4f6a2676a34d68c4abe8c61874355b9027e828ca9e064b002d62e8d8cf0744921753d35e3c87c5d5779453e7768617574684461746158c449960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976341000000000000000000000000000000000000000000408903fd7dfd2c9770e98cae0123b13a2c27828a106349bc6277140e7290b7e9eb7976aa3c04ed347027caf7da3a2fa76304751c02208acfc4e7fc6c7ebbc375c8a5010203262001215820ad7f7992c335b90d882b2802061b97a4fabca7e2ee3e7a51e728b8055e4eb9c7225820e0966ba7005987fece6f0e0e13447aa98cec248e4000a594b01b74c1cb1d40b3")
+	var v attestationObject
+	if err := cbor.Unmarshal(cborData, &v); err != nil {
+		b.Fatal("Unmarshal:", err)
+	}
+	for i := 0; i < b.N; i++ {
+		if _, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
+			b.Fatal("Marshal:", err)
+		}
 	}
 }
