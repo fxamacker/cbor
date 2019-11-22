@@ -16,7 +16,7 @@ __What is CBOR__?  [CBOR](CBOR.md) ([RFC 7049](https://tools.ietf.org/html/rfc70
 
 __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: small, fast, reliable and easy. 
 
-* __Small__ and self-contained.  It compiles to under 0.5 MB, has no external dependencies, and no code gen.
+* __Small__ and self-contained.  It compiles to under 0.5 MB, has no external dependencies, and no code gen. In extreme cases, program sizes can be smaller by 8-9 MB by using this library.  See [comparisons](#comparisons).
 
 * __Fast__ (esp. since v1.3). It soley uses safe optimizations.  Faster libraries will always exist, but speed is only one factor.  Choose this library if you value your time, program size, and system reliability. 
 
