@@ -77,21 +77,35 @@ import (
 // Channel, complex, and functon values cannot be encoded in CBOR.  Attempting
 // to encode such a value causes Marshal to return an UnsupportedTypeError.
 //
-// CBOR cannot represent cyclic data structures and Marshal does not handle them.
+// Canonical CBOR encoding uses the following rules:
+//
+//     1. Integers must be as small as possible.
+//     2. The expression of lengths in major types 2 through 5 must be as short
+//        as possible.
+//     3. The keys in every map must be sorted by the following rules:
+//        *  If two keys have different lengths, the shorter one sorts earlier;
+//		  *  If two keys have the same length, the one with the lower value in
+//           (byte-wise) lexical order sorts earlier.
+//     4. Indefinite-length items must be made into definite-length items.
 //
 // CTAP2 canonical CBOR encoding uses the following rules:
 //
 //     1. Integers must be encoded as small as possible.
 //     2. The representations of any floating-point values are not changed.
-//     3. The expression of lengths in major types 2 through 5 must be as short as possible.
+//     3. The expression of lengths in major types 2 through 5 must be as short
+//        as possible.
 //     4. Indefinite-length items must be made into definite-length items.
 //     5. The keys in every map must be sorted lowest value to highest.
+//        * If the major types are different, the one with the lower value in
+//          numerical order sorts earlier.
+//        * If two keys have different lengths, the shorter one sorts earlier;
+//        * If two keys have the same length, the one with the lower value in
+//          (byte-wise) lexical order sorts earlier.
 //     6. Tags must not be present.
 //
-// Canonical CBOR encoding specified in RFC 7049 section 3.9 consists of CTAP2
-// canonical CBOR encoding rules 1, 3, 4, and 5.
-//
-// Marshal supports RFC 7049 and CTAP2 canonical CBOR encoding.
+// Marshal supports 2 options for canonical encoding:
+// 1. Canonical: Canonical CBOR encoding (RFC 7049)
+// 2. CTAP2Canonical:  CTAP2 canonical CBOR encoding
 func Marshal(v interface{}, encOpts EncOptions) ([]byte, error) {
 	e := getEncodeState()
 
@@ -128,12 +142,19 @@ func (e *UnsupportedTypeError) Error() string {
 type EncOptions struct {
 	// Canonical causes map and struct to be encoded in a predictable sequence
 	// of bytes by sorting map keys or struct fields according to canonical rules:
-	//     - If two keys have different CBOR types, the one with lower value in
-	//       numerical order sorts earlier.
-	//     - If two keys have different lengths, the shorter one sorts earlier.
-	//     - If two keys have the same CBOR type and same length, the one with the
-	//       lower value in (byte-wise) lexical order sorts earlier.
+	//     - If two keys have different lengths, the shorter one sorts earlier;
+	//     - If two keys have the same length, the one with the lower value in
+	//       (byte-wise) lexical order sorts earlier.
 	Canonical bool
+	// CTAP2Canonical uses bytewise lexicographic order of map keys encodings:
+	//     - If the major types are different, the one with the lower value in
+	//       numerical order sorts earlier.
+	//     - If two keys have different lengths, the shorter one sorts earlier;
+	//     - If two keys have the same length, the one with the lower value in
+	//       (byte-wise) lexical order sorts earlier.
+	// Please note that when maps keys have the same data type, "canonical CBOR"
+	// AND "CTAP2 canonical CBOR" render the same sort order.
+	CTAP2Canonical bool
 	// TimeRFC3339 causes time.Time to be encoded as string in RFC3339 format;
 	// otherwise, time.Time is encoded as numerical representation of seconds
 	// since January 1, 1970 UTC.
@@ -299,7 +320,7 @@ type mapEncoder struct {
 }
 
 func (me mapEncoder) encodeMap(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
-	if opts.Canonical {
+	if opts.Canonical || opts.CTAP2Canonical {
 		return me.encodeMapCanonical(e, v, opts)
 	}
 	if me.kf == nil || me.ef == nil {
@@ -333,18 +354,33 @@ type keyValue struct {
 	keyLen, keyValueLen           int
 }
 
-type byCanonicalKeyValues []keyValue
+type pairs []keyValue
 
-func (x byCanonicalKeyValues) Len() int {
+func (x pairs) Len() int {
 	return len(x)
 }
 
-func (x byCanonicalKeyValues) Swap(i, j int) {
+func (x pairs) Swap(i, j int) {
 	x[i], x[j] = x[j], x[i]
 }
 
-func (x byCanonicalKeyValues) Less(i, j int) bool {
-	return bytes.Compare(x[i].keyCBORData, x[j].keyCBORData) <= 0
+type byBytewiseKeyValues struct {
+	pairs
+}
+
+func (x byBytewiseKeyValues) Less(i, j int) bool {
+	return bytes.Compare(x.pairs[i].keyCBORData, x.pairs[j].keyCBORData) <= 0
+}
+
+type byLengthFirstKeyValues struct {
+	pairs
+}
+
+func (x byLengthFirstKeyValues) Less(i, j int) bool {
+	if len(x.pairs[i].keyCBORData) != len(x.pairs[j].keyCBORData) {
+		return len(x.pairs[i].keyCBORData) < len(x.pairs[j].keyCBORData)
+	}
+	return bytes.Compare(x.pairs[i].keyCBORData, x.pairs[j].keyCBORData) <= 0
 }
 
 var keyValuePool = sync.Pool{}
@@ -406,7 +442,11 @@ func (me mapEncoder) encodeMapCanonical(e *encodeState, v reflect.Value, opts En
 		off += kvs[i].keyValueLen
 	}
 
-	sort.Sort(byCanonicalKeyValues(kvs))
+	if opts.CTAP2Canonical {
+		sort.Sort(byBytewiseKeyValues{kvs})
+	} else {
+		sort.Sort(byLengthFirstKeyValues{kvs})
+	}
 
 	n := encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(len(kvs)))
 	for i := 0; i < len(kvs); i++ {
@@ -476,7 +516,9 @@ func encodeStruct(e *encodeState, v reflect.Value, opts EncOptions) (int, error)
 
 	flds := structType.fields
 	if opts.Canonical {
-		flds = structType.canonicalFields
+		flds = structType.lenFirstCanonicalFields
+	} else if opts.CTAP2Canonical {
+		flds = structType.bytewiseCanonicalFields
 	}
 
 	if !structType.hasAnonymousField && !structType.omitEmpty {

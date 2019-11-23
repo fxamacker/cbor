@@ -39,20 +39,31 @@ func getDecodingStructType(t reflect.Type) decodingStructType {
 }
 
 type encodingStructType struct {
-	fields            fields
-	canonicalFields   fields
-	err               error
-	toArray           bool
-	omitEmpty         bool
-	hasAnonymousField bool
+	fields                  fields
+	bytewiseCanonicalFields fields
+	lenFirstCanonicalFields fields
+	err                     error
+	toArray                 bool
+	omitEmpty               bool
+	hasAnonymousField       bool
 }
 
-// byCanonical sorts fields by CBOR encoded field name.
-type byCanonical struct {
+type byBytewiseFields struct {
 	fields
 }
 
-func (x byCanonical) Less(i, j int) bool {
+func (x byBytewiseFields) Less(i, j int) bool {
+	return bytes.Compare(x.fields[i].cborName, x.fields[j].cborName) <= 0
+}
+
+type byLengthFirstFields struct {
+	fields
+}
+
+func (x byLengthFirstFields) Less(i, j int) bool {
+	if len(x.fields[i].cborName) != len(x.fields[j].cborName) {
+		return len(x.fields[i].cborName) < len(x.fields[j].cborName)
+	}
 	return bytes.Compare(x.fields[i].cborName, x.fields[j].cborName) <= 0
 }
 
@@ -68,6 +79,8 @@ func getEncodingStructType(t reflect.Type) encodingStructType {
 	var err error
 	var omitEmpty bool
 	var hasAnonymousField bool
+	var hasKeyAsInt bool
+	var hasKeyAsStr bool
 	e := getEncodeState()
 	for i := 0; i < len(flds); i++ {
 		// Get field's encodeFunc
@@ -112,6 +125,12 @@ func getEncodingStructType(t reflect.Type) encodingStructType {
 		if !omitEmpty && flds[i].omitEmpty {
 			omitEmpty = true
 		}
+
+		if flds[i].keyAsInt {
+			hasKeyAsInt = true
+		} else {
+			hasKeyAsStr = true
+		}
 	}
 	putEncodeState(e)
 
@@ -122,11 +141,18 @@ func getEncodingStructType(t reflect.Type) encodingStructType {
 	}
 
 	// Sort fields by canonical order
-	canonicalFields := make(fields, len(flds))
-	copy(canonicalFields, flds)
-	sort.Sort(byCanonical{canonicalFields})
+	bytewiseCanonicalFields := make(fields, len(flds))
+	copy(bytewiseCanonicalFields, flds)
+	sort.Sort(byBytewiseFields{bytewiseCanonicalFields})
 
-	structType := encodingStructType{fields: flds, canonicalFields: canonicalFields, toArray: toArray, omitEmpty: omitEmpty, hasAnonymousField: hasAnonymousField}
+	lenFirstCanonicalFields := bytewiseCanonicalFields
+	if hasKeyAsInt && hasKeyAsStr {
+		lenFirstCanonicalFields = make(fields, len(flds))
+		copy(lenFirstCanonicalFields, flds)
+		sort.Sort(byLengthFirstFields{lenFirstCanonicalFields})
+	}
+
+	structType := encodingStructType{fields: flds, bytewiseCanonicalFields: bytewiseCanonicalFields, lenFirstCanonicalFields: lenFirstCanonicalFields, toArray: toArray, omitEmpty: omitEmpty, hasAnonymousField: hasAnonymousField}
 	encodingStructTypeCache.Store(t, structType)
 	return structType
 }

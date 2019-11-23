@@ -1545,3 +1545,81 @@ func TestMarshalUnmarshalStructToArray(t *testing.T) {
 		})
 	}
 }
+
+func TestMapCBORCanonical(t *testing.T) {
+	m := make(map[interface{}]bool)
+	m[10] = true
+	m[100] = true
+	m[-1] = true
+	m["z"] = true
+	m["aa"] = true
+	m[[1]int{100}] = true
+	m[[1]int{-1}] = true
+	m[false] = true
+	wantCborData := hexDecode("a80af520f5f4f51864f5617af58120f5626161f5811864f5")
+	b, err := cbor.Marshal(m, cbor.EncOptions{Canonical: true})
+	if err != nil {
+		t.Errorf("Marshal(%v) returns error %s", m, err)
+	}
+	if !bytes.Equal(b, wantCborData) {
+		t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", m, b, wantCborData)
+	}
+}
+
+func TestMapCTAP2Canonical(t *testing.T) {
+	m := make(map[interface{}]bool)
+	m[10] = true
+	m[100] = true
+	m[-1] = true
+	m["z"] = true
+	m["aa"] = true
+	m[[1]int{100}] = true
+	m[[1]int{-1}] = true
+	m[false] = true
+	wantCborData := hexDecode("a80af51864f520f5617af5626161f5811864f58120f5f4f5")
+	b, err := cbor.Marshal(m, cbor.EncOptions{CTAP2Canonical: true})
+	if err != nil {
+		t.Errorf("Marshal(%v) returns error %s", m, err)
+	}
+	if !bytes.Equal(b, wantCborData) {
+		t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", m, b, wantCborData)
+	}
+}
+
+func TestStructCBORCanonical(t *testing.T) {
+	type T struct {
+		A bool `cbor:"10,keyasint"`
+		B bool `cbor:"100,keyasint"`
+		C bool `cbor:"-1,keyasint"`
+		D bool `cbor:"z"`
+		E bool `cbor:"aa"`
+	}
+	wantCborData := hexDecode("a50af420f41864f4617af4626161f4")
+	var v T
+	b, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true})
+	if err != nil {
+		t.Errorf("Marshal(%v) returns error %s", v, err)
+	}
+	if !bytes.Equal(b, wantCborData) {
+		t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", v, b, wantCborData)
+	}
+}
+
+func TestStructCTAP2Canonical(t *testing.T) {
+	type T struct {
+		A bool `cbor:"10,keyasint"`
+		B bool `cbor:"100,keyasint"`
+		C bool `cbor:"-1,keyasint"`
+		D bool `cbor:"z"`
+		E bool `cbor:"aa"`
+	}
+	wantCborData := hexDecode("a50af41864f420f4617af4626161f4")
+	var v T
+	b, err := cbor.Marshal(v, cbor.EncOptions{CTAP2Canonical: true})
+	if err != nil {
+		t.Errorf("Marshal(%v) returns error %s", v, err)
+	}
+	if !bytes.Equal(b, wantCborData) {
+		t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", v, b, wantCborData)
+	}
+}

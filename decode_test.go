@@ -940,9 +940,9 @@ var invalidCBORUnmarshalTests = []struct {
 }
 
 func TestInvalidCBORUnmarshal(t *testing.T) {
-	var i interface{}
 	for _, tc := range invalidCBORUnmarshalTests {
 		t.Run(tc.name, func(t *testing.T) {
+			var i interface{}
 			err := cbor.Unmarshal(tc.cborData, &i)
 			if err == nil {
 				t.Errorf("Unmarshal(0x%0x) expecting error, got nil", tc.cborData)
