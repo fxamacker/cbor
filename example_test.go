@@ -424,12 +424,12 @@ func Example_senML() {
 		BaseVersion int     `cbor:"-1,keyasint,omitempty"`
 		Name        string  `cbor:"0,keyasint,omitempty"`
 		Unit        string  `cbor:"1,keyasint,omitempty"`
-		Time        int     `cbor:"6,keyasint,omitempty"`
+		Time        float64 `cbor:"6,keyasint,omitempty"`
 		UpdateTime  float64 `cbor:"7,keyasint,omitempty"`
 		Value       float64 `cbor:"2,keyasint,omitempty"`
 		ValueS      string  `cbor:"3,keyasint,omitempty"`
 		ValueB      bool    `cbor:"4,keyasint,omitempty"`
-		ValueD      []byte  `cbor:"8,keyasint,omitempty"`
+		ValueD      string  `cbor:"8,keyasint,omitempty"`
 		Sum         float64 `cbor:"5,keyasint,omitempty"`
 	}
 	// Data from https://tools.ietf.org/html/rfc8428#section-6
@@ -445,13 +445,13 @@ func Example_senML() {
 		fmt.Printf("%+v\n", rec)
 	}
 	// Output:
-	// {BaseName:urn:dev:ow:10e2073a0108006: BaseTime:1.276020076001e+09 BaseUnit:A BaseValue:0 BaseSum:0 BaseVersion:5 Name:voltage Unit:V Time:0 UpdateTime:0 Value:120.1 ValueS: ValueB:false ValueD:[] Sum:0}
-	// {BaseName: BaseTime:0 BaseUnit: BaseValue:0 BaseSum:0 BaseVersion:0 Name:current Unit: Time:-5 UpdateTime:0 Value:1.2 ValueS: ValueB:false ValueD:[] Sum:0}
-	// {BaseName: BaseTime:0 BaseUnit: BaseValue:0 BaseSum:0 BaseVersion:0 Name:current Unit: Time:-4 UpdateTime:0 Value:1.3 ValueS: ValueB:false ValueD:[] Sum:0}
-	// {BaseName: BaseTime:0 BaseUnit: BaseValue:0 BaseSum:0 BaseVersion:0 Name:current Unit: Time:-3 UpdateTime:0 Value:1.4 ValueS: ValueB:false ValueD:[] Sum:0}
-	// {BaseName: BaseTime:0 BaseUnit: BaseValue:0 BaseSum:0 BaseVersion:0 Name:current Unit: Time:-2 UpdateTime:0 Value:1.5 ValueS: ValueB:false ValueD:[] Sum:0}
-	// {BaseName: BaseTime:0 BaseUnit: BaseValue:0 BaseSum:0 BaseVersion:0 Name:current Unit: Time:-1 UpdateTime:0 Value:1.6 ValueS: ValueB:false ValueD:[] Sum:0}
-	// {BaseName: BaseTime:0 BaseUnit: BaseValue:0 BaseSum:0 BaseVersion:0 Name:current Unit: Time:0 UpdateTime:0 Value:1.7 ValueS: ValueB:false ValueD:[] Sum:0}
+	// {BaseName:urn:dev:ow:10e2073a0108006: BaseTime:1.276020076001e+09 BaseUnit:A BaseValue:0 BaseSum:0 BaseVersion:5 Name:voltage Unit:V Time:0 UpdateTime:0 Value:120.1 ValueS: ValueB:false ValueD: Sum:0}
+	// {BaseName: BaseTime:0 BaseUnit: BaseValue:0 BaseSum:0 BaseVersion:0 Name:current Unit: Time:-5 UpdateTime:0 Value:1.2 ValueS: ValueB:false ValueD: Sum:0}
+	// {BaseName: BaseTime:0 BaseUnit: BaseValue:0 BaseSum:0 BaseVersion:0 Name:current Unit: Time:-4 UpdateTime:0 Value:1.3 ValueS: ValueB:false ValueD: Sum:0}
+	// {BaseName: BaseTime:0 BaseUnit: BaseValue:0 BaseSum:0 BaseVersion:0 Name:current Unit: Time:-3 UpdateTime:0 Value:1.4 ValueS: ValueB:false ValueD: Sum:0}
+	// {BaseName: BaseTime:0 BaseUnit: BaseValue:0 BaseSum:0 BaseVersion:0 Name:current Unit: Time:-2 UpdateTime:0 Value:1.5 ValueS: ValueB:false ValueD: Sum:0}
+	// {BaseName: BaseTime:0 BaseUnit: BaseValue:0 BaseSum:0 BaseVersion:0 Name:current Unit: Time:-1 UpdateTime:0 Value:1.6 ValueS: ValueB:false ValueD: Sum:0}
+	// {BaseName: BaseTime:0 BaseUnit: BaseValue:0 BaseSum:0 BaseVersion:0 Name:current Unit: Time:0 UpdateTime:0 Value:1.7 ValueS: ValueB:false ValueD: Sum:0}
 }
 
 func Example_webAuthn() {

@@ -42,13 +42,6 @@ var (
 	typeIntf            = reflect.TypeOf([]interface{}(nil)).Elem()
 )
 
-type unmarshalTest struct {
-	cborData            []byte
-	emptyInterfaceValue interface{}
-	values              []interface{}
-	wrongTypes          []reflect.Type
-}
-
 type unmarshalFloatTest struct {
 	cborData            []byte
 	emptyInterfaceValue interface{}
@@ -58,98 +51,103 @@ type unmarshalFloatTest struct {
 }
 
 // CBOR test data are from https://tools.ietf.org/html/rfc7049#appendix-A.
-var unmarshalTests = []unmarshalTest{
+var unmarshalTests = []struct {
+	cborData            []byte
+	emptyInterfaceValue interface{}
+	values              []interface{}
+	wrongTypes          []reflect.Type
+}{
 	// positive integer
 	{
 		hexDecode("00"),
 		uint64(0),
-		[]interface{}{uint8(0), uint16(0), uint32(0), uint64(0), uint(0), int8(0), int16(0), int32(0), int64(0), int(0)},
-		[]reflect.Type{typeFloat32, typeFloat64, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]interface{}{uint8(0), uint16(0), uint32(0), uint64(0), uint(0), int8(0), int16(0), int32(0), int64(0), int(0), float32(0), float64(0)},
+		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
 	{
 		hexDecode("01"),
 		uint64(1),
-		[]interface{}{uint8(1), uint16(1), uint32(1), uint64(1), uint(1), int8(1), int16(1), int32(1), int64(1), int(1)},
-		[]reflect.Type{typeFloat32, typeFloat64, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]interface{}{uint8(1), uint16(1), uint32(1), uint64(1), uint(1), int8(1), int16(1), int32(1), int64(1), int(1), float32(1), float64(1)},
+		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
 	{
 		hexDecode("0a"),
 		uint64(10),
-		[]interface{}{uint8(10), uint16(10), uint32(10), uint64(10), uint(10), int8(10), int16(10), int32(10), int64(10), int(10)},
-		[]reflect.Type{typeFloat32, typeFloat64, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]interface{}{uint8(10), uint16(10), uint32(10), uint64(10), uint(10), int8(10), int16(10), int32(10), int64(10), int(10), float32(10), float64(10)},
+		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
 	{
 		hexDecode("17"),
 		uint64(23),
-		[]interface{}{uint8(23), uint16(23), uint32(23), uint64(23), uint(23), int8(23), int16(23), int32(23), int64(23), int(23)},
-		[]reflect.Type{typeFloat32, typeFloat64, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]interface{}{uint8(23), uint16(23), uint32(23), uint64(23), uint(23), int8(23), int16(23), int32(23), int64(23), int(23), float32(23), float64(23)},
+		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
 	{
 		hexDecode("1818"),
 		uint64(24),
-		[]interface{}{uint8(24), uint16(24), uint32(24), uint64(24), uint(24), int8(24), int16(24), int32(24), int64(24), int(24)},
-		[]reflect.Type{typeFloat32, typeFloat64, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]interface{}{uint8(24), uint16(24), uint32(24), uint64(24), uint(24), int8(24), int16(24), int32(24), int64(24), int(24), float32(24), float64(24)},
+		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
 	{
 		hexDecode("1819"),
 		uint64(25),
-		[]interface{}{uint8(25), uint16(25), uint32(25), uint64(25), uint(25), int8(25), int16(25), int32(25), int64(25), int(25)},
-		[]reflect.Type{typeFloat32, typeFloat64, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]interface{}{uint8(25), uint16(25), uint32(25), uint64(25), uint(25), int8(25), int16(25), int32(25), int64(25), int(25), float32(25), float64(25)},
+		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
 	{
 		hexDecode("1864"),
 		uint64(100),
-		[]interface{}{uint8(100), uint16(100), uint32(100), uint64(100), uint(100), int8(100), int16(100), int32(100), int64(100), int(100)},
-		[]reflect.Type{typeFloat32, typeFloat64, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]interface{}{uint8(100), uint16(100), uint32(100), uint64(100), uint(100), int8(100), int16(100), int32(100), int64(100), int(100), float32(100), float64(100)},
+		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
 	{
 		hexDecode("1903e8"),
 		uint64(1000),
-		[]interface{}{uint16(1000), uint32(1000), uint64(1000), uint(1000), int16(1000), int32(1000), int64(1000), int(1000)},
-		[]reflect.Type{typeUint8, typeInt8, typeFloat32, typeFloat64, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]interface{}{uint16(1000), uint32(1000), uint64(1000), uint(1000), int16(1000), int32(1000), int64(1000), int(1000), float32(1000), float64(1000)},
+		[]reflect.Type{typeUint8, typeInt8, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
 	{
 		hexDecode("1a000f4240"),
 		uint64(1000000),
-		[]interface{}{uint32(1000000), uint64(1000000), uint(1000000), int32(1000000), int64(1000000), int(1000000)},
-		[]reflect.Type{typeUint8, typeUint16, typeInt8, typeInt16, typeFloat32, typeFloat64, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]interface{}{uint32(1000000), uint64(1000000), uint(1000000), int32(1000000), int64(1000000), int(1000000), float32(1000000), float64(1000000)},
+		[]reflect.Type{typeUint8, typeUint16, typeInt8, typeInt16, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
 	{
 		hexDecode("1b000000e8d4a51000"),
 		uint64(1000000000000),
-		[]interface{}{uint64(1000000000000), uint(1000000000000), int64(1000000000000), int(1000000000000)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeInt8, typeInt16, typeInt32, typeFloat32, typeFloat64, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]interface{}{uint64(1000000000000), uint(1000000000000), int64(1000000000000), int(1000000000000), float32(1000000000000), float64(1000000000000)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeInt8, typeInt16, typeInt32, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
 	{
 		hexDecode("1bffffffffffffffff"),
 		uint64(18446744073709551615),
-		[]interface{}{uint64(18446744073709551615), uint(18446744073709551615)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeInt8, typeInt16, typeInt32, typeFloat32, typeFloat64, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]interface{}{uint64(18446744073709551615), uint(18446744073709551615), float32(18446744073709551615), float64(18446744073709551615)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeInt8, typeInt16, typeInt32, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
 	// negative integer
 	{
 		hexDecode("20"),
 		int64(-1),
-		[]interface{}{int8(-1), int16(-1), int32(-1), int64(-1), int(-1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeFloat32, typeFloat64, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]interface{}{int8(-1), int16(-1), int32(-1), int64(-1), int(-1), float32(-1), float64(-1)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
 	{
 		hexDecode("29"),
 		int64(-10),
-		[]interface{}{int8(-10), int16(-10), int32(-10), int64(-10), int(-10)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeFloat32, typeFloat64, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]interface{}{int8(-10), int16(-10), int32(-10), int64(-10), int(-10), float32(-10), float64(-10)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
 	{
 		hexDecode("3863"),
 		int64(-100),
-		[]interface{}{int8(-100), int16(-100), int32(-100), int64(-100), int(-100)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeFloat32, typeFloat64, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]interface{}{int8(-100), int16(-100), int32(-100), int64(-100), int(-100), float32(-100), float64(-100)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
 	{
 		hexDecode("3903e7"),
 		int64(-1000),
-		[]interface{}{int16(-1000), int32(-1000), int64(-1000), int(-1000)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeFloat32, typeFloat64, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]interface{}{int16(-1000), int32(-1000), int64(-1000), int(-1000), float32(-1000), float64(-1000)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
 	//{"3bffffffffffffffff", int64(-18446744073709551616)}, // CBOR value -18446744073709551616 overflows Go's int64, see TestNegIntOverflow
 	// byte string
@@ -224,13 +222,13 @@ var unmarshalTests = []unmarshalTest{
 	{
 		hexDecode("80"),
 		[]interface{}{},
-		[]interface{}{[]interface{}{}, []byte{}, []string{}, []int{}, [...]int{}},
+		[]interface{}{[]interface{}{}, []byte{}, []string{}, []int{}, [...]int{}, []float32{}, []float64{}},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeMapStringInt},
 	},
 	{
 		hexDecode("83010203"),
 		[]interface{}{uint64(1), uint64(2), uint64(3)},
-		[]interface{}{[]interface{}{uint64(1), uint64(2), uint64(3)}, []byte{1, 2, 3}, []int{1, 2, 3}, []uint{1, 2, 3}, [...]int{1, 2, 3}},
+		[]interface{}{[]interface{}{uint64(1), uint64(2), uint64(3)}, []byte{1, 2, 3}, []int{1, 2, 3}, []uint{1, 2, 3}, [...]int{1, 2, 3}, []float32{1, 2, 3}, []float64{1, 2, 3}},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{})},
 	},
 	{
@@ -259,13 +257,15 @@ var unmarshalTests = []unmarshalTest{
 			[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
-			[...]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}},
+			[...]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
+			[]float32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
+			[]float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{})},
 	},
 	{
 		hexDecode("9fff"),
 		[]interface{}{},
-		[]interface{}{[]interface{}{}, []byte{}, []string{}, []int{}, [...]int{}},
+		[]interface{}{[]interface{}{}, []byte{}, []string{}, []int{}, [...]int{}, []float32{}, []float64{}},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeMapStringInt},
 	},
 	{
@@ -288,7 +288,9 @@ var unmarshalTests = []unmarshalTest{
 			[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
-			[...]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}},
+			[...]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
+			[]float32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
+			[]float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{})},
 	},
 	{
@@ -355,8 +357,8 @@ var unmarshalTests = []unmarshalTest{
 	{
 		hexDecode("c11a514b67b0"),
 		uint64(1363896240),
-		[]interface{}{uint32(1363896240), uint64(1363896240), int32(1363896240), int64(1363896240)},
-		[]reflect.Type{typeUint8, typeUint16, typeInt8, typeInt16, typeFloat32, typeFloat64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]interface{}{uint32(1363896240), uint64(1363896240), int32(1363896240), int64(1363896240), float32(1363896240), float64(1363896240)},
+		[]reflect.Type{typeUint8, typeUint16, typeInt8, typeInt16, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	}, // 1: epoch-based date/time
 	{
 		hexDecode("c249010000000000000000"),
@@ -422,20 +424,20 @@ var unmarshalTests = []unmarshalTest{
 	{
 		hexDecode("f0"),
 		uint64(16),
-		[]interface{}{uint8(16), uint16(16), uint32(16), uint64(16), uint(16), int8(16), int16(16), int32(16), int64(16), int(16)},
-		[]reflect.Type{typeFloat32, typeFloat64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]interface{}{uint8(16), uint16(16), uint32(16), uint64(16), uint(16), int8(16), int16(16), int32(16), int64(16), int(16), float32(16), float64(16)},
+		[]reflect.Type{typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
 	{
 		hexDecode("f818"),
 		uint64(24),
-		[]interface{}{uint8(24), uint16(24), uint32(24), uint64(24), uint(24), int8(24), int16(24), int32(24), int64(24), int(24)},
-		[]reflect.Type{typeFloat32, typeFloat64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]interface{}{uint8(24), uint16(24), uint32(24), uint64(24), uint(24), int8(24), int16(24), int32(24), int64(24), int(24), float32(24), float64(24)},
+		[]reflect.Type{typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
 	{
 		hexDecode("f8ff"),
 		uint64(255),
-		[]interface{}{uint8(255), uint16(255), uint32(255), uint64(255), uint(255), int16(255), int32(255), int64(255), int(255)},
-		[]reflect.Type{typeFloat32, typeFloat64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]interface{}{uint8(255), uint16(255), uint32(255), uint64(255), uint(255), int16(255), int32(255), int64(255), int(255), float32(255), float64(255)},
+		[]reflect.Type{typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
 }
 

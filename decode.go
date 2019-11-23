@@ -864,6 +864,10 @@ func fillPositiveInt(t cborType, val uint64, v reflect.Value) error {
 		}
 		v.SetUint(val)
 		return nil
+	case reflect.Float32, reflect.Float64:
+		f := float64(val)
+		v.SetFloat(f)
+		return nil
 	}
 	if v.Type() == typeTime {
 		tm := time.Unix(int64(val), 0)
@@ -880,6 +884,10 @@ func fillNegativeInt(t cborType, val int64, v reflect.Value) error {
 			return &UnmarshalTypeError{Value: t.String(), Type: v.Type(), errMsg: strconv.FormatInt(val, 10) + " overflows " + v.Type().String()}
 		}
 		v.SetInt(val)
+		return nil
+	case reflect.Float32, reflect.Float64:
+		f := float64(val)
+		v.SetFloat(f)
 		return nil
 	}
 	if v.Type() == typeTime {

@@ -240,9 +240,9 @@ type SenMLRecord struct {
 	Value       float64 `cbor:"2,keyasint,omitempty"`
 	ValueS      string  `cbor:"3,keyasint,omitempty"`
 	ValueB      bool    `cbor:"4,keyasint,omitempty"`
-	ValueD      []byte  `cbor:"8,keyasint,omitempty"`
+	ValueD      string  `cbor:"8,keyasint,omitempty"`
 	Sum         float64 `cbor:"5,keyasint,omitempty"`
-	Time        int     `cbor:"6,keyasint,omitempty"`
+	Time        float64 `cbor:"6,keyasint,omitempty"`
 	UpdateTime  float64 `cbor:"7,keyasint,omitempty"`
 }
 
