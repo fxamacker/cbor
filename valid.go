@@ -29,26 +29,27 @@ func Valid(data []byte) (rest []byte, err error) {
 	if len(data) == 0 {
 		return nil, io.EOF
 	}
-	offset, _, err := checkValid(data, 0)
+	offset, _, _, err := checkValid(data, 0)
 	if err != nil {
 		return nil, err
 	}
 	return data[offset:], nil
 }
 
-func checkValid(data []byte, off int) (_ int, t cborType, err error) {
+func checkValid(data []byte, off int) (_ int, t cborType, indefinite bool, err error) {
 	if len(data)-off < 1 {
-		return 0, 0, io.ErrUnexpectedEOF
+		return 0, 0, false, io.ErrUnexpectedEOF
 	}
 
-	off, t, val, indefinite, err := checkTypeAndValue(data, off)
+	var val uint64
+	off, t, val, indefinite, err = checkTypeAndValue(data, off)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, false, err
 	}
 
 	if indefinite {
 		off, err = checkValidIndefinite(data, off, t)
-		return off, t, err
+		return off, t, indefinite, err
 	}
 
 	switch t {
@@ -56,17 +57,17 @@ func checkValid(data []byte, off int) (_ int, t cborType, err error) {
 		valInt := int(val)
 		if valInt < 0 {
 			// Detect integer overflow
-			return 0, 0, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
+			return 0, 0, false, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
 		}
 		if len(data)-off < valInt {
-			return 0, 0, io.ErrUnexpectedEOF
+			return 0, 0, false, io.ErrUnexpectedEOF
 		}
 		off += valInt
 	case cborTypeArray, cborTypeMap:
 		valInt := int(val)
 		if valInt < 0 {
 			// Detect integer overflow
-			return 0, 0, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
+			return 0, 0, false, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
 		}
 		count := 1
 		if t == cborTypeMap {
@@ -74,19 +75,23 @@ func checkValid(data []byte, off int) (_ int, t cborType, err error) {
 		}
 		for j := 0; j < count; j++ {
 			for i := 0; i < valInt; i++ {
-				if off, _, err = checkValid(data, off); err != nil {
-					return 0, 0, err
+				if off, _, _, err = checkValid(data, off); err != nil {
+					return 0, 0, false, err
 				}
 			}
 		}
 	case cborTypeTag: // Check tagged item following tag.
 		return checkValid(data, off)
 	}
-	return off, t, nil
+	return off, t, indefinite, nil
 }
 
 func checkValidIndefinite(data []byte, off int, t cborType) (_ int, err error) {
-	for true {
+	var nextType cborType
+	var indefinite bool
+	isByteOrTextString := (t == cborTypeByteString) || (t == cborTypeTextString)
+	i := 0
+	for ; true; i++ {
 		if len(data)-off < 1 {
 			return 0, io.ErrUnexpectedEOF
 		}
@@ -94,20 +99,20 @@ func checkValidIndefinite(data []byte, off int, t cborType) (_ int, err error) {
 			off++
 			break
 		}
-		var nextType cborType
-		if off, nextType, err = checkValid(data, off); err != nil {
+		if off, nextType, indefinite, err = checkValid(data, off); err != nil {
 			return 0, err
 		}
-		switch t {
-		case cborTypeByteString, cborTypeTextString:
+		if isByteOrTextString {
 			if t != nextType {
 				return 0, &SemanticError{"cbor: wrong element type " + nextType.String() + " for indefinite-length " + t.String()}
 			}
-		case cborTypeMap:
-			if off, _, err = checkValid(data, off); err != nil {
-				return 0, err
+			if indefinite {
+				return 0, &SemanticError{"cbor: indefinite-length " + t.String() + " chunk is not definite-length"}
 			}
 		}
+	}
+	if t == cborTypeMap && i%2 == 1 {
+		return 0, &SyntaxError{"cbor: unexpected \"break\" code"}
 	}
 	return off, nil
 }
@@ -151,7 +156,7 @@ func checkTypeAndValue(data []byte, off int) (_ int, t cborType, val uint64, ind
 			return 0, 0, 0, false, &SyntaxError{"cbor: invalid additional information " + strconv.Itoa(int(ai)) + " for type " + t.String()}
 		case cborTypePrimitives: // 0xFF (break code) should not be outside checkValidIndefinite().
 			return 0, 0, 0, false, &SyntaxError{"cbor: unexpected \"break\" code"}
-		case cborTypeByteString, cborTypeTextString, cborTypeArray, cborTypeMap:
+		default:
 			return off, t, val, true, nil
 		}
 	}

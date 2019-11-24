@@ -937,6 +937,20 @@ var invalidCBORUnmarshalTests = []struct {
 	{"indefinite-length map: no \"break\" code", []byte{0xbf, 0x01}, "unexpected EOF", false},
 	{"indefinite-length map: read \"break\" code before completing key-value pair", []byte{0xbf, 0x01, 0xff}, "cbor: unexpected \"break\" code", false},
 	{"indefinite-length map: invalid element", []byte{0xbf, 0x01, 0x1f}, "cbor: invalid additional information", true},
+	// Data from 7049bis G.1
+	{"Definite length maps and arrays not closed with enough items", hexDecode("818181818181818181818200a1a20102a100a2000000"), "unexpected EOF", false},
+	{"Indefinite length strings not closed by a break stop code", hexDecode("5f41007f6100"), "unexpected EOF", false},
+	{"Indefinite length maps and arrays not closed by a break stop code", hexDecode("9f9f0102bfbf01020102819f9f80009f9f9f9f9fffffffff9f819f819f9fffffff"), "unexpected EOF", false},
+	{"Reserved additional information values", hexDecode("1c1d1e3c3d3e5c5d5e7c7d7e9c9d9ebcbdbedcdddefcfdfe"), "cbor: invalid additional information 28 for type positive integer", false},
+	//{"Reserved two-byte encodings of simple types", hexDecode("f800f801f818f81f"), "cbor: invalid simple value 0 for type primitives", false},
+	{"Indefinite length string chunks not of the correct type", hexDecode("5f00ff5f21ff5f6100ff5f80ff5fa0ff5fc000ff5fe0ff7f4100ff"), "cbor: wrong element type positive integer for indefinite-length byte string", false},
+	{"Indefinite length string chunks not definite length", hexDecode("5f5f4100ffff7f7f6100ffff"), "cbor: indefinite-length byte string chunk is not definite-length", false},
+	{"Break occurring on its own outside of an indefinite length item", hexDecode("ff"), "cbor: unexpected \"break\" code", false},
+	{"Break occurring in a definite length array or map or a tag", hexDecode("81ff8200ffa1ffa1ff00a100ffa20000ff9f81ff9f829f819f9fffffffff"), "cbor: unexpected \"break\" code", false},
+	{"Break in indefinite length map would lead to odd number of items (break in a value position)", hexDecode("bf00ffbf000000ff"), "cbor: unexpected \"break\" code", false},
+	{"Major type 0 with additional information 31", hexDecode("1f3fdf"), "cbor: invalid additional information 31 for type positive integer", false},
+	{"Major type 1 with additional information 31", hexDecode("3f3fdf"), "cbor: invalid additional information 31 for type negative integer", false},
+	{"Major type 6 with additional information 31", hexDecode("df3fdf"), "cbor: invalid additional information 31 for type tag", false},
 }
 
 func TestInvalidCBORUnmarshal(t *testing.T) {
@@ -1304,14 +1318,14 @@ func TestFuzzCrash4(t *testing.T) {
 }
 
 func TestFuzzCrash5(t *testing.T) {
-	// Crash5: parsing tagged elememt in byte/text string.
-	data := []byte("\u007f\xc5\u007f\xff\xff")
+	// Crash5: parsing indefinite length string chunk inside indefinite length string
+	data := hexDecode("7fc57fffff")
 	var intf interface{}
-	if err := cbor.Unmarshal(data, &intf); err != nil {
-		t.Fatalf("Unmarshal(0x%02x) returns error %s\n", data, err)
-	}
-	if _, err := cbor.Marshal(intf, cbor.EncOptions{Canonical: true}); err != nil {
-		t.Errorf("Marshal(%v) returns error %s", intf, err)
+	wantErrorMsg := "cbor: indefinite-length UTF-8 text string chunk is not definite-length"
+	if err := cbor.Unmarshal(data, &intf); err == nil {
+		t.Errorf("Unmarshal(0x%02x) returns no error, want error containing substring %s", data, wantErrorMsg)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%02x) returns error %s, want error containing substring %s", data, err, wantErrorMsg)
 	}
 }
 

@@ -1520,7 +1520,7 @@ func TestMarshalUnmarshalStructToArray(t *testing.T) {
 				t.Errorf("Marshal(%+v) = 0x%0x, want 0x%0x", tc.obj, b, tc.wantCborData)
 			}
 
-			// Cannonical setting should be ignored for struct to array encoding
+			// Canonical setting should be ignored for struct to array encoding
 			b, err = cbor.Marshal(tc.obj, cbor.EncOptions{Canonical: true})
 			if err != nil {
 				t.Errorf("Marshal(%+v) returns error %s", tc.obj, err)
