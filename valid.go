@@ -160,5 +160,8 @@ func checkTypeAndValue(data []byte, off int) (_ int, t cborType, val uint64, ind
 			return off, t, val, true, nil
 		}
 	}
+	if t == cborTypePrimitives && ai == 24 && val < 32 {
+		return 0, 0, 0, false, &SyntaxError{"cbor: invalid simple value " + strconv.Itoa(int(val)) + " for type " + t.String()}
+	}
 	return off, t, val, false, nil
 }

@@ -427,10 +427,21 @@ var unmarshalTests = []struct {
 		[]interface{}{uint8(16), uint16(16), uint32(16), uint64(16), uint(16), int8(16), int16(16), int32(16), int64(16), int(16), float32(16), float64(16)},
 		[]reflect.Type{typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
+	// This example is not well-formed because Simple value (with 5-bit value 24) must be >= 32.
+	// See RFC 7049 section 2.3 for details, instead of the incorrect example in RFC 7049 Appendex A.
+	// I reported an errata to RFC 7049 and Carsten Bormann confirmed at https://github.com/fxamacker/cbor/issues/46
+	/*
+		{
+			hexDecode("f818"),
+			uint64(24),
+			[]interface{}{uint8(24), uint16(24), uint32(24), uint64(24), uint(24), int8(24), int16(24), int32(24), int64(24), int(24), float32(24), float64(24)},
+			[]reflect.Type{typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		},
+	*/
 	{
-		hexDecode("f818"),
-		uint64(24),
-		[]interface{}{uint8(24), uint16(24), uint32(24), uint64(24), uint(24), int8(24), int16(24), int32(24), int64(24), int(24), float32(24), float64(24)},
+		hexDecode("f820"),
+		uint64(32),
+		[]interface{}{uint8(32), uint16(32), uint32(32), uint64(32), uint(32), int8(32), int16(32), int32(32), int64(32), int(32), float32(32), float64(32)},
 		[]reflect.Type{typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
 	{
@@ -937,12 +948,13 @@ var invalidCBORUnmarshalTests = []struct {
 	{"indefinite-length map: no \"break\" code", []byte{0xbf, 0x01}, "unexpected EOF", false},
 	{"indefinite-length map: read \"break\" code before completing key-value pair", []byte{0xbf, 0x01, 0xff}, "cbor: unexpected \"break\" code", false},
 	{"indefinite-length map: invalid element", []byte{0xbf, 0x01, 0x1f}, "cbor: invalid additional information", true},
+	{"invalid simple value", []byte{0xf8, 0x18}, "cbor: invalid simple value 24 for type primitives", true},
 	// Data from 7049bis G.1
 	{"Definite length maps and arrays not closed with enough items", hexDecode("818181818181818181818200a1a20102a100a2000000"), "unexpected EOF", false},
 	{"Indefinite length strings not closed by a break stop code", hexDecode("5f41007f6100"), "unexpected EOF", false},
 	{"Indefinite length maps and arrays not closed by a break stop code", hexDecode("9f9f0102bfbf01020102819f9f80009f9f9f9f9fffffffff9f819f819f9fffffff"), "unexpected EOF", false},
 	{"Reserved additional information values", hexDecode("1c1d1e3c3d3e5c5d5e7c7d7e9c9d9ebcbdbedcdddefcfdfe"), "cbor: invalid additional information 28 for type positive integer", false},
-	//{"Reserved two-byte encodings of simple types", hexDecode("f800f801f818f81f"), "cbor: invalid simple value 0 for type primitives", false},
+	{"Reserved two-byte encodings of simple types", hexDecode("f800f801f818f81f"), "cbor: invalid simple value 0 for type primitives", false},
 	{"Indefinite length string chunks not of the correct type", hexDecode("5f00ff5f21ff5f6100ff5f80ff5fa0ff5fc000ff5fe0ff7f4100ff"), "cbor: wrong element type positive integer for indefinite-length byte string", false},
 	{"Indefinite length string chunks not definite length", hexDecode("5f5f4100ffff7f7f6100ffff"), "cbor: indefinite-length byte string chunk is not definite-length", false},
 	{"Break occurring on its own outside of an indefinite length item", hexDecode("ff"), "cbor: unexpected \"break\" code", false},
