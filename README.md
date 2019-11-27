@@ -18,7 +18,7 @@ __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: 
 
 * __Small__ and self-contained.  It has no external dependencies and no code gen. Programs in projects like cisco/senml are 4 MB smaller by switching to this library. In extreme cases programs can be smaller by 8+ MB.  See [comparisons](#comparisons).
 
-* __Fast__ (esp. since v1.3). It soley uses safe optimizations.  Faster libraries will always exist, but speed is only one factor.  Choose this library if you value your time, program size, and system reliability. 
+* __Fast__ (esp. since v1.3). It solely uses safe optimizations.  Faster libraries will always exist, but speed is only one factor.  Choose this library if you value your time, program size, and system reliability. 
 
 * __Reliable__ and safe. It prevents crashes on malicious CBOR data by using extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's [`unsafe`](https://golang.org/pkg/unsafe/) package.
 
