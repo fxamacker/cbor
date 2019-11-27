@@ -2139,3 +2139,14 @@ func TestStructKeyAsIntError(t *testing.T) {
 		t.Errorf("Unmarshal(0x%0x) = %v, want %v", cborData, v, wantV)
 	}
 }
+
+func TestMapKeyUnhashable(t *testing.T) {
+	cborData := hexDecode("bf8030ff") // {[]: -17}
+	wantErrorMsg := "cbor: invalid map key type: slice"
+	var v map[interface{}]interface{}
+	if err := cbor.Unmarshal(cborData, &v); err == nil {
+		t.Errorf("Unmarshal(0x%0x) doesn't return error, want %q", cborData, wantErrorMsg)
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("Unmarshal(0x%0x) returns error %q, want %q", cborData, err, wantErrorMsg)
+	}
+}

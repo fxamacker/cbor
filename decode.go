@@ -572,6 +572,7 @@ func (d *decodeState) parseMap(t cborType, count int, v reflect.Value) error {
 	var keyValue, eleValue, zeroKeyValue, zeroEleValue reflect.Value
 	keyIsUnmarshaler := implementsUnmarshaler(v.Type().Key())
 	elemIsUnmarshaler := implementsUnmarshaler(v.Type().Elem())
+	keyIsInterfaceType := keyType == typeIntf // If key type is interface{}, need to check if key value is hashable.
 	var err, lastErr error
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
 		if !keyValue.IsValid() {
@@ -585,6 +586,13 @@ func (d *decodeState) parseMap(t cborType, count int, v reflect.Value) error {
 		if lastErr = d.parse(keyValue, keyIsUnmarshaler); lastErr != nil {
 			if err == nil {
 				err = lastErr
+			}
+			d.skip()
+			continue
+		}
+		if keyIsInterfaceType && !isHashableKind(keyValue.Elem().Kind()) {
+			if err == nil {
+				err = errors.New("cbor: invalid map key type: " + keyValue.Elem().Kind().String())
 			}
 			d.skip()
 			continue
@@ -848,6 +856,7 @@ func (d *decodeState) reset(data []byte) {
 }
 
 var (
+	typeIntf              = reflect.TypeOf([]interface{}(nil)).Elem()
 	typeTime              = reflect.TypeOf(time.Time{})
 	typeUnmarshaler       = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
 	typeBinaryUnmarshaler = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
