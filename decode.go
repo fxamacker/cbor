@@ -142,7 +142,6 @@ func (e *UnmarshalTypeError) Error() string {
 type decodeState struct {
 	data []byte
 	off  int // next read offset in data
-	err  error
 }
 
 func (d *decodeState) value(v interface{}) error {
@@ -160,13 +159,10 @@ func (d *decodeState) value(v interface{}) error {
 	if rv.Kind() == reflect.Interface && rv.NumMethod() == 0 && rv.IsNil() {
 		// Fast path to decode to empty interface without calling implementsUnmarshaler.
 		iv, err := d.parseInterface()
-		if err != nil {
-			return err
-		}
 		if iv != nil {
 			rv.Set(reflect.ValueOf(iv))
 		}
-		return nil
+		return err
 	}
 
 	return d.parse(rv, implementsUnmarshaler(rv.Type()))
@@ -460,20 +456,24 @@ func (d *decodeState) parseStringBuf(p []byte) (_ []byte, isCopy bool) {
 	return d.data[oldOff:newOff], false
 }
 
-func (d *decodeState) parseArrayInterface(t cborType, count int) (_ []interface{}, err error) {
+func (d *decodeState) parseArrayInterface(t cborType, count int) ([]interface{}, error) {
 	hasSize := count >= 0
 	if count == -1 {
 		count = d.numOfItemsUntilBreak() // peek ahead to get array size to preallocate slice for better performance
 	}
 	v := make([]interface{}, count)
 	var e interface{}
+	var err, lastErr error
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
-		if e, err = d.parseInterface(); err != nil {
-			return nil, err
+		if e, lastErr = d.parseInterface(); lastErr != nil {
+			if err == nil {
+				err = lastErr
+			}
+			continue
 		}
 		v[i] = e
 	}
-	return v, nil
+	return v, err
 }
 
 func (d *decodeState) parseSlice(t cborType, count int, v reflect.Value) error {
@@ -489,31 +489,27 @@ func (d *decodeState) parseSlice(t cborType, count int, v reflect.Value) error {
 	}
 	v.SetLen(count)
 	elemIsUnmarshaler := implementsUnmarshaler(v.Type().Elem())
+	var err error
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
-		if err := d.parse(v.Index(i), elemIsUnmarshaler); err != nil {
-			if _, ok := err.(*UnmarshalTypeError); ok {
-				for i++; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
-					d.skip()
-				}
+		if lastErr := d.parse(v.Index(i), elemIsUnmarshaler); lastErr != nil {
+			if err == nil {
+				err = lastErr
 			}
-			return err
 		}
 	}
-	return nil
+	return err
 }
 
 func (d *decodeState) parseArray(t cborType, count int, v reflect.Value) error {
 	hasSize := count >= 0
 	elemIsUnmarshaler := implementsUnmarshaler(v.Type().Elem())
 	i := 0
+	var err error
 	for ; i < v.Len() && ((hasSize && i < count) || (!hasSize && !d.foundBreak())); i++ {
-		if err := d.parse(v.Index(i), elemIsUnmarshaler); err != nil {
-			if _, ok := err.(*UnmarshalTypeError); ok {
-				for i++; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
-					d.skip()
-				}
+		if lastErr := d.parse(v.Index(i), elemIsUnmarshaler); lastErr != nil {
+			if err == nil {
+				err = lastErr
 			}
-			return err
 		}
 	}
 	// Set remaining Go array elements to zero values.
@@ -527,27 +523,39 @@ func (d *decodeState) parseArray(t cborType, count int, v reflect.Value) error {
 	for ; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
 		d.skip()
 	}
-	return nil
+	return err
 }
 
-func (d *decodeState) parseMapInterface(t cborType, count int) (_ map[interface{}]interface{}, err error) {
+func (d *decodeState) parseMapInterface(t cborType, count int) (map[interface{}]interface{}, error) {
 	m := make(map[interface{}]interface{})
 	hasSize := count >= 0
 	var k, e interface{}
+	var err, lastErr error
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
-		if k, err = d.parseInterface(); err != nil {
-			return nil, err
+		if k, lastErr = d.parseInterface(); lastErr != nil {
+			if err == nil {
+				err = lastErr
+			}
+			d.skip()
+			continue
 		}
 		kkind := reflect.ValueOf(k).Kind()
 		if !isHashableKind(kkind) {
-			return nil, errors.New("cbor: invalid map key type: " + kkind.String())
+			if err == nil {
+				err = errors.New("cbor: invalid map key type: " + kkind.String())
+			}
+			d.skip()
+			continue
 		}
-		if e, err = d.parseInterface(); err != nil {
-			return nil, err
+		if e, lastErr = d.parseInterface(); lastErr != nil {
+			if err == nil {
+				err = lastErr
+			}
+			continue
 		}
 		m[k] = e
 	}
-	return m, nil
+	return m, err
 }
 
 func (d *decodeState) parseMap(t cborType, count int, v reflect.Value) error {
@@ -564,6 +572,7 @@ func (d *decodeState) parseMap(t cborType, count int, v reflect.Value) error {
 	var keyValue, eleValue, zeroKeyValue, zeroEleValue reflect.Value
 	keyIsUnmarshaler := implementsUnmarshaler(v.Type().Key())
 	elemIsUnmarshaler := implementsUnmarshaler(v.Type().Elem())
+	var err, lastErr error
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
 		if !keyValue.IsValid() {
 			keyValue = reflect.New(keyType).Elem()
@@ -573,13 +582,12 @@ func (d *decodeState) parseMap(t cborType, count int, v reflect.Value) error {
 			}
 			keyValue.Set(zeroKeyValue)
 		}
-		if err := d.parse(keyValue, keyIsUnmarshaler); err != nil {
-			if _, ok := err.(*UnmarshalTypeError); ok {
-				for i = i*2 + 1; (hasSize && i < count*2) || (!hasSize && !d.foundBreak()); i++ {
-					d.skip()
-				}
+		if lastErr = d.parse(keyValue, keyIsUnmarshaler); lastErr != nil {
+			if err == nil {
+				err = lastErr
 			}
-			return err
+			d.skip()
+			continue
 		}
 
 		if !eleValue.IsValid() {
@@ -590,52 +598,60 @@ func (d *decodeState) parseMap(t cborType, count int, v reflect.Value) error {
 			}
 			eleValue.Set(zeroEleValue)
 		}
-		if err := d.parse(eleValue, elemIsUnmarshaler); err != nil {
-			if _, ok := err.(*UnmarshalTypeError); ok {
-				for i = i*2 + 2; (hasSize && i < count*2) || (!hasSize && !d.foundBreak()); i++ {
-					d.skip()
-				}
+		if lastErr := d.parse(eleValue, elemIsUnmarshaler); lastErr != nil {
+			if err == nil {
+				err = lastErr
 			}
-			return err
+			continue
 		}
 
 		v.SetMapIndex(keyValue, eleValue)
 	}
-	return nil
+	return err
 }
 
 func (d *decodeState) parseStructFromArray(t cborType, count int, v reflect.Value) error {
 	structType := getDecodingStructType(v.Type())
-
 	if !structType.toArray {
+		hasSize := count >= 0
+		for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
+			d.skip()
+		}
 		return &UnmarshalTypeError{Value: t.String(), Type: v.Type(), errMsg: "cannot decode CBOR array to struct without toarray option"}
 	}
-
 	hasSize := count >= 0
 	if count == -1 {
 		count = d.numOfItemsUntilBreak() // peek ahead to get array size to verify that array size matches number of fields
 	}
 	if count != len(structType.fields) {
+		for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
+			d.skip()
+		}
 		return &UnmarshalTypeError{Value: t.String(), Type: v.Type(), errMsg: "cannot decode CBOR array to struct with different number of elements"}
 	}
+	var err error
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
-		fv, err := fieldByIndex(v, structType.fields[i].idx)
-		if err != nil {
-			return err
+		fv, lastErr := fieldByIndex(v, structType.fields[i].idx)
+		if lastErr != nil {
+			if err == nil {
+				err = lastErr
+			}
+			d.skip()
+			continue
 		}
-		if err := d.parse(fv, structType.fields[i].isUnmarshaler); err != nil {
-			if d.err == nil {
-				if typeError, ok := err.(*UnmarshalTypeError); ok {
+		if lastErr := d.parse(fv, structType.fields[i].isUnmarshaler); lastErr != nil {
+			if err == nil {
+				if typeError, ok := lastErr.(*UnmarshalTypeError); ok {
 					typeError.Struct = v.Type().String()
 					typeError.Field = structType.fields[i].name
-					d.err = typeError
+					err = typeError
 				} else {
-					d.err = err
+					err = lastErr
 				}
 			}
 		}
 	}
-	return d.err
+	return err
 }
 
 func (d *decodeState) parseStructFromMap(t cborType, count int, v reflect.Value) error {
@@ -643,24 +659,24 @@ func (d *decodeState) parseStructFromMap(t cborType, count int, v reflect.Value)
 
 	foundFldIdx := make([]bool, len(structType.fields))
 	hasSize := count >= 0
+	var err, lastErr error
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
 		var keyBytes []byte
-		var err error
 		t := cborType(d.data[d.off] & 0xE0)
 		if t == cborTypeTextString {
-			keyBytes, err = d.parseTextString()
-			if err != nil {
-				if d.err == nil {
-					d.err = err
+			keyBytes, lastErr = d.parseTextString()
+			if lastErr != nil {
+				if err == nil {
+					err = lastErr
 				}
 				d.skip() // skip value
 				continue
 			}
 		} else if t == cborTypePositiveInt || t == cborTypeNegativeInt {
-			iv, err := d.parseInterface()
-			if err != nil {
-				if d.err == nil {
-					d.err = err
+			iv, lastErr := d.parseInterface()
+			if lastErr != nil {
+				if err == nil {
+					err = lastErr
 				}
 				d.skip() // skip value
 				continue
@@ -672,8 +688,8 @@ func (d *decodeState) parseStructFromMap(t cborType, count int, v reflect.Value)
 				keyBytes = []byte(strconv.Itoa(int(n)))
 			}
 		} else {
-			if d.err == nil {
-				d.err = &UnmarshalTypeError{Value: t.String(), Type: reflect.TypeOf(""), errMsg: "map key is of type " + t.String() + " and cannot be used to match struct " + v.Type().String() + " field name"}
+			if err == nil {
+				err = &UnmarshalTypeError{Value: t.String(), Type: reflect.TypeOf(""), errMsg: "map key is of type " + t.String() + " and cannot be used to match struct " + v.Type().String() + " field name"}
 			}
 			d.skip() // skip key
 			d.skip() // skip value
@@ -707,23 +723,27 @@ func (d *decodeState) parseStructFromMap(t cborType, count int, v reflect.Value)
 		}
 		// reflect.Value.FieldByIndex() panics at nil pointer to unexported
 		// anonymous field.  fieldByIndex() returns error.
-		fv, err := fieldByIndex(v, f.idx)
-		if err != nil {
-			return err
+		fv, lastErr := fieldByIndex(v, f.idx)
+		if lastErr != nil {
+			if err == nil {
+				err = lastErr
+			}
+			d.skip()
+			continue
 		}
-		if err := d.parse(fv, f.isUnmarshaler); err != nil {
-			if d.err == nil {
-				if typeError, ok := err.(*UnmarshalTypeError); ok {
+		if lastErr = d.parse(fv, f.isUnmarshaler); lastErr != nil {
+			if err == nil {
+				if typeError, ok := lastErr.(*UnmarshalTypeError); ok {
 					typeError.Struct = v.Type().String()
 					typeError.Field = f.name
-					d.err = typeError
+					err = typeError
 				} else {
-					d.err = err
+					err = lastErr
 				}
 			}
 		}
 	}
-	return d.err
+	return err
 }
 
 // skip moves data offset to the next item.  skip assumes data is well-formed,
@@ -825,7 +845,6 @@ func (d *decodeState) foundBreak() bool {
 func (d *decodeState) reset(data []byte) {
 	d.data = data
 	d.off = 0
-	d.err = nil
 }
 
 var (

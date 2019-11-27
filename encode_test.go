@@ -782,11 +782,16 @@ func TestAnonymousFields8(t *testing.T) {
 
 	// v cannot be unmarshaled to because reflect cannot allocate unexported field s1.
 	var v1 S
+	wantErrorMsg := "cannot set embedded pointer to unexported struct"
+	wantV := S{S2: &S2{Y: 4}}
 	err = cbor.Unmarshal(b, &v1)
 	if err == nil {
-		t.Errorf("Unmarshal(%0x) doesn't return error.  want error: 'cannot set embedded pointer to unexported struct'", b)
-	} else if !strings.Contains(err.Error(), "cannot set embedded pointer to unexported struct") {
-		t.Errorf("Unmarshal(%0x) returns error '%s'.  want error: 'cannot set embedded pointer to unexported struct'", b, err)
+		t.Errorf("Unmarshal(%0x) doesn't return error.  want error: %q", b, wantErrorMsg)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(%0x) returns error '%s'.  want error: %q", b, err, wantErrorMsg)
+	}
+	if !reflect.DeepEqual(v1, wantV) {
+		t.Errorf("Unmarshal(%0x) = %+v (%T), want %+v (%T)", b, v1, v1, wantV, wantV)
 	}
 
 	// v can be unmarshaled to because unexported field s1 is already allocated.
