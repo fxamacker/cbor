@@ -39,7 +39,7 @@ Version 1.x has:
 
 * __Stable API__ – won't make breaking API changes.  
 * __Stable requirements__ – will always support Go v1.12.  
-* __Passed fuzzing__ – v1.3 passed 72+ hours of coverage-guided fuzzing.  See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
+* __Passed fuzzing__ – v1.3.2 passed 1+ billion execs in coverage-guided fuzzing.  See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
 
 Recent activity:
 
@@ -47,7 +47,8 @@ Recent activity:
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- faster encoding and decoding.
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- add struct to/from CBOR array (`toarray` struct tag) for more compact data.
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- add struct to/from CBOR map with int keys (`keyasint` struct tag). Simplifies using COSE, etc.
-* [ ] [Milestone v1.4](https://github.com/fxamacker/cbor/milestone/3) -- 🎈 (maybe) Add support for CBOR tags (major type 6.)
+* [x] [Release v1.3.2](https://github.com/fxamacker/cbor/releases) -- (latest) prevent potential problems by adding checks after well-formedness.
+* [ ] [Milestone v1.4](https://github.com/fxamacker/cbor/milestone/3) -- 🎈 add support for CBOR tags (major type 6.)
 
 ## Design Goals 
 This CBOR library was created for my [WebAuthn (FIDO2) server library](https://github.com/fxamacker/webauthn), because existing CBOR libraries didn't meet certain criteria.  This library became a good fit for many other projects.
@@ -94,7 +95,7 @@ Additional comparisons may be added here from time to time (esp. speed compariso
 * v1.2 -- User-defined types can have custom CBOR encoding and decoding by implementing `cbor.Marshaler` and `cbor.Unmarshaler` interfaces. 
 * v1.3 -- add struct to/from CBOR array (`toarray` struct tag) for more compact data
 * v1.3 -- add struct to/from CBOR map with int keys (`keyasint` struct tag). Simplifies using COSE, etc.
-* [Milestone v1.4](https://github.com/fxamacker/cbor/milestone/3) -- (maybe) 🎈 add support for CBOR tags (major type 6.)
+* [Milestone v1.4](https://github.com/fxamacker/cbor/milestone/3) -- 🎈 add support for CBOR tags (major type 6.)
 
 ## Fuzzing and Code Coverage
 
@@ -108,9 +109,9 @@ Each release passes coverage-guided fuzzing using [fxamacker/cbor-fuzz](https://
 
 Unit tests include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and etc.
 
-Minimum code coverage is 95%.  Minimum fuzzing is 10 hours for each release but often longer (v1.3 passed 72+ hours.)
+Minimum code coverage is 95%.  Coverage-guided fuzzing with cbor-fuzz must pass before tagging a release.  E.g. v1.3.2 was tagged when it reached 364.9 million execs and continued fuzzing (1+ billion execs.)
 
-Code coverage is 97.8% (`go test -cover`) for cbor v1.3 which is among the highest for libraries of this type.
+Code coverage is 97.8% (`go test -cover`) for cbor v1.3 which is among the highest for libraries (in Go) of this type.
 
 ## Standards
 This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049), with minor [limitations](#limitations).
@@ -125,7 +126,7 @@ CTAP2 Canonical CBOR encoding is used by [CTAP](https://fidoalliance.org/specs/f
 All three encoding modes in this library use smallest form of CBOR integer that preserves data.
 
 ## Limitations
-🎈 CBOR tags (type 6) is being considered for a future release. Please let me know if this feature is important to you.
+🎈 CBOR tags (type 6) is being considered for a future release.
 
 Current limitations:
 
