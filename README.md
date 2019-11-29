@@ -80,7 +80,7 @@ __This library is faster__ for encoding and decoding CBOR Web Token (CWT claims)
 
 ![alt text](https://user-images.githubusercontent.com/57072051/69888282-9d404380-12b0-11ea-95fd-a847038c384f.png "CBOR library speed comparison chart")
 
-The time and resource intensive `codec.CborHandle` function (other library) was placed outside the benchmark loop to make sure their library wasn't penalized.
+The resource intensive `codec.CborHandle` initialization (in the other library) was placed outside the benchmark loop to make sure their library wasn't penalized.
 
 Doing your own comparisons is highly recommended.  Use your most common message sizes and data types.
 
