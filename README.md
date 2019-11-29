@@ -16,11 +16,11 @@ __What is CBOR__?  [CBOR](CBOR.md) ([RFC 7049](https://tools.ietf.org/html/rfc70
 
 __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: small, fast, reliable and easy. 
 
-* __Small__ and self-contained.  It has no external dependencies and no code gen. Programs in projects like cisco/senml are 4 MB smaller by switching to this library. In extreme cases programs can be smaller by 8+ MB.  See [comparisons](#comparisons).
+* __Small__ and self-contained.  It has no external dependencies and no code gen. Programs like senmlCat (cisco/senml) are 4 MB smaller by switching to this library. Some programs can be smaller by 9+ MB.  See [size comparisons](#comparisons).
 
-* __Fast__ (esp. since v1.3). It solely uses safe optimizations.  Faster libraries will always exist, but speed is only one factor.  Choose this library if you value your time, program size, and system reliability. 
+* __Fast__ (esp. since v1.3). It's faster than the most popular codec.  Faster libraries will always exist, but speed is only one factor.  Choose this library if you value your time, program size, and system reliability. See [speed comparisons](#comparisons)
 
-* __Reliable__ and safe. It prevents crashes on malicious CBOR data by using extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's [`unsafe`](https://golang.org/pkg/unsafe/) package.
+* __Reliable__ and safe. It prevents crashes on malicious CBOR data by using extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's [`unsafe`](https://golang.org/pkg/unsafe/) package. It solely uses safe optimizations.
 
 * __Easy__ and saves time.  It has the same API as [Go](https://golang.org)'s [`encoding/json`](https://golang.org/pkg/encoding/json/) when possible.  Existing structs don't require changes.  Go struct tags like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` work as expected.
 
@@ -70,13 +70,21 @@ All releases prioritize reliability to avoid crashes on decoding malformed CBOR 
 
 ## Comparisons
 
-![alt text](https://user-images.githubusercontent.com/57072051/69281068-3e424680-0bad-11ea-97ab-730b3d3069af.png "CBOR library and program size comparison chart")
+Program size and speed comparisons are between this new library and the most popular codec.  This library prioritizes reliability so the speed comparison was a nice surprise.
 
-Programs like senmlCat in cisco/senml will be about 4 MB smaller by switching to this library.
+__This library makes compiled programs smaller__. Programs like senmlCat can be 4 MB smaller by switching to this library.  Programs using more complex CBOR data types can be 9.2 MB smaller.
+
+![alt text](https://user-images.githubusercontent.com/57072051/69885102-264f7e80-12a1-11ea-8605-6164aafb8a87.png "CBOR library and program size comparison chart")
+
+__This library is faster__ for encoding and decoding CBOR Web Token (CWT claims).  WebAuthn has more impressive speed advantages but its CBOR data (on servers) is used during registration (not login).  So CWT speed matters more.
+
+![alt text](https://user-images.githubusercontent.com/57072051/69888282-9d404380-12b0-11ea-95fd-a847038c384f.png "CBOR library speed comparison chart")
+
+The resource intensive `codec.CborHandle` initialization (in the other library) was placed outside the benchmark loop to make sure their library wasn't penalized.
 
 Doing your own comparisons is highly recommended.  Use your most common message sizes and data types.
 
-Additional comparisons may be added here from time to time (esp. speed comparisons!)
+Additional comparisons may be added here from time to time.
 
 ## Features
 
