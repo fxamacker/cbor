@@ -4,7 +4,7 @@
 [![CBOR Library in Go/Golang](https://user-images.githubusercontent.com/57072051/69258148-c874b580-0b81-11ea-982d-e44b21f3a0fe.png)](https://github.com/fxamacker/cbor/releases)
 
 # CBOR library in Go
-This library encodes and decodes CBOR.  It's been fuzz tested since v0.1 and got faster in v1.3.
+This library encodes and decodes CBOR.  It's been fuzz tested since v0.1 and fast since v1.3.
 
 [![Build Status](https://travis-ci.com/fxamacker/cbor.svg?branch=master)](https://travis-ci.com/fxamacker/cbor)
 [![codecov](https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4)](https://codecov.io/gh/fxamacker/cbor)
@@ -18,7 +18,7 @@ __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: 
 
 * __Small__ and self-contained.  It has no external dependencies and no code gen. Programs like senmlCat (cisco/senml) are 4 MB smaller by switching to this library. Some programs can be smaller by 9+ MB.  See [size comparisons](#comparisons).
 
-* __Fast__ (esp. since v1.3). It's faster than the most popular codec.  Faster libraries will always exist, but speed is only one factor.  Choose this library if you value your time, program size, and system reliability. See [speed comparisons](#comparisons)
+* __Fast__. v1.3 became faster than the most popular library.  Faster libraries will always exist, but speed is only one factor.  Choose this library if you value your time, program size, and system reliability. See [speed comparisons](#comparisons).
 
 * __Reliable__ and safe. It prevents crashes on malicious CBOR data by using extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's [`unsafe`](https://golang.org/pkg/unsafe/) package. It solely uses safe optimizations.
 
