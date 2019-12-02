@@ -117,7 +117,7 @@ Each release passes coverage-guided fuzzing using [fxamacker/cbor-fuzz](https://
 
 Unit tests include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and etc.
 
-Minimum code coverage is 95%.  Coverage-guided fuzzing with cbor-fuzz must pass before tagging a release.  E.g. v1.3.2 was tagged when it reached 364.9 million execs and continued fuzzing (1+ billion execs.)
+Minimum code coverage is 95%.  Coverage-guided fuzzing with cbor-fuzz must pass before tagging a release.  E.g. v1.3.2 was tagged when it reached 364.9 million execs and continued fuzzing (3.5+ billion execs.)
 
 Code coverage is 97.8% (`go test -cover`) for cbor v1.3 which is among the highest for libraries (in Go) of this type.
 
@@ -134,7 +134,7 @@ CTAP2 Canonical CBOR encoding is used by [CTAP](https://fidoalliance.org/specs/f
 All three encoding modes in this library use smallest form of CBOR integer that preserves data.
 
 ## Limitations
-🎈 CBOR tags (type 6) is being considered for a future release.
+🎈 CBOR tags (type 6) is being added in the next release.
 
 Current limitations:
 
