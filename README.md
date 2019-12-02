@@ -74,11 +74,11 @@ Program size and speed comparisons are between this new library and the most pop
 
 __This library makes compiled programs smaller__. Programs like senmlCat can be 4 MB smaller by switching to this library.  Programs using more complex CBOR data types can be 9.2 MB smaller.
 
-![alt text](https://user-images.githubusercontent.com/57072051/69885102-264f7e80-12a1-11ea-8605-6164aafb8a87.png "CBOR library and program size comparison chart")
+![alt text](https://user-images.githubusercontent.com/57072051/69993581-b98eeb00-1511-11ea-98da-46d14ad0fdd0.png "CBOR library and program size comparison chart")
 
 __This library is faster__ for encoding and decoding CBOR Web Token (CWT claims).  WebAuthn has more impressive speed advantages but its CBOR data (on servers) is used during registration (not login).  So CWT speed matters more.
 
-![alt text](https://user-images.githubusercontent.com/57072051/69888282-9d404380-12b0-11ea-95fd-a847038c384f.png "CBOR library speed comparison chart")
+![alt text](https://user-images.githubusercontent.com/57072051/69992105-9c0c5200-150e-11ea-9888-9c50a0f41de2.png "CBOR library speed comparison chart")
 
 The resource intensive `codec.CborHandle` initialization (in the other library) was placed outside the benchmark loop to make sure their library wasn't penalized.
 
@@ -117,7 +117,7 @@ Each release passes coverage-guided fuzzing using [fxamacker/cbor-fuzz](https://
 
 Unit tests include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and etc.
 
-Minimum code coverage is 95%.  Coverage-guided fuzzing with cbor-fuzz must pass before tagging a release.  E.g. v1.3.2 was tagged when it reached 364.9 million execs and continued fuzzing (1+ billion execs.)
+Minimum code coverage is 95%.  Coverage-guided fuzzing with cbor-fuzz must pass before tagging a release.  E.g. v1.3.2 was tagged when it reached 364.9 million execs and continued fuzzing (3.5+ billion execs.)
 
 Code coverage is 97.8% (`go test -cover`) for cbor v1.3 which is among the highest for libraries (in Go) of this type.
 
@@ -134,7 +134,7 @@ CTAP2 Canonical CBOR encoding is used by [CTAP](https://fidoalliance.org/specs/f
 All three encoding modes in this library use smallest form of CBOR integer that preserves data.
 
 ## Limitations
-🎈 CBOR tags (type 6) is being considered for a future release.
+🎈 CBOR tags (type 6) is being added in the next release.
 
 Current limitations:
 
