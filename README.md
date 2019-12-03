@@ -1,6 +1,3 @@
-<!-- removed centered image and badges to avoid rendering issues on go.dev  -->
-<!-- removed github emojis like :lock: and :rocket: to avoid potential rendering issues on go.dev  -->
-
 [![CBOR Library in Go/Golang](https://user-images.githubusercontent.com/57072051/69258148-c874b580-0b81-11ea-982d-e44b21f3a0fe.png)](https://github.com/fxamacker/cbor/releases)
 
 # CBOR library in Go
@@ -28,18 +25,16 @@ New struct tags like __`keyasint`__ and __`toarray`__ make CBOR, COSE, CWT, and 
 
 Install with ```go get github.com/fxamacker/cbor``` and use it like Go's ```encoding/json```.
 
-<div align="center">
-
-• [Design Goals](#design-goals) • [Comparisons](#comparisons)  • [Features](#features) • [Standards](#standards) • [Fuzzing](#fuzzing-and-code-coverage) • [Usage](#usage) • [Security Policy](#security-policy) •
-
-</div>
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; • [Design Goals](#design-goals) • [Comparisons](#comparisons)  • [Features](#features) • [Standards](#standards) • [Fuzzing](#fuzzing-and-code-coverage) • [Usage](#usage) • [Security Policy](#security-policy) •
 
 ## Current Status
 Version 1.x has:
 
 * __Stable API__ – won't make breaking API changes.  
 * __Stable requirements__ – will always support Go v1.12.  
-* __Passed fuzzing__ – v1.3.2 passed 1+ billion execs in coverage-guided fuzzing.  See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
+* __Passed fuzzing__ – v1.3.2 passed 4+ billion execs in coverage-guided fuzzing.
+
+Each commit passes hundreds of unit tests. Each release also passes fuzz tests. See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
 
 Recent activity:
 
@@ -61,8 +56,8 @@ This library is designed to be:
 
 Competing factors are balanced:
 
-* __Speed__ vs __safety__ vs __size__ – to keep size small, avoid code generation. For safety, validate data and avoid Go's unsafe package.  For speed, use safe optimizations: cache struct metadata, bypass reflect when appropriate, use sync.Pool to reuse transient objects, and etc.
-* __Standards compliance__ – support [CBOR](https://tools.ietf.org/html/rfc7049), including [canonical CBOR encodings](https://tools.ietf.org/html/rfc7049#section-3.9) (RFC 7049 and [CTAP2](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form)) with minor [limitations](#limitations). For example, negative numbers that can't fit into Go's int64 aren’t supported (like `encoding/json`.)
+* __Speed__ vs __safety__ vs __size__ – to keep size small, avoid code generation. For safety, validate data and avoid Go's `unsafe` pkg.  For speed, use safe optimizations: cache struct metadata, bypass reflect when appropriate, use sync.Pool to reuse transient objects, and etc. v1.3 is faster than the most popular `unsafe`-using codec library.
+* __Standards compliance__ – CBOR ([RFC 7049](https://tools.ietf.org/html/rfc7049) and RFC 7049bis), with minor [limitations](#limitations).  Encoding modes include default (no sorting), [RFC 7049 canonical](https://tools.ietf.org/html/rfc7049#section-3.9), and [CTAP2 canonical](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form). Decoding checks for all required malformed data mentioned in RFC 7049bis.  See [Standards](#standards) section.
 
 Initial releases focus on features, testing, and fuzzing.  After that, new releases (like v1.3) will also improve speed.
 
@@ -107,7 +102,11 @@ Additional comparisons may be added here from time to time.
 
 ## Fuzzing and Code Coverage
 
-Each release passes coverage-guided fuzzing using [fxamacker/cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  Default corpus has:
+__Hundreds of unit tests__ must pass before tagging a release.  They include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and over 87 tests with malformed data based on RFC 7049bis.
+
+__Code coverage__ must not fall below 95% when tagging a release.  Code coverage is 97.8% (`go test -cover`) for cbor v1.3 which is among the highest for libraries (in Go) of this type.
+
+__Coverage-guided fuzzing__ must pass before tagging a release.  E.g. v1.3.2 was tagged when it reached 364.9 million execs and continued fuzzing (4+ billion execs) with [fxamacker/cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  Default corpus has:
 
 * 2 files related to WebAuthn (FIDO U2F key).
 * 3 files with custom struct.
@@ -115,26 +114,25 @@ Each release passes coverage-guided fuzzing using [fxamacker/cbor-fuzz](https://
 * 17 files with [COSE examples (RFC 8152 Appendix B & C)](https://github.com/cose-wg/Examples/tree/master/RFC8152).
 * 81 files with [CBOR examples (RFC 7049 Appendix A) ](https://tools.ietf.org/html/rfc7049#appendix-A). It excludes 1 errata first reported in [issue #46](https://github.com/fxamacker/cbor/issues/46).
 
-Unit tests include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and etc.
-
-Minimum code coverage is 95%.  Coverage-guided fuzzing with cbor-fuzz must pass before tagging a release.  E.g. v1.3.2 was tagged when it reached 364.9 million execs and continued fuzzing (3.5+ billion execs.)
-
-Code coverage is 97.8% (`go test -cover`) for cbor v1.3 which is among the highest for libraries (in Go) of this type.
+Over 1,000 files (corpus) are used for fuzzing because it includes fuzz-generated corpus.
 
 ## Standards
-This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049), with minor [limitations](#limitations).
+This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049) and RFC 7049bis, with minor [limitations](#limitations).
 
-Three encoding modes are available since v1.3.1:
+Decoding checks for all required well-formedness errors described in RFC 7049bis, including all "subkinds" of syntax errors and too little data.
+
+Encoding has 3 modes:
+
 * default: no sorting, so it's the fastest mode.
 * Canonical: [(RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9) uses length-first map key ordering.
 * CTAP2Canonical: [(CTAP2 Canonical CBOR)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form) uses bytewise lexicographic order for sorting keys.
 
 CTAP2 Canonical CBOR encoding is used by [CTAP](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html) and [WebAuthn](https://www.w3.org/TR/webauthn/) in [FIDO2](https://fidoalliance.org/fido2/) framework.
 
-All three encoding modes in this library use smallest form of CBOR integer that preserves data.
+All three encoding modes in this library use smallest form of CBOR integer that preserves data.  A new encoding mode will be added to do the same for floating point numbers in [milestone v1.4](https://github.com/fxamacker/cbor/milestone/3).
 
 ## Limitations
-🎈 CBOR tags (type 6) is being added in the next release.
+🎈 CBOR tags (type 6) is being added in the next release ([milestone v1.4](https://github.com/fxamacker/cbor/milestone/3)).
 
 Current limitations:
 
@@ -385,7 +383,7 @@ For v1, security fixes are provided only for the latest released version since t
 To report security vulnerabilities, please email [faye.github@gmail.com](mailto:faye.github@gmail.com) and allow time for the problem to be resolved before reporting it to the public.
 
 ## Disclaimers
-Phrases like "no crashes" mean there are none known to the maintainer based on results of unit tests and coverage-based fuzzing.  It doesn't imply the software is 100% bug-free or 100% invulnerable to all known and unknown attacks.
+Phrases like "no crashes" or "doesn't crash" mean there are no known crash bugs in the latest version based on results of unit tests and coverage-guided fuzzing.  It doesn't imply the software is 100% bug-free or 100% invulnerable to all known and unknown attacks.
 
 Please read the license for additional disclaimers and terms.
 
@@ -395,8 +393,5 @@ Copyright (c) 2019 [Faye Amacker](https://github.com/fxamacker)
 Licensed under [MIT License](LICENSE)
 
 <hr>
-<div align="center">
 
-• [Design Goals](#design-goals) • [Comparisons](#comparisons)  • [Features](#features) • [Standards](#standards) • [Fuzzing](#fuzzing-and-code-coverage) • [Usage](#usage) • [Security Policy](#security-policy) •
-
-</div>
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; • [Design Goals](#design-goals) • [Comparisons](#comparisons)  • [Features](#features) • [Standards](#standards) • [Fuzzing](#fuzzing-and-code-coverage) • [Usage](#usage) • [Security Policy](#security-policy) •
