@@ -104,10 +104,10 @@ func checkValidIndefinite(data []byte, off int, t cborType) (_ int, err error) {
 		}
 		if isByteOrTextString {
 			if t != nextType {
-				return 0, &SemanticError{"cbor: wrong element type " + nextType.String() + " for indefinite-length " + t.String()}
+				return 0, &SyntaxError{"cbor: wrong element type " + nextType.String() + " for indefinite-length " + t.String()}
 			}
 			if indefinite {
-				return 0, &SemanticError{"cbor: indefinite-length " + t.String() + " chunk is not definite-length"}
+				return 0, &SyntaxError{"cbor: indefinite-length " + t.String() + " chunk is not definite-length"}
 			}
 		}
 	}
