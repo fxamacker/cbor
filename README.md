@@ -119,11 +119,7 @@ Over 1,000 files (corpus) are used for fuzzing because it includes fuzz-generate
 ## Standards
 This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049) and RFC 7049bis, with minor [limitations](#limitations).
 
-Decoding checks for all required well-formedness errors described in RFC 7049bis, including:
-
-* too much data
-* too little data
-* syntax errors
+Decoding checks for all required well-formedness errors described in RFC 7049bis, including all "subkinds" of syntax errors and too little data.
 
 Encoding has 3 modes:
 
