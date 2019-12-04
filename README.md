@@ -57,7 +57,7 @@ This library is designed to be:
 Competing factors are balanced:
 
 * __Speed__ vs __safety__ vs __size__ – to keep size small, avoid code generation. For safety, validate data and avoid Go's `unsafe` pkg.  For speed, use safe optimizations: cache struct metadata, bypass reflect when appropriate, use sync.Pool to reuse transient objects, and etc. v1.3 is faster than the most popular `unsafe`-using codec library.
-* __Standards compliance__ – CBOR ([RFC 7049](https://tools.ietf.org/html/rfc7049) and RFC 7049bis), with minor [limitations](#limitations).  Encoding modes include default (no sorting), [RFC 7049 canonical](https://tools.ietf.org/html/rfc7049#section-3.9), and [CTAP2 canonical](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form). Decoding checks for all required malformed data mentioned in RFC 7049bis.  See [Standards](#standards) section.
+* __Standards compliance__ – CBOR ([RFC 7049](https://tools.ietf.org/html/rfc7049)) with minor [limitations](#limitations).  Encoding modes include default (no sorting), [RFC 7049 canonical](https://tools.ietf.org/html/rfc7049#section-3.9), and [CTAP2 canonical](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form). Decoding also checks for all required malformed data mentioned in latest RFC 7049bis.  See [Standards](#standards) section.
 
 Initial releases focus on features, testing, and fuzzing.  After that, new releases (like v1.3) will also improve speed.
 
@@ -117,9 +117,9 @@ __Coverage-guided fuzzing__ must pass before tagging a release.  E.g. v1.3.2 was
 Over 1,000 files (corpus) are used for fuzzing because it includes fuzz-generated corpus.
 
 ## Standards
-This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049) and RFC 7049bis, with minor [limitations](#limitations).
+This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049) with minor [limitations](#limitations).
 
-Decoding checks for all required well-formedness errors described in RFC 7049bis, including all "subkinds" of syntax errors and too little data.
+Decoding also checks for all required well-formedness errors described in the latest RFC 7049bis, including all "subkinds" of syntax errors and too little data.
 
 Encoding has 3 modes:
 
