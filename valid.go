@@ -81,7 +81,9 @@ func checkValid(data []byte, off int) (_ int, t cborType, indefinite bool, err e
 			}
 		}
 	case cborTypeTag: // Check tagged item following tag.
-		return checkValid(data, off)
+		if off, _, _, err = checkValid(data, off); err != nil {
+			return 0, 0, false, err
+		}
 	}
 	return off, t, indefinite, nil
 }

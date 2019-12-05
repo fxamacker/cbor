@@ -929,6 +929,8 @@ var invalidCBORUnmarshalTests = []struct {
 	{"data is nil", []byte(nil), "EOF", false},
 	{"data is empty", []byte{}, "EOF", false},
 	{"tag: no tagged data item", []byte{0xc0}, "unexpected EOF", false},
+	{"Definite length strings with tagged chunk", hexDecode("5fc64401020304ff"), "cbor: wrong element type tag for indefinite-length byte string", false},
+	{"Definite length strings with tagged chunk", hexDecode("7fc06161ff"), "cbor: wrong element type tag for indefinite-length UTF-8 text string", false},
 	// Data from 7049bis G.1
 	// Premature end of the input
 	{"End of input in a head", hexDecode("18"), "unexpected EOF", false},
@@ -1001,7 +1003,7 @@ var invalidCBORUnmarshalTests = []struct {
 	{"Indefinite length string chunks not of the correct type", hexDecode("5f6100ff"), "cbor: wrong element type UTF-8 text string for indefinite-length byte string", false},
 	{"Indefinite length string chunks not of the correct type", hexDecode("5f80ff"), "cbor: wrong element type array for indefinite-length byte string", false},
 	{"Indefinite length string chunks not of the correct type", hexDecode("5fa0ff"), "cbor: wrong element type map for indefinite-length byte string", false},
-	{"Indefinite length string chunks not of the correct type", hexDecode("5fc000ff"), "cbor: wrong element type positive integer for indefinite-length byte string", false},
+	{"Indefinite length string chunks not of the correct type", hexDecode("5fc000ff"), "cbor: wrong element type tag for indefinite-length byte string", false},
 	{"Indefinite length string chunks not of the correct type", hexDecode("5fe0ff"), "cbor: wrong element type primitives for indefinite-length byte string", false},
 	{"Indefinite length string chunks not of the correct type", hexDecode("7f4100ff"), "cbor: wrong element type byte string for indefinite-length UTF-8 text string", false},
 	{"Indefinite length string chunks not definite length", hexDecode("5f5f4100ffff"), "cbor: indefinite-length byte string chunk is not definite-length", false},
@@ -1054,17 +1056,6 @@ func TestInvalidUTF8TextString(t *testing.T) {
 		t.Errorf("Unmarshal(0x%0x) expecting error, got nil", cborData)
 	} else if err.Error() != wantErrorMsg {
 		t.Errorf("Unmarshal(0x%0x) error %s, want %s", cborData, err, wantErrorMsg)
-	}
-}
-
-func TestUnmarshalTaggedString(t *testing.T) {
-	cborData := hexDecode("5fc64401020304ff")
-	want := []byte{1, 2, 3, 4}
-	var v interface{}
-	if err := cbor.Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %q", cborData, err)
-	} else if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
 	}
 }
 
@@ -1390,18 +1381,6 @@ func TestFuzzCrash4(t *testing.T) {
 	data := []byte("\xbfѣ\x88\xf70000000000000\xff")
 	var intf interface{}
 	wantErrorMsg := "invalid map key type"
-	if err := cbor.Unmarshal(data, &intf); err == nil {
-		t.Errorf("Unmarshal(0x%02x) returns no error, want error containing substring %s", data, wantErrorMsg)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%02x) returns error %s, want error containing substring %s", data, err, wantErrorMsg)
-	}
-}
-
-func TestFuzzCrash5(t *testing.T) {
-	// Crash5: parsing indefinite length string chunk inside indefinite length string
-	data := hexDecode("7fc57fffff")
-	var intf interface{}
-	wantErrorMsg := "cbor: indefinite-length UTF-8 text string chunk is not definite-length"
 	if err := cbor.Unmarshal(data, &intf); err == nil {
 		t.Errorf("Unmarshal(0x%02x) returns no error, want error containing substring %s", data, wantErrorMsg)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {

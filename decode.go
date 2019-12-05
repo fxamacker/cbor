@@ -428,11 +428,7 @@ func (d *decodeState) parseTextString() ([]byte, error) {
 
 // parseStringBuf assumes data is well-formed, and does not perform bounds checking.
 func (d *decodeState) parseStringBuf(p []byte) (_ []byte, isCopy bool) {
-	t, ai, val := d.getHeader()
-
-	if t == cborTypeTag {
-		return d.parseStringBuf(p)
-	}
+	_, ai, val := d.getHeader()
 
 	if ai == 31 {
 		// Process indefinite length string.
