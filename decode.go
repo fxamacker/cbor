@@ -399,14 +399,21 @@ func (d *decodeState) parseInterface() (_ interface{}, err error) {
 // parseByteString parses CBOR encoded byte string.  It returns a byte slice
 // pointing to a copy of parsed data.
 func (d *decodeState) parseByteString() []byte {
-	val, isCopy := d.parseStringBuf(nil)
-	if !isCopy {
-		// Make a copy of val so that GC can collect underlying data val points to.
-		copyVal := make([]byte, len(val))
-		copy(copyVal, val)
-		return copyVal
+	_, ai, val := d.getHeader()
+	if ai != 31 {
+		b := make([]byte, int(val))
+		copy(b, d.data[d.off:d.off+int(val)])
+		d.off += int(val)
+		return b
 	}
-	return val
+	// Process indefinite length string chunks.
+	b := []byte{}
+	for !d.foundBreak() {
+		_, _, val = d.getHeader()
+		b = append(b, d.data[d.off:d.off+int(val)]...)
+		d.off += int(val)
+	}
+	return b
 }
 
 // parseTextString parses CBOR encoded text string.  It does not return a string
@@ -415,41 +422,37 @@ func (d *decodeState) parseByteString() []byte {
 //
 // parseStruct() uses parseTextString() to improve memory and performance,
 // compared with using parse(reflect.Value).  parse(reflect.Value) sets
-// reflect.Value with parsed string, while parseTextString() returns parsed string.
+// reflect.Value with parsed string, while parseTextString() returns zero-copy []byte.
 func (d *decodeState) parseTextString() ([]byte, error) {
-	val, _ := d.parseStringBuf(nil)
-
-	if !utf8.Valid(val) {
-		return nil, &SemanticError{"cbor: invalid UTF-8 string"}
-	}
-
-	return val, nil
-}
-
-// parseStringBuf assumes data is well-formed, and does not perform bounds checking.
-func (d *decodeState) parseStringBuf(p []byte) (_ []byte, isCopy bool) {
 	_, ai, val := d.getHeader()
-
-	if ai == 31 {
-		// Process indefinite length string.
-		if p == nil {
-			p = make([]byte, 0, 64)
+	if ai != 31 {
+		b := d.data[d.off : d.off+int(val)]
+		d.off += int(val)
+		if !utf8.Valid(b) {
+			return nil, &SemanticError{"cbor: invalid UTF-8 string"}
 		}
+		return b, nil
+	}
+	// Process indefinite length string chunks.
+	b := []byte{}
+	var err error
+	for !d.foundBreak() {
+		_, _, val = d.getHeader()
+		x := d.data[d.off : d.off+int(val)]
+		d.off += int(val)
+		if !utf8.Valid(x) {
+			err = &SemanticError{"cbor: invalid UTF-8 string"}
+			break
+		}
+		b = append(b, x...)
+	}
+	if err != nil {
 		for !d.foundBreak() {
-			p, _ = d.parseStringBuf(p)
+			d.skip() // Skip remaining chunk on error
 		}
-		return p, true
+		return nil, err
 	}
-
-	// Process definite length string.
-	oldOff, newOff := d.off, d.off+int(val)
-	d.off = newOff
-
-	if p != nil {
-		p = append(p, d.data[oldOff:newOff]...)
-		return p, true
-	}
-	return d.data[oldOff:newOff], false
+	return b, nil
 }
 
 func (d *decodeState) parseArrayInterface(t cborType, count int) ([]interface{}, error) {

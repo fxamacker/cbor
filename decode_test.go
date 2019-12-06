@@ -450,6 +450,25 @@ var unmarshalTests = []struct {
 		[]interface{}{uint8(255), uint16(255), uint32(255), uint64(255), uint(255), int16(255), int32(255), int64(255), int(255), float32(255), float64(255)},
 		[]reflect.Type{typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	},
+	// More testcases not covered by https://tools.ietf.org/html/rfc7049#appendix-A.
+	{
+		hexDecode("5fff"), // empty indefinite length byte string
+		[]byte{},
+		[]interface{}{[]byte{}},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
+	},
+	{
+		hexDecode("7fff"), // empty indefinite length text string
+		"",
+		[]interface{}{""},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
+	},
+	{
+		hexDecode("bfff"), // empty indefinite length map
+		map[interface{}]interface{}{},
+		[]interface{}{map[interface{}]interface{}{}, map[string]bool{}, map[string]int{}, map[int]string{}, map[int]bool{}},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeString, typeBool, typeIntSlice},
+	},
 }
 
 // CBOR test data are from https://tools.ietf.org/html/rfc7049#appendix-A.
@@ -1041,21 +1060,44 @@ func TestInvalidCBORUnmarshal(t *testing.T) {
 }
 
 func TestInvalidUTF8TextString(t *testing.T) {
-	cborData := []byte{0x61, 0xfe}
-	wantErrorMsg := "cbor: invalid UTF-8 string"
-
-	var i interface{}
-	if err := cbor.Unmarshal(cborData, &i); err == nil {
-		t.Errorf("Unmarshal(0x%0x) expecting error, got nil", cborData)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%0x) error %s, want %s", cborData, err, wantErrorMsg)
+	invalidUTF8TextStringTests := []struct {
+		name         string
+		cborData     []byte
+		wantErrorMsg string
+	}{
+		{"definite length text string", hexDecode("61fe"), "cbor: invalid UTF-8 string"},
+		{"indefinite length text string", hexDecode("7f62e6b061b4ff"), "cbor: invalid UTF-8 string"},
 	}
+	for _, tc := range invalidUTF8TextStringTests {
+		t.Run(tc.name, func(t *testing.T) {
+			var i interface{}
+			if err := cbor.Unmarshal(tc.cborData, &i); err == nil {
+				t.Errorf("Unmarshal(0x%0x) expecting error, got nil", tc.cborData)
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("Unmarshal(0x%0x) error %s, want %s", tc.cborData, err, tc.wantErrorMsg)
+			}
 
+			var s string
+			if err := cbor.Unmarshal(tc.cborData, &s); err == nil {
+				t.Errorf("Unmarshal(0x%0x) expecting error, got nil", tc.cborData)
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("Unmarshal(0x%0x) error %s, want %s", tc.cborData, err, tc.wantErrorMsg)
+			}
+		})
+	}
+	// Test decoding of mixed invalid text string and valid text string
+	cborData := hexDecode("7f62e6b061b4ff7f657374726561646d696e67ff")
+	dec := cbor.NewDecoder(bytes.NewReader(cborData))
 	var s string
-	if err := cbor.Unmarshal(cborData, &s); err == nil {
-		t.Errorf("Unmarshal(0x%0x) expecting error, got nil", cborData)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%0x) error %s, want %s", cborData, err, wantErrorMsg)
+	if err := dec.Decode(&s); err == nil {
+		t.Errorf("Decode() expecting error, got nil")
+	} else if s != "" {
+		t.Errorf("Decode() returns %s, want %q", s, "")
+	}
+	if err := dec.Decode(&s); err != nil {
+		t.Errorf("Decode() returns error %q", err)
+	} else if s != "streaming" {
+		t.Errorf("Decode() returns %s, want %s", s, "streaming")
 	}
 }
 
