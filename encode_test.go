@@ -1628,3 +1628,275 @@ func TestStructCTAP2Canonical(t *testing.T) {
 		t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", v, b, wantCborData)
 	}
 }
+
+func TestTypeAlias(t *testing.T) {
+	type myBool = bool
+	type myUint = uint
+	type myUint8 = uint8
+	type myUint16 = uint16
+	type myUint32 = uint32
+	type myUint64 = uint64
+	type myInt = int
+	type myInt8 = int8
+	type myInt16 = int16
+	type myInt32 = int32
+	type myInt64 = int64
+	type myFloat32 = float32
+	type myFloat64 = float64
+	type myString = string
+	type myByteSlice = []byte
+	type myIntSlice = []int
+	type myIntArray = [4]int
+	type myMapIntInt = map[int]int
+
+	testCases := []struct {
+		name         string
+		obj          interface{}
+		wantCborData []byte
+	}{
+		{
+			name:         "bool alias",
+			obj:          myBool(true),
+			wantCborData: hexDecode("f5"),
+		},
+		{
+			name:         "uint alias",
+			obj:          myUint(0),
+			wantCborData: hexDecode("00"),
+		},
+		{
+			name:         "uint8 alias",
+			obj:          myUint8(0),
+			wantCborData: hexDecode("00"),
+		},
+		{
+			name:         "uint16 alias",
+			obj:          myUint16(1000),
+			wantCborData: hexDecode("1903e8"),
+		},
+		{
+			name:         "uint32 alias",
+			obj:          myUint32(1000000),
+			wantCborData: hexDecode("1a000f4240"),
+		},
+		{
+			name:         "uint64 alias",
+			obj:          myUint64(1000000000000),
+			wantCborData: hexDecode("1b000000e8d4a51000"),
+		},
+		{
+			name:         "int alias",
+			obj:          myInt(-1),
+			wantCborData: hexDecode("20"),
+		},
+		{
+			name:         "int8 alias",
+			obj:          myInt8(-1),
+			wantCborData: hexDecode("20"),
+		},
+		{
+			name:         "int16 alias",
+			obj:          myInt16(-1000),
+			wantCborData: hexDecode("3903e7"),
+		},
+		{
+			name:         "int32 alias",
+			obj:          myInt32(-1000),
+			wantCborData: hexDecode("3903e7"),
+		},
+		{
+			name:         "int64 alias",
+			obj:          myInt64(-1000),
+			wantCborData: hexDecode("3903e7"),
+		},
+		{
+			name:         "float32 alias",
+			obj:          myFloat32(100000.0),
+			wantCborData: hexDecode("fa47c35000"),
+		},
+		{
+			name:         "float64 alias",
+			obj:          myFloat64(1.1),
+			wantCborData: hexDecode("fb3ff199999999999a"),
+		},
+		{
+			name:         "string alias",
+			obj:          myString("a"),
+			wantCborData: hexDecode("6161"),
+		},
+		{
+			name:         "[]byte alias",
+			obj:          myByteSlice([]byte{1, 2, 3, 4}),
+			wantCborData: hexDecode("4401020304"),
+		},
+		{
+			name:         "[]int alias",
+			obj:          myIntSlice([]int{1, 2, 3, 4}),
+			wantCborData: hexDecode("8401020304"),
+		},
+		{
+			name:         "[4]int alias",
+			obj:          myIntArray([...]int{1, 2, 3, 4}),
+			wantCborData: hexDecode("8401020304"),
+		},
+		{
+			name:         "map[int]int alias",
+			obj:          myMapIntInt(map[int]int{1: 2, 3: 4}),
+			wantCborData: hexDecode("a201020304"),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := cbor.Marshal(tc.obj, cbor.EncOptions{Canonical: true})
+			if err != nil {
+				t.Errorf("Marshal(%+v) returns error %q\n", tc.obj, err)
+			}
+			if !bytes.Equal(b, tc.wantCborData) {
+				t.Errorf("Marshal(%+v) = 0x%0x, want 0x%0x", tc.obj, b, tc.wantCborData)
+			}
+			v := reflect.New(reflect.TypeOf(tc.obj))
+			if err := cbor.Unmarshal(b, v.Interface()); err != nil {
+				t.Errorf("Unmarshal() returns error %q\n", err)
+			}
+			if !reflect.DeepEqual(tc.obj, v.Elem().Interface()) {
+				t.Errorf("Marshal-Unmarshal return different values: %v, %v\n", tc.obj, v.Elem().Interface())
+			}
+		})
+	}
+}
+
+func TestNewTypeWithBuiltinUnderlyingType(t *testing.T) {
+	type myBool bool
+	type myUint uint
+	type myUint8 uint8
+	type myUint16 uint16
+	type myUint32 uint32
+	type myUint64 uint64
+	type myInt int
+	type myInt8 int8
+	type myInt16 int16
+	type myInt32 int32
+	type myInt64 int64
+	type myFloat32 float32
+	type myFloat64 float64
+	type myString string
+	type myByteSlice []byte
+	type myIntSlice []int
+	type myIntArray [4]int
+	type myMapIntInt map[int]int
+
+	testCases := []struct {
+		name         string
+		obj          interface{}
+		wantCborData []byte
+	}{
+		{
+			name:         "bool alias",
+			obj:          myBool(true),
+			wantCborData: hexDecode("f5"),
+		},
+		{
+			name:         "uint alias",
+			obj:          myUint(0),
+			wantCborData: hexDecode("00"),
+		},
+		{
+			name:         "uint8 alias",
+			obj:          myUint8(0),
+			wantCborData: hexDecode("00"),
+		},
+		{
+			name:         "uint16 alias",
+			obj:          myUint16(1000),
+			wantCborData: hexDecode("1903e8"),
+		},
+		{
+			name:         "uint32 alias",
+			obj:          myUint32(1000000),
+			wantCborData: hexDecode("1a000f4240"),
+		},
+		{
+			name:         "uint64 alias",
+			obj:          myUint64(1000000000000),
+			wantCborData: hexDecode("1b000000e8d4a51000"),
+		},
+		{
+			name:         "int alias",
+			obj:          myInt(-1),
+			wantCborData: hexDecode("20"),
+		},
+		{
+			name:         "int8 alias",
+			obj:          myInt8(-1),
+			wantCborData: hexDecode("20"),
+		},
+		{
+			name:         "int16 alias",
+			obj:          myInt16(-1000),
+			wantCborData: hexDecode("3903e7"),
+		},
+		{
+			name:         "int32 alias",
+			obj:          myInt32(-1000),
+			wantCborData: hexDecode("3903e7"),
+		},
+		{
+			name:         "int64 alias",
+			obj:          myInt64(-1000),
+			wantCborData: hexDecode("3903e7"),
+		},
+		{
+			name:         "float32 alias",
+			obj:          myFloat32(100000.0),
+			wantCborData: hexDecode("fa47c35000"),
+		},
+		{
+			name:         "float64 alias",
+			obj:          myFloat64(1.1),
+			wantCborData: hexDecode("fb3ff199999999999a"),
+		},
+		{
+			name:         "string alias",
+			obj:          myString("a"),
+			wantCborData: hexDecode("6161"),
+		},
+		{
+			name:         "[]byte alias",
+			obj:          myByteSlice([]byte{1, 2, 3, 4}),
+			wantCborData: hexDecode("4401020304"),
+		},
+		{
+			name:         "[]int alias",
+			obj:          myIntSlice([]int{1, 2, 3, 4}),
+			wantCborData: hexDecode("8401020304"),
+		},
+		{
+			name:         "[4]int alias",
+			obj:          myIntArray([...]int{1, 2, 3, 4}),
+			wantCborData: hexDecode("8401020304"),
+		},
+		{
+			name:         "map[int]int alias",
+			obj:          myMapIntInt(map[int]int{1: 2, 3: 4}),
+			wantCborData: hexDecode("a201020304"),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := cbor.Marshal(tc.obj, cbor.EncOptions{Canonical: true})
+			if err != nil {
+				t.Errorf("Marshal(%+v) returns error %q\n", tc.obj, err)
+			}
+			if !bytes.Equal(b, tc.wantCborData) {
+				t.Errorf("Marshal(%+v) = 0x%0x, want 0x%0x", tc.obj, b, tc.wantCborData)
+			}
+			v := reflect.New(reflect.TypeOf(tc.obj))
+			if err := cbor.Unmarshal(b, v.Interface()); err != nil {
+				t.Errorf("Unmarshal() returns error %q\n", err)
+			}
+			if !reflect.DeepEqual(tc.obj, v.Elem().Interface()) {
+				t.Errorf("Marshal-Unmarshal return different values: %v, %v\n", tc.obj, v.Elem().Interface())
+			}
+		})
+	}
+}

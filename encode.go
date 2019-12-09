@@ -248,7 +248,7 @@ func encodeFloat(e *encodeState, v reflect.Value, opts EncOptions) (int, error) 
 		return e.Write(cborNegativeInfinity)
 	}
 	if v.Kind() == reflect.Float32 {
-		f32 := v.Interface().(float32)
+		f32 := float32(f64)
 		e.scratch[0] = byte(cborTypePrimitives) | byte(26)
 		binary.BigEndian.PutUint32(e.scratch[1:], math.Float32bits(f32))
 		e.Write(e.scratch[:5])
