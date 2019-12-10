@@ -67,9 +67,9 @@ All releases prioritize reliability to avoid crashes on decoding malformed CBOR 
 
 Safety, program size, and speed comparisons are between this newer library and the most popular library.  The other library is a feature-rich codec for multiple data formats and had over 1,000 stars on github before this library was created.
 
-__This library is safer__. Tiny malicious CBOR messages have a harder time succeeding in resource exhaustion attacks.
+__This library is safer__.  Small malicious CBOR messages are detected and rejected quickly.
 
-![alt text](https://user-images.githubusercontent.com/57072051/70485838-b669a100-1ab5-11ea-9847-ff17e3e042da.png "CBOR library safety comparison")
+![alt text](https://user-images.githubusercontent.com/57072051/70557141-e19cd080-1b47-11ea-8b7d-5a3fd43c3783.png "CBOR library safety comparison")
 
 __This library is smaller__. Programs like senmlCat can be 4 MB smaller by switching to this library.  Programs using more complex CBOR data types can be 9.2 MB smaller.
 
