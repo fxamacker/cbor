@@ -42,7 +42,7 @@ Recent activity:
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- faster encoding and decoding.
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- add struct to/from CBOR array (`toarray` struct tag) for more compact data.
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- add struct to/from CBOR map with int keys (`keyasint` struct tag). Simplifies using COSE, etc.
-* [x] [Release v1.3.3](https://github.com/fxamacker/cbor/releases) -- (latest) prevent potential problems by adding validation checks and unit tests.
+* [x] [Release v1.3.3](https://github.com/fxamacker/cbor/releases) -- (latest) bugfixes and more unit tests based on latest 7049bis.
 * [ ] [Milestone v2.0](https://github.com/fxamacker/cbor/milestone/3) -- (in progress) add support for CBOR tags (major type 6) and more encoding modes.
 
 ## Design Goals 
