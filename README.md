@@ -1,4 +1,4 @@
-[![CBOR Library in Go/Golang](https://user-images.githubusercontent.com/57072051/69258148-c874b580-0b81-11ea-982d-e44b21f3a0fe.png)](https://github.com/fxamacker/cbor/releases)
+[![CBOR Library in Go/Golang](https://github.com/fxamacker/images/raw/master/cbor/cbor_slides.gif)](https://github.com/fxamacker/cbor/releases)
 
 # CBOR library in Go
 This library is a generic CBOR encoder and decoder.  It's been fuzz tested since v0.1 and fast since v1.3.
