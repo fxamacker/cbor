@@ -1,7 +1,7 @@
 [![CBOR Library in Go/Golang](https://user-images.githubusercontent.com/57072051/69258148-c874b580-0b81-11ea-982d-e44b21f3a0fe.png)](https://github.com/fxamacker/cbor/releases)
 
 # CBOR library in Go
-This library encodes and decodes CBOR.  It's been fuzz tested since v0.1 and fast since v1.3.
+This library is a generic CBOR encoder and decoder.  It's been fuzz tested since v0.1 and fast since v1.3.
 
 [![Build Status](https://travis-ci.com/fxamacker/cbor.svg?branch=master)](https://travis-ci.com/fxamacker/cbor)
 [![codecov](https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4)](https://codecov.io/gh/fxamacker/cbor)
@@ -9,7 +9,7 @@ This library encodes and decodes CBOR.  It's been fuzz tested since v0.1 and fas
 [![Release](https://img.shields.io/github/release/fxamacker/cbor.svg?style=flat-square)](https://github.com/fxamacker/cbor/releases)
 [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE)
 
-__What is CBOR__?  [CBOR](CBOR.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049)) is a binary data format inspired by JSON and MessagePack.  CBOR is used in [IETF](https://www.ietf.org) Internet Standards such as COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)) and CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)). WebAuthn also uses CBOR.
+__What is CBOR__?  [CBOR](CBOR.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049)) is a binary data format inspired by JSON and MessagePack.  CBOR is used in [IETF](https://www.ietf.org) Internet Standards such as COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)) and CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)). Even WebAuthn uses CBOR.
 
 __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: small, fast, reliable and easy. 
 
@@ -32,7 +32,7 @@ Version 1.x has:
 
 * __Stable API__ – won't make breaking API changes.  
 * __Stable requirements__ – will always support Go v1.12.  
-* __Passed fuzzing__ – v1.3.2 passed 4+ billion execs in coverage-guided fuzzing.
+* __Passed fuzzing__ – v1.3.3 passed 250+ million execs in coverage-guided fuzzing.
 
 Each commit passes hundreds of unit tests. Each release also passes fuzz tests. See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
 
@@ -42,11 +42,11 @@ Recent activity:
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- faster encoding and decoding.
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- add struct to/from CBOR array (`toarray` struct tag) for more compact data.
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- add struct to/from CBOR map with int keys (`keyasint` struct tag). Simplifies using COSE, etc.
-* [x] [Release v1.3.2](https://github.com/fxamacker/cbor/releases) -- (latest) prevent potential problems by adding checks after well-formedness.
-* [ ] [Milestone v1.4](https://github.com/fxamacker/cbor/milestone/3) -- 🎈 add support for CBOR tags (major type 6.)
+* [x] [Release v1.3.3](https://github.com/fxamacker/cbor/releases) -- (latest) prevent potential problems by adding validation checks and unit tests.
+* [ ] [Milestone v2.0](https://github.com/fxamacker/cbor/milestone/3) -- (in progress) add support for CBOR tags (major type 6) and more encoding modes.
 
 ## Design Goals 
-This CBOR library was created for my [WebAuthn (FIDO2) server library](https://github.com/fxamacker/webauthn), because existing CBOR libraries didn't meet certain criteria.  This library became a good fit for many other projects.
+This library is designed to be a generic CBOR encoder and decoder.  It was initially created for my [WebAuthn (FIDO2) server library](https://github.com/fxamacker/webauthn), because existing CBOR libraries (in Go) didn't meet certain criteria in 2019.
 
 This library is designed to be:
 
@@ -65,15 +65,19 @@ All releases prioritize reliability to avoid crashes on decoding malformed CBOR 
 
 ## Comparisons
 
-Program size and speed comparisons are between this new library and the most popular codec.  This library prioritizes reliability so the speed comparison was a nice surprise.
+Safety, program size, and speed comparisons are between this newer library and the most popular library.  The other library is a feature-rich codec for multiple data formats and had over 1,000 stars on github before this library was created.
 
-__This library makes compiled programs smaller__. Programs like senmlCat can be 4 MB smaller by switching to this library.  Programs using more complex CBOR data types can be 9.2 MB smaller.
+__This library is safer__. Tiny malicious CBOR messages have a harder time succeeding in resource exhaustion attacks.
 
-![alt text](https://user-images.githubusercontent.com/57072051/69993581-b98eeb00-1511-11ea-98da-46d14ad0fdd0.png "CBOR library and program size comparison chart")
+![alt text](https://user-images.githubusercontent.com/57072051/70479896-f889e700-1aa3-11ea-8135-c51cfb8508e2.png "CBOR library safety comparison")
 
-__This library is faster__ for encoding and decoding CBOR Web Token (CWT claims).  WebAuthn has more impressive speed advantages but its CBOR data (on servers) is used during registration (not login).  So CWT speed matters more.
+__This library is smaller__. Programs like senmlCat can be 4 MB smaller by switching to this library.  Programs using more complex CBOR data types can be 9.2 MB smaller.
 
-![alt text](https://user-images.githubusercontent.com/57072051/69992105-9c0c5200-150e-11ea-9888-9c50a0f41de2.png "CBOR library speed comparison chart")
+![alt text](https://user-images.githubusercontent.com/57072051/70470674-316c9080-1a91-11ea-930f-3d221ced0973.png "CBOR library and program size comparison chart")
+
+__This library is faster__ for encoding and decoding CBOR Web Token (CWT claims).  However, speed is only one factor and it can vary depending on data types and sizes.
+
+![alt text](https://user-images.githubusercontent.com/57072051/70470717-4812e780-1a91-11ea-964d-be82996d90b3.png "CBOR library speed comparison chart")
 
 The resource intensive `codec.CborHandle` initialization (in the other library) was placed outside the benchmark loop to make sure their library wasn't penalized.
 
@@ -84,6 +88,7 @@ Additional comparisons may be added here from time to time.
 ## Features
 
 * Idiomatic API like `encoding/json`.
+* Support 3 encoding modes: default (unsorted), Canonical, CTAP2Canonical
 * Support "cbor" and "json" keys in Go's struct tags. If both are specified, then "cbor" is used.
 * Encode using smallest CBOR integer sizes for more compact data serialization.
 * Decode slices, maps, and structs in-place.
@@ -98,7 +103,7 @@ Additional comparisons may be added here from time to time.
 * v1.2 -- User-defined types can have custom CBOR encoding and decoding by implementing `cbor.Marshaler` and `cbor.Unmarshaler` interfaces. 
 * v1.3 -- add struct to/from CBOR array (`toarray` struct tag) for more compact data
 * v1.3 -- add struct to/from CBOR map with int keys (`keyasint` struct tag). Simplifies using COSE, etc.
-* [Milestone v1.4](https://github.com/fxamacker/cbor/milestone/3) -- 🎈 add support for CBOR tags (major type 6.)
+* [Milestone v2.0](https://github.com/fxamacker/cbor/milestone/3) -- add support for CBOR tags (major type 6) and more encoding modes.
 
 ## Fuzzing and Code Coverage
 
@@ -129,10 +134,10 @@ Encoding has 3 modes:
 
 CTAP2 Canonical CBOR encoding is used by [CTAP](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html) and [WebAuthn](https://www.w3.org/TR/webauthn/) in [FIDO2](https://fidoalliance.org/fido2/) framework.
 
-All three encoding modes in this library use smallest form of CBOR integer that preserves data.  A new encoding mode will be added to do the same for floating point numbers in [milestone v1.4](https://github.com/fxamacker/cbor/milestone/3).
+All three encoding modes in this library use smallest form of CBOR integer that preserves data.  A new encoding mode will be added to do the same for floating point numbers in [milestone v2.0](https://github.com/fxamacker/cbor/milestone/3).
 
 ## Limitations
-🎈 CBOR tags (type 6) is being added in the next release ([milestone v1.4](https://github.com/fxamacker/cbor/milestone/3)).
+🎈 CBOR tags (type 6) is being added in the next release ([milestone v2.0](https://github.com/fxamacker/cbor/milestone/3)).
 
 Current limitations:
 
