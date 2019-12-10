@@ -69,7 +69,7 @@ Safety, program size, and speed comparisons are between this newer library and t
 
 __This library is safer__. Tiny malicious CBOR messages have a harder time succeeding in resource exhaustion attacks.
 
-![alt text](https://user-images.githubusercontent.com/57072051/70479896-f889e700-1aa3-11ea-8135-c51cfb8508e2.png "CBOR library safety comparison")
+![alt text](https://user-images.githubusercontent.com/57072051/70485838-b669a100-1ab5-11ea-9847-ff17e3e042da.png "CBOR library safety comparison")
 
 __This library is smaller__. Programs like senmlCat can be 4 MB smaller by switching to this library.  Programs using more complex CBOR data types can be 9.2 MB smaller.
 
