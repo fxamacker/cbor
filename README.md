@@ -1,4 +1,4 @@
-[![CBOR Library in Go/Golang](https://github.com/fxamacker/images/raw/master/cbor/cbor_slides.gif)](https://github.com/fxamacker/cbor/releases)
+[![CBOR Library in Go/Golang](https://github.com/fxamacker/images/raw/master/cbor/v1.3.3/cbor_slides.gif)](https://github.com/fxamacker/cbor/releases)
 
 # CBOR library in Go
 This library is a generic CBOR encoder and decoder.  It's been fuzz tested since v0.1 and fast since v1.3.
@@ -69,15 +69,15 @@ Safety, program size, and speed comparisons are between this newer library and t
 
 __This library is safer__.  Small malicious CBOR messages are detected and rejected quickly.
 
-![alt text](https://user-images.githubusercontent.com/57072051/70557141-e19cd080-1b47-11ea-8b7d-5a3fd43c3783.png "CBOR library safety comparison")
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.3.3/cbor_safety_comparison.png "CBOR library safety comparison")
 
 __This library is smaller__. Programs like senmlCat can be 4 MB smaller by switching to this library.  Programs using more complex CBOR data types can be 9.2 MB smaller.
 
-![alt text](https://user-images.githubusercontent.com/57072051/70470674-316c9080-1a91-11ea-930f-3d221ced0973.png "CBOR library and program size comparison chart")
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.3.3/cbor_size_comparison.png "CBOR library and program size comparison chart")
 
 __This library is faster__ for encoding and decoding CBOR Web Token (CWT claims).  However, speed is only one factor and it can vary depending on data types and sizes.
 
-![alt text](https://user-images.githubusercontent.com/57072051/70470717-4812e780-1a91-11ea-964d-be82996d90b3.png "CBOR library speed comparison chart")
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.3.3/cbor_speed_comparison.png "CBOR library speed comparison chart")
 
 The resource intensive `codec.CborHandle` initialization (in the other library) was placed outside the benchmark loop to make sure their library wasn't penalized.
 
