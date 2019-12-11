@@ -23,6 +23,12 @@ __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: 
 
 New struct tags like __`keyasint`__ and __`toarray`__ make CBOR, COSE, CWT, and SenML very easy to use.
 
+<hr>
+
+[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/cbor_easy_api.png)](#usage)
+
+<hr>
+
 Install with ```go get github.com/fxamacker/cbor``` and use it like Go's ```encoding/json```.
 
 ## Current Status
