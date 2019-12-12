@@ -156,7 +156,7 @@ func (d *decodeState) value(v interface{}) error {
 
 	rv = rv.Elem()
 
-	if rv.Kind() == reflect.Interface && rv.NumMethod() == 0 && rv.IsNil() {
+	if rv.Kind() == reflect.Interface && rv.NumMethod() == 0 {
 		// Fast path to decode to empty interface without calling implementsUnmarshaler.
 		iv, err := d.parseInterface()
 		if iv != nil {
@@ -206,8 +206,8 @@ func (t cborType) String() string {
 
 // parse assumes data is well-formed, and does not perform bounds checking.
 func (d *decodeState) parse(v reflect.Value, isUnmarshaler bool) (err error) {
-	if v.Kind() == reflect.Interface && v.NumMethod() == 0 && v.IsNil() {
-		// nil interface
+	if v.Kind() == reflect.Interface && v.NumMethod() == 0 {
+		// empty interface
 		iv, err := d.parseInterface()
 		if err != nil {
 			return err

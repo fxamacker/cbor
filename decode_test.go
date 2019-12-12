@@ -869,21 +869,30 @@ func TestUnmarshalIntoArray(t *testing.T) {
 
 func TestUnmarshalNil(t *testing.T) {
 	cborData := [][]byte{hexDecode("f6"), hexDecode("f7")} // null, undefined
-	bSlice := []byte{1, 2, 3}
-	strSlice := []string{"hello", "world"}
-	m := map[string]bool{"hello": true, "goodbye": false}
-	nilValuesAfterUnmarshal := []interface{}{bSlice, strSlice, m}
 
+	// Test []byte/slice/map with CBOR nil/undefined
 	for _, data := range cborData {
-		for _, v := range nilValuesAfterUnmarshal {
-			if err := cbor.Unmarshal(data, &v); err != nil {
-				t.Errorf("Unmarshal(0x%0x) returns error %v", data, err)
-			} else if v != nil {
-				t.Errorf("Unmarshal(0x%0x) = %v (%T), want nil", data, v, v)
-			}
+		bSlice := []byte{1, 2, 3}
+		if err := cbor.Unmarshal(data, &bSlice); err != nil {
+			t.Errorf("Unmarshal(0x%0x) returns error %v", data, err)
+		} else if bSlice != nil {
+			t.Errorf("Unmarshal(0x%0x) = %v (%T), want nil", data, bSlice, bSlice)
+		}
+		strSlice := []string{"hello", "world"}
+		if err := cbor.Unmarshal(data, &strSlice); err != nil {
+			t.Errorf("Unmarshal(0x%0x) returns error %v", data, err)
+		} else if strSlice != nil {
+			t.Errorf("Unmarshal(0x%0x) = %v (%T), want nil", data, strSlice, strSlice)
+		}
+		m := map[string]bool{"hello": true, "goodbye": false}
+		if err := cbor.Unmarshal(data, &m); err != nil {
+			t.Errorf("Unmarshal(0x%0x) returns error %v", data, err)
+		} else if m != nil {
+			t.Errorf("Unmarshal(0x%0x) = %v (%T), want nil", data, m, m)
 		}
 	}
 
+	// Test int/float64/string/bool with CBOR nil/undefined
 	for _, data := range cborData {
 		i := 10
 		if err := cbor.Unmarshal(data, &i); err != nil {
@@ -2237,5 +2246,19 @@ func TestMapKeyUnhashable(t *testing.T) {
 		t.Errorf("Unmarshal(0x%0x) doesn't return error, want %q", cborData, wantErrorMsg)
 	} else if err.Error() != wantErrorMsg {
 		t.Errorf("Unmarshal(0x%0x) returns error %q, want %q", cborData, err, wantErrorMsg)
+	}
+}
+
+func TestUnmarshalToNotNilInterface(t *testing.T) {
+	cborData := hexDecode("83010203") // []uint64{1, 2, 3}
+	s := "hello"
+	var v interface{} = s // Unmarshal() sees v as type inteface{} and sets CBOR data as default Go type.  s is unmodified.  Same behavior as encoding/json.
+	wantV := []interface{}{uint64(1), uint64(2), uint64(3)}
+	if err := cbor.Unmarshal(cborData, &v); err != nil {
+		t.Errorf("Unmarshal(0x%0x) returns error %s", cborData, err)
+	} else if !reflect.DeepEqual(v, wantV) {
+		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, v, v, wantV, wantV)
+	} else if s != "hello" {
+		t.Errorf("Unmarshal(0x%0x) modified s %s", cborData, s)
 	}
 }
