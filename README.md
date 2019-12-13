@@ -15,7 +15,7 @@ __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: 
 
 * __Small__ and self-contained.  Same programs are 4-9 MB smaller by switching to this library.  There are no external dependencies and no code gen.   See [comparisons](#comparisons).
 
-* __Fast__. v1.3 became faster than a well-known library that had 1,000+ stars before this library was created.  Faster libraries will always exist, but speed is only one factor.  This library solely uses safe optimizations.  See [comparisons](#comparisons).
+* __Fast__. v1.3 became faster than a well-known library that uses `unsafe` optimizations.  Faster libraries will always exist, but speed is only one factor.  This library solely uses safe optimizations.  See [comparisons](#comparisons).
 
 * __Safe__ and reliable. It prevents crashes on malicious CBOR data by using extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's [`unsafe`](https://golang.org/pkg/unsafe/) package. See [comparisons](#comparisons).
 
@@ -29,18 +29,36 @@ New struct tags like __`keyasint`__ and __`toarray`__ make CBOR, COSE, CWT, and 
 
 <hr>
 
-Install with ```go get github.com/fxamacker/cbor``` and use it like Go's ```encoding/json```.
+👉  [Comparisons](#comparisons) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Fuzzing](#fuzzing-and-code-coverage) • [Usage](#usage) • [Security Policy](#security-policy) • [License](#license)
 
-👉 [Design Goals](#design-goals) • [Comparisons](#comparisons)  • [Features](#features) • [Standards](#standards) • [Fuzzing](#fuzzing-and-code-coverage) • [Usage](#usage) • [Security Policy](#security-policy) • [License](#license)
+## Comparisons
+
+Comparisons are between this newer library and a well-known library that had 1,000+ stars before this library was created.  Default build settings for each library were used for all comparisons.
+
+__This library is safer__.  Small malicious CBOR messages are rejected quickly before they exhaust system resources.
+
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.3.3/cbor_safety_comparison.png "CBOR library safety comparison")
+
+__This library is smaller__. Programs like senmlCat can be 4 MB smaller by switching to this library.  Programs using more complex CBOR data types can be 9.2 MB smaller.
+
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.3.3/cbor_size_comparison.png "CBOR library and program size comparison chart")
+
+__This library is faster__ for encoding and decoding CBOR Web Token (CWT).  However, speed is only one factor and it can vary depending on data types and sizes.  Unlike the other library, this one doesn't use Go's ```unsafe``` package or code gen.
+
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.3.3/cbor_speed_comparison.png "CBOR library speed comparison chart")
+
+The resource intensive `codec.CborHandle` initialization (in the other library) was placed outside the benchmark loop to make sure their library wasn't penalized.
+
+Doing your own comparisons is highly recommended.  Use your most common message sizes and data types.
 
 ## Current Status
 Version 1.x has:
 
 * __Stable API__ – won't make breaking API changes.  
-* __Stable requirements__ – will always support Go v1.12.  
-* __Passed fuzzing__ – v1.3.3 passed 250+ million execs in coverage-guided fuzzing.
+* __Stable requirements__ – will always support Go v1.12 (unless there's compelling reason).
+* __Passed fuzzing__ – v1.3.3 passed 250+ million execs in coverage-guided fuzzing when it was released. It reached 1+ billion execs on Dec 11, 2019.
 
-Each commit passes hundreds of unit tests. Each release also passes fuzz tests. See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
+Each commit passes hundreds of unit tests. Each release also passes fuzz tests using over 1,000 CBOR files (corpus). See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
 
 Recent activity:
 
@@ -49,7 +67,8 @@ Recent activity:
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- add struct to/from CBOR array (`toarray` struct tag) for more compact data.
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- add struct to/from CBOR map with int keys (`keyasint` struct tag). Simplifies using COSE, etc.
 * [x] [Release v1.3.3](https://github.com/fxamacker/cbor/releases) -- (latest) bugfixes and more unit tests based on latest 7049bis.
-* [ ] [Milestone v2.0](https://github.com/fxamacker/cbor/milestone/3) -- (in progress) add support for CBOR tags (major type 6) and more encoding modes.
+
+Coming soon: [Milestone v2.0](https://github.com/fxamacker/cbor/milestone/3) with support for CBOR tags (major type 6) and more encoding modes.
 
 ## Design Goals 
 This library is designed to be a generic CBOR encoder and decoder.  It was initially created for my [WebAuthn (FIDO2) server library](https://github.com/fxamacker/webauthn), because existing CBOR libraries (in Go) didn't meet certain criteria in 2019.
@@ -62,34 +81,10 @@ This library is designed to be:
 
 Competing factors are balanced:
 
-* __Speed__ vs __safety__ vs __size__ – to keep size small, avoid code generation. For safety, validate data and avoid Go's `unsafe` pkg.  For speed, use safe optimizations: cache struct metadata, bypass reflect when appropriate, use sync.Pool to reuse transient objects, and etc. v1.3 is faster than the most popular `unsafe`-using codec library.
+* __Speed__ vs __safety__ vs __size__ – to keep size small, avoid code generation. For safety, validate data and avoid Go's `unsafe` pkg.  For speed, use safe optimizations such as caching struct metadata. v1.3 is faster than a well-known library that uses `unsafe` and code gen.
 * __Standards compliance__ – CBOR ([RFC 7049](https://tools.ietf.org/html/rfc7049)) with minor [limitations](#limitations).  Encoding modes include default (no sorting), [RFC 7049 canonical](https://tools.ietf.org/html/rfc7049#section-3.9), and [CTAP2 canonical](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form). Decoding also checks for all required malformed data mentioned in latest RFC 7049bis.  See [Standards](#standards) section.
 
-Initial releases focus on features, testing, and fuzzing.  After that, new releases (like v1.3) will also improve speed.
-
 All releases prioritize reliability to avoid crashes on decoding malformed CBOR data. See [Fuzzing and Coverage](#fuzzing-and-code-coverage).
-
-## Comparisons
-
-Comparisons are between this newer library and a well-known library that had 1,000+ stars before this library was created.  Default build settings for each library were used for all comparisons.
-
-__This library is safer__.  Small malicious CBOR messages are detected and rejected quickly.
-
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.3.3/cbor_safety_comparison.png "CBOR library safety comparison")
-
-__This library is smaller__. Programs like senmlCat can be 4 MB smaller by switching to this library.  Programs using more complex CBOR data types can be 9.2 MB smaller.
-
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.3.3/cbor_size_comparison.png "CBOR library and program size comparison chart")
-
-__This library is faster__ for encoding and decoding CBOR Web Token (CWT claims).  However, speed is only one factor and it can vary depending on data types and sizes.
-
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.3.3/cbor_speed_comparison.png "CBOR library speed comparison chart")
-
-The resource intensive `codec.CborHandle` initialization (in the other library) was placed outside the benchmark loop to make sure their library wasn't penalized.
-
-Doing your own comparisons is highly recommended.  Use your most common message sizes and data types.
-
-Additional comparisons may be added here from time to time.
 
 ## Features
 
@@ -109,7 +104,8 @@ Additional comparisons may be added here from time to time.
 * v1.2 -- User-defined types can have custom CBOR encoding and decoding by implementing `cbor.Marshaler` and `cbor.Unmarshaler` interfaces. 
 * v1.3 -- add struct to/from CBOR array (`toarray` struct tag) for more compact data
 * v1.3 -- add struct to/from CBOR map with int keys (`keyasint` struct tag). Simplifies using COSE, etc.
-* [Milestone v2.0](https://github.com/fxamacker/cbor/milestone/3) -- add support for CBOR tags (major type 6) and more encoding modes.
+
+Coming soon: [Milestone v2.0](https://github.com/fxamacker/cbor/milestone/3) with support for CBOR tags (major type 6) and more encoding modes.
 
 ## Fuzzing and Code Coverage
 
@@ -143,7 +139,7 @@ CTAP2 Canonical CBOR encoding is used by [CTAP](https://fidoalliance.org/specs/f
 All three encoding modes in this library use smallest form of CBOR integer that preserves data.  A new encoding mode will be added to do the same for floating point numbers in [milestone v2.0](https://github.com/fxamacker/cbor/milestone/3).
 
 ## Limitations
-🎈 CBOR tags (type 6) is being added in the next release ([milestone v2.0](https://github.com/fxamacker/cbor/milestone/3)).
+CBOR tags (type 6) is being added in the next release ([milestone v2.0](https://github.com/fxamacker/cbor/milestone/3)) and is coming soon.
 
 Current limitations:
 
@@ -203,7 +199,7 @@ go get github.com/fxamacker/cbor
 [Released versions](https://github.com/fxamacker/cbor/releases) benefit from longer fuzz tests.
 
 ## Usage
-👉 Like Go's `encoding/json`, data validation checks the entire message to prevent partially filled (corrupted) data. This library also prevents crashes and resource exhaustion attacks from malicious CBOR data. Use Go's `io.LimitReader` when decoding very large data to limit size.
+👉 Use Go's `io.LimitReader` when decoding very large data to limit size.
 
 Like `encoding/json`:
 
@@ -405,4 +401,4 @@ Licensed under [MIT License](LICENSE)
 
 <hr>
 
-👉 [Design Goals](#design-goals) • [Comparisons](#comparisons)  • [Features](#features) • [Standards](#standards) • [Fuzzing](#fuzzing-and-code-coverage) • [Usage](#usage) • [Security Policy](#security-policy) • [License](#license)
+👉  [Comparisons](#comparisons) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Fuzzing](#fuzzing-and-code-coverage) • [Usage](#usage) • [Security Policy](#security-policy) • [License](#license)
