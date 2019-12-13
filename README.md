@@ -1,7 +1,7 @@
 [![CBOR Library in Go/Golang](https://github.com/fxamacker/images/raw/master/cbor/v1.3.3/cbor_slides.gif)](https://github.com/fxamacker/cbor/releases)
 
 # CBOR library in Go
-This library is a generic CBOR encoder and decoder.  It's been fuzz tested since v0.1 and fast since v1.3.
+This library is a generic CBOR encoder and decoder.  It's been fuzz tested since v0.1 and fast since v1.3.  Choose this library if you value your time, program size, and system reliability.
 
 [![Build Status](https://travis-ci.com/fxamacker/cbor.svg?branch=master)](https://travis-ci.com/fxamacker/cbor)
 [![codecov](https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4)](https://codecov.io/gh/fxamacker/cbor)
@@ -13,11 +13,11 @@ __What is CBOR__?  [CBOR](CBOR.md) ([RFC 7049](https://tools.ietf.org/html/rfc70
 
 __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: small, fast, reliable and easy. 
 
-* __Small__ and self-contained.  It has no external dependencies and no code gen. Programs like senmlCat (cisco/senml) are 4 MB smaller by switching to this library. Some programs can be smaller by 9+ MB.  See [size comparisons](#comparisons).
+* __Small__ and self-contained.  Same programs are 4-9 MB smaller by switching to this library.  There are no external dependencies and no code gen.   See [comparisons](#comparisons).
 
-* __Fast__. v1.3 became faster than the most popular library.  Faster libraries will always exist, but speed is only one factor.  Choose this library if you value your time, program size, and system reliability. See [speed comparisons](#comparisons).
+* __Fast__. v1.3 became faster than a well-known library that had 1,000+ stars before this library was created.  Faster libraries will always exist, but speed is only one factor.  This library solely uses safe optimizations.  See [comparisons](#comparisons).
 
-* __Reliable__ and safe. It prevents crashes on malicious CBOR data by using extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's [`unsafe`](https://golang.org/pkg/unsafe/) package. It solely uses safe optimizations.
+* __Safe__ and reliable. It prevents crashes on malicious CBOR data by using extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's [`unsafe`](https://golang.org/pkg/unsafe/) package. See [comparisons](#comparisons).
 
 * __Easy__ and saves time.  It has the same API as [Go](https://golang.org)'s [`encoding/json`](https://golang.org/pkg/encoding/json/) when possible.  Existing structs don't require changes.  Go struct tags like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` work as expected.
 
@@ -30,6 +30,8 @@ New struct tags like __`keyasint`__ and __`toarray`__ make CBOR, COSE, CWT, and 
 <hr>
 
 Install with ```go get github.com/fxamacker/cbor``` and use it like Go's ```encoding/json```.
+
+👉 [Design Goals](#design-goals) • [Comparisons](#comparisons)  • [Features](#features) • [Standards](#standards) • [Fuzzing](#fuzzing-and-code-coverage) • [Usage](#usage) • [Security Policy](#security-policy) • [License](#license)
 
 ## Current Status
 Version 1.x has:
@@ -55,8 +57,8 @@ This library is designed to be a generic CBOR encoder and decoder.  It was initi
 This library is designed to be:
 
 * __Easy__ – idiomatic API like `encoding/json` with identical API when possible.
-* __Small and self-contained__ – no external dependencies and no code gen.  Programs in cisco/senml are 4 MB smaller by switching to this library. In extreme cases programs can be smaller by 8+ MB. See [comparisons](#comparisons).
-* __Safe and reliable__ – no `unsafe` pkg, coverage >95%, coverage-guided fuzzing, and data validation to avoid crashes on malformed or malicious data.
+* __Small and self-contained__ – no external dependencies and no code gen.  Programs in cisco/senml are 4 MB smaller by switching to this library. In extreme cases programs can be smaller by 9+ MB. See [comparisons](#comparisons).
+* __Safe and reliable__ – no `unsafe` pkg, coverage >95%, coverage-guided fuzzing, and data validation to avoid crashes on malformed or malicious data.  See [comparisons](#comparisons).
 
 Competing factors are balanced:
 
@@ -69,7 +71,7 @@ All releases prioritize reliability to avoid crashes on decoding malformed CBOR 
 
 ## Comparisons
 
-Safety, program size, and speed comparisons are between this newer library and the most popular library.  The other library is a feature-rich codec for multiple data formats and had over 1,000 stars on github before this library was created.
+Comparisons are between this newer library and a well-known library that had 1,000+ stars before this library was created.  Default build settings for each library were used for all comparisons.
 
 __This library is safer__.  Small malicious CBOR messages are detected and rejected quickly.
 
@@ -403,4 +405,4 @@ Licensed under [MIT License](LICENSE)
 
 <hr>
 
-• [Design Goals](#design-goals) • [Comparisons](#comparisons)  • [Features](#features) • [Standards](#standards) • [Fuzzing](#fuzzing-and-code-coverage) • [Usage](#usage) • [Security Policy](#security-policy) •
+👉 [Design Goals](#design-goals) • [Comparisons](#comparisons)  • [Features](#features) • [Standards](#standards) • [Fuzzing](#fuzzing-and-code-coverage) • [Usage](#usage) • [Security Policy](#security-policy) • [License](#license)
