@@ -1,4 +1,4 @@
-[![CBOR Library in Go/Golang](https://github.com/fxamacker/images/raw/master/cbor/v1.3.3/cbor_slides.gif)](https://github.com/fxamacker/cbor/releases)
+[![CBOR Library in Go/Golang](https://github.com/x448/images/raw/master/cbor/cbor_slides.gif)](https://github.com/fxamacker/cbor/releases)
 
 # CBOR library in Go
 This library is a generic CBOR encoder and decoder.  It's been fuzz tested since v0.1 and fast since v1.3.  Choose this library if you value your time, program size, and system reliability.
@@ -397,6 +397,15 @@ To report security vulnerabilities, please email [faye.github@gmail.com](mailto:
 Phrases like "no crashes" or "doesn't crash" mean there are no known crash bugs in the latest version based on results of unit tests and coverage-guided fuzzing.  It doesn't imply the software is 100% bug-free or 100% invulnerable to all known and unknown attacks.
 
 Please read the license for additional disclaimers and terms.
+
+## Special Thanks
+* Carsten Bormann for RFC 7049 (CBOR), his fast confirmation to my RFC 7049 errata, approving my pull request to 7049bis, and patience when I misread a line in 7049bis.
+* Montgomery Edwards⁴⁴⁸ for updating the README.md, creating comparison charts, and filing many helpful issues.
+* Stefan Tatschner for being the 1st to discover my CBOR library, filing issues #1 and #2, and recommending this library.
+* Yawning Angel for replacing a library with this one in a big project after an external security audit, and filing issue #5.
+* Jernej Kos for filing issue #11 (add feature similar to json.RawMessage) and his kind words about this library.
+* Jeffrey Yasskin and Laurence Lundblade for their help clarifying 7049bis on the IETF mailing list.
+* Jakob Borg for his words of encouragement about this library at Go Forum.
 
 ## License 
 Copyright (c) 2019 [Faye Amacker](https://github.com/fxamacker)
