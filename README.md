@@ -86,6 +86,8 @@ Competing factors are balanced:
 
 All releases prioritize reliability to avoid crashes on decoding malformed CBOR data. See [Fuzzing and Coverage](#fuzzing-and-code-coverage).
 
+Features not in Go's standard library are usually not added.  However, the __`toarray`__ struct tag in ugorji/go was too useful to ignore. It was added in v1.3 when a project mentioned they were using it with CBOR to save disk space.
+
 ## Features
 
 * Idiomatic API like `encoding/json`.
@@ -201,14 +203,16 @@ go get github.com/fxamacker/cbor
 ## Usage
 👉 Use Go's `io.LimitReader` when decoding very large data to limit size.
 
-Like `encoding/json`:
+The API is the same as `encoding/json` when possible:
 
-* cbor.Marshal uses []byte
-* cbor.Unmarshal uses []byte
-* cbor.Encoder uses io.Writer
-* cbor.Decoder uses io.Reader
+* cbor.Marshal writes CBOR to []byte
+* cbor.Unmarshal reads CBOR from []byte
+* cbor.Encoder writes CBOR to io.Writer
+* cbor.Decoder reads CBOR from io.Reader
 
-The `keyasint` and `toarray` struct tags can reduce programming effort, improve system performance, and reduce the size of serialized data.
+The `keyasint` and `toarray` struct tags make it easy to use compact CBOR message formats.  Internet standards often use CBOR arrays and CBOR maps with int keys to save space.
+
+Using named struct fields instead of array elements or maps with int keys makes code more readable and less error prone.
 
 __Decoding CWT (CBOR Web Token)__ using `keyasint` and `toarray` struct tags:
 ```
