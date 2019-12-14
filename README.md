@@ -1,4 +1,4 @@
-[![CBOR Library in Go/Golang](https://github.com/fxamacker/images/raw/master/cbor/v1.3.3/cbor_slides.gif)](https://github.com/fxamacker/cbor/releases)
+[![CBOR Library in Go/Golang](https://github.com/x448/images/raw/master/cbor/cbor_slides.gif)](https://github.com/fxamacker/cbor/releases)
 
 # CBOR library in Go
 This library is a generic CBOR encoder and decoder.  It's been fuzz tested since v0.1 and fast since v1.3.  Choose this library if you value your time, program size, and system reliability.
@@ -85,6 +85,8 @@ Competing factors are balanced:
 * __Standards compliance__ – CBOR ([RFC 7049](https://tools.ietf.org/html/rfc7049)) with minor [limitations](#limitations).  Encoding modes include default (no sorting), [RFC 7049 canonical](https://tools.ietf.org/html/rfc7049#section-3.9), and [CTAP2 canonical](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form). Decoding also checks for all required malformed data mentioned in latest RFC 7049bis.  See [Standards](#standards) section.
 
 All releases prioritize reliability to avoid crashes on decoding malformed CBOR data. See [Fuzzing and Coverage](#fuzzing-and-code-coverage).
+
+Features not in Go's standard library are usually not added.  However, the __`toarray`__ struct tag in ugorji/go was too useful to ignore. It was added in v1.3 when a project mentioned they were using it with CBOR to save disk space.
 
 ## Features
 
@@ -201,14 +203,16 @@ go get github.com/fxamacker/cbor
 ## Usage
 👉 Use Go's `io.LimitReader` when decoding very large data to limit size.
 
-Like `encoding/json`:
+The API is the same as `encoding/json` when possible:
 
-* cbor.Marshal uses []byte
-* cbor.Unmarshal uses []byte
-* cbor.Encoder uses io.Writer
-* cbor.Decoder uses io.Reader
+* cbor.Marshal writes CBOR to []byte
+* cbor.Unmarshal reads CBOR from []byte
+* cbor.Encoder writes CBOR to io.Writer
+* cbor.Decoder reads CBOR from io.Reader
 
-The `keyasint` and `toarray` struct tags can reduce programming effort, improve system performance, and reduce the size of serialized data.
+The `keyasint` and `toarray` struct tags make it easy to use compact CBOR message formats.  Internet standards often use CBOR arrays and CBOR maps with int keys to save space.
+
+Using named struct fields instead of array elements or maps with int keys makes code more readable and less error prone.
 
 __Decoding CWT (CBOR Web Token)__ using `keyasint` and `toarray` struct tags:
 ```
@@ -393,6 +397,15 @@ To report security vulnerabilities, please email [faye.github@gmail.com](mailto:
 Phrases like "no crashes" or "doesn't crash" mean there are no known crash bugs in the latest version based on results of unit tests and coverage-guided fuzzing.  It doesn't imply the software is 100% bug-free or 100% invulnerable to all known and unknown attacks.
 
 Please read the license for additional disclaimers and terms.
+
+## Special Thanks
+* Carsten Bormann for RFC 7049 (CBOR), his fast confirmation to my RFC 7049 errata, approving my pull request to 7049bis, and patience when I misread a line in 7049bis.
+* Montgomery Edwards⁴⁴⁸ for updating the README.md, creating comparison charts, and filing many helpful issues.
+* Stefan Tatschner for being the 1st to discover my CBOR library, filing issues #1 and #2, and recommending this library.
+* Yawning Angel for replacing a library with this one in a big project after an external security audit, and filing issue #5.
+* Jernej Kos for filing issue #11 (add feature similar to json.RawMessage) and his kind words about this library.
+* Jeffrey Yasskin and Laurence Lundblade for their help clarifying 7049bis on the IETF mailing list.
+* Jakob Borg for his words of encouragement about this library at Go Forum.
 
 ## License 
 Copyright (c) 2019 [Faye Amacker](https://github.com/fxamacker)
