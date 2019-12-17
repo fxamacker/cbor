@@ -56,7 +56,7 @@ Version 1.x has:
 
 * __Stable API__ – won't make breaking API changes.  
 * __Stable requirements__ – will always support Go v1.12 (unless there's compelling reason).
-* __Passed fuzzing__ – v1.3.3 passed 250+ million execs in coverage-guided fuzzing when it was released. It reached 1+ billion execs on Dec 11, 2019.
+* __Passed fuzzing__ – v1.3.3 passed 250+ million execs in coverage-guided fuzzing when it was released. It reached 2.3+ billion execs about one week after release.
 
 Each commit passes hundreds of unit tests. Each release also passes fuzz tests using over 1,000 CBOR files (corpus). See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
 
