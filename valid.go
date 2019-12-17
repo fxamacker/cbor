@@ -29,20 +29,30 @@ func Valid(data []byte) (rest []byte, err error) {
 	if len(data) == 0 {
 		return nil, io.EOF
 	}
-	offset, err := valid(data, 0)
+	offset, _, err := valid(data, 0, 1)
 	if err != nil {
 		return nil, err
 	}
 	return data[offset:], nil
 }
 
-func valid(data []byte, off int) (int, error) {
+const (
+	maxNestingLevel = 32
+)
+
+func valid(data []byte, off int, depth int) (int, int, error) {
+	if depth > maxNestingLevel {
+		return 0, 0, errors.New("cbor: reached max depth " + strconv.Itoa(maxNestingLevel))
+	}
 	off, t, ai, val, err := validHead(data, off)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	if ai == 31 {
-		return validIndefinite(data, off, t)
+		if t == cborTypeByteString || t == cborTypeTextString {
+			return validIndefiniteString(data, off, t, depth)
+		}
+		return validIndefiniteArrOrMap(data, off, t, depth)
 	}
 
 	switch t {
@@ -50,80 +60,106 @@ func valid(data []byte, off int) (int, error) {
 		valInt := int(val)
 		if valInt < 0 {
 			// Detect integer overflow
-			return 0, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
+			return 0, 0, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
 		}
 		if len(data)-off < valInt { // valInt+off may overflow integer
-			return 0, io.ErrUnexpectedEOF
+			return 0, 0, io.ErrUnexpectedEOF
 		}
 		off += valInt
 	case cborTypeArray, cborTypeMap:
 		valInt := int(val)
 		if valInt < 0 {
 			// Detect integer overflow
-			return 0, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
+			return 0, 0, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
 		}
 		count := 1
 		if t == cborTypeMap {
 			count = 2
 		}
+		maxDepth := depth
 		for j := 0; j < count; j++ {
 			for i := 0; i < valInt; i++ {
-				if off, err = valid(data, off); err != nil {
-					return 0, err
+				var d int
+				if off, d, err = valid(data, off, depth+1); err != nil {
+					return 0, 0, err
+				}
+				if d > maxDepth {
+					maxDepth = d // Save max depth
 				}
 			}
 		}
+		depth = maxDepth
 	case cborTypeTag:
 		// Scan nested tag numbers to avoid recursion.
 		for true {
 			if len(data)-off < 1 { // Tag number must be followed by tag content.
-				return 0, io.ErrUnexpectedEOF
+				return 0, 0, io.ErrUnexpectedEOF
 			}
 			if cborType(data[off]&0xE0) != cborTypeTag {
 				break
 			}
 			if off, _, _, _, err = validHead(data, off); err != nil {
-				return 0, err
+				return 0, 0, err
 			}
+			depth++
 		}
 		// Check tag content.
-		if off, err = valid(data, off); err != nil {
-			return 0, err
+		if off, depth, err = valid(data, off, depth); err != nil {
+			return 0, 0, err
 		}
 	}
-	return off, nil
+	return off, depth, nil
 }
 
-func validIndefinite(data []byte, off int, t cborType) (_ int, err error) {
-	isString := (t == cborTypeByteString) || (t == cborTypeTextString)
+func validIndefiniteString(data []byte, off int, t cborType, depth int) (int, int, error) {
+	var err error
 	for true {
 		if len(data)-off < 1 {
-			return 0, io.ErrUnexpectedEOF
+			return 0, 0, io.ErrUnexpectedEOF
 		}
 		if data[off] == 0xFF {
 			off++
 			break
 		}
-		if isString {
-			// Peek ahead to get next type and indefinite length status.
-			nextType := cborType(data[off] & 0xE0)
-			if t != nextType {
-				return 0, &SyntaxError{"cbor: wrong element type " + nextType.String() + " for indefinite-length " + t.String()}
-			}
-			if (data[off] & 0x1F) == 31 {
-				return 0, &SyntaxError{"cbor: indefinite-length " + t.String() + " chunk is not definite-length"}
-			}
+		// Peek ahead to get next type and indefinite length status.
+		nt := cborType(data[off] & 0xE0)
+		if t != nt {
+			return 0, 0, &SyntaxError{"cbor: wrong element type " + nt.String() + " for indefinite-length " + t.String()}
 		}
-		if off, err = valid(data, off); err != nil {
-			return 0, err
+		if (data[off] & 0x1F) == 31 {
+			return 0, 0, &SyntaxError{"cbor: indefinite-length " + t.String() + " chunk is not definite-length"}
 		}
-		if t == cborTypeMap {
-			if off, err = valid(data, off); err != nil {
-				return 0, err
-			}
+		if off, depth, err = valid(data, off, depth); err != nil {
+			return 0, 0, err
 		}
 	}
-	return off, nil
+	return off, depth, nil
+}
+
+func validIndefiniteArrOrMap(data []byte, off int, t cborType, depth int) (int, int, error) {
+	var err error
+	maxDepth := depth
+	i := 0
+	for ; true; i++ {
+		if len(data)-off < 1 {
+			return 0, 0, io.ErrUnexpectedEOF
+		}
+		if data[off] == 0xFF {
+			off++
+			break
+		}
+		var d int
+		if off, d, err = valid(data, off, depth+1); err != nil {
+			return 0, 0, err
+		}
+		if d > maxDepth {
+			maxDepth = d
+		}
+	}
+	if t == cborTypeMap && i%2 == 1 {
+		return 0, 0, &SyntaxError{"cbor: unexpected \"break\" code"}
+	}
+	return off, maxDepth, nil
 }
 
 func validHead(data []byte, off int) (_ int, t cborType, ai byte, val uint64, err error) {
