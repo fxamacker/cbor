@@ -25,7 +25,7 @@ func NewDecoder(r io.Reader) *Decoder {
 
 // Decode reads the next CBOR-encoded value from its input and stores it in
 // the value pointed to by v.
-func (dec *Decoder) Decode(v interface{}) (err error) {
+func (dec *Decoder) Decode(v interface{}) error {
 	if len(dec.buf) == dec.off {
 		if n, err := dec.read(); n == 0 {
 			return err
@@ -33,7 +33,7 @@ func (dec *Decoder) Decode(v interface{}) (err error) {
 	}
 
 	dec.d.reset(dec.buf[dec.off:])
-	err = dec.d.value(v)
+	err := dec.d.value(v)
 	dec.off += dec.d.off
 	dec.bytesRead += dec.d.off
 	if err != nil {
@@ -111,6 +111,7 @@ func (enc *Encoder) Encode(v interface{}) error {
 	if err == nil {
 		_, err = enc.e.WriteTo(enc.w)
 	}
+	enc.e.Reset()
 	return err
 }
 

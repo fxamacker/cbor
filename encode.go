@@ -226,14 +226,14 @@ func encodeBool(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 func encodeInt(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 	i := v.Int()
 	if i >= 0 {
-		return encodeTypeAndAdditionalValue(e, byte(cborTypePositiveInt), uint64(i)), nil
+		return encodeHead(e, byte(cborTypePositiveInt), uint64(i)), nil
 	}
 	n := v.Int()*(-1) - 1
-	return encodeTypeAndAdditionalValue(e, byte(cborTypeNegativeInt), uint64(n)), nil
+	return encodeHead(e, byte(cborTypeNegativeInt), uint64(n)), nil
 }
 
 func encodeUint(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
-	return encodeTypeAndAdditionalValue(e, byte(cborTypePositiveInt), v.Uint()), nil
+	return encodeHead(e, byte(cborTypePositiveInt), v.Uint()), nil
 }
 
 func encodeFloat(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
@@ -268,7 +268,7 @@ func encodeByteString(e *encodeState, v reflect.Value, opts EncOptions) (int, er
 	if slen == 0 {
 		return 1, e.WriteByte(byte(cborTypeByteString))
 	}
-	n1 := encodeTypeAndAdditionalValue(e, byte(cborTypeByteString), uint64(slen))
+	n1 := encodeHead(e, byte(cborTypeByteString), uint64(slen))
 	if v.Kind() == reflect.Array {
 		for i := 0; i < slen; i++ {
 			e.WriteByte(byte(v.Index(i).Uint()))
@@ -284,7 +284,7 @@ func encodeString(e *encodeState, v reflect.Value, opts EncOptions) (int, error)
 }
 
 func encodeStringInternal(e *encodeState, s string, opts EncOptions) (int, error) {
-	n1 := encodeTypeAndAdditionalValue(e, byte(cborTypeTextString), uint64(len(s)))
+	n1 := encodeHead(e, byte(cborTypeTextString), uint64(len(s)))
 	n2, _ := e.WriteString(s)
 	return n1 + n2, nil
 }
@@ -304,7 +304,7 @@ func (ae arrayEncoder) encodeArray(e *encodeState, v reflect.Value, opts EncOpti
 	if alen == 0 {
 		return 1, e.WriteByte(byte(cborTypeArray))
 	}
-	n := encodeTypeAndAdditionalValue(e, byte(cborTypeArray), uint64(alen))
+	n := encodeHead(e, byte(cborTypeArray), uint64(alen))
 	for i := 0; i < alen; i++ {
 		n1, err := ae.f(e, v.Index(i), opts)
 		if err != nil {
@@ -333,7 +333,7 @@ func (me mapEncoder) encodeMap(e *encodeState, v reflect.Value, opts EncOptions)
 	if mlen == 0 {
 		return 1, e.WriteByte(byte(cborTypeMap))
 	}
-	n := encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(mlen))
+	n := encodeHead(e, byte(cborTypeMap), uint64(mlen))
 	iter := v.MapRange()
 	for iter.Next() {
 		n1, err := me.kf(e, iter.Key(), opts)
@@ -448,7 +448,7 @@ func (me mapEncoder) encodeMapCanonical(e *encodeState, v reflect.Value, opts En
 		sort.Sort(byLengthFirstKeyValues{kvs})
 	}
 
-	n := encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(len(kvs)))
+	n := encodeHead(e, byte(cborTypeMap), uint64(len(kvs)))
 	for i := 0; i < len(kvs); i++ {
 		n1, _ := e.Write(kvs[i].keyValueCBORData)
 		n += n1
@@ -460,7 +460,7 @@ func (me mapEncoder) encodeMapCanonical(e *encodeState, v reflect.Value, opts En
 }
 
 func encodeStructToArray(e *encodeState, v reflect.Value, opts EncOptions, flds fields) (int, error) {
-	n := encodeTypeAndAdditionalValue(e, byte(cborTypeArray), uint64(len(flds)))
+	n := encodeHead(e, byte(cborTypeArray), uint64(len(flds)))
 FieldLoop:
 	for i := 0; i < len(flds); i++ {
 		fv := v
@@ -487,7 +487,7 @@ FieldLoop:
 }
 
 func encodeFixedLengthStruct(e *encodeState, v reflect.Value, opts EncOptions, flds fields) (int, error) {
-	n := encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(len(flds)))
+	n := encodeHead(e, byte(cborTypeMap), uint64(len(flds)))
 
 	for i := 0; i < len(flds); i++ {
 		n1, _ := e.Write(flds[i].cborName)
@@ -555,7 +555,7 @@ FieldLoop:
 		kvcount++
 	}
 
-	n1 := encodeTypeAndAdditionalValue(e, byte(cborTypeMap), uint64(kvcount))
+	n1 := encodeHead(e, byte(cborTypeMap), uint64(kvcount))
 	n2, err := e.Write(kve.Bytes())
 
 	putEncodeState(kve)
@@ -597,7 +597,7 @@ func encodeBinaryMarshalerType(e *encodeState, v reflect.Value, opts EncOptions)
 	if err != nil {
 		return 0, err
 	}
-	n1 := encodeTypeAndAdditionalValue(e, byte(cborTypeByteString), uint64(len(data)))
+	n1 := encodeHead(e, byte(cborTypeByteString), uint64(len(data)))
 	n2, _ := e.Write(data)
 	return n1 + n2, nil
 }
@@ -616,7 +616,7 @@ func encodeMarshalerType(e *encodeState, v reflect.Value, opts EncOptions) (int,
 	return e.Write(data)
 }
 
-func encodeTypeAndAdditionalValue(e *encodeState, t byte, n uint64) int {
+func encodeHead(e *encodeState, t byte, n uint64) int {
 	if n <= 23 {
 		e.WriteByte(t | byte(n))
 		return 1

@@ -954,11 +954,12 @@ var invalidCBORUnmarshalTests = []struct {
 	wantErrorMsg         string
 	errorMsgPartialMatch bool
 }{
-	{"data is nil", []byte(nil), "EOF", false},
-	{"data is empty", []byte{}, "EOF", false},
-	{"tag: no tagged data item", []byte{0xc0}, "unexpected EOF", false},
+	{"Nil data", []byte(nil), "EOF", false},
+	{"Empty data", []byte{}, "EOF", false},
+	{"Tag number not followed by tag content", []byte{0xc0}, "unexpected EOF", false},
 	{"Definite length strings with tagged chunk", hexDecode("5fc64401020304ff"), "cbor: wrong element type tag for indefinite-length byte string", false},
 	{"Definite length strings with tagged chunk", hexDecode("7fc06161ff"), "cbor: wrong element type tag for indefinite-length UTF-8 text string", false},
+	{"Invalid nested tag number", hexDecode("d864dc1a514b67b0"), "cbor: invalid additional information", true},
 	// Data from 7049bis G.1
 	// Premature end of the input
 	{"End of input in a head", hexDecode("18"), "unexpected EOF", false},
@@ -1371,15 +1372,15 @@ func TestStructFieldNil(t *testing.T) {
 	}
 }
 
-func TestFuzzCrash1(t *testing.T) {
-	// Crash1: string/slice/map length in uint64 cast to int causes integer overflow.
-	hexData := []string{
-		"bbcf30303030303030cfd697829782",
-		"5bcf30303030303030cfd697829782",
+func TestLengthOverflowsInt(t *testing.T) {
+	// Data is generating by go-fuzz.
+	// string/slice/map length in uint64 cast to int causes integer overflow.
+	cborData := [][]byte{
+		hexDecode("bbcf30303030303030cfd697829782"),
+		hexDecode("5bcf30303030303030cfd697829782"),
 	}
 	wantErrorMsg := "is too large"
-	for _, data := range hexData {
-		data := hexDecode(data)
+	for _, data := range cborData {
 		var intf interface{}
 		if err := cbor.Unmarshal(data, &intf); err == nil {
 			t.Errorf("Unmarshal(0x%02x) returns no error, want error containing substring %s", data, wantErrorMsg)
@@ -1389,69 +1390,90 @@ func TestFuzzCrash1(t *testing.T) {
 	}
 }
 
-func TestFuzzCrash2(t *testing.T) {
-	// Crash2: map key (slice or map) is unhashable.
-	testData := []string{
-		"b0303030308030303030303030303030303030303030303030303030303030303030",
-		"b030303030303030a1413030303030303030303030303030306230303030303030303030303030",
-		"b03030303030303030403030303030303030303030306230303030303030303030303030",
-		"8f303030a7303a30303030a2303030303030303030303030303030303030303030303030303030",
-		"bf30bf8030ffff",
-		"bf30a1a030ff",
-		"8f3030a730304430303030303030303030303030303030303030303030303030303030",
-		"8f303030a730303030303030308530303030303030303030303030303030303030303030",
-		"bfb0303030303030303030303030303030303030303030303030303030303030303030ff",
+func TestMapKeyUnhashable(t *testing.T) {
+	// Data is generating by go-fuzz.
+	testCases := []struct {
+		name         string
+		cborData     []byte
+		wantErrorMsg string
+	}{
+		{"slice as map key", hexDecode("bf8030ff"), "cbor: invalid map key type: slice"},                                                                 // {[]: -17}
+		{"map as map key", hexDecode("bf30a1a030ff"), "cbor: invalid map key type: map"},                                                                 // {-17: {{}: -17}}, empty map as map key
+		{"slice as map key", hexDecode("8f3030a730304430303030303030303030303030303030303030303030303030303030"), "cbor: invalid map key type: slice"},   // [-17, -17, {-17: -17, h'30303030': -17}, -17, -17, -17, -17, -17, -17, -17, -17, -17, -17, -17, -17], byte slice as may key
+		{"slice as map key", hexDecode("8f303030a730303030303030308530303030303030303030303030303030303030303030"), "cbor: invalid map key type: slice"}, // [-17, -17, -17, {-17: -17, [-17, -17, -17, -17, -17]: -17}, -17, -17, -17, -17, -17, -17, -17, -17, -17, -17, -17]
+		{"slice as map key", hexDecode("bfd1a388f730303030303030303030303030ff"), "cbor: invalid map key type: slice"},                                   // {17({[undefined, -17, -17, -17, -17, -17, -17, -17]: -17, -17: -17}): -17}}
+		{"map as map key", hexDecode("bfb0303030303030303030303030303030303030303030303030303030303030303030ff"), "cbor: invalid map key type: map"},     // {{-17: -17}: -17}, map as key
+		{"tagged slice as map key", hexDecode("a1c84c30303030303030303030303030"), "cbor: invalid map key type: slice"},                                  // {8(h'303030303030303030303030'): -17}
+		{"nested-tagged slice as map key", hexDecode("a33030306430303030d1cb4030"), "cbor: invalid map key type: slice"},                                 // {-17: "0000", 17(11(h'')): -17}
 	}
-	wantErrorMsg := "invalid map key type"
-	for _, hexData := range testData {
-		data := hexDecode(hexData)
-		var intf interface{}
-		if err := cbor.Unmarshal(data, &intf); err == nil {
-			t.Errorf("Unmarshal(0x%02x) returns no error, want error containing substring %s", data, wantErrorMsg)
-		} else if !strings.Contains(err.Error(), wantErrorMsg) {
-			t.Errorf("Unmarshal(0x%02x) returns error %s, want error containing substring %s", data, err, wantErrorMsg)
-		}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var v interface{}
+			if err := cbor.Unmarshal(tc.cborData, &v); err == nil {
+				t.Errorf("Unmarshal(0x%0x) doesn't return error, want %q", tc.cborData, tc.wantErrorMsg)
+			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+				t.Errorf("Unmarshal(0x%0x) returns error %q, want %q", tc.cborData, err, tc.wantErrorMsg)
+			}
+			if _, ok := v.(map[interface{}]interface{}); ok {
+				var v map[interface{}]interface{}
+				if err := cbor.Unmarshal(tc.cborData, &v); err == nil {
+					t.Errorf("Unmarshal(0x%0x) doesn't return error, want %q", tc.cborData, tc.wantErrorMsg)
+				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+					t.Errorf("Unmarshal(0x%0x) returns error %q, want %q", tc.cborData, err, tc.wantErrorMsg)
+				}
+			}
+		})
 	}
 }
 
-func TestFuzzCrash3(t *testing.T) {
-	// Crash3: encoding nil elment in slice/array/map
-	hexData := "b0303030303030303030303030303030303038303030faffff30303030303030303030303030"
-	data := hexDecode(hexData)
+func TestMapKeyNan(t *testing.T) {
+	// Data is generating by go-fuzz.
+	cborData := hexDecode("b0303030303030303030303030303030303038303030faffff30303030303030303030303030") // {-17: -17, NaN: -17}
 	var intf interface{}
-	if err := cbor.Unmarshal(data, &intf); err != nil {
-		t.Fatalf("Unmarshal(0x%02x) returns error %s\n", data, err)
+	if err := cbor.Unmarshal(cborData, &intf); err != nil {
+		t.Fatalf("Unmarshal(0x%02x) returns error %s\n", cborData, err)
 	}
 	if _, err := cbor.Marshal(intf, cbor.EncOptions{Canonical: true}); err != nil {
 		t.Errorf("Marshal(%v) returns error %s", intf, err)
 	}
 }
 
-func TestFuzzCrash4(t *testing.T) {
-	// Crash4: parsing nil/undefined element in slice/array/map.
-	data := []byte("\xbfѣ\x88\xf70000000000000\xff")
+func TestUnmarshalUndefinedElement(t *testing.T) {
+	// Data is generating by go-fuzz.
+	cborData := hexDecode("bfd1a388f730303030303030303030303030ff") // {17({[undefined, -17, -17, -17, -17, -17, -17, -17]: -17, -17: -17}): -17}
 	var intf interface{}
 	wantErrorMsg := "invalid map key type"
-	if err := cbor.Unmarshal(data, &intf); err == nil {
-		t.Errorf("Unmarshal(0x%02x) returns no error, want error containing substring %s", data, wantErrorMsg)
+	if err := cbor.Unmarshal(cborData, &intf); err == nil {
+		t.Errorf("Unmarshal(0x%02x) returns no error, want error containing substring %s", cborData, wantErrorMsg)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%02x) returns error %s, want error containing substring %s", data, err, wantErrorMsg)
+		t.Errorf("Unmarshal(0x%02x) returns error %s, want error containing substring %s", cborData, err, wantErrorMsg)
 	}
 }
 
-func TestFuzzCrash6(t *testing.T) {
-	// Crash5: parsing nil into map key.
+func TestMapKeyNil(t *testing.T) {
 	testData := [][]byte{
-		[]byte("\x82\xa1\xf60000"),
-		[]byte("\xa1\xf600"),
+		hexDecode("a1f630"), // {null: -17}
 	}
+	want := map[interface{}]interface{}{nil: int64(-17)}
 	for _, data := range testData {
 		var intf interface{}
 		if err := cbor.Unmarshal(data, &intf); err != nil {
 			t.Fatalf("Unmarshal(0x%02x) returns error %s\n", data, err)
+		} else if !reflect.DeepEqual(intf, want) {
+			t.Errorf("Unmarshal(0x%0x) returns %+v, want %+v", data, intf, want)
 		}
 		if _, err := cbor.Marshal(intf, cbor.EncOptions{Canonical: true}); err != nil {
 			t.Errorf("Marshal(%v) returns error %s", intf, err)
+		}
+
+		var v map[interface{}]interface{}
+		if err := cbor.Unmarshal(data, &v); err != nil {
+			t.Errorf("Unmarshal(0x%0x) returns error %q", data, err)
+		} else if !reflect.DeepEqual(v, want) {
+			t.Errorf("Unmarshal(0x%0x) returns %+v, want %+v", data, v, want)
+		}
+		if _, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true}); err != nil {
+			t.Errorf("Marshal(%v) returns error %s", v, err)
 		}
 	}
 }
@@ -2235,17 +2257,6 @@ func TestStructKeyAsIntError(t *testing.T) {
 	}
 	if !reflect.DeepEqual(v, wantV) {
 		t.Errorf("Unmarshal(0x%0x) = %v, want %v", cborData, v, wantV)
-	}
-}
-
-func TestMapKeyUnhashable(t *testing.T) {
-	cborData := hexDecode("bf8030ff") // {[]: -17}
-	wantErrorMsg := "cbor: invalid map key type: slice"
-	var v map[interface{}]interface{}
-	if err := cbor.Unmarshal(cborData, &v); err == nil {
-		t.Errorf("Unmarshal(0x%0x) doesn't return error, want %q", cborData, wantErrorMsg)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%0x) returns error %q, want %q", cborData, err, wantErrorMsg)
 	}
 }
 

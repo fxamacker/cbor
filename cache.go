@@ -99,16 +99,16 @@ func getEncodingStructType(t reflect.Type) encodingStructType {
 					break
 				}
 				if nameAsInt >= 0 {
-					encodeTypeAndAdditionalValue(e, byte(cborTypePositiveInt), uint64(nameAsInt))
+					encodeHead(e, byte(cborTypePositiveInt), uint64(nameAsInt))
 				} else {
 					n := nameAsInt*(-1) - 1
-					encodeTypeAndAdditionalValue(e, byte(cborTypeNegativeInt), uint64(n))
+					encodeHead(e, byte(cborTypeNegativeInt), uint64(n))
 				}
 				flds[i].cborName = make([]byte, e.Len())
 				copy(flds[i].cborName, e.Bytes())
 				e.Reset()
 			} else {
-				encodeTypeAndAdditionalValue(e, byte(cborTypeTextString), uint64(len(flds[i].name)))
+				encodeHead(e, byte(cborTypeTextString), uint64(len(flds[i].name)))
 				flds[i].cborName = make([]byte, e.Len()+len(flds[i].name))
 				n := copy(flds[i].cborName, e.Bytes())
 				copy(flds[i].cborName[n:], flds[i].name)
