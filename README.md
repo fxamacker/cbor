@@ -37,15 +37,15 @@ Comparisons are between this newer library and a well-known library that had 1,0
 
 __This library is safer__.  Small malicious CBOR messages are rejected quickly before they exhaust system resources.
 
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.3.3/cbor_safety_comparison.png "CBOR library safety comparison")
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.3.4/cbor_safety_comparison.png "CBOR library safety comparison")
 
 __This library is smaller__. Programs like senmlCat can be 4 MB smaller by switching to this library.  Programs using more complex CBOR data types can be 9.2 MB smaller.
 
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.3.3/cbor_size_comparison.png "CBOR library and program size comparison chart")
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.3.4/cbor_size_comparison.png "CBOR library and program size comparison chart")
 
 __This library is faster__ for encoding and decoding CBOR Web Token (CWT).  However, speed is only one factor and it can vary depending on data types and sizes.  Unlike the other library, this one doesn't use Go's ```unsafe``` package or code gen.
 
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.3.3/cbor_speed_comparison.png "CBOR library speed comparison chart")
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.3.4/cbor_speed_comparison.png "CBOR library speed comparison chart")
 
 The resource intensive `codec.CborHandle` initialization (in the other library) was placed outside the benchmark loop to make sure their library wasn't penalized.
 
@@ -56,7 +56,7 @@ Version 1.x has:
 
 * __Stable API__ – won't make breaking API changes.  
 * __Stable requirements__ – will always support Go v1.12 (unless there's compelling reason).
-* __Passed fuzzing__ – v1.3.3 passed 250+ million execs in coverage-guided fuzzing when it was released. It reached 2.3+ billion execs about one week after release.
+* __Passed fuzzing__ – v1.3.4 passed 370+ million execs in coverage-guided fuzzing when it was released.
 
 Each commit passes hundreds of unit tests. Each release also passes fuzz tests using over 1,000 CBOR files (corpus). See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
 
@@ -66,7 +66,7 @@ Recent activity:
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- faster encoding and decoding.
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- add struct to/from CBOR array (`toarray` struct tag) for more compact data.
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- add struct to/from CBOR map with int keys (`keyasint` struct tag). Simplifies using COSE, etc.
-* [x] [Release v1.3.3](https://github.com/fxamacker/cbor/releases) -- (latest) bugfixes and more unit tests based on latest 7049bis.
+* [x] [Release v1.3.4](https://github.com/fxamacker/cbor/releases) -- (latest) bugfixes and refactoring.  Limit nested levels to 32 for arrays, maps, tags.
 
 Coming soon: [Milestone v2.0](https://github.com/fxamacker/cbor/milestone/3) with support for CBOR tags (major type 6) and more encoding modes.
 
