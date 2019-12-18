@@ -2273,3 +2273,21 @@ func TestUnmarshalToNotNilInterface(t *testing.T) {
 		t.Errorf("Unmarshal(0x%0x) modified s %s", cborData, s)
 	}
 }
+
+func TestDuplicateMapKeys(t *testing.T) {
+	cborData := hexDecode("a6616161416162614261636143616461446165614561636146") // map with duplicate key "c": {"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "c": "F"}
+	wantV := map[interface{}]interface{}{"a": "A", "b": "B", "c": "F", "d": "D", "e": "E"}
+	wantM := map[string]string{"a": "A", "b": "B", "c": "F", "d": "D", "e": "E"}
+	var v interface{}
+	if err := cbor.Unmarshal(cborData, &v); err != nil {
+		t.Errorf("Unmarshal(0x%0x) returns error %s", cborData, err)
+	} else if !reflect.DeepEqual(v, wantV) {
+		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, v, v, wantV, wantV)
+	}
+	var m map[string]string
+	if err := cbor.Unmarshal(cborData, &m); err != nil {
+		t.Errorf("Unmarshal(0x%0x) returns error %s", cborData, err)
+	} else if !reflect.DeepEqual(m, wantM) {
+		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, m, m, wantM, wantM)
+	}
+}
