@@ -1,3 +1,6 @@
+// Copyright (c) 2019 Faye Amacker. All rights reserved.
+// Use of this source code is governed by a MIT license found in the LICENSE file.
+
 package cbor
 
 import (
