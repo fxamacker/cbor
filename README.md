@@ -90,9 +90,11 @@ Features not in Go's standard library are usually not added.  However, the __`to
 
 ## Features
 
-* API is like `encoding/json`:  
-  * Both `Marshal` and `Unmarshal` use `[]byte`.  
-  * `Decoder` and `Encoder` use `io.Reader` and `io.Writer`.
+* API is like `encoding/json` plus extra struct tags:
+  * `cbor.Encoder` writes CBOR to `io.Writer`.  
+  * `cbor.Decoder` reads CBOR from `io.Reader`.
+  * `cbor.Marshal` writes CBOR to `[]byte`.  
+  * `cbor.Unmarshal` reads CBOR from `[]byte`.  
 * Support "cbor" and "json" keys in Go's struct tags. If both are specified, then "cbor" is used.
 * `toarray` struct tag allows named struct fields for elements of CBOR arrays.
 * `keyasint` struct tag allows named struct fields for elements of CBOR maps with int keys.
@@ -101,7 +103,7 @@ Features not in Go's standard library are usually not added.  However, the __`to
 * Support `cbor.RawMessage` which can delay CBOR decoding or precompute CBOR encoding.
 * Support `cbor.Marshaler` and `cbor.Unmarshaler` interfaces to allow user-defined types to have custom CBOR encoding and decoding.
 * Support `time.Time` as RFC 3339 formatted text string or Unix time.
-* Support indefinite length CBOR data (["streaming"](https://tools.ietf.org/html/rfc7049#section-2.2)).  For decoding, they must fit into memory to perform well-formedness checks that prevent exploits. Go's `io.LimitReader` can be used to limit sizes.
+* Support indefinite length CBOR data (["streaming"](https://tools.ietf.org/html/rfc7049#section-2.2)).  For decoding, each indefinite length "container" must fit into memory to perform well-formedness checks that prevent exploits. Go's `io.LimitReader` can be used to limit sizes.
 * Encoder uses struct field visibility rules for anonymous struct fields (same rules as `encoding/json`.)
 * Encoder always uses smallest CBOR integer sizes for more compact data serialization.
 * Decoder always checks for invalid UTF-8 string errors.
@@ -110,22 +112,6 @@ Features not in Go's standard library are usually not added.  However, the __`to
 * Both encoder and decoder correctly handles nil slice, map, pointer, and interface values.
 
 Coming soon: support for CBOR tags (major type 6) and new encoding option to shrink floats.  After that, options for handling duplicate map keys.
-
-## Fuzzing and Code Coverage
-
-__Over 145 unit tests (plus many more subtests)__ must pass before tagging a release.  They include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and over 87 tests with malformed data based on RFC 7049bis.
-
-__Code coverage__ must not fall below 95% when tagging a release.  Code coverage is 97.8% (`go test -cover`) for cbor v1.3 which is among the highest for libraries (in Go) of this type.
-
-__Coverage-guided fuzzing__ must pass 250+ million execs before tagging a release.  E.g. v1.3.2 was tagged when it reached 364.9 million execs and continued fuzzing (4+ billion execs) with [fxamacker/cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  Default corpus has:
-
-* 2 files related to WebAuthn (FIDO U2F key).
-* 3 files with custom struct.
-* 9 files with [CWT examples (RFC 8392 Appendix A)](https://tools.ietf.org/html/rfc8392#appendix-A)
-* 17 files with [COSE examples (RFC 8152 Appendix B & C)](https://github.com/cose-wg/Examples/tree/master/RFC8152).
-* 81 files with [CBOR examples (RFC 7049 Appendix A) ](https://tools.ietf.org/html/rfc7049#appendix-A). It excludes 1 errata first reported in [issue #46](https://github.com/fxamacker/cbor/issues/46).
-
-Over 1,000 files (corpus) are used for fuzzing because it includes fuzz-generated corpus.
 
 ## Standards
 This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049) with minor [limitations](#limitations).
@@ -161,6 +147,22 @@ Current limitations:
 * Nested levels for CBOR arrays, maps, and tags are limited to 32 to prevent exploits.  If you need a larger limit, please open an issue describing your data format and this limit will be reconsidered.
 
 Like Go's `encoding/json`, data validation checks the entire message to prevent partially filled (corrupted) data. This library also prevents crashes and resource exhaustion attacks from malicious CBOR data. Use Go's `io.LimitReader` when decoding very large data to limit size.
+
+## Fuzzing and Code Coverage
+
+__Over 145 unit tests (plus many more subtests)__ must pass before tagging a release.  They include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and over 87 tests with malformed data based on RFC 7049bis.
+
+__Code coverage__ must not fall below 95% when tagging a release.  Code coverage is 97.8% (`go test -cover`) for cbor v1.3 which is among the highest for libraries (in Go) of this type.
+
+__Coverage-guided fuzzing__ must pass 250+ million execs before tagging a release.  E.g. v1.3.2 was tagged when it reached 364.9 million execs and continued fuzzing (4+ billion execs) with [fxamacker/cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  Default corpus has:
+
+* 2 files related to WebAuthn (FIDO U2F key).
+* 3 files with custom struct.
+* 9 files with [CWT examples (RFC 8392 Appendix A)](https://tools.ietf.org/html/rfc8392#appendix-A)
+* 17 files with [COSE examples (RFC 8152 Appendix B & C)](https://github.com/cose-wg/Examples/tree/master/RFC8152).
+* 81 files with [CBOR examples (RFC 7049 Appendix A) ](https://tools.ietf.org/html/rfc7049#appendix-A). It excludes 1 errata first reported in [issue #46](https://github.com/fxamacker/cbor/issues/46).
+
+Over 1,000 files (corpus) are used for fuzzing because it includes fuzz-generated corpus.
 
 ## System Requirements
 
