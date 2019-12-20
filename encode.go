@@ -7,9 +7,11 @@ import (
 	"bytes"
 	"encoding"
 	"encoding/binary"
+	"errors"
 	"math"
 	"reflect"
 	"sort"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -76,36 +78,6 @@ import (
 //
 // Channel, complex, and functon values cannot be encoded in CBOR.  Attempting
 // to encode such a value causes Marshal to return an UnsupportedTypeError.
-//
-// Canonical CBOR encoding uses the following rules:
-//
-//     1. Integers must be as small as possible.
-//     2. The expression of lengths in major types 2 through 5 must be as short
-//        as possible.
-//     3. The keys in every map must be sorted by the following rules:
-//        *  If two keys have different lengths, the shorter one sorts earlier;
-//		  *  If two keys have the same length, the one with the lower value in
-//           (byte-wise) lexical order sorts earlier.
-//     4. Indefinite-length items must be made into definite-length items.
-//
-// CTAP2 canonical CBOR encoding uses the following rules:
-//
-//     1. Integers must be encoded as small as possible.
-//     2. The representations of any floating-point values are not changed.
-//     3. The expression of lengths in major types 2 through 5 must be as short
-//        as possible.
-//     4. Indefinite-length items must be made into definite-length items.
-//     5. The keys in every map must be sorted lowest value to highest.
-//        * If the major types are different, the one with the lower value in
-//          numerical order sorts earlier.
-//        * If two keys have different lengths, the shorter one sorts earlier;
-//        * If two keys have the same length, the one with the lower value in
-//          (byte-wise) lexical order sorts earlier.
-//     6. Tags must not be present.
-//
-// Marshal supports 2 options for canonical encoding:
-// 1. Canonical: Canonical CBOR encoding (RFC 7049)
-// 2. CTAP2Canonical:  CTAP2 canonical CBOR encoding
 func Marshal(v interface{}, encOpts EncOptions) ([]byte, error) {
 	e := getEncodeState()
 
@@ -138,14 +110,56 @@ func (e *UnsupportedTypeError) Error() string {
 	return "cbor: unsupported type: " + e.Type.String()
 }
 
+// SortMode identifies supported sorting order.
+type SortMode int
+
+const (
+	// SortNone means no sorting.
+	SortNone SortMode = 0
+
+	// SortLengthFirst causes map keys or struct fields to be sorted such that:
+	//     - If two keys have different lengths, the shorter one sorts earlier;
+	//     - If two keys have the same length, the one with the lower value in
+	//       (byte-wise) lexical order sorts earlier.
+	// It is used in "Canonical CBOR" encoding in RFC 7049 3.9.
+	SortLengthFirst SortMode = 1
+
+	// SortBytewiseLexical causes map keys or struct fields to be sorted in the
+	// bytewise lexicographic order of their deterministic CBOR encodings.
+	// It is used in "CTAP2 Canonical CBOR" and "Core Deterministic Encoding"
+	// in RFC 7049bis.
+	SortBytewiseLexical SortMode = 2
+
+	// SortCanonical is used in "Canonical CBOR" encoding in RFC 7049 3.9.
+	SortCanonical SortMode = SortLengthFirst
+
+	// SortCTAP2 is used in "CTAP2 Canonical CBOR".
+	SortCTAP2 SortMode = SortBytewiseLexical
+
+	// SortCoreDeterministic is used in "Core Deterministic Encoding" in RFC 7049bis.
+	SortCoreDeterministic SortMode = SortBytewiseLexical
+
+	maxSortMode SortMode = 3
+)
+
+func (sm SortMode) valid() bool {
+	return sm < maxSortMode
+}
+
 // EncOptions specifies encoding options.
 type EncOptions struct {
+	// Sort specifies sorting order.
+	Sort SortMode
+
 	// Canonical causes map and struct to be encoded in a predictable sequence
 	// of bytes by sorting map keys or struct fields according to canonical rules:
 	//     - If two keys have different lengths, the shorter one sorts earlier;
 	//     - If two keys have the same length, the one with the lower value in
 	//       (byte-wise) lexical order sorts earlier.
+	//
+	// Deprecated: Set Sort to SortCanonical instead.
 	Canonical bool
+
 	// CTAP2Canonical uses bytewise lexicographic order of map keys encodings:
 	//     - If the major types are different, the one with the lower value in
 	//       numerical order sorts earlier.
@@ -154,7 +168,10 @@ type EncOptions struct {
 	//       (byte-wise) lexical order sorts earlier.
 	// Please note that when maps keys have the same data type, "canonical CBOR"
 	// AND "CTAP2 canonical CBOR" render the same sort order.
+	//
+	// Deprecated: Set Sort to SortCTAP2 instead.
 	CTAP2Canonical bool
+
 	// TimeRFC3339 causes time.Time to be encoded as string in RFC3339 format;
 	// otherwise, time.Time is encoded as numerical representation of seconds
 	// since January 1, 1970 UTC.
@@ -187,6 +204,21 @@ func putEncodeState(e *encodeState) {
 }
 
 func (e *encodeState) marshal(v interface{}, opts EncOptions) error {
+	if !opts.Sort.valid() {
+		return errors.New("cbor: invalid SortMode " + strconv.Itoa(int(opts.Sort)))
+	}
+	if opts.Canonical {
+		if opts.Sort != SortNone && opts.Sort != SortCanonical {
+			return errors.New("cbor: conflicting sorting modes not allowed")
+		}
+		opts.Sort = SortCanonical
+	}
+	if opts.CTAP2Canonical {
+		if opts.Sort != SortNone && opts.Sort != SortCTAP2 {
+			return errors.New("cbor: conflicting sorting modes not allowed")
+		}
+		opts.Sort = SortCTAP2
+	}
 	_, err := encode(e, reflect.ValueOf(v), opts)
 	return err
 }
@@ -320,7 +352,7 @@ type mapEncoder struct {
 }
 
 func (me mapEncoder) encodeMap(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
-	if opts.Canonical || opts.CTAP2Canonical {
+	if opts.Sort != SortNone {
 		return me.encodeMapCanonical(e, v, opts)
 	}
 	if me.kf == nil || me.ef == nil {
@@ -442,7 +474,7 @@ func (me mapEncoder) encodeMapCanonical(e *encodeState, v reflect.Value, opts En
 		off += kvs[i].keyValueLen
 	}
 
-	if opts.CTAP2Canonical {
+	if opts.Sort == SortBytewiseLexical {
 		sort.Sort(byBytewiseKeyValues{kvs})
 	} else {
 		sort.Sort(byLengthFirstKeyValues{kvs})
@@ -515,9 +547,9 @@ func encodeStruct(e *encodeState, v reflect.Value, opts EncOptions) (int, error)
 	}
 
 	flds := structType.fields
-	if opts.Canonical {
+	if opts.Sort == SortLengthFirst {
 		flds = structType.lenFirstCanonicalFields
-	} else if opts.CTAP2Canonical {
+	} else if opts.Sort == SortBytewiseLexical {
 		flds = structType.bytewiseCanonicalFields
 	}
 

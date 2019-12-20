@@ -1433,7 +1433,7 @@ func TestMapKeyNan(t *testing.T) {
 	if err := cbor.Unmarshal(cborData, &intf); err != nil {
 		t.Fatalf("Unmarshal(0x%02x) returns error %s\n", cborData, err)
 	}
-	if _, err := cbor.Marshal(intf, cbor.EncOptions{Canonical: true}); err != nil {
+	if _, err := cbor.Marshal(intf, cbor.EncOptions{Sort: cbor.SortCanonical}); err != nil {
 		t.Errorf("Marshal(%v) returns error %s", intf, err)
 	}
 }
@@ -1462,7 +1462,7 @@ func TestMapKeyNil(t *testing.T) {
 		} else if !reflect.DeepEqual(intf, want) {
 			t.Errorf("Unmarshal(0x%0x) returns %+v, want %+v", data, intf, want)
 		}
-		if _, err := cbor.Marshal(intf, cbor.EncOptions{Canonical: true}); err != nil {
+		if _, err := cbor.Marshal(intf, cbor.EncOptions{Sort: cbor.SortCanonical}); err != nil {
 			t.Errorf("Marshal(%v) returns error %s", intf, err)
 		}
 
@@ -1472,7 +1472,7 @@ func TestMapKeyNil(t *testing.T) {
 		} else if !reflect.DeepEqual(v, want) {
 			t.Errorf("Unmarshal(0x%0x) returns %+v, want %+v", data, v, want)
 		}
-		if _, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true}); err != nil {
+		if _, err := cbor.Marshal(v, cbor.EncOptions{Sort: cbor.SortCanonical}); err != nil {
 			t.Errorf("Marshal(%v) returns error %s", v, err)
 		}
 	}

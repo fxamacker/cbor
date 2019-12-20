@@ -123,7 +123,7 @@ func TestDecoderStructTag(t *testing.T) {
 func TestEncoder(t *testing.T) {
 	var want bytes.Buffer
 	var w bytes.Buffer
-	encoder := cbor.NewEncoder(&w, cbor.EncOptions{Canonical: true})
+	encoder := cbor.NewEncoder(&w, cbor.EncOptions{Sort: cbor.SortCanonical})
 	for _, tc := range marshalTests {
 		for _, value := range tc.values {
 			want.Write(tc.cborData)
@@ -276,7 +276,7 @@ func TestIndefiniteArray(t *testing.T) {
 func TestIndefiniteMap(t *testing.T) {
 	want := hexDecode("bf61610161629f0203ffff")
 	var w bytes.Buffer
-	encoder := cbor.NewEncoder(&w, cbor.EncOptions{Canonical: true})
+	encoder := cbor.NewEncoder(&w, cbor.EncOptions{Sort: cbor.SortCanonical})
 	if err := encoder.StartIndefiniteMap(); err != nil {
 		t.Fatalf("StartIndefiniteMap() returns error %v", err)
 	}
@@ -337,7 +337,7 @@ func TestEncoderStructTag(t *testing.T) {
 	want := hexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
 
 	var w bytes.Buffer
-	encoder := cbor.NewEncoder(&w, cbor.EncOptions{Canonical: true})
+	encoder := cbor.NewEncoder(&w, cbor.EncOptions{Sort: cbor.SortCanonical})
 	if err := encoder.Encode(v); err != nil {
 		t.Errorf("Encode(%+v) returns error %v", v, err)
 	}
@@ -365,7 +365,7 @@ func TestRawMessage(t *testing.T) {
 	if !reflect.DeepEqual(v, want) {
 		t.Errorf("Unmarshal(0x%0x) returns v %v, want %v", cborData, v, want)
 	}
-	b, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true})
+	b, err := cbor.Marshal(v, cbor.EncOptions{Sort: cbor.SortCanonical})
 	if err != nil {
 		t.Fatalf("Marshal(%+v) returns error %s\n", v, err)
 	}

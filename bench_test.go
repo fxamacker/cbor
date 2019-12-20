@@ -417,7 +417,7 @@ func BenchmarkMarshalCanonical(b *testing.B) {
 			}
 			b.Run(name, func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true}); err != nil {
+					if _, err := cbor.Marshal(v, cbor.EncOptions{Sort: cbor.SortCanonical}); err != nil {
 						b.Fatal("Marshal:", err)
 					}
 				}

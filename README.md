@@ -333,7 +333,7 @@ __Encoding__:
 
 ```
 // create an encoder with canonical CBOR encoding enabled
-enc := cbor.NewEncoder(writer, cbor.EncOptions{Canonical: true})
+enc := cbor.NewEncoder(writer, cbor.EncOptions{Sort: cbor.SortCanonical})
 
 // encode struct
 err = enc.Encode(stru)

@@ -58,7 +58,7 @@ func ExampleMarshal_canonical() {
 		Male     bool
 	}
 	animal := Animal{Age: 4, Name: "Candy", Contacts: map[string]string{"Mary": "111-111-1111", "Joe": "222-222-2222"}}
-	b, err := cbor.Marshal(animal, cbor.EncOptions{Canonical: true})
+	b, err := cbor.Marshal(animal, cbor.EncOptions{Sort: cbor.SortCanonical})
 	if err != nil {
 		fmt.Println("error:", err)
 	}
@@ -152,7 +152,7 @@ func ExampleEncoder() {
 		{Age: 2, Name: "Duke", Owners: []string{"Norton"}, Male: true},
 	}
 	var buf bytes.Buffer
-	enc := cbor.NewEncoder(&buf, cbor.EncOptions{Canonical: true})
+	enc := cbor.NewEncoder(&buf, cbor.EncOptions{Sort: cbor.SortCanonical})
 	for _, animal := range animals {
 		err := enc.Encode(animal)
 		if err != nil {
@@ -262,7 +262,7 @@ func ExampleEncoder_indefiniteLengthArray() {
 // indefinite length map.  Encoder supports nested indefinite length values.
 func ExampleEncoder_indefiniteLengthMap() {
 	var buf bytes.Buffer
-	enc := cbor.NewEncoder(&buf, cbor.EncOptions{Canonical: true})
+	enc := cbor.NewEncoder(&buf, cbor.EncOptions{Sort: cbor.SortCanonical})
 	// Start indefinite length map encoding.
 	if err := enc.StartIndefiniteMap(); err != nil {
 		fmt.Println("error:", err)

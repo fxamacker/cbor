@@ -282,15 +282,15 @@ func TestInvalidTypeMarshal(t *testing.T) {
 				t.Errorf("Marshal(%v, cbor.EncOptions{}) = 0x%0x, want nil", tc.value, b)
 			}
 
-			b, err = cbor.Marshal(&tc.value, cbor.EncOptions{Canonical: true})
+			b, err = cbor.Marshal(&tc.value, cbor.EncOptions{Sort: cbor.SortCanonical})
 			if err == nil {
-				t.Errorf("Marshal(%v, cbor.EncOptions{Canonical: true}) doesn't return an error, want error %q", tc.value, tc.wantErrorMsg)
+				t.Errorf("Marshal(%v, cbor.EncOptions{Sort: cbor.SortCanonical}) doesn't return an error, want error %q", tc.value, tc.wantErrorMsg)
 			} else if _, ok := err.(*cbor.UnsupportedTypeError); !ok {
-				t.Errorf("Marshal(%v, cbor.EncOptions{Canonical: true}) error type %T, want *cbor.UnsupportedTypeError", tc.value, err)
+				t.Errorf("Marshal(%v, cbor.EncOptions{Sort: cbor.SortCanonical}) error type %T, want *cbor.UnsupportedTypeError", tc.value, err)
 			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Marshal(%v, cbor.EncOptions{Canonical: true}) error %s, want %s", tc.value, err, tc.wantErrorMsg)
+				t.Errorf("Marshal(%v, cbor.EncOptions{Sort: cbor.SortCanonical}) error %s, want %s", tc.value, err, tc.wantErrorMsg)
 			} else if b != nil {
-				t.Errorf("Marshal(%v, cbor.EncOptions{Canonical: true}) = 0x%0x, want nil", tc.value, b)
+				t.Errorf("Marshal(%v, cbor.EncOptions{Sort: cbor.SortCanonical}) = 0x%0x, want nil", tc.value, b)
 			}
 		})
 	}
@@ -425,10 +425,10 @@ func testMarshal(t *testing.T, testCases []marshalTest) {
 			if _, err := cbor.Marshal(value, cbor.EncOptions{}); err != nil {
 				t.Errorf("Marshal(%v, cbor.EncOptions{}) returns error %v", value, err)
 			}
-			if b, err := cbor.Marshal(value, cbor.EncOptions{Canonical: true}); err != nil {
-				t.Errorf("Marshal(%v, cbor.EncOptions{Canonical: true}) returns error %v", value, err)
+			if b, err := cbor.Marshal(value, cbor.EncOptions{Sort: cbor.SortCanonical}); err != nil {
+				t.Errorf("Marshal(%v, cbor.EncOptions{Sort: cbor.SortCanonical}) returns error %v", value, err)
 			} else if !bytes.Equal(b, tc.cborData) {
-				t.Errorf("Marshal(%v, cbor.EncOptions{Canonical: true}) = 0x%0x, want 0x%0x", value, b, tc.cborData)
+				t.Errorf("Marshal(%v, cbor.EncOptions{Sort: cbor.SortCanonical}) = 0x%0x, want 0x%0x", value, b, tc.cborData)
 			}
 		}
 		r := cbor.RawMessage(tc.cborData)
@@ -549,7 +549,7 @@ func TestMarshalStructCanonical(t *testing.T) {
 	binary.BigEndian.PutUint32(b, uint32(1000000))
 	cborData.Write(b)
 
-	if b, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true}); err != nil {
+	if b, err := cbor.Marshal(v, cbor.EncOptions{Sort: cbor.SortCanonical}); err != nil {
 		t.Errorf("Marshal(%v) returns error %v", v, err)
 	} else if !bytes.Equal(b, cborData.Bytes()) {
 		t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", v, b, cborData.Bytes())
@@ -1056,7 +1056,7 @@ func TestTaggedAnonymousField(t *testing.T) {
 	// Test that an anonymous field with a name given in its CBOR tag is treated as having that name, rather than being anonymous.
 	s := S3{X: 1, S1: S1{X: 2}}
 	want := []byte{0xa2, 0x61, 0x58, 0x01, 0x62, 0x53, 0x31, 0xa1, 0x61, 0x58, 0x02} // {X: 1, S1: {X:2}}
-	b, err := cbor.Marshal(s, cbor.EncOptions{Canonical: true})
+	b, err := cbor.Marshal(s, cbor.EncOptions{Sort: cbor.SortCanonical})
 	if err != nil {
 		t.Errorf("Marshal(%+v) returns error %v", s, err)
 	} else if !bytes.Equal(b, want) {
@@ -1076,7 +1076,7 @@ func TestAnonymousInterfaceField(t *testing.T) {
 	// Test that an anonymous struct field of interface type is treated the same as having that type as its name, rather than being anonymous.
 	s := S4{X: 1, Reader: S2{X: 2}}
 	want := []byte{0xa2, 0x61, 0x58, 0x01, 0x66, 0x52, 0x65, 0x61, 0x64, 0x65, 0x72, 0xa1, 0x61, 0x58, 0x02} // {X: 1, Reader: {X:2}}
-	b, err := cbor.Marshal(s, cbor.EncOptions{Canonical: true})
+	b, err := cbor.Marshal(s, cbor.EncOptions{Sort: cbor.SortCanonical})
 	if err != nil {
 		t.Errorf("Marshal(%+v) returns error %v", s, err)
 	} else if !bytes.Equal(b, want) {
@@ -1101,7 +1101,7 @@ func TestEncodeInterface(t *testing.T) {
 	var r io.Reader
 	r = S2{X: 2}
 	want := []byte{0xa1, 0x61, 0x58, 0x02} // {X:2}
-	b, err := cbor.Marshal(r, cbor.EncOptions{Canonical: true})
+	b, err := cbor.Marshal(r, cbor.EncOptions{Sort: cbor.SortCanonical})
 	if err != nil {
 		t.Errorf("Marshal(%+v) returns error %v", r, err)
 	} else if !bytes.Equal(b, want) {
@@ -1195,7 +1195,7 @@ func TestMarshalStructTag1(t *testing.T) {
 	}
 	want := hexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
 
-	if b, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true}); err != nil {
+	if b, err := cbor.Marshal(v, cbor.EncOptions{Sort: cbor.SortCanonical}); err != nil {
 		t.Errorf("Marshal(%+v) returns error %v", v, err)
 	} else if !bytes.Equal(b, want) {
 		t.Errorf("Marshal(%+v) = %v, want %v", v, b, want)
@@ -1215,7 +1215,7 @@ func TestMarshalStructTag2(t *testing.T) {
 	}
 	want := hexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
 
-	if b, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true}); err != nil {
+	if b, err := cbor.Marshal(v, cbor.EncOptions{Sort: cbor.SortCanonical}); err != nil {
 		t.Errorf("Marshal(%+v) returns error %v", v, err)
 	} else if !bytes.Equal(b, want) {
 		t.Errorf("Marshal(%+v) = %v, want %v", v, b, want)
@@ -1235,7 +1235,7 @@ func TestMarshalStructTag3(t *testing.T) {
 	}
 	want := hexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
 
-	if b, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true}); err != nil {
+	if b, err := cbor.Marshal(v, cbor.EncOptions{Sort: cbor.SortCanonical}); err != nil {
 		t.Errorf("Marshal(%+v) returns error %v", v, err)
 	} else if !bytes.Equal(b, want) {
 		t.Errorf("Marshal(%+v) = %v, want %v", v, b, want)
@@ -1255,7 +1255,7 @@ func TestMarshalStructTag4(t *testing.T) {
 	}
 	want := hexDecode("a26161614161626142") // {"a":"A", "b":"B"}
 
-	if b, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true}); err != nil {
+	if b, err := cbor.Marshal(v, cbor.EncOptions{Sort: cbor.SortCanonical}); err != nil {
 		t.Errorf("Marshal(%+v) returns error %v", v, err)
 	} else if !bytes.Equal(b, want) {
 		t.Errorf("Marshal(%+v) = %v, want %v", v, b, want)
@@ -1275,7 +1275,7 @@ func TestMarshalStructLongFieldName(t *testing.T) {
 	}
 	want := hexDecode("a361616141781a6162636465666768696a6b6c6d6e6f707172737475767778797a614278426162636465666768696a6b6c6d6e6f707172737475767778797a6162636465666768696a6b6c6d6e6f707172737475767778797a6162636465666768696a6b6c6d6e6143") // {"a":"A", "abcdefghijklmnopqrstuvwxyz":"B", "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmn":"C"}
 
-	if b, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true}); err != nil {
+	if b, err := cbor.Marshal(v, cbor.EncOptions{Sort: cbor.SortCanonical}); err != nil {
 		t.Errorf("Marshal(%+v) returns error %v", v, err)
 	} else if !bytes.Equal(b, want) {
 		t.Errorf("Marshal(%+v) = %v, want %v", v, b, want)
@@ -1421,7 +1421,7 @@ func TestMarshalUnmarshalStructKeyAsInt(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			b, err := cbor.Marshal(tc.obj, cbor.EncOptions{Canonical: true})
+			b, err := cbor.Marshal(tc.obj, cbor.EncOptions{Sort: cbor.SortCanonical})
 			if err != nil {
 				t.Errorf("Marshal(%+v) returns error %s", tc.obj, err)
 			}
@@ -1525,8 +1525,8 @@ func TestMarshalUnmarshalStructToArray(t *testing.T) {
 				t.Errorf("Marshal(%+v) = 0x%0x, want 0x%0x", tc.obj, b, tc.wantCborData)
 			}
 
-			// Canonical setting should be ignored for struct to array encoding
-			b, err = cbor.Marshal(tc.obj, cbor.EncOptions{Canonical: true})
+			// SortMode should be ignored for struct to array encoding
+			b, err = cbor.Marshal(tc.obj, cbor.EncOptions{Sort: cbor.SortCanonical})
 			if err != nil {
 				t.Errorf("Marshal(%+v) returns error %s", tc.obj, err)
 			}
@@ -1551,7 +1551,7 @@ func TestMarshalUnmarshalStructToArray(t *testing.T) {
 	}
 }
 
-func TestMapCBORCanonical(t *testing.T) {
+func TestMapSort(t *testing.T) {
 	m := make(map[interface{}]bool)
 	m[10] = true
 	m[100] = true
@@ -1561,71 +1561,108 @@ func TestMapCBORCanonical(t *testing.T) {
 	m[[1]int{100}] = true
 	m[[1]int{-1}] = true
 	m[false] = true
-	wantCborData := hexDecode("a80af520f5f4f51864f5617af58120f5626161f5811864f5")
-	b, err := cbor.Marshal(m, cbor.EncOptions{Canonical: true})
-	if err != nil {
-		t.Errorf("Marshal(%v) returns error %s", m, err)
+
+	lenFirstSortedCborData := hexDecode("a80af520f5f4f51864f5617af58120f5626161f5811864f5") // sorted keys: 10, -1, false, 100, "z", [-1], "aa", [100]
+	bytewiseSortedCborData := hexDecode("a80af51864f520f5617af5626161f5811864f58120f5f4f5") // sorted keys: 10, 100, -1, "z", "aa", [100], [-1], false
+
+	testCases := []struct {
+		name         string
+		opts         cbor.EncOptions
+		wantCborData []byte
+	}{
+		{"Length first sort", cbor.EncOptions{Sort: cbor.SortLengthFirst}, lenFirstSortedCborData},
+		{"Bytewise sort", cbor.EncOptions{Sort: cbor.SortBytewiseLexical}, bytewiseSortedCborData},
+		{"CBOR canonical sort", cbor.EncOptions{Sort: cbor.SortCanonical}, lenFirstSortedCborData},
+		{"CTAP2 canonical sort", cbor.EncOptions{Sort: cbor.SortCTAP2}, bytewiseSortedCborData},
+		{"Core deterministic sort", cbor.EncOptions{Sort: cbor.SortCoreDeterministic}, bytewiseSortedCborData},
+		{"CBOR canonical sort (deprecated option)", cbor.EncOptions{Canonical: true}, lenFirstSortedCborData},
+		{"CBOR canonical sort (deprecated option)", cbor.EncOptions{Sort: cbor.SortNone, Canonical: true}, lenFirstSortedCborData},
+		{"CBOR canonical sort (deprecated option)", cbor.EncOptions{Sort: cbor.SortCanonical, Canonical: true}, lenFirstSortedCborData},
+		{"CTAP2 canonical sort (deprecated option)", cbor.EncOptions{CTAP2Canonical: true}, bytewiseSortedCborData},
+		{"CTAP2 canonical sort (deprecated option)", cbor.EncOptions{Sort: cbor.SortNone, CTAP2Canonical: true}, bytewiseSortedCborData},
+		{"CTAP2 canonical sort (deprecated option)", cbor.EncOptions{Sort: cbor.SortCTAP2, CTAP2Canonical: true}, bytewiseSortedCborData},
 	}
-	if !bytes.Equal(b, wantCborData) {
-		t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", m, b, wantCborData)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := cbor.Marshal(m, tc.opts)
+			if err != nil {
+				t.Errorf("Marshal(%v) returns error %s", m, err)
+			}
+			if !bytes.Equal(b, tc.wantCborData) {
+				t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", m, b, tc.wantCborData)
+			}
+		})
 	}
 }
 
-func TestMapCTAP2Canonical(t *testing.T) {
-	m := make(map[interface{}]bool)
-	m[10] = true
-	m[100] = true
-	m[-1] = true
-	m["z"] = true
-	m["aa"] = true
-	m[[1]int{100}] = true
-	m[[1]int{-1}] = true
-	m[false] = true
-	wantCborData := hexDecode("a80af51864f520f5617af5626161f5811864f58120f5f4f5")
-	b, err := cbor.Marshal(m, cbor.EncOptions{CTAP2Canonical: true})
-	if err != nil {
-		t.Errorf("Marshal(%v) returns error %s", m, err)
-	}
-	if !bytes.Equal(b, wantCborData) {
-		t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", m, b, wantCborData)
-	}
-}
-
-func TestStructCBORCanonical(t *testing.T) {
+func TestStructSort(t *testing.T) {
 	type T struct {
-		A bool `cbor:"10,keyasint"`
-		B bool `cbor:"100,keyasint"`
+		A bool `cbor:"aa"`
+		B bool `cbor:"z"`
 		C bool `cbor:"-1,keyasint"`
-		D bool `cbor:"z"`
-		E bool `cbor:"aa"`
+		D bool `cbor:"100,keyasint"`
+		E bool `cbor:"10,keyasint"`
 	}
-	wantCborData := hexDecode("a50af420f41864f4617af4626161f4")
 	var v T
-	b, err := cbor.Marshal(v, cbor.EncOptions{Canonical: true})
-	if err != nil {
-		t.Errorf("Marshal(%v) returns error %s", v, err)
+
+	unsortedCborData := hexDecode("a5626161f4617af420f41864f40af4")       // unsorted fields: "aa", "z", -1, 100, 10
+	lenFirstSortedCborData := hexDecode("a50af420f41864f4617af4626161f4") // sorted fields: 10, -1, 100, "z", "aa",
+	bytewiseSortedCborData := hexDecode("a50af41864f420f4617af4626161f4") // sorted fields: 10, 100, -1, "z", "aa"
+
+	testCases := []struct {
+		name         string
+		opts         cbor.EncOptions
+		wantCborData []byte
+	}{
+		{"No sort", cbor.EncOptions{}, unsortedCborData},
+		{"No sort", cbor.EncOptions{Sort: cbor.SortNone}, unsortedCborData},
+		{"Length first sort", cbor.EncOptions{Sort: cbor.SortLengthFirst}, lenFirstSortedCborData},
+		{"Bytewise sort", cbor.EncOptions{Sort: cbor.SortBytewiseLexical}, bytewiseSortedCborData},
+		{"CBOR canonical sort", cbor.EncOptions{Sort: cbor.SortCanonical}, lenFirstSortedCborData},
+		{"CTAP2 canonical sort", cbor.EncOptions{Sort: cbor.SortCTAP2}, bytewiseSortedCborData},
+		{"Core deterministic sort", cbor.EncOptions{Sort: cbor.SortCoreDeterministic}, bytewiseSortedCborData},
+		{"CBOR canonical sort (deprecated option)", cbor.EncOptions{Canonical: true}, lenFirstSortedCborData},
+		{"CBOR canonical sort (deprecated option)", cbor.EncOptions{Sort: cbor.SortNone, Canonical: true}, lenFirstSortedCborData},
+		{"CBOR canonical sort (deprecated option)", cbor.EncOptions{Sort: cbor.SortCanonical, Canonical: true}, lenFirstSortedCborData},
+		{"CTAP2 canonical sort (deprecated option)", cbor.EncOptions{CTAP2Canonical: true}, bytewiseSortedCborData},
+		{"CTAP2 canonical sort (deprecated option)", cbor.EncOptions{Sort: cbor.SortNone, CTAP2Canonical: true}, bytewiseSortedCborData},
+		{"CTAP2 canonical sort (deprecated option)", cbor.EncOptions{Sort: cbor.SortCTAP2, CTAP2Canonical: true}, bytewiseSortedCborData},
 	}
-	if !bytes.Equal(b, wantCborData) {
-		t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", v, b, wantCborData)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := cbor.Marshal(v, tc.opts)
+			if err != nil {
+				t.Errorf("Marshal(%v) returns error %s", v, err)
+			}
+			if !bytes.Equal(b, tc.wantCborData) {
+				t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", v, b, tc.wantCborData)
+			}
+		})
 	}
 }
 
-func TestStructCTAP2Canonical(t *testing.T) {
-	type T struct {
-		A bool `cbor:"10,keyasint"`
-		B bool `cbor:"100,keyasint"`
-		C bool `cbor:"-1,keyasint"`
-		D bool `cbor:"z"`
-		E bool `cbor:"aa"`
+func TestInvalidSort(t *testing.T) {
+	m := map[string]bool{"hello": true}
+	testCases := []struct {
+		name         string
+		opts         cbor.EncOptions
+		wantErrorMsg string
+	}{
+		{"Invalid SortMode value", cbor.EncOptions{Sort: cbor.SortMode(100)}, "cbor: invalid SortMode 100"},
+		{"Deprecated Canonical conflicting with SortMode value", cbor.EncOptions{Sort: cbor.SortBytewiseLexical, Canonical: true}, "cbor: conflicting sorting modes not allowed"},
+		{"Deprecated Canonical conflicting with SortMode value", cbor.EncOptions{Sort: cbor.SortCTAP2, Canonical: true}, "cbor: conflicting sorting modes not allowed"},
+		{"Deprecated Canonical conflicting with SortMode value", cbor.EncOptions{Sort: cbor.SortCoreDeterministic, Canonical: true}, "cbor: conflicting sorting modes not allowed"},
+		{"Deprecated CTAP2Canonical conflicting with SortMode value", cbor.EncOptions{Sort: cbor.SortLengthFirst, CTAP2Canonical: true}, "cbor: conflicting sorting modes not allowed"},
+		{"Deprecated CTAP2Canonical conflicting with SortMode value", cbor.EncOptions{Sort: cbor.SortCanonical, CTAP2Canonical: true}, "cbor: conflicting sorting modes not allowed"},
 	}
-	wantCborData := hexDecode("a50af41864f420f4617af4626161f4")
-	var v T
-	b, err := cbor.Marshal(v, cbor.EncOptions{CTAP2Canonical: true})
-	if err != nil {
-		t.Errorf("Marshal(%v) returns error %s", v, err)
-	}
-	if !bytes.Equal(b, wantCborData) {
-		t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", v, b, wantCborData)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := cbor.Marshal(m, tc.opts); err == nil {
+				t.Errorf("Marshal() doens't return error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("Marshal() returns error %s, want %s", err, tc.wantErrorMsg)
+			}
+		})
 	}
 }
 
@@ -1747,7 +1784,7 @@ func TestTypeAlias(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			b, err := cbor.Marshal(tc.obj, cbor.EncOptions{Canonical: true})
+			b, err := cbor.Marshal(tc.obj, cbor.EncOptions{Sort: cbor.SortCanonical})
 			if err != nil {
 				t.Errorf("Marshal(%+v) returns error %q\n", tc.obj, err)
 			}
@@ -1883,7 +1920,7 @@ func TestNewTypeWithBuiltinUnderlyingType(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			b, err := cbor.Marshal(tc.obj, cbor.EncOptions{Canonical: true})
+			b, err := cbor.Marshal(tc.obj, cbor.EncOptions{Sort: cbor.SortCanonical})
 			if err != nil {
 				t.Errorf("Marshal(%+v) returns error %q\n", tc.obj, err)
 			}
