@@ -1,7 +1,7 @@
-[![CBOR Library - Slideshow and Latest Docs.](https://github.com/x448/images/raw/master/cbor/cbor_slides.gif)](https://github.com/fxamacker/cbor/blob/master/README.md)
+[![CBOR Library - Slideshow and Latest Docs.](https://github.com/fxamacker/images/raw/master/cbor/v1.4.0/cbor_slides.gif)](https://github.com/fxamacker/cbor/blob/master/README.md)
 
 # CBOR library in Go
-This library is a CBOR encoder and decoder.  There are many CBOR libraries.  Choose this CBOR library if you value your time, program size, and system reliability.
+This library is a CBOR encoder and decoder.  Each release passes 375+ tests and 250+ million execs in fuzzing with 1000+ CBOR files.   Choose this CBOR library if you value your time, program size, and system reliability.
 
 [![Build Status](https://travis-ci.com/fxamacker/cbor.svg?branch=master)](https://travis-ci.com/fxamacker/cbor)
 [![codecov](https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4)](https://codecov.io/gh/fxamacker/cbor)
@@ -25,7 +25,7 @@ New struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data lik
 
 <hr>
 
-[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/cbor_easy_api.png)](#usage)
+[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v1.4.0/cbor_easy_api.png)](#usage)
 
 <hr>
 
@@ -37,15 +37,15 @@ Comparisons are between this newer library and a well-known library that had 1,0
 
 __This library is safer__.  Small malicious CBOR messages are rejected quickly before they exhaust system resources.
 
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.3.4/cbor_safety_comparison.png "CBOR library safety comparison")
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.4.0/cbor_safety_comparison.png "CBOR library safety comparison")
 
 __This library is smaller__. Programs like senmlCat can be 4 MB smaller by switching to this library.  Programs using more complex CBOR data types can be 9.2 MB smaller.
 
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.3.4/cbor_size_comparison.png "CBOR library and program size comparison chart")
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.4.0/cbor_size_comparison.png "CBOR library and program size comparison chart")
 
 __This library is faster__ for encoding and decoding CBOR Web Token (CWT).  However, speed is only one factor and it can vary depending on data types and sizes.  Unlike the other library, this one doesn't use Go's ```unsafe``` package or code gen.
 
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.3.4/cbor_speed_comparison.png "CBOR library speed comparison chart")
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.4.0/cbor_speed_comparison.png "CBOR library speed comparison chart")
 
 The resource intensive `codec.CborHandle` initialization (in the other library) was placed outside the benchmark loop to make sure their library wasn't penalized.
 
@@ -56,17 +56,17 @@ Version 1.x has:
 
 * __Stable API__ – won't make breaking API changes.  
 * __Stable requirements__ – will always support Go v1.12 (unless there's compelling reason).
-* __Passed fuzzing__ – v1.3.4 passed 370+ million execs in coverage-guided fuzzing when it was released.
+* __Passed fuzzing__ – v1.4 passed 532+ million execs in coverage-guided fuzzing at the time of release. And v1.4 will continue fuzzing until it reaches 1+ billion execs (or until a newer release needs fuzzing.)
 
-Each commit passes 145+ unit tests (plus many more subtests). Each release also passes 250+ million execs in coverage-guided fuzzing using 1,000+ CBOR files (corpus). See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
+Each commit passes 375+ tests. Each release also passes 250+ million execs in coverage-guided fuzzing using 1,000+ CBOR files (corpus). See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
 
 Recent activity:
 
-* [x] [Release v1.2](https://github.com/fxamacker/cbor/releases) -- add RawMessage type, Marshaler and Unmarshaler interfaces.
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- faster encoding and decoding.
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- add `toarray` struct tag to simplify using CBOR arrays.
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- add `keyasint` struct tag to simplify using CBOR maps with int keys.
-* [x] [Release v1.3.4](https://github.com/fxamacker/cbor/releases) -- (latest) bugfixes and refactoring.  Limit nested levels to 32 for arrays, maps, tags.
+* [x] [Release v1.3.4](https://github.com/fxamacker/cbor/releases) -- bugfixes and refactoring.  Limit nested levels to 32 for arrays, maps, tags.
+* [x] [Release v1.4](https://github.com/fxamacker/cbor/releases) -- (latest) Deprecate bool encoding options and add int SortMode.  Use float16 to float32 conversion func that had all 65536 results verified to be correct. Fix decoding of float16 subnormal numbers.
 
 Coming soon: support for CBOR tags (major type 6) and new encoding option to shrink floats. After that, options for handling duplicate map keys.
 
@@ -81,7 +81,7 @@ This library is designed to be:
 
 Competing factors are balanced:
 
-* __Speed__ vs __safety__ vs __size__ – to keep size small, avoid code generation. For safety, validate data and avoid Go's `unsafe` pkg.  For speed, use safe optimizations such as caching struct metadata. v1.3 is faster than a well-known library that uses `unsafe` and code gen.
+* __Speed__ vs __safety__ vs __size__ – to keep size small, avoid code generation. For safety, validate data and avoid Go's `unsafe` pkg.  For speed, use safe optimizations such as caching struct metadata. v1.4 is faster than a well-known library that uses `unsafe` and code gen.
 * __Standards compliance__ – CBOR ([RFC 7049](https://tools.ietf.org/html/rfc7049)) with minor [limitations](#limitations).  Encoding modes include default (no sorting), [RFC 7049 canonical](https://tools.ietf.org/html/rfc7049#section-3.9), and [CTAP2 canonical](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form). Decoding also checks for all required malformed data mentioned in latest RFC 7049bis.  See [Standards](#standards) section.
 
 All releases prioritize reliability to avoid crashes on decoding malformed CBOR data. See [Fuzzing and Coverage](#fuzzing-and-code-coverage).
@@ -150,9 +150,9 @@ Like Go's `encoding/json`, data validation checks the entire message to prevent 
 
 ## Fuzzing and Code Coverage
 
-__Over 145 unit tests (plus many more subtests)__ must pass before tagging a release.  They include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and over 87 tests with malformed data based on RFC 7049bis.
+__Over 375 tests__ must pass before tagging a release.  They include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and over 87 tests with malformed data based on RFC 7049bis.
 
-__Code coverage__ must not fall below 95% when tagging a release.  Code coverage is 97.8% (`go test -cover`) for cbor v1.3 which is among the highest for libraries (in Go) of this type.
+__Code coverage__ must not fall below 95% when tagging a release.  Code coverage is 97.8% (`go test -cover`) for cbor v1.4 which is among the highest for libraries (in Go) of this type.
 
 __Coverage-guided fuzzing__ must pass 250+ million execs before tagging a release.  E.g. v1.3.2 was tagged when it reached 364.9 million execs and continued fuzzing (4+ billion execs) with [fxamacker/cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  Default corpus has:
 
@@ -413,7 +413,7 @@ Please read the license for additional disclaimers and terms.
 
 ## Special Thanks
 * Carsten Bormann for RFC 7049 (CBOR), his fast confirmation to my RFC 7049 errata, approving my pull request to 7049bis, and his patience when I misread a line in 7049bis.
-* Montgomery Edwards⁴⁴⁸ for updating the README.md, creating comparison charts, and filing many helpful issues.
+* Montgomery Edwards⁴⁴⁸ for contributing float16 conversion code, updating the README.md, creating comparison charts & slideshow, and filing many helpful issues.
 * Stefan Tatschner for being the 1st to discover my CBOR library, filing issues #1 and #2, and recommending this library.
 * Yawning Angel for replacing a library with this one in a big project after an external security audit, and filing issue #5.
 * Jernej Kos for filing issue #11 (add feature similar to json.RawMessage) and his kind words about this library.
