@@ -991,23 +991,44 @@ func fillTextString(t cborType, val []byte, v reflect.Value) error {
 }
 
 func uint16ToFloat64(num uint16) float64 {
-	bits := uint32(num)
+	return float64(math.Float32frombits(f16bitsToF32bits(num)))
+}
 
-	sign := bits >> 15
-	exp := bits >> 10 & 0x1F
-	frac := bits & 0x3FF
+// f16bitsToF32bits returns uint32 (float32 bits) converted from specified uint16.
+func f16bitsToF32bits(in uint16) uint32 {
+	// f16bitsToF32bits was contributed to fxamacker/cbor project by
+	// Montgomery Edwards⁴⁴⁸ (github.com/x448) on Dec 24, 2019.
+	// All 65536 possible float16 to float32 conversions were verified to be correct.
 
-	switch exp {
-	case 0:
-	case 0x1F:
-		exp = 0xFF
-	default:
-		exp = exp - 15 + 127
+	sign := uint32(in&0x8000) << 16 // sign for 32-bit
+	exp := uint32(in&0x7c00) >> 10  // exponenent for 16-bit
+	coef := uint32(in&0x03ff) << 13 // significand for 32-bit
+
+	if exp == 0x1f {
+		if coef == 0 {
+			// infinity
+			return sign | 0x7f800000 | coef
+		}
+		// NaN
+		return sign | 0x7fc00000 | coef
 	}
-	bits = sign<<31 | exp<<23 | frac<<13
 
-	f := math.Float32frombits(bits)
-	return float64(f)
+	if exp == 0 {
+		if coef == 0 {
+			// zero
+			return sign
+		}
+
+		// normalize subnormal numbers
+		exp++
+		for coef&0x7f800000 == 0 {
+			coef <<= 1
+			exp--
+		}
+		coef &= 0x007fffff
+	}
+
+	return sign | ((exp + (0x7f - 0xf)) << 23) | coef
 }
 
 func isImmutableKind(k reflect.Kind) bool {

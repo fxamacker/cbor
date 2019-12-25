@@ -42,21 +42,15 @@ var (
 	typeIntf            = reflect.TypeOf([]interface{}(nil)).Elem()
 )
 
-type unmarshalFloatTest struct {
+type unmarshalTest struct {
 	cborData            []byte
 	emptyInterfaceValue interface{}
-	diff                float64
 	values              []interface{}
 	wrongTypes          []reflect.Type
 }
 
 // CBOR test data are from https://tools.ietf.org/html/rfc7049#appendix-A.
-var unmarshalTests = []struct {
-	cborData            []byte
-	emptyInterfaceValue interface{}
-	values              []interface{}
-	wrongTypes          []reflect.Type
-}{
+var unmarshalTests = []unmarshalTest{
 	// positive integer
 	{
 		hexDecode("00"),
@@ -471,163 +465,201 @@ var unmarshalTests = []struct {
 	},
 }
 
+type unmarshalFloatTest struct {
+	cborData            []byte
+	emptyInterfaceValue interface{}
+	values              []interface{}
+	wrongTypes          []reflect.Type
+	equalityThreshold   float64 // Not used for +inf, -inf, and NaN.
+}
+
 // CBOR test data are from https://tools.ietf.org/html/rfc7049#appendix-A.
 var unmarshalFloatTests = []unmarshalFloatTest{
 	// float16
 	{
 		hexDecode("f90000"),
 		float64(0.0),
-		float64(0.0),
 		[]interface{}{float32(0.0), float64(0.0)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
 	},
 	{
 		hexDecode("f98000"),
 		float64(-0.0),
-		float64(0.0),
 		[]interface{}{float32(-0.0), float64(-0.0)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
 	},
 	{
 		hexDecode("f93c00"),
 		float64(1.0),
-		float64(0.0),
 		[]interface{}{float32(1.0), float64(1.0)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
 	},
 	{
 		hexDecode("f93e00"),
 		float64(1.5),
-		float64(0.00001),
 		[]interface{}{float32(1.5), float64(1.5)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
 	},
 	{
 		hexDecode("f97bff"),
 		float64(65504.0),
-		float64(0.0),
 		[]interface{}{float32(65504.0), float64(65504.0)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
 	},
 	{
 		hexDecode("f90001"),
 		float64(5.960464477539063e-08),
-		float64(0.00001),
 		[]interface{}{float32(5.960464477539063e-08), float64(5.960464477539063e-08)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		1e-16,
 	},
 	{
 		hexDecode("f90400"),
 		float64(6.103515625e-05),
-		float64(0.00001),
 		[]interface{}{float32(6.103515625e-05), float64(6.103515625e-05)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		1e-16,
 	},
 	{
 		hexDecode("f9c400"),
 		float64(-4.0),
-		float64(0.0),
 		[]interface{}{float32(-4.0), float64(-4.0)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
 	},
 	{
 		hexDecode("f97c00"),
 		math.Inf(1),
-		float64(0),
 		[]interface{}{float32(math.Float32frombits(0x7f800000)), float64(math.Inf(1))},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
 	},
 	{
 		hexDecode("f97e00"),
 		math.NaN(),
-		float64(0),
 		[]interface{}{float32(math.Float32frombits(0x7fc00000)), float64(math.NaN())},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
 	},
 	{
 		hexDecode("f9fc00"),
 		math.Inf(-1),
-		float64(0),
 		[]interface{}{float32(math.Float32frombits(0xff800000)), float64(math.Inf(-1))},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
 	},
 	// float32
 	{
 		hexDecode("fa47c35000"),
 		float64(100000.0),
-		float64(0.0),
 		[]interface{}{float32(100000.0), float64(100000.0)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
 	},
 	{
 		hexDecode("fa7f7fffff"),
 		float64(3.4028234663852886e+38),
-		float64(0.00001),
 		[]interface{}{float32(3.4028234663852886e+38), float64(3.4028234663852886e+38)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		1e-9,
 	},
 	{
 		hexDecode("fa7f800000"),
 		math.Inf(1),
-		float64(0),
 		[]interface{}{float32(math.Float32frombits(0x7f800000)), float64(math.Inf(1))},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
 	},
 	{
 		hexDecode("fa7fc00000"),
 		math.NaN(),
-		float64(0),
 		[]interface{}{float32(math.Float32frombits(0x7fc00000)), float64(math.NaN())},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt}},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
+	},
 	{
 		hexDecode("faff800000"),
 		math.Inf(-1),
-		float64(0),
 		[]interface{}{float32(math.Float32frombits(0xff800000)), float64(math.Inf(-1))},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
 	},
 	// float64
 	{
 		hexDecode("fb3ff199999999999a"),
 		float64(1.1),
-		float64(0.00001),
 		[]interface{}{float32(1.1), float64(1.1)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		1e-9,
 	},
 	{
 		hexDecode("fb7e37e43c8800759c"),
 		float64(1.0e+300),
-		float64(0.00001),
 		[]interface{}{float64(1.0e+300)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		1e-9,
 	},
 	{
 		hexDecode("fbc010666666666666"),
 		float64(-4.1),
-		float64(0.00001),
 		[]interface{}{float32(-4.1), float64(-4.1)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		1e-9,
 	},
 	{
 		hexDecode("fb7ff0000000000000"),
 		math.Inf(1),
-		float64(0),
 		[]interface{}{float32(math.Float32frombits(0x7f800000)), float64(math.Inf(1))},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
 	},
 	{
 		hexDecode("fb7ff8000000000000"),
 		math.NaN(),
-		float64(0),
 		[]interface{}{float32(math.Float32frombits(0x7fc00000)), float64(math.NaN())},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
 	},
 	{
 		hexDecode("fbfff0000000000000"),
 		math.Inf(-1),
-		float64(0),
 		[]interface{}{float32(math.Float32frombits(0xff800000)), float64(math.Inf(-1))},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
+	},
+	// More float16 test data from "Half-precision"
+	{
+		hexDecode("f903ff"),
+		float64(0.000060976),
+		[]interface{}{float32(0.000060976), float64(0.000060976)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		1e-9,
+	},
+	{
+		hexDecode("f93bff"),
+		float64(0.999511719),
+		[]interface{}{float32(0.999511719), float64(0.999511719)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		1e-9,
+	},
+	{
+		hexDecode("f93c01"),
+		float64(1.000976563),
+		[]interface{}{float32(1.000976563), float64(1.000976563)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		1e-9,
+	},
+	{
+		hexDecode("f93555"),
+		float64(0.333251953125),
+		[]interface{}{float32(0.333251953125), float64(0.333251953125)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		1e-9,
 	},
 }
 
@@ -686,13 +718,24 @@ func TestUnmarshalFloat(t *testing.T) {
 		var v interface{}
 		if err := cbor.Unmarshal(tc.cborData, &v); err != nil {
 			t.Errorf("Unmarshal(0x%0x) returns error %v", tc.cborData, err)
+		} else if f, ok := v.(float64); !ok {
+			t.Errorf("Unmarshal(0x%0x) returns value of type %T, want float64", tc.cborData, f)
 		} else {
-			if f, ok := v.(float64); !ok {
-				t.Errorf("Unmarshal(0x%0x) returns value of type %T, want float64", tc.cborData, f)
-			} else {
-				if math.Abs(f-tc.emptyInterfaceValue.(float64)) > tc.diff {
-					t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+			wantf := tc.emptyInterfaceValue.(float64)
+			if math.IsNaN(wantf) {
+				if !math.IsNaN(f) {
+					t.Errorf("Unmarshal(0x%0x) = %f, want Nan", tc.cborData, f)
 				}
+			} else if math.IsInf(wantf, 1) {
+				if !math.IsInf(f, 1) {
+					t.Errorf("Unmarshal(0x%0x) = %f, want +Inf", tc.cborData, f)
+				}
+			} else if math.IsInf(wantf, -1) {
+				if !math.IsInf(f, -1) {
+					t.Errorf("Unmarshal(0x%0x) = %f, want -Inf", tc.cborData, f)
+				}
+			} else if math.Abs(f-wantf) > tc.equalityThreshold {
+				t.Errorf("Unmarshal(0x%0x) = %.18f, want %.18f, diff %.18f > threshold %.18f", tc.cborData, f, wantf, math.Abs(f-wantf), tc.equalityThreshold)
 			}
 		}
 		// Test unmarshalling CBOR into RawMessage.
@@ -712,15 +755,39 @@ func TestUnmarshalFloat(t *testing.T) {
 				switch reflect.TypeOf(value).Kind() {
 				case reflect.Float32:
 					f := v.Elem().Interface().(float32)
-					diff := f - value.(float32)
-					if math.Abs(float64(diff)) > tc.diff {
-						t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), value, value)
+					wantf := value.(float32)
+					if math.IsNaN(float64(wantf)) {
+						if !math.IsNaN(float64(f)) {
+							t.Errorf("Unmarshal(0x%0x) = %f, want Nan", tc.cborData, f)
+						}
+					} else if math.IsInf(float64(wantf), 1) {
+						if !math.IsInf(float64(f), 1) {
+							t.Errorf("Unmarshal(0x%0x) = %f, want +Inf", tc.cborData, f)
+						}
+					} else if math.IsInf(float64(wantf), -1) {
+						if !math.IsInf(float64(f), -1) {
+							t.Errorf("Unmarshal(0x%0x) = %f, want -Inf", tc.cborData, f)
+						}
+					} else if math.Abs(float64(f-wantf)) > tc.equalityThreshold {
+						t.Errorf("Unmarshal(0x%0x) = %.18f, want %.18f, diff %.18f > threshold %.18f", tc.cborData, f, wantf, math.Abs(float64(f-wantf)), tc.equalityThreshold)
 					}
 				case reflect.Float64:
 					f := v.Elem().Interface().(float64)
-					diff := f - value.(float64)
-					if math.Abs(float64(diff)) > tc.diff {
-						t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), value, value)
+					wantf := value.(float64)
+					if math.IsNaN(wantf) {
+						if !math.IsNaN(f) {
+							t.Errorf("Unmarshal(0x%0x) = %f, want Nan", tc.cborData, f)
+						}
+					} else if math.IsInf(wantf, 1) {
+						if !math.IsInf(f, 1) {
+							t.Errorf("Unmarshal(0x%0x) = %f, want +Inf", tc.cborData, f)
+						}
+					} else if math.IsInf(wantf, -1) {
+						if !math.IsInf(f, -1) {
+							t.Errorf("Unmarshal(0x%0x) = %f, want -Inf", tc.cborData, f)
+						}
+					} else if math.Abs(f-wantf) > tc.equalityThreshold {
+						t.Errorf("Unmarshal(0x%0x) = %.18f, want %.18f, diff %.18f > threshold %.18f", tc.cborData, f, wantf, math.Abs(f-wantf), tc.equalityThreshold)
 					}
 				}
 			}
