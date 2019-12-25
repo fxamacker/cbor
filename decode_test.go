@@ -49,8 +49,8 @@ type unmarshalTest struct {
 	wrongTypes          []reflect.Type
 }
 
-// CBOR test data are from https://tools.ietf.org/html/rfc7049#appendix-A.
 var unmarshalTests = []unmarshalTest{
+	// CBOR test data are from https://tools.ietf.org/html/rfc7049#appendix-A.
 	// positive integer
 	{
 		hexDecode("00"),
@@ -473,8 +473,11 @@ type unmarshalFloatTest struct {
 	equalityThreshold   float64 // Not used for +inf, -inf, and NaN.
 }
 
-// CBOR test data are from https://tools.ietf.org/html/rfc7049#appendix-A.
+// unmarshalFloatTests includes test values for float16, float32, and float64.
+// Note: the function for float16 to float32 conversion was tested with all
+// 65536 values, which is too many to include here.
 var unmarshalFloatTests = []unmarshalFloatTest{
+	// CBOR test data are from https://tools.ietf.org/html/rfc7049#appendix-A.
 	// float16
 	{
 		hexDecode("f90000"),
@@ -512,7 +515,7 @@ var unmarshalFloatTests = []unmarshalFloatTest{
 		0.0,
 	},
 	{
-		hexDecode("f90001"),
+		hexDecode("f90001"), // float16 subnormal value
 		float64(5.960464477539063e-08),
 		[]interface{}{float32(5.960464477539063e-08), float64(5.960464477539063e-08)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
@@ -632,7 +635,8 @@ var unmarshalFloatTests = []unmarshalFloatTest{
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 		0.0,
 	},
-	// More float16 test data from "Half-precision"
+
+	// float16 test data from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
 	{
 		hexDecode("f903ff"),
 		float64(0.000060976),
