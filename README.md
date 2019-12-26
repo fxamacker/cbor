@@ -259,7 +259,7 @@ __Encoding CWT (CBOR Web Token)__ using `keyasint` and `toarray` struct tags:
 
 var v signedCWT
 ...
-if data, err := cbor.Marshal(v); err != nil {
+if data, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
 	return err
 }
 ```
@@ -301,7 +301,7 @@ __Encoding SenML__ using `keyasint` struct tag:
 
 var v []SenMLRecord
 ...
-if data, err := cbor.Marshal(v); err != nil {
+if data, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
 	return err
 }
 ```
