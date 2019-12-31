@@ -13,7 +13,7 @@ __What is CBOR__?  [CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/htm
 
 __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: small, fast, safe and easy. 
 
-* __Small__ and self-contained.  Same programs are 4-9 MB smaller by switching to this library.  There are no external dependencies and no code gen.   
+* __Small__.  Same programs are 4-9 MB smaller by switching to this library.  No code gen and the only imported pkg is [cbor-go/float16](https://github.com/cbor-go/float16) which is maintained by the same team.
 
 * __Fast__. v1.3 became faster than a well-known library that uses `unsafe` optimizations and code gen.  Faster libraries will always exist, but speed is only one factor.  This library doesn't use `unsafe` optimizations or code gen.  
 
