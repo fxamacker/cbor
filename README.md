@@ -13,7 +13,7 @@ __What is CBOR__?  [CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/htm
 
 __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: small, fast, safe and easy. 
 
-* __Small__ and self-contained.  Same programs are 4-9 MB smaller by switching to this library.  There are no external dependencies and no code gen.   
+* __Small__.  Same programs are 4-9 MB smaller by switching to this library.  No code gen and the only imported pkg is [cbor-go/float16](https://github.com/cbor-go/float16) which is maintained by the same team.
 
 * __Fast__. v1.3 became faster than a well-known library that uses `unsafe` optimizations and code gen.  Faster libraries will always exist, but speed is only one factor.  This library doesn't use `unsafe` optimizations or code gen.  
 
@@ -68,7 +68,7 @@ Recent activity:
 * [x] [Release v1.3.4](https://github.com/fxamacker/cbor/releases) -- bugfixes and refactoring.  Limit nested levels to 32 for arrays, maps, tags.
 * [x] [Release v1.4](https://github.com/fxamacker/cbor/releases) -- (latest) Deprecate bool encoding options and add int SortMode.  Use float16 to float32 conversion func that had all 65536 results verified to be correct. Fix decoding of float16 subnormal numbers.
 
-Coming soon: support for CBOR tags (major type 6) and new encoding option to shrink floats. After that, options for handling duplicate map keys.
+Coming soon: support for CBOR tags (major type 6). After that, options for handling duplicate map keys.
 
 ## Design Goals 
 This library is designed to be a generic CBOR encoder and decoder.  It was initially created for a [WebAuthn (FIDO2) server library](https://github.com/fxamacker/webauthn), because existing CBOR libraries (in Go) didn't meet certain criteria in 2019.
@@ -76,7 +76,7 @@ This library is designed to be a generic CBOR encoder and decoder.  It was initi
 This library is designed to be:
 
 * __Easy__ – API is like `encoding/json` plus `keyasint` and `toarray` struct tags.
-* __Small and self-contained__ – no external dependencies and no code gen.  Programs in cisco/senml are 4 MB smaller by switching to this library. In extreme cases programs can be smaller by 9+ MB. See [comparisons](#comparisons).
+* __Small__ – Programs in cisco/senml are 4 MB smaller by switching to this library. In extreme cases programs can be smaller by 9+ MB. No code gen and the only imported pkg is [cbor-go/float16](https://github.com/cbor-go/float16) which is maintained by the same team.  See [comparisons](#comparisons).
 * __Safe and reliable__ – no `unsafe` pkg, coverage >95%, coverage-guided fuzzing, and data validation to avoid crashes on malformed or malicious data.  See [comparisons](#comparisons).
 
 Competing factors are balanced:
@@ -98,7 +98,8 @@ Features not in Go's standard library are usually not added.  However, the __`to
 * Support "cbor" and "json" keys in Go's struct tags. If both are specified, then "cbor" is used.
 * `toarray` struct tag allows named struct fields for elements of CBOR arrays.
 * `keyasint` struct tag allows named struct fields for elements of CBOR maps with int keys.
-* Support 3 encoding modes: default (unsorted), Canonical, CTAP2Canonical.
+* Encoder has 3 sorting modes: default (unsorted), Canonical, CTAP2Canonical.
+* Encoder has 4 floating-point modes: default (no conversion), ShortestFloat16, ShortestFloat32, ShortestFloat64.
 * Support `encoding.BinaryMarshaler` and `encoding.BinaryUnmarshaler` interfaces.
 * Support `cbor.RawMessage` which can delay CBOR decoding or precompute CBOR encoding.
 * Support `cbor.Marshaler` and `cbor.Unmarshaler` interfaces to allow user-defined types to have custom CBOR encoding and decoding.
@@ -111,20 +112,27 @@ Features not in Go's standard library are usually not added.  However, the __`to
 * Decoder uses case-insensitive field name match when decoding to structs. 
 * Both encoder and decoder correctly handles nil slice, map, pointer, and interface values.
 
-Coming soon: support for CBOR tags (major type 6) and new encoding option to shrink floats.  After that, options for handling duplicate map keys.
+Coming soon: support for CBOR tags (major type 6).  After that, options for handling duplicate map keys.
 
 ## Standards
 This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049) with minor [limitations](#limitations).
 
-Encoder has 3 modes:
+Encoder has options that can be combined to provide different encoding modes.
+
+Encoder has 3 options for sorting:
 
 * default: no sorting, so it's the fastest mode.
 * Canonical: [(RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9) uses length-first map key ordering.
 * CTAP2Canonical: [(CTAP2 Canonical CBOR)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form) uses bytewise lexicographic order for sorting keys.
 
-CTAP2 Canonical CBOR encoding is used by [CTAP](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html) and [WebAuthn](https://www.w3.org/TR/webauthn/) in [FIDO2](https://fidoalliance.org/fido2/) framework.
+Encoder has 4 options for encoding float-point data:
 
-All three encoding modes in this library use smallest form of CBOR integer that preserves data.  New encoding mode(s) will be added to do the same for floating point numbers in [milestone v2.0](https://github.com/fxamacker/cbor/milestone/3).
+* default: no conversion, so it's the fastest mode.
+* ShortestFloat16: uses float16 as the shortest form that preserves value.
+* ShortestFloat32: uses float32 as the shortest form that preserves value.
+* ShortestFloat64: uses float64 as the shortest form (this can needlessly increase size of CBOR encoded data).
+
+For integer data types in Go, the encoder always uses the smallest form of CBOR integer that preserves data.  
 
 Decoder checks for all required well-formedness errors described in the latest RFC 7049bis, including all "subkinds" of syntax errors and too little data.
 
