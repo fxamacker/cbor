@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/cbor-go/float16"
 )
 
 // Marshal returns the CBOR encoding of v.
@@ -146,10 +148,48 @@ func (sm SortMode) valid() bool {
 	return sm < maxSortMode
 }
 
+// ShortestFloatMode specifies which floating-point format should
+// be used as the shortest possible format for CBOR encoding of
+// floating-point values.
+type ShortestFloatMode int
+
+const (
+	// ShortestFloatNone makes float values encode without any conversion.
+	// This is the default for ShortestFloatMode in v1.
+	// E.g. a float32 in Go will encode to CBOR float32.  And
+	// a float64 in Go will encode to CBOR float64.
+	ShortestFloatNone ShortestFloatMode = iota
+
+	// ShortestFloat16 specifies float16 as the shortest form that preserves value.
+	// E.g. if float64 can convert to float32 while perserving value, then
+	// encoding will also try to convert float32 to float16.  So a float64 might
+	// encode as CBOR float64, float32 or float16 depending on the value.
+	ShortestFloat16
+
+	// ShortestFloat32 specifies float32 as the shortest form that preserves value.
+	// E.g. if float64 can convert to float32 while perserving value, then
+	// it will encode as CBOR float32 without any further conversion attempts.
+	ShortestFloat32
+
+	// ShortestFloat64 specifies float64 as the shortest form that preserves value.
+	// Both float32 and float64 in Go will encode to CBOR float64.
+	// WARNING: this option can needlessly increase size of CBOR encoded data.
+	ShortestFloat64
+
+	maxShortestFloat
+)
+
+func (sfm ShortestFloatMode) valid() bool {
+	return sfm < maxShortestFloat
+}
+
 // EncOptions specifies encoding options.
 type EncOptions struct {
 	// Sort specifies sorting order.
 	Sort SortMode
+
+	// ShortestFloat specifies the shortest floating-point encoding that preserves the value being encoded.
+	ShortestFloat ShortestFloatMode
 
 	// Canonical causes map and struct to be encoded in a predictable sequence
 	// of bytes by sorting map keys or struct fields according to canonical rules:
@@ -219,6 +259,9 @@ func (e *encodeState) marshal(v interface{}, opts EncOptions) error {
 		}
 		opts.Sort = SortCTAP2
 	}
+	if !opts.ShortestFloat.valid() {
+		return errors.New("cbor: invalid ShortestFloatMode " + strconv.Itoa(int(opts.ShortestFloat)))
+	}
 	_, err := encode(e, reflect.ValueOf(v), opts)
 	return err
 }
@@ -279,17 +322,30 @@ func encodeFloat(e *encodeState, v reflect.Value, opts EncOptions) (int, error) 
 	if math.IsInf(f64, -1) {
 		return e.Write(cborNegativeInfinity)
 	}
-	if v.Kind() == reflect.Float32 {
-		f32 := float32(f64)
-		e.scratch[0] = byte(cborTypePrimitives) | byte(26)
-		binary.BigEndian.PutUint32(e.scratch[1:], math.Float32bits(f32))
-		e.Write(e.scratch[:5])
-		return 5, nil
+
+	fopt := opts.ShortestFloat
+	if fopt == ShortestFloat64 || (v.Kind() == reflect.Float64 && (fopt == ShortestFloatNone || overflowFloat32(f64))) {
+		// Encode float64
+		e.scratch[0] = byte(cborTypePrimitives) | byte(27)
+		binary.BigEndian.PutUint64(e.scratch[1:], math.Float64bits(f64))
+		return e.Write(e.scratch[:9])
 	}
-	e.scratch[0] = byte(cborTypePrimitives) | byte(27)
-	binary.BigEndian.PutUint64(e.scratch[1:], math.Float64bits(f64))
-	e.Write(e.scratch[:9])
-	return 9, nil
+
+	f32 := float32(f64)
+	if fopt == ShortestFloat16 {
+		f16 := float16.Fromfloat32(f32)
+		if f16.Float32() == f32 {
+			// Encode float16
+			e.scratch[0] = byte(cborTypePrimitives) | byte(25)
+			binary.BigEndian.PutUint16(e.scratch[1:], uint16(f16))
+			return e.Write(e.scratch[:3])
+		}
+	}
+
+	// Encode float32
+	e.scratch[0] = byte(cborTypePrimitives) | byte(26)
+	binary.BigEndian.PutUint32(e.scratch[1:], math.Float32bits(f32))
+	return e.Write(e.scratch[:5])
 }
 
 func encodeByteString(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
@@ -755,4 +811,9 @@ func isEmptyValue(v reflect.Value) bool {
 		return v.IsNil()
 	}
 	return false
+}
+
+func overflowFloat32(f64 float64) bool {
+	f32 := float32(f64)
+	return float64(f32) != f64
 }

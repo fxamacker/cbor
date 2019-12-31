@@ -1937,3 +1937,252 @@ func TestNewTypeWithBuiltinUnderlyingType(t *testing.T) {
 		})
 	}
 }
+
+func TestShortestFloat16(t *testing.T) {
+	testCases := []struct {
+		name         string
+		f64          float64
+		wantCborData []byte
+	}{
+		// Data from RFC 7049 appendix A
+		{"Shrink to float16", 0.0, hexDecode("f90000")},
+		{"Shrink to float16", 1.0, hexDecode("f93c00")},
+		{"Shrink to float16", 1.5, hexDecode("f93e00")},
+		{"Shrink to float16", 65504.0, hexDecode("f97bff")},
+		{"Shrink to float16", 5.960464477539063e-08, hexDecode("f90001")},
+		{"Shrink to float16", 6.103515625e-05, hexDecode("f90400")},
+		{"Shrink to float16", -4.0, hexDecode("f9c400")},
+		// Data from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
+		{"Shrink to float16", 0.333251953125, hexDecode("f93555")},
+		// Data from 7049bis 4.2.1 and 5.5
+		{"Shrink to float16", 5.5, hexDecode("f94580")},
+		// Data from RFC 7049 appendix A
+		{"Shrink to float32", 100000.0, hexDecode("fa47c35000")},
+		{"Shrink to float32", 3.4028234663852886e+38, hexDecode("fa7f7fffff")},
+		// Data from 7049bis 4.2.1 and 5.5
+		{"Shrink to float32", 5555.5, hexDecode("fa45ad9c00")},
+		{"Shrink to float32", 1000000.5, hexDecode("fa49742408")},
+		// Data from RFC 7049 appendix A
+		{"Shrink to float64", 1.0e+300, hexDecode("fb7e37e43c8800759c")},
+	}
+	opts := cbor.EncOptions{ShortestFloat: cbor.ShortestFloat16}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := cbor.Marshal(tc.f64, opts)
+			if err != nil {
+				t.Errorf("Marshal(%v) returns error %s", tc.f64, err)
+			} else if !bytes.Equal(b, tc.wantCborData) {
+				t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", tc.f64, b, tc.wantCborData)
+			}
+			var f64 float64
+			if err = cbor.Unmarshal(b, &f64); err != nil {
+				t.Errorf("Unmarshal(0x%0x) returns error %s", b, err)
+			} else if f64 != tc.f64 {
+				t.Errorf("Unmarshal(0x%0x) = %f, want %f", b, f64, tc.f64)
+			}
+		})
+	}
+}
+
+func TestShortestFloat32(t *testing.T) {
+	testCases := []struct {
+		name         string
+		f64          float64
+		wantCborData []byte
+	}{
+		// Data from RFC 7049 appendix A
+		{"Shrink to float32", 0.0, hexDecode("fa00000000")},
+		{"Shrink to float32", 1.0, hexDecode("fa3f800000")},
+		{"Shrink to float32", 1.5, hexDecode("fa3fc00000")},
+		{"Shrink to float32", 65504.0, hexDecode("fa477fe000")},
+		{"Shrink to float32", 5.960464477539063e-08, hexDecode("fa33800000")},
+		{"Shrink to float32", 6.103515625e-05, hexDecode("fa38800000")},
+		{"Shrink to float32", -4.0, hexDecode("fac0800000")},
+		// Data from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
+		{"Shrink to float32", 0.333251953125, hexDecode("fa3eaaa000")},
+		// Data from 7049bis 4.2.1 and 5.5
+		{"Shrink to float32", 5.5, hexDecode("fa40b00000")},
+		// Data from RFC 7049 appendix A
+		{"Shrink to float32", 100000.0, hexDecode("fa47c35000")},
+		{"Shrink to float32", 3.4028234663852886e+38, hexDecode("fa7f7fffff")},
+		// Data from 7049bis 4.2.1 and 5.5
+		{"Shrink to float32", 5555.5, hexDecode("fa45ad9c00")},
+		{"Shrink to float32", 1000000.5, hexDecode("fa49742408")},
+		// Data from RFC 7049 appendix A
+		{"Shrink to float64", 1.0e+300, hexDecode("fb7e37e43c8800759c")},
+	}
+	opts := cbor.EncOptions{ShortestFloat: cbor.ShortestFloat32}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := cbor.Marshal(tc.f64, opts)
+			if err != nil {
+				t.Errorf("Marshal(%v) returns error %s", tc.f64, err)
+			} else if !bytes.Equal(b, tc.wantCborData) {
+				t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", tc.f64, b, tc.wantCborData)
+			}
+			var f64 float64
+			if err = cbor.Unmarshal(b, &f64); err != nil {
+				t.Errorf("Unmarshal(0x%0x) returns error %s", b, err)
+			} else if f64 != tc.f64 {
+				t.Errorf("Unmarshal(0x%0x) = %f, want %f", b, f64, tc.f64)
+			}
+		})
+	}
+}
+
+func TestShortestFloat64(t *testing.T) {
+	testCases := []struct {
+		name         string
+		f64          float64
+		wantCborData []byte
+	}{
+		// Data from RFC 7049 appendix A
+		{"Shrink to float64", 0.0, hexDecode("fb0000000000000000")},
+		{"Shrink to float64", 1.0, hexDecode("fb3ff0000000000000")},
+		{"Shrink to float64", 1.5, hexDecode("fb3ff8000000000000")},
+		{"Shrink to float64", 65504.0, hexDecode("fb40effc0000000000")},
+		{"Shrink to float64", 5.960464477539063e-08, hexDecode("fb3e70000000000000")},
+		{"Shrink to float64", 6.103515625e-05, hexDecode("fb3f10000000000000")},
+		{"Shrink to float64", -4.0, hexDecode("fbc010000000000000")},
+		// Data from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
+		{"Shrink to float64", 0.333251953125, hexDecode("fb3fd5540000000000")},
+		// Data from 7049bis 4.2.1 and 5.5
+		{"Shrink to float64", 5.5, hexDecode("fb4016000000000000")},
+		// Data from RFC 7049 appendix A
+		{"Shrink to float64", 100000.0, hexDecode("fb40f86a0000000000")},
+		{"Shrink to float64", 3.4028234663852886e+38, hexDecode("fb47efffffe0000000")},
+		// Data from 7049bis 4.2.1 and 5.5
+		{"Shrink to float64", 5555.5, hexDecode("fb40b5b38000000000")},
+		{"Shrink to float64", 1000000.5, hexDecode("fb412e848100000000")},
+		// Data from RFC 7049 appendix A
+		{"Shrink to float64", 1.0e+300, hexDecode("fb7e37e43c8800759c")},
+	}
+	opts := cbor.EncOptions{ShortestFloat: cbor.ShortestFloat64}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := cbor.Marshal(tc.f64, opts)
+			if err != nil {
+				t.Errorf("Marshal(%v) returns error %s", tc.f64, err)
+			} else if !bytes.Equal(b, tc.wantCborData) {
+				t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", tc.f64, b, tc.wantCborData)
+			}
+			var f64 float64
+			if err = cbor.Unmarshal(b, &f64); err != nil {
+				t.Errorf("Unmarshal(0x%0x) returns error %s", b, err)
+			} else if f64 != tc.f64 {
+				t.Errorf("Unmarshal(0x%0x) = %f, want %f", b, f64, tc.f64)
+			}
+		})
+	}
+}
+
+func TestShortestFloatNone(t *testing.T) {
+	testCases := []struct {
+		name         string
+		f            interface{}
+		wantCborData []byte
+	}{
+		// Data from RFC 7049 appendix A
+		{"float32", float32(0.0), hexDecode("fa00000000")},
+		{"float64", float64(0.0), hexDecode("fb0000000000000000")},
+		{"float32", float32(1.0), hexDecode("fa3f800000")},
+		{"float64", float64(1.0), hexDecode("fb3ff0000000000000")},
+		{"float32", float32(1.5), hexDecode("fa3fc00000")},
+		{"float64", float64(1.5), hexDecode("fb3ff8000000000000")},
+		{"float32", float32(65504.0), hexDecode("fa477fe000")},
+		{"float64", float64(65504.0), hexDecode("fb40effc0000000000")},
+		{"float32", float32(5.960464477539063e-08), hexDecode("fa33800000")},
+		{"float64", float64(5.960464477539063e-08), hexDecode("fb3e70000000000000")},
+		{"float32", float32(6.103515625e-05), hexDecode("fa38800000")},
+		{"float64", float64(6.103515625e-05), hexDecode("fb3f10000000000000")},
+		{"float32", float32(-4.0), hexDecode("fac0800000")},
+		{"float64", float64(-4.0), hexDecode("fbc010000000000000")},
+		// Data from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
+		{"float32", float32(0.333251953125), hexDecode("fa3eaaa000")},
+		{"float64", float64(0.333251953125), hexDecode("fb3fd5540000000000")},
+		// Data from 7049bis 4.2.1 and 5.5
+		{"float32", float32(5.5), hexDecode("fa40b00000")},
+		{"float64", float64(5.5), hexDecode("fb4016000000000000")},
+		// Data from RFC 7049 appendix A
+		{"float32", float32(100000.0), hexDecode("fa47c35000")},
+		{"float64", float64(100000.0), hexDecode("fb40f86a0000000000")},
+		{"float32", float32(3.4028234663852886e+38), hexDecode("fa7f7fffff")},
+		{"float64", float64(3.4028234663852886e+38), hexDecode("fb47efffffe0000000")},
+		// Data from 7049bis 4.2.1 and 5.5
+		{"float32", float32(5555.5), hexDecode("fa45ad9c00")},
+		{"float64", float64(5555.5), hexDecode("fb40b5b38000000000")},
+		{"float32", float32(1000000.5), hexDecode("fa49742408")},
+		{"float64", float64(1000000.5), hexDecode("fb412e848100000000")},
+		{"float64", float64(1.0e+300), hexDecode("fb7e37e43c8800759c")},
+	}
+	opts := cbor.EncOptions{ShortestFloat: cbor.ShortestFloatNone}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := cbor.Marshal(tc.f, opts)
+			if err != nil {
+				t.Errorf("Marshal(%v) returns error %s", tc.f, err)
+			} else if !bytes.Equal(b, tc.wantCborData) {
+				t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", tc.f, b, tc.wantCborData)
+			}
+			if reflect.ValueOf(tc.f).Kind() == reflect.Float32 {
+				var f32 float32
+				if err = cbor.Unmarshal(b, &f32); err != nil {
+					t.Errorf("Unmarshal(0x%0x) returns error %s", b, err)
+				} else if f32 != tc.f {
+					t.Errorf("Unmarshal(0x%0x) = %f, want %f", b, f32, tc.f)
+				}
+			} else {
+				var f64 float64
+				if err = cbor.Unmarshal(b, &f64); err != nil {
+					t.Errorf("Unmarshal(0x%0x) returns error %s", b, err)
+				} else if f64 != tc.f {
+					t.Errorf("Unmarshal(0x%0x) = %f, want %f", b, f64, tc.f)
+				}
+			}
+		})
+	}
+}
+
+func TestInvalidShortestFloat(t *testing.T) {
+	var i int
+	wantErrorMsg := "cbor: invalid ShortestFloatMode 100"
+	if _, err := cbor.Marshal(i, cbor.EncOptions{ShortestFloat: cbor.ShortestFloatMode(100)}); err == nil {
+		t.Errorf("Marshal() doens't return error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("Marshal() returns error %s, want %s", err, wantErrorMsg)
+	}
+}
+
+func TestMarshalSenML(t *testing.T) {
+	// Data from https://tools.ietf.org/html/rfc8428#section-6
+	// Data contains 13 floating-point numbers.
+	cborData := hexDecode("87a721781b75726e3a6465763a6f773a3130653230373361303130383030363a22fb41d303a15b00106223614120050067766f6c7461676501615602fb405e066666666666a3006763757272656e74062402fb3ff3333333333333a3006763757272656e74062302fb3ff4cccccccccccda3006763757272656e74062202fb3ff6666666666666a3006763757272656e74062102f93e00a3006763757272656e74062002fb3ff999999999999aa3006763757272656e74060002fb3ffb333333333333")
+	testCases := []struct {
+		name string
+		opts cbor.EncOptions
+	}{
+		{"EncOptions ShortestFloatNone", cbor.EncOptions{}},
+		{"EncOptions ShortestFloat16", cbor.EncOptions{ShortestFloat: cbor.ShortestFloat16}},
+		{"EncOptions ShortestFloat32", cbor.EncOptions{ShortestFloat: cbor.ShortestFloat32}},
+		{"EncOptions ShortestFloat64", cbor.EncOptions{ShortestFloat: cbor.ShortestFloat64}},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var v []SenMLRecord
+			if err := cbor.Unmarshal(cborData, &v); err != nil {
+				t.Errorf("Marshal() returns error %s", err)
+			}
+			b, err := cbor.Marshal(v, tc.opts)
+			if err != nil {
+				t.Errorf("Unmarshal() returns error %s ", err)
+			}
+			var v2 []SenMLRecord
+			if err := cbor.Unmarshal(b, &v2); err != nil {
+				t.Errorf("Marshal() returns error %s", err)
+			}
+			if !reflect.DeepEqual(v, v2) {
+				t.Errorf("SenML round-trip failed: v1 %+v, v2 %+v", v, v2)
+			}
+		})
+	}
+}
