@@ -76,8 +76,8 @@ This library is designed to be a generic CBOR encoder and decoder.  It was initi
 This library is designed to be:
 
 * __Easy__ – API is like `encoding/json` plus `keyasint` and `toarray` struct tags.
-* __Small__ – Programs in cisco/senml are 4 MB smaller by switching to this library. In extreme cases programs can be smaller by 9+ MB. No code gen and the only imported pkg is [cbor-go/float16](https://github.com/cbor-go/float16) which is maintained by the same team.  See [comparisons](#comparisons).
-* __Safe and reliable__ – no `unsafe` pkg, coverage >95%, coverage-guided fuzzing, and data validation to avoid crashes on malformed or malicious data.  See [comparisons](#comparisons).
+* __Small__ – Programs in cisco/senml are 4 MB smaller by switching to this library. In extreme cases programs can be smaller by 9+ MB. No code gen and the only imported pkg is [cbor-go/float16](https://github.com/cbor-go/float16) which is maintained by the same team.
+* __Safe and reliable__ – no `unsafe` pkg, coverage >95%, coverage-guided fuzzing, and data validation to avoid crashes on malformed or malicious data.
 
 Competing factors are balanced:
 
@@ -128,9 +128,11 @@ Encoder has 3 options for sorting:
 Encoder has 4 options for encoding float-point data:
 
 * default: no conversion, so it's the fastest mode.
-* ShortestFloat16: uses float16 as the shortest form that preserves value.
+* ShortestFloat16: uses float16 ([IEEE 754 binary16](https://en.wikipedia.org/wiki/Half-precision_floating-point_format)) as the shortest form that preserves value.
 * ShortestFloat32: uses float32 as the shortest form that preserves value.
 * ShortestFloat64: uses float64 as the shortest form (this can needlessly increase size of CBOR encoded data).
+
+Float16 to float32 conversions are lossless conversions.  Float32 to float16 conversions use IEEE 754 default rounding: "Round-to-Nearest RoundTiesToEven".  Float16 uses [cbor-go/float16](https://github.com/cbor-go/float16) maintained by the same team as this library.
 
 For integer data types in Go, the encoder always uses the smallest form of CBOR integer that preserves data.  
 
@@ -421,7 +423,7 @@ Please read the license for additional disclaimers and terms.
 
 ## Special Thanks
 * Carsten Bormann for RFC 7049 (CBOR), his fast confirmation to my RFC 7049 errata, approving my pull request to 7049bis, and his patience when I misread a line in 7049bis.
-* Montgomery Edwards⁴⁴⁸ for contributing float16 conversion code, updating the README.md, creating comparison charts & slideshow, and filing many helpful issues.
+* Montgomery Edwards⁴⁴⁸ for contributing [float16 conversion code](https://github.com/cbor-go/float16), updating the README.md, creating comparison charts & slideshow, and filing many helpful issues.
 * Stefan Tatschner for being the 1st to discover my CBOR library, filing issues #1 and #2, and recommending this library.
 * Yawning Angel for replacing a library with this one in a big project after an external security audit, and filing issue #5.
 * Jernej Kos for filing issue #11 (add feature similar to json.RawMessage) and his kind words about this library.
