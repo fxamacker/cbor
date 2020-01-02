@@ -216,6 +216,42 @@ type EncOptions struct {
 	// otherwise, time.Time is encoded as numerical representation of seconds
 	// since January 1, 1970 UTC.
 	TimeRFC3339 bool
+
+	disableIndefiniteLength bool
+}
+
+// CanonicalEncOptions returns EncOptions for "Canonical CBOR" encoding,
+// defined in RFC 7049 Section 3.9 with the following rules:
+// 1. Integers must be as small as possible.
+// 2. The expression of lengths in major types 2 through 5 must be as short as possible.
+// 3. The keys in every map must be sorted in length-first sorting order.
+//    Refer to SortLengthFirst for details.
+// 4. Indefinite-length items must be made into definite-length items.
+func CanonicalEncOptions() EncOptions {
+	return EncOptions{Sort: SortCanonical, disableIndefiniteLength: true}
+}
+
+// CTAP2EncOptions returns EncOptions for "CTAP2 Canonical CBOR" encoding,
+// defined in CTAP specification, with the following rules:
+// 1. Integers must be encoded as small as possible.
+// 2. The representations of any floating-point values are not changed.
+// 3. The expression of lengths in major types 2 through 5 must be as short as possible.
+// 4. Indefinite-length items must be made into definite-length items.
+// 5. The keys in every map must be sorted in bytewise lexicographic order.
+//    Refer to SortBytewiseLexical for details.
+func CTAP2EncOptions() EncOptions {
+	return EncOptions{Sort: SortCTAP2, disableIndefiniteLength: true}
+}
+
+// CoreDetEncOptions returns EncOptions for "Core Deterministic" encoding,
+// defined in RFC 7049bis with the following rules:
+// 1. Preferred serialization MUST be used.
+//    Arguments for integers, lengths in major types 2 through 5, and tags MUST be as short as possible,
+//    Floating point values also MUST use the shortest form that preserves the value.
+// 2. Indefinite-length items MUST NOT appear.
+// 3. The keys in every map MUST be sorted in the bytewise lexicographic order of their deterministic encodings.
+func CoreDetEncOptions() EncOptions {
+	return EncOptions{Sort: SortCoreDeterministic, ShortestFloat: ShortestFloat16, disableIndefiniteLength: true}
 }
 
 // An encodeState encodes CBOR into a bytes.Buffer.

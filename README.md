@@ -13,7 +13,9 @@ __What is CBOR__?  [CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/htm
 
 __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: small, fast, safe and easy. 
 
-* __Small__.  Same programs are 4-9 MB smaller by switching to this library.  No code gen and the only imported pkg is [cbor-go/float16](https://github.com/cbor-go/float16) which is maintained by the same team.
+* __Small apps__.  Same programs are 4-9 MB smaller by switching to this library.  No code gen and the only imported pkg is [cbor-go/float16](https://github.com/cbor-go/float16) which is maintained by the same team.
+
+* __Small data__.  The `toarray` and `keyasint` struct tags can shrink size of Go structs encoded to CBOR.  Also, integers always encode to smallest type that fits.  Optionally, floats can shrink from float64 to float32 or float16 when values can be preserved.
 
 * __Fast__. v1.3 became faster than a well-known library that uses `unsafe` optimizations and code gen.  Faster libraries will always exist, but speed is only one factor.  This library doesn't use `unsafe` optimizations or code gen.  
 
@@ -77,12 +79,12 @@ This library is designed to be:
 
 * __Easy__ – API is like `encoding/json` plus `keyasint` and `toarray` struct tags.
 * __Small__ – Programs in cisco/senml are 4 MB smaller by switching to this library. In extreme cases programs can be smaller by 9+ MB. No code gen and the only imported pkg is [cbor-go/float16](https://github.com/cbor-go/float16) which is maintained by the same team.
-* __Safe and reliable__ – no `unsafe` pkg, coverage >95%, coverage-guided fuzzing, and data validation to avoid crashes on malformed or malicious data.
+* __Safe and reliable__ – No `unsafe` pkg, coverage >95%, coverage-guided fuzzing, and data validation to avoid crashes on malformed or malicious data.
 
 Competing factors are balanced:
 
 * __Speed__ vs __safety__ vs __size__ – to keep size small, avoid code generation. For safety, validate data and avoid Go's `unsafe` pkg.  For speed, use safe optimizations such as caching struct metadata. v1.4 is faster than a well-known library that uses `unsafe` and code gen.
-* __Standards compliance__ – CBOR ([RFC 7049](https://tools.ietf.org/html/rfc7049)) with minor [limitations](#limitations).  Encoding modes include default (no sorting), [RFC 7049 canonical](https://tools.ietf.org/html/rfc7049#section-3.9), and [CTAP2 canonical](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form). Decoding also checks for all required malformed data mentioned in latest RFC 7049bis.  See [Standards](#standards) section.
+* __Standards compliance__ – CBOR ([RFC 7049](https://tools.ietf.org/html/rfc7049)) with minor [limitations](#limitations).  Encoder supports options for sorting, floating-point conversions, and more.  Predefined configurations are also available so you can use "CTAP2 Canonical CBOR", etc. without knowing individual options.  Decoder checks for well-formedness, validates data, and limits nested levels to defend against attacks.  See [Standards](#standards).
 
 All releases prioritize reliability to avoid crashes on decoding malformed CBOR data. See [Fuzzing and Coverage](#fuzzing-and-code-coverage).
 
@@ -98,8 +100,12 @@ Features not in Go's standard library are usually not added.  However, the __`to
 * Support "cbor" and "json" keys in Go's struct tags. If both are specified, then "cbor" is used.
 * `toarray` struct tag allows named struct fields for elements of CBOR arrays.
 * `keyasint` struct tag allows named struct fields for elements of CBOR maps with int keys.
-* Encoder has 3 sorting modes: default (unsorted), Canonical, CTAP2Canonical.
-* Encoder has 4 floating-point modes: default (no conversion), ShortestFloat16, ShortestFloat32, ShortestFloat64.
+* Encoder has simple functions that create well-known configurations:
+  * func CanonicalEncOptions() EncOptions
+  * func CTAP2EncOptions() EncOptions
+  * func CoreDetEncOptions() EncOptions
+* Encoder sort options: SortNone (default), BytewiseLexical, Canonical, CTAP2Canonical, etc.
+* Encoder floating-point options: ShortestFloatNone (default), ShortestFloat16, ShortestFloat32, ShortestFloat64.
 * Support `encoding.BinaryMarshaler` and `encoding.BinaryUnmarshaler` interfaces.
 * Support `cbor.RawMessage` which can delay CBOR decoding or precompute CBOR encoding.
 * Support `cbor.Marshaler` and `cbor.Unmarshaler` interfaces to allow user-defined types to have custom CBOR encoding and decoding.
@@ -117,31 +123,40 @@ Coming soon: support for CBOR tags (major type 6).  After that, options for hand
 ## Standards
 This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049) with minor [limitations](#limitations).
 
-Encoder has options that can be combined to provide different encoding modes.
+Encoder has options that can be set individually to create custom configurations. Simple functions are also provided to create predefined configurations:
 
-Encoder has 3 options for sorting:
+* CanonicalEncOptions() -- [Canonical CBOR (RFC 7049)](https://tools.ietf.org/html/rfc7049#section-3.9).
+* CTAP2EncOptions() -- [CTAP2 Canonical CBOR](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).
+* CoreDetEncOptions() -- Core Deterministic Encoding (floats use [IEEE 754 binary16](https://en.wikipedia.org/wiki/Half-precision_floating-point_format) if value is preserved).
 
-* default: no sorting, so it's the fastest mode.
-* Canonical: [(RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9) uses length-first map key ordering.
-* CTAP2Canonical: [(CTAP2 Canonical CBOR)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form) uses bytewise lexicographic order for sorting keys.
+Encoder has 4 options for encoding floating-point data:
 
-Encoder has 4 options for encoding float-point data:
-
-* default: no conversion, so it's the fastest mode.
+* ShortestFloatNone (default): no conversion.
 * ShortestFloat16: uses float16 ([IEEE 754 binary16](https://en.wikipedia.org/wiki/Half-precision_floating-point_format)) as the shortest form that preserves value.
 * ShortestFloat32: uses float32 as the shortest form that preserves value.
-* ShortestFloat64: uses float64 as the shortest form (this can needlessly increase size of CBOR encoded data).
+* ShortestFloat64: uses float64 as the shortest form (this can needlessly increase size of CBOR data).
 
-Float16 to float32 conversions are lossless conversions.  Float32 to float16 conversions use IEEE 754 default rounding: "Round-to-Nearest RoundTiesToEven".  Float16 uses [cbor-go/float16](https://github.com/cbor-go/float16) maintained by the same team as this library.
+Floating-point conversions are only performed when the original value is preserved.  E.g., a round-trip back to the original floating-point format must produce the same value.
+
+Float16 conversions use [cbor-go/float16](https://github.com/cbor-go/float16) maintained by the same team as this library.  All 4+ billion possible conversions are verified to be correct in that library.
 
 For integer data types in Go, the encoder always uses the smallest form of CBOR integer that preserves data.  
+
+Encoder has 3 options (and 3 aliases) for sorting:
+
+* SortNone (default): no sorting.
+* LengthFirst: length-first map key ordering.
+* BytewiseLexical: bytewise lexicographic ordering.
+* Canonical [(RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9): same as LengthFirst.
+* CTAP2Canonical [(CTAP2 Canonical CBOR)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form): same as BytewiseLexical.
+* CoreDeterministic: same as BytewiseLexical.
 
 Decoder checks for all required well-formedness errors described in the latest RFC 7049bis, including all "subkinds" of syntax errors and too little data.
 
 After well-formedness is verified, basic validity errors are handled as follows:
 
-- Invalid UTF-8 string: Decoder always checks and returns invalid UTF-8 string error.
-- Duplicate keys in a map: By default, decoder decodes to a map with duplicate keys by overwriting previous value with the same key.  Options to handle duplicate map keys in different ways may be added as a feature.
+* Invalid UTF-8 string: Decoder always checks and returns invalid UTF-8 string error.
+* Duplicate keys in a map: By default, decoder decodes to a map with duplicate keys by overwriting previous value with the same key.  Options to handle duplicate map keys in different ways may be added as a feature.
 
 When decoding well-formed CBOR arrays and maps, decoder saves the first error it encounters and continues with the next item.  Options to handle this differently may be added in the future.
 
@@ -198,6 +213,9 @@ type Decoder struct{ ... }
     func (dec *Decoder) Decode(v interface{}) (err error)
     func (dec *Decoder) NumBytesRead() int
 type EncOptions struct{ ... }
+    func CTAP2EncOptions() EncOptions
+    func CanonicalEncOptions() EncOptions
+    func CoreDetEncOptions() EncOptions
 type Encoder struct{ ... }
     func NewEncoder(w io.Writer, encOpts EncOptions) *Encoder
     func (enc *Encoder) Encode(v interface{}) error
@@ -210,6 +228,10 @@ type InvalidUnmarshalError struct{ ... }
 type Marshaler interface{ ... }
 type RawMessage []byte
 type SemanticError struct{ ... }
+type ShortestFloatMode int
+    const ShortestFloatNone ShortestFloatMode = iota ...
+type SortMode int
+    const SortNone SortMode = 0 ...
 type SyntaxError struct{ ... }
 type UnmarshalTypeError struct{ ... }
 type Unmarshaler interface{ ... }
@@ -305,13 +327,13 @@ if err := cbor.Unmarshal(data, &v); err != nil {
 }
 ```
 
-__Encoding SenML__ using `keyasint` struct tag:
+__Encoding SenML__ using `keyasint` struct tag and `ShortestFloat16` encoding option:
 ```
 // use SenMLRecord struct defined in "Decoding SenML" example
 
 var v []SenMLRecord
 ...
-if data, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
+if data, err := cbor.Marshal(v, cbor.EncOptions{ShortestFloat: cbor.ShortestFloat16}); err != nil {
 	return err
 }
 ```
@@ -343,7 +365,7 @@ __Encoding__:
 
 ```
 // create an encoder with canonical CBOR encoding enabled
-enc := cbor.NewEncoder(writer, cbor.EncOptions{Sort: cbor.SortCanonical})
+enc := cbor.NewEncoder(writer, cbor.CanonicalEncOptions())
 
 // encode struct
 err = enc.Encode(stru)
@@ -390,14 +412,17 @@ More [examples](example_test.go).
 ## Benchmarks
 
 Go structs are faster than maps with string keys:
+
 * decoding into struct is >31% faster than decoding into map.
 * encoding struct is >33% faster than encoding map.
 
 Go structs with `keyasint` struct tag are faster than maps with integer keys:
+
 * decoding into struct is >25% faster than decoding into map.
 * encoding struct is >31% faster than encoding map.
 
 Go structs with `toarray` struct tag are faster than slice:
+
 * decoding into struct is >15% faster than decoding into slice.
 * encoding struct is >10% faster than encoding slice.
 

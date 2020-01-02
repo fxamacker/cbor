@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
+	"io/ioutil"
 	"math"
 	"reflect"
 	"strconv"
@@ -2184,5 +2185,62 @@ func TestMarshalSenML(t *testing.T) {
 				t.Errorf("SenML round-trip failed: v1 %+v, v2 %+v", v, v2)
 			}
 		})
+	}
+}
+
+func TestCanonicalEncOptions(t *testing.T) {
+	wantSortMode := cbor.SortCanonical
+	wantShortestFloat := cbor.ShortestFloatNone
+	wantIndefiniteLengthErrorMsg := "cbor: indefinite-length items are not allowed"
+	opts := cbor.CanonicalEncOptions()
+	if opts.Sort != wantSortMode {
+		t.Errorf("CanonicalEncOptions() returns EncOptions with Sort %d, want %d", opts.Sort, wantSortMode)
+	}
+	if opts.ShortestFloat != wantShortestFloat {
+		t.Errorf("CanonicalEncOptions() returns EncOptions with ShortestFloat %d, want %d", opts.ShortestFloat, wantShortestFloat)
+	}
+	enc := cbor.NewEncoder(ioutil.Discard, opts)
+	if err := enc.StartIndefiniteArray(); err == nil {
+		t.Errorf("StartIndefiniteArray() doesn't return error")
+	} else if err.Error() != wantIndefiniteLengthErrorMsg {
+		t.Errorf("StartIndefiniteArray() returns error %s, want %s", err.Error(), wantIndefiniteLengthErrorMsg)
+	}
+}
+
+func TestCTAP2EncOptions(t *testing.T) {
+	wantSortMode := cbor.SortCTAP2
+	wantShortestFloat := cbor.ShortestFloatNone
+	wantIndefiniteLengthErrorMsg := "cbor: indefinite-length items are not allowed"
+	opts := cbor.CTAP2EncOptions()
+	if opts.Sort != wantSortMode {
+		t.Errorf("CTAP2EncOptions() returns EncOptions with Sort %d, want %d", opts.Sort, wantSortMode)
+	}
+	if opts.ShortestFloat != wantShortestFloat {
+		t.Errorf("CTAP2EncOptions() returns EncOptions with ShortestFloat %d, want %d", opts.ShortestFloat, wantShortestFloat)
+	}
+	enc := cbor.NewEncoder(ioutil.Discard, opts)
+	if err := enc.StartIndefiniteArray(); err == nil {
+		t.Errorf("StartIndefiniteArray() doesn't return error")
+	} else if err.Error() != wantIndefiniteLengthErrorMsg {
+		t.Errorf("StartIndefiniteArray() returns error %s, want %s", err.Error(), wantIndefiniteLengthErrorMsg)
+	}
+}
+
+func TestCoreDetEncOptions(t *testing.T) {
+	wantSortMode := cbor.SortCoreDeterministic
+	wantShortestFloat := cbor.ShortestFloat16
+	wantIndefiniteLengthErrorMsg := "cbor: indefinite-length items are not allowed"
+	opts := cbor.CoreDetEncOptions()
+	if opts.Sort != wantSortMode {
+		t.Errorf("CoreDetEncOptions() returns EncOptions with Sort %d, want %d", opts.Sort, wantSortMode)
+	}
+	if opts.ShortestFloat != wantShortestFloat {
+		t.Errorf("CoreDetEncOptions() returns EncOptions with ShortestFloat %d, want %d", opts.ShortestFloat, wantShortestFloat)
+	}
+	enc := cbor.NewEncoder(ioutil.Discard, opts)
+	if err := enc.StartIndefiniteArray(); err == nil {
+		t.Errorf("StartIndefiniteArray() doesn't return error")
+	} else if err.Error() != wantIndefiniteLengthErrorMsg {
+		t.Errorf("StartIndefiniteArray() returns error %s, want %s", err.Error(), wantIndefiniteLengthErrorMsg)
 	}
 }

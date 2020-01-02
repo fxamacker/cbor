@@ -58,7 +58,7 @@ func ExampleMarshal_canonical() {
 		Male     bool
 	}
 	animal := Animal{Age: 4, Name: "Candy", Contacts: map[string]string{"Mary": "111-111-1111", "Joe": "222-222-2222"}}
-	b, err := cbor.Marshal(animal, cbor.EncOptions{Sort: cbor.SortCanonical})
+	b, err := cbor.Marshal(animal, cbor.CanonicalEncOptions())
 	if err != nil {
 		fmt.Println("error:", err)
 	}
@@ -152,7 +152,7 @@ func ExampleEncoder() {
 		{Age: 2, Name: "Duke", Owners: []string{"Norton"}, Male: true},
 	}
 	var buf bytes.Buffer
-	enc := cbor.NewEncoder(&buf, cbor.EncOptions{Sort: cbor.SortCanonical})
+	enc := cbor.NewEncoder(&buf, cbor.CanonicalEncOptions())
 	for _, animal := range animals {
 		err := enc.Encode(animal)
 		if err != nil {
@@ -438,7 +438,8 @@ func Example_senML() {
 	if err := cbor.Unmarshal(cborData, &v); err != nil {
 		fmt.Println("error:", err)
 	}
-	if _, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
+	// Encoder uses ShortestFloat16 option to use float16 as the shortest form that preserves floating-point value.
+	if _, err := cbor.Marshal(v, cbor.EncOptions{ShortestFloat: cbor.ShortestFloat16}); err != nil {
 		fmt.Println("error:", err)
 	}
 	for _, rec := range v {
