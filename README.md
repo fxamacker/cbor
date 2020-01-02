@@ -15,7 +15,7 @@ __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: 
 
 * __Small apps__.  Same programs are 4-9 MB smaller by switching to this library.  No code gen and the only imported pkg is [cbor-go/float16](https://github.com/cbor-go/float16) which is maintained by the same team.
 
-* __Small data__.  The `toarray` and `keyasint` struct tags can shrink size of Go structs encoded to CBOR.  Also, integers always encode to smallest type that fits.  Optionally, floats can shrink from float64 to float32 or float16 when values can be preserved.
+* __Small data__.  The `toarray` and `keyasint` struct tags can shrink size of Go structs encoded to CBOR.  Also, integers always encode to smallest type that fits.  Optionally, floats can shrink from float64 to float32 or float16 when values fit.
 
 * __Fast__. v1.3 became faster than a well-known library that uses `unsafe` optimizations and code gen.  Faster libraries will always exist, but speed is only one factor.  This library doesn't use `unsafe` optimizations or code gen.  
 
