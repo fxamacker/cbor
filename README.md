@@ -167,7 +167,7 @@ Known limitations:
 
 * Currently, CBOR tag numbers are ignored.  Decoder simply decodes tag content. Work is in progress to add support.
 * Currently, duplicate map keys are not checked during decoding.  Option to handle duplicate map keys in different ways will be added.
-* Floating-point NaN (not-a-number) values always encode to 0xf97e00. This is required by Canonical CBOR in RFC 7049 and this library uses it for all encoding configurations for consistency and simplicity.  Options may be added later.
+* Floating-point NaN (not-a-number) values always encode to 0xf97e00. This is required by Canonical CBOR in RFC 7049 and this library uses it for all encoding configurations.  Options may be added later.
 * Nested levels for CBOR arrays, maps, and tags are limited to 32 to prevent exploits.  This limit will be reconsidered upon request.
 * CBOR negative int (type 1) that cannot fit into Go's int64 are not supported, such as RFC 7049 example -18446744073709551616.  Decoding these values returns `cbor.UnmarshalTypeError` like Go's `encoding/json`.
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  Use CBOR `Null` (0xf6) to round-trip with Go's `nil`.
