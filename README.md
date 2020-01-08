@@ -105,6 +105,7 @@ Features not in Go's standard library are usually not added.  However, the __`to
   * func CTAP2EncOptions() EncOptions
   * func CoreDetEncOptions() EncOptions
 * Encoder sort options: SortNone, SortBytewiseLexical, SortCanonical, SortCTAP2, SortCoreDeterministic
+* For Go integers, encoder uses "preferred serialization" which encodes their values to the smallest number of bytes.
 * Encoder floating-point option types: ShortestFloatMode, InfConvertMode, and NaNConvertMode.
   * ShortestFloatMode: ShortestFloatNone or ShortestFloat16 (IEEE 754 binary16, etc. if value fits).
   * InfConvertMode: InfConvertNone or InfConvertFloat16.
@@ -126,6 +127,8 @@ Coming soon: support for CBOR tags (major type 6).  After that, options for hand
 ## Standards
 This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049) with minor [limitations](#limitations).
 
+For Go integers, encoder always uses "preferred serialization" which encodes their values to the smallest number of bytes.
+
 Encoder has options that can be set individually to create custom configurations. Easy functions are also provided to create and return modifiable configurations (EncOptions):
 
 * CanonicalEncOptions() -- [Canonical CBOR (RFC 7049)](https://tools.ietf.org/html/rfc7049#section-3.9).
@@ -141,7 +144,7 @@ __Encoder's SortMode__ has 3 options (and 3 aliases):
 * SortCTAP2Canonical [(CTAP2 Canonical CBOR)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form): same as SortBytewiseLexical.
 * SortCoreDeterministic: same as SortBytewiseLexical.
 
-Encoder has 3 types of options for floating-point data. ShortestFloatMode, InfConvertMode, and NaNConvertMode.
+Encoder has 3 types of options for floating-point data: ShortestFloatMode, InfConvertMode, and NaNConvertMode.
 
 __Encoder's ShortestFloatMode__ can be:
 
@@ -150,21 +153,19 @@ __Encoder's ShortestFloatMode__ can be:
 
 With ShortestFloat16, each encoded float can be float64, float32 or float16 -- whichever is the smallest size that preserves original value.
 
-__Encoder's InfConvertMode__ overrides ShortestFloatMode and can be:
+__Encoder's InfConvertMode__ overrides ShortestFloatMode for infinity values and can be:
 
 * InfConvertNone: don't convert +- infinity to other representations -- used by CTAP2 Canonical CBOR
 * InfConvertFloat16: convert +- infinity to float16 since they always preserve value (recommended)
 
-__Encoder's NaNConvertMode__ overrides ShortestFloatMode and can be:
+__Encoder's NaNConvertMode__ overrides ShortestFloatMode for NaN values and can be:
 
 * NaNConvertNone: don't convert NaN to other representations -- used by CTAP2 Canonical CBOR.
 * NaNConvert7e00: encode to 0xf97e00 (CBOR float16 = 0x7e00) -- used by RFC 7049 Canonical CBOR.
 * NaNConvertQuiet: force quiet bit = 1 and use shortest form that preserves NaN payload.
-* NaNConvertPreserveSignal: convert to smallest form that preserves value -- described in RFC 7049bis Draft 12 when protocols don't want predifined value such as 0x7e00.
+* NaNConvertPreserveSignal: convert to smallest form that preserves value (quit bit unmodified and NaN payload preserved) -- described in RFC 7049bis Draft 12 when protocols don't want predifined value such as 0x7e00.
 
 Float16 conversions use [cbor-go/float16](https://github.com/cbor-go/float16) maintained by the same team as this library.  All 4+ billion possible conversions are verified to be correct in that library.
-
-For integer data types in Go, the encoder always uses the smallest form of CBOR integer that preserves data.  
 
 Decoder checks for all required well-formedness errors described in the latest RFC 7049bis, including all "subkinds" of syntax errors and too little data.
 
@@ -182,7 +183,7 @@ Known limitations:
 
 * Currently, CBOR tag numbers are ignored.  Decoder simply decodes tag content. Work is in progress to add support.
 * Currently, duplicate map keys are not checked during decoding.  Option to handle duplicate map keys in different ways will be added.
-* Nested levels for CBOR arrays, maps, and tags are limited to 32 to quickly reject malformed data.  This limit will be reconsidered upon request.
+* Nested levels for CBOR arrays, maps, and tags are limited to 32 to quickly reject potentially malicious data.  This limit will be reconsidered upon request.
 * CBOR negative int (type 1) that cannot fit into Go's int64 are not supported, such as RFC 7049 example -18446744073709551616.  Decoding these values returns `cbor.UnmarshalTypeError` like Go's `encoding/json`.
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  Use CBOR `Null` (0xf6) to round-trip with Go's `nil`.
 
