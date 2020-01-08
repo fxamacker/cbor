@@ -104,12 +104,12 @@ Features not in Go's standard library are usually not added.  However, the __`to
   * func CanonicalEncOptions() EncOptions
   * func CTAP2EncOptions() EncOptions
   * func CoreDetEncOptions() EncOptions
-* Encoder sort options: SortNone, SortBytewiseLexical, SortCanonical, SortCTAP2, SortCoreDeterministic
-* For Go integers, encoder uses "preferred serialization" which encodes their values to the smallest number of bytes.
+* For Go integers, encoder always uses "preferred serialization" which encodes their values to the smallest number of bytes.
 * Encoder floating-point option types: ShortestFloatMode, InfConvertMode, and NaNConvertMode.
   * ShortestFloatMode: ShortestFloatNone or ShortestFloat16 (IEEE 754 binary16, etc. if value fits).
   * InfConvertMode: InfConvertNone or InfConvertFloat16.
   * NanConvertMode: NaNConvertNone, NanConvert7e00, NanConvertQuiet, or NaNConvertPreserveSignal
+* Encoder sort options: SortNone, SortBytewiseLexical, SortCanonical, SortCTAP2, SortCoreDeterministic  
 * Support `encoding.BinaryMarshaler` and `encoding.BinaryUnmarshaler` interfaces.
 * Support `cbor.RawMessage` which can delay CBOR decoding or precompute CBOR encoding.
 * Support `cbor.Marshaler` and `cbor.Unmarshaler` interfaces to allow user-defined types to have custom CBOR encoding and decoding.
