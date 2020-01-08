@@ -465,6 +465,7 @@ Please read the license for additional disclaimers and terms.
 ## Special Thanks
 * Carsten Bormann for RFC 7049 (CBOR), his fast confirmation to my RFC 7049 errata, approving my pull request to 7049bis, and his patience when I misread a line in 7049bis.
 * Montgomery Edwards⁴⁴⁸ for contributing [float16 conversion code](https://github.com/cbor-go/float16), updating the README.md, creating comparison charts & slideshow, and filing many helpful issues.
+* Keith Randall for [fixing Go bugs and providing workarounds](https://github.com/golang/go/issues/36400) so we don't have to wait for new versions of Go.
 * Stefan Tatschner for being the 1st to discover my CBOR library, filing issues #1 and #2, and recommending this library.
 * Yawning Angel for replacing a library with this one in a big project after an external security audit, and filing issue #5.
 * Jernej Kos for filing issue #11 (add feature similar to json.RawMessage) and his kind words about this library.
