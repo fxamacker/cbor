@@ -25,9 +25,9 @@ const (
 	cborByteStringType  byte = 0x40
 	cborTextStringType  byte = 0x60
 	cborArrayType       byte = 0x80
-	cborMapType         byte = 0xA0
-	cborTagType         byte = 0xC0
-	cborPrimitivesType  byte = 0xE0
+	cborMapType         byte = 0xa0
+	cborTagType         byte = 0xc0
+	cborPrimitivesType  byte = 0xe0
 )
 
 type marshalTest struct {

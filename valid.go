@@ -95,7 +95,7 @@ func valid(data []byte, off int, depth int) (int, int, error) {
 			if len(data)-off < 1 { // Tag number must be followed by tag content.
 				return 0, 0, io.ErrUnexpectedEOF
 			}
-			if cborType(data[off]&0xE0) != cborTypeTag {
+			if cborType(data[off]&0xe0) != cborTypeTag {
 				break
 			}
 			if off, _, _, _, err = validHead(data, off); err != nil {
@@ -117,16 +117,16 @@ func validIndefiniteString(data []byte, off int, t cborType, depth int) (int, in
 		if len(data)-off < 1 {
 			return 0, 0, io.ErrUnexpectedEOF
 		}
-		if data[off] == 0xFF {
+		if data[off] == 0xff {
 			off++
 			break
 		}
 		// Peek ahead to get next type and indefinite length status.
-		nt := cborType(data[off] & 0xE0)
+		nt := cborType(data[off] & 0xe0)
 		if t != nt {
 			return 0, 0, &SyntaxError{"cbor: wrong element type " + nt.String() + " for indefinite-length " + t.String()}
 		}
-		if (data[off] & 0x1F) == 31 {
+		if (data[off] & 0x1f) == 31 {
 			return 0, 0, &SyntaxError{"cbor: indefinite-length " + t.String() + " chunk is not definite-length"}
 		}
 		if off, depth, err = valid(data, off, depth); err != nil {
@@ -144,7 +144,7 @@ func validIndefiniteArrOrMap(data []byte, off int, t cborType, depth int) (int, 
 		if len(data)-off < 1 {
 			return 0, 0, io.ErrUnexpectedEOF
 		}
-		if data[off] == 0xFF {
+		if data[off] == 0xff {
 			off++
 			break
 		}
@@ -168,8 +168,8 @@ func validHead(data []byte, off int) (_ int, t cborType, ai byte, val uint64, er
 		return 0, 0, 0, 0, io.ErrUnexpectedEOF
 	}
 
-	t = cborType(data[off] & 0xE0)
-	ai = data[off] & 0x1F
+	t = cborType(data[off] & 0xe0)
+	ai = data[off] & 0x1f
 	val = uint64(ai)
 	off++
 
@@ -204,7 +204,7 @@ func validHead(data []byte, off int) (_ int, t cborType, ai byte, val uint64, er
 		switch t {
 		case cborTypePositiveInt, cborTypeNegativeInt, cborTypeTag:
 			return 0, 0, 0, 0, &SyntaxError{"cbor: invalid additional information " + strconv.Itoa(int(ai)) + " for type " + t.String()}
-		case cborTypePrimitives: // 0xFF (break code) should not be outside validIndefinite().
+		case cborTypePrimitives: // 0xff (break code) should not be outside validIndefinite().
 			return 0, 0, 0, 0, &SyntaxError{"cbor: unexpected \"break\" code"}
 		}
 	}

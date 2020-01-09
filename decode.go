@@ -178,9 +178,9 @@ const (
 	cborTypeByteString  cborType = 0x40
 	cborTypeTextString  cborType = 0x60
 	cborTypeArray       cborType = 0x80
-	cborTypeMap         cborType = 0xA0
-	cborTypeTag         cborType = 0xC0
-	cborTypePrimitives  cborType = 0xE0
+	cborTypeMap         cborType = 0xa0
+	cborTypeTag         cborType = 0xc0
+	cborTypePrimitives  cborType = 0xe0
 )
 
 func (t cborType) String() string {
@@ -756,8 +756,8 @@ func (d *decodeState) parseMapToStruct(v reflect.Value) error {
 // skip moves data offset to the next item.  skip assumes data is well-formed,
 // and does not perform bounds checking.
 func (d *decodeState) skip() {
-	t := cborType(d.data[d.off] & 0xE0)
-	ai := d.data[d.off] & 0x1F
+	t := cborType(d.data[d.off] & 0xe0)
+	ai := d.data[d.off] & 0x1f
 	val := uint64(ai)
 	d.off++
 
@@ -780,7 +780,7 @@ func (d *decodeState) skip() {
 		switch t {
 		case cborTypeByteString, cborTypeTextString, cborTypeArray, cborTypeMap:
 			for true {
-				if d.data[d.off] == 0xFF {
+				if d.data[d.off] == 0xff {
 					d.off++
 					return
 				}
@@ -807,8 +807,8 @@ func (d *decodeState) skip() {
 
 // getHead assumes data is well-formed, and does not perform bounds checking.
 func (d *decodeState) getHead() (t cborType, ai byte, val uint64) {
-	t = cborType(d.data[d.off] & 0xE0)
-	ai = d.data[d.off] & 0x1F
+	t = cborType(d.data[d.off] & 0xe0)
+	ai = d.data[d.off] & 0x1f
 	val = uint64(ai)
 	d.off++
 
@@ -842,7 +842,7 @@ func (d *decodeState) numOfItemsUntilBreak() int {
 
 // foundBreak assumes data is well-formed, and does not perform bounds checking.
 func (d *decodeState) foundBreak() bool {
-	if d.data[d.off] == 0xFF {
+	if d.data[d.off] == 0xff {
 		d.off++
 		return true
 	}
@@ -855,7 +855,7 @@ func (d *decodeState) reset(data []byte) {
 }
 
 func (d *decodeState) nextCBORType() cborType {
-	return cborType(d.data[d.off] & 0xE0)
+	return cborType(d.data[d.off] & 0xe0)
 }
 
 func (d *decodeState) nextCBORNil() bool {
