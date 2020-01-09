@@ -2563,3 +2563,27 @@ func TestCoreDetEncOptions(t *testing.T) {
 		t.Errorf("StartIndefiniteArray() returns error %s, want %s", err.Error(), wantIndefiniteLengthErrorMsg)
 	}
 }
+
+func TestPreferredUnsortedEncOptions(t *testing.T) {
+	wantSortMode := cbor.SortNone
+	wantShortestFloat := cbor.ShortestFloat16
+	wantNanConvert := cbor.NaNConvert7e00
+	wantInfConvert := cbor.InfConvertFloat16
+	opts := cbor.PreferredUnsortedEncOptions()
+	if opts.Sort != wantSortMode {
+		t.Errorf("PreferredUnsortedEncOptions() returns EncOptions with Sort %d, want %d", opts.Sort, wantSortMode)
+	}
+	if opts.ShortestFloat != wantShortestFloat {
+		t.Errorf("PreferredUnsortedEncOptions() returns EncOptions with ShortestFloat %d, want %d", opts.ShortestFloat, wantShortestFloat)
+	}
+	if opts.NaNConvert != wantNanConvert {
+		t.Errorf("PreferredUnsortedEncOptions() returns EncOptions with NanConvert %d, want %d", opts.NaNConvert, wantNanConvert)
+	}
+	if opts.InfConvert != wantInfConvert {
+		t.Errorf("PreferredUnsortedEncOptions() returns EncOptions with InfConvert %d, want %d", opts.InfConvert, wantInfConvert)
+	}
+	enc := cbor.NewEncoder(ioutil.Discard, opts)
+	if err := enc.StartIndefiniteArray(); err != nil {
+		t.Errorf("StartIndefiniteArray() returns error %s", err)
+	}
+}

@@ -104,6 +104,7 @@ Features not in Go's standard library are usually not added.  However, the __`to
   * func CanonicalEncOptions() EncOptions
   * func CTAP2EncOptions() EncOptions
   * func CoreDetEncOptions() EncOptions
+  * func PreferredUnsortedEncOptions() EncOptions
 * For Go integers, encoder always uses "preferred serialization" which encodes their values to the smallest number of bytes.
 * Encoder floating-point option types: ShortestFloatMode, InfConvertMode, and NaNConvertMode.
   * ShortestFloatMode: ShortestFloatNone or ShortestFloat16 (IEEE 754 binary16, etc. if value fits).
@@ -134,6 +135,7 @@ Encoder has options that can be set individually to create custom configurations
 * CanonicalEncOptions() -- [Canonical CBOR (RFC 7049)](https://tools.ietf.org/html/rfc7049#section-3.9).
 * CTAP2EncOptions() -- [CTAP2 Canonical CBOR](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).
 * CoreDetEncOptions() -- Core Deterministic Encoding (floats use [IEEE 754 binary16](https://en.wikipedia.org/wiki/Half-precision_floating-point_format) if value is preserved).
+* PreferredUnsortedEncOptions() -- Preferred Serialization (unsorted, shortest integer and floating-point forms that preserve values, NaN values encoded as 0xf97e00).
 
 __Encoder's SortMode__ has 3 options (and 3 aliases):
 
@@ -232,6 +234,7 @@ type EncOptions struct{ ... }
     func CTAP2EncOptions() EncOptions
     func CanonicalEncOptions() EncOptions
     func CoreDetEncOptions() EncOptions
+    func PreferredUnsortedEncOptions() EncOptions
 type Encoder struct{ ... }
     func NewEncoder(w io.Writer, encOpts EncOptions) *Encoder
     func (enc *Encoder) Encode(v interface{}) error
