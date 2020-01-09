@@ -149,8 +149,8 @@ func (sm SortMode) valid() bool {
 }
 
 // ShortestFloatMode specifies which floating-point format should
-// be used as the shortest possible format for CBOR encoding of
-// floating-point values.
+// be used as the shortest possible format for CBOR encoding.
+// It is not used for encoding Infinity and NaN values.
 type ShortestFloatMode int
 
 const (
@@ -166,21 +166,55 @@ const (
 	// encode as CBOR float64, float32 or float16 depending on the value.
 	ShortestFloat16
 
-	// ShortestFloat32 specifies float32 as the shortest form that preserves value.
-	// E.g. if float64 can convert to float32 while perserving value, then
-	// it will encode as CBOR float32 without any further conversion attempts.
-	ShortestFloat32
-
-	// ShortestFloat64 specifies float64 as the shortest form that preserves value.
-	// Both float32 and float64 in Go will encode to CBOR float64.
-	// WARNING: this option can needlessly increase size of CBOR encoded data.
-	ShortestFloat64
-
 	maxShortestFloat
 )
 
 func (sfm ShortestFloatMode) valid() bool {
 	return sfm < maxShortestFloat
+}
+
+// NaNConvertMode specifies how to encode NaN and overrides ShortestFloatMode.
+// ShortestFloatMode is not used for encoding Infinity and NaN values.
+type NaNConvertMode int
+
+const (
+	// NaNConvert7e00 always encodes NaN to 0xf97e00 (CBOR float16 = 0x7e00).
+	NaNConvert7e00 NaNConvertMode = iota
+
+	// NaNConvertNone never modifies or converts NaN to other representations
+	// (float64 NaN stays float64, etc. even if it can use float16 without losing any bits).
+	NaNConvertNone
+
+	// NaNConvertPreserveSignal converts NaN to the smallest form that preserves
+	// value (quiet bit + payload) as described in RFC 7049bis Draft 12.
+	NaNConvertPreserveSignal
+
+	// NaNConvertQuiet always forces quiet bit = 1 and shortest form that preserves NaN payload.
+	NaNConvertQuiet
+
+	maxNaNConvert
+)
+
+func (ncm NaNConvertMode) valid() bool {
+	return ncm < maxNaNConvert
+}
+
+// InfConvertMode specifies how to encode Infinity and overrides ShortestFloatMode.
+// ShortestFloatMode is not used for encoding Infinity and NaN values.
+type InfConvertMode int
+
+const (
+	// InfConvertFloat16 always converts Infinity to lossless IEEE binary16 (float16).
+	InfConvertFloat16 InfConvertMode = iota
+
+	// InfConvertNone never converts (used by CTAP2 Canonical CBOR).
+	InfConvertNone
+
+	maxInfConvert
+)
+
+func (icm InfConvertMode) valid() bool {
+	return icm < maxInfConvert
 }
 
 // EncOptions specifies encoding options.
@@ -190,6 +224,12 @@ type EncOptions struct {
 
 	// ShortestFloat specifies the shortest floating-point encoding that preserves the value being encoded.
 	ShortestFloat ShortestFloatMode
+
+	// NaNConvert specifies how to encode NaN and it overrides ShortestFloatMode.
+	NaNConvert NaNConvertMode
+
+	// InfConvert specifies how to encode Infinity and it overrides ShortestFloatMode.
+	InfConvert InfConvertMode
 
 	// Canonical causes map and struct to be encoded in a predictable sequence
 	// of bytes by sorting map keys or struct fields according to canonical rules:
@@ -227,8 +267,21 @@ type EncOptions struct {
 // 3. The keys in every map must be sorted in length-first sorting order.
 //    Refer to SortLengthFirst for details.
 // 4. Indefinite-length items must be made into definite-length items.
+// 5. If a protocol allows for IEEE floats, then additional canonicalization rules might
+//    need to be added.  One example rule might be to have all floats start as a 64-bit
+//    float, then do a test conversion to a 32-bit float; if the result is the same numeric
+//    value, use the shorter value and repeat the process with a test conversion to a
+//    16-bit float.  (This rule selects 16-bit float for positive and negative Infinity
+//    as well.)  Also, there are many representations for NaN.  If NaN is an allowed value,
+//    it must always be represented as 0xf97e00.
 func CanonicalEncOptions() EncOptions {
-	return EncOptions{Sort: SortCanonical, disableIndefiniteLength: true}
+	return EncOptions{
+		Sort:                    SortCanonical,
+		ShortestFloat:           ShortestFloat16,
+		NaNConvert:              NaNConvert7e00,
+		InfConvert:              InfConvertFloat16,
+		disableIndefiniteLength: true,
+	}
 }
 
 // CTAP2EncOptions returns EncOptions for "CTAP2 Canonical CBOR" encoding,
@@ -240,7 +293,13 @@ func CanonicalEncOptions() EncOptions {
 // 5. The keys in every map must be sorted in bytewise lexicographic order.
 //    Refer to SortBytewiseLexical for details.
 func CTAP2EncOptions() EncOptions {
-	return EncOptions{Sort: SortCTAP2, disableIndefiniteLength: true}
+	return EncOptions{
+		Sort:                    SortCTAP2,
+		ShortestFloat:           ShortestFloatNone,
+		NaNConvert:              NaNConvertNone,
+		InfConvert:              InfConvertNone,
+		disableIndefiniteLength: true,
+	}
 }
 
 // CoreDetEncOptions returns EncOptions for "Core Deterministic" encoding,
@@ -251,7 +310,13 @@ func CTAP2EncOptions() EncOptions {
 // 2. Indefinite-length items MUST NOT appear.
 // 3. The keys in every map MUST be sorted in the bytewise lexicographic order of their deterministic encodings.
 func CoreDetEncOptions() EncOptions {
-	return EncOptions{Sort: SortCoreDeterministic, ShortestFloat: ShortestFloat16, disableIndefiniteLength: true}
+	return EncOptions{
+		Sort:                    SortCoreDeterministic,
+		ShortestFloat:           ShortestFloat16,
+		NaNConvert:              NaNConvert7e00,
+		InfConvert:              InfConvertFloat16,
+		disableIndefiniteLength: true,
+	}
 }
 
 // An encodeState encodes CBOR into a bytes.Buffer.
@@ -297,6 +362,12 @@ func (e *encodeState) marshal(v interface{}, opts EncOptions) error {
 	}
 	if !opts.ShortestFloat.valid() {
 		return errors.New("cbor: invalid ShortestFloatMode " + strconv.Itoa(int(opts.ShortestFloat)))
+	}
+	if !opts.NaNConvert.valid() {
+		return errors.New("cbor: invalid NaNConvertMode " + strconv.Itoa(int(opts.NaNConvert)))
+	}
+	if !opts.InfConvert.valid() {
+		return errors.New("cbor: invalid InfConvertMode " + strconv.Itoa(int(opts.InfConvert)))
 	}
 	_, err := encode(e, reflect.ValueOf(v), opts)
 	return err
@@ -350,18 +421,15 @@ func encodeUint(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 func encodeFloat(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 	f64 := v.Float()
 	if math.IsNaN(f64) {
-		return e.Write(cborNan)
+		return encodeNaN(e, v, opts)
 	}
-	if math.IsInf(f64, 1) {
-		return e.Write(cborPositiveInfinity)
+	if math.IsInf(f64, 0) {
+		return encodeInf(e, v, opts)
 	}
-	if math.IsInf(f64, -1) {
-		return e.Write(cborNegativeInfinity)
-	}
-
 	fopt := opts.ShortestFloat
-	if fopt == ShortestFloat64 || (v.Kind() == reflect.Float64 && (fopt == ShortestFloatNone || overflowFloat32(f64))) {
+	if v.Kind() == reflect.Float64 && (fopt == ShortestFloatNone || cannotFitFloat32(f64)) {
 		// Encode float64
+		// Don't use encodeFloat64() because it cannot be inlined.
 		e.scratch[0] = byte(cborTypePrimitives) | byte(27)
 		binary.BigEndian.PutUint64(e.scratch[1:], math.Float64bits(f64))
 		return e.Write(e.scratch[:9])
@@ -372,6 +440,7 @@ func encodeFloat(e *encodeState, v reflect.Value, opts EncOptions) (int, error) 
 		f16 := float16.Fromfloat32(f32)
 		if f16.Float32() == f32 {
 			// Encode float16
+			// Don't use encodeFloat16() because it cannot be inlined.
 			e.scratch[0] = byte(cborTypePrimitives) | byte(25)
 			binary.BigEndian.PutUint16(e.scratch[1:], uint16(f16))
 			return e.Write(e.scratch[:3])
@@ -379,9 +448,99 @@ func encodeFloat(e *encodeState, v reflect.Value, opts EncOptions) (int, error) 
 	}
 
 	// Encode float32
+	// Don't use encodeFloat32() because it cannot be inlined.
 	e.scratch[0] = byte(cborTypePrimitives) | byte(26)
 	binary.BigEndian.PutUint32(e.scratch[1:], math.Float32bits(f32))
 	return e.Write(e.scratch[:5])
+}
+
+func encodeInf(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+	f64 := v.Float()
+	if opts.InfConvert == InfConvertFloat16 {
+		if f64 > 0 {
+			return e.Write(cborPositiveInfinity)
+		}
+		return e.Write(cborNegativeInfinity)
+	}
+	if v.Kind() == reflect.Float64 {
+		return encodeFloat64(e, f64)
+	}
+	return encodeFloat32(e, float32(f64))
+}
+
+func encodeNaN(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+	switch opts.NaNConvert {
+	case NaNConvert7e00:
+		return e.Write(cborNan)
+
+	case NaNConvertNone:
+		if v.Kind() == reflect.Float64 {
+			return encodeFloat64(e, v.Float())
+		}
+		f32 := float32NaNFromReflectValue(v)
+		return encodeFloat32(e, f32)
+
+	default: // NaNConvertPreserveSignal, NaNConvertQuiet
+		if v.Kind() == reflect.Float64 {
+			f64 := v.Float()
+			f64bits := math.Float64bits(f64)
+			if opts.NaNConvert == NaNConvertQuiet && f64bits&(1<<51) == 0 {
+				f64bits = f64bits | (1 << 51) // Set quiet bit = 1
+				f64 = math.Float64frombits(f64bits)
+			}
+			// The lower 29 bits are dropped when converting from float64 to float32.
+			if f64bits&0x1fffffff != 0 {
+				// Encode NaN as float64 because dropped coef bits from float64 to float32 are not all 0s.
+				return encodeFloat64(e, f64)
+			}
+			// Create float32 from float64 manually because float32(f64) always turns on NaN's quiet bits.
+			sign := uint32(f64bits>>32) & (1 << 31)
+			exp := uint32(0x7f800000)
+			coef := uint32((f64bits & 0xfffffffffffff) >> 29)
+			f32bits := sign | exp | coef
+			f32 := math.Float32frombits(f32bits)
+			// The lower 13 bits are dropped when converting from float32 to float16.
+			if f32bits&0x1fff != 0 {
+				// Encode NaN as float32 because dropped coef bits from float32 to float16 are not all 0s.
+				return encodeFloat32(e, f32)
+			}
+			// Encode NaN as float16
+			f16, _ := float16.FromNaN32ps(f32) // Ignore err because it only returns error when f32 is not a NaN.
+			return encodeFloat16(e, f16)
+		}
+
+		f32 := float32NaNFromReflectValue(v)
+		f32bits := math.Float32bits(f32)
+		if opts.NaNConvert == NaNConvertQuiet && f32bits&(1<<22) == 0 {
+			f32bits = f32bits | (1 << 22) // Set quiet bit = 1
+			f32 = math.Float32frombits(f32bits)
+		}
+		// The lower 13 bits are dropped coef bits when converting from float32 to float16.
+		if f32bits&0x1fff != 0 {
+			// Encode NaN as float32 because dropped coef bits from float32 to float16 are not all 0s.
+			return encodeFloat32(e, f32)
+		}
+		f16, _ := float16.FromNaN32ps(f32) // Ignore err because it only returns error when f32 is not a NaN.
+		return encodeFloat16(e, f16)
+	}
+}
+
+func encodeFloat16(e *encodeState, f16 float16.Float16) (int, error) {
+	e.scratch[0] = byte(cborTypePrimitives) | byte(25)
+	binary.BigEndian.PutUint16(e.scratch[1:], uint16(f16))
+	return e.Write(e.scratch[:3])
+}
+
+func encodeFloat32(e *encodeState, f32 float32) (int, error) {
+	e.scratch[0] = byte(cborTypePrimitives) | byte(26)
+	binary.BigEndian.PutUint32(e.scratch[1:], math.Float32bits(f32))
+	return e.Write(e.scratch[:5])
+}
+
+func encodeFloat64(e *encodeState, f64 float64) (int, error) {
+	e.scratch[0] = byte(cborTypePrimitives) | byte(27)
+	binary.BigEndian.PutUint64(e.scratch[1:], math.Float64bits(f64))
+	return e.Write(e.scratch[:9])
 }
 
 func encodeByteString(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
@@ -744,27 +903,29 @@ func encodeHead(e *encodeState, t byte, n uint64) int {
 	if n <= 23 {
 		e.WriteByte(t | byte(n))
 		return 1
-	} else if n <= math.MaxUint8 {
+	}
+	if n <= math.MaxUint8 {
 		e.scratch[0] = t | byte(24)
 		e.scratch[1] = byte(n)
 		e.Write(e.scratch[:2])
 		return 2
-	} else if n <= math.MaxUint16 {
+	}
+	if n <= math.MaxUint16 {
 		e.scratch[0] = t | byte(25)
 		binary.BigEndian.PutUint16(e.scratch[1:], uint16(n))
 		e.Write(e.scratch[:3])
 		return 3
-	} else if n <= math.MaxUint32 {
+	}
+	if n <= math.MaxUint32 {
 		e.scratch[0] = t | byte(26)
 		binary.BigEndian.PutUint32(e.scratch[1:], uint32(n))
 		e.Write(e.scratch[:5])
 		return 5
-	} else {
-		e.scratch[0] = t | byte(27)
-		binary.BigEndian.PutUint64(e.scratch[1:], uint64(n))
-		e.Write(e.scratch[:9])
-		return 9
 	}
+	e.scratch[0] = t | byte(27)
+	binary.BigEndian.PutUint64(e.scratch[1:], uint64(n))
+	e.Write(e.scratch[:9])
+	return 9
 }
 
 var (
@@ -849,7 +1010,16 @@ func isEmptyValue(v reflect.Value) bool {
 	return false
 }
 
-func overflowFloat32(f64 float64) bool {
+func cannotFitFloat32(f64 float64) bool {
 	f32 := float32(f64)
 	return float64(f32) != f64
+}
+
+// float32NaNFromReflectValue extracts float32 NaN from reflect.Value while preserving NaN's quiet bit.
+func float32NaNFromReflectValue(v reflect.Value) float32 {
+	// Keith Randall's workaround for issue https://github.com/golang/go/issues/36400
+	p := reflect.New(v.Type())
+	p.Elem().Set(v)
+	f32 := p.Convert(reflect.TypeOf((*float32)(nil))).Elem().Interface().(float32)
+	return f32
 }

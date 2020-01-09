@@ -1,2 +1,4 @@
 github.com/cbor-go/float16 v0.6.0 h1:OQZmSTfRgTQN31vtvXopmB0Qhyo70r/9DV3mQ1Nj9Ls=
 github.com/cbor-go/float16 v0.6.0/go.mod h1:UXY4CbDyuvGHOae3o7TKoqWJn7OrSrXAkDnpi6QFjTg=
+github.com/cbor-go/float16 v0.8.0 h1:almRw4dwp0QBZ36OQh9SM154KEHCN0Ps9FScrQdrIhs=
+github.com/cbor-go/float16 v0.8.0/go.mod h1:UXY4CbDyuvGHOae3o7TKoqWJn7OrSrXAkDnpi6QFjTg=

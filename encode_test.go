@@ -6,6 +6,7 @@ package cbor_test
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"math"
@@ -1985,6 +1986,7 @@ func TestShortestFloat16(t *testing.T) {
 	}
 }
 
+/*
 func TestShortestFloat32(t *testing.T) {
 	testCases := []struct {
 		name         string
@@ -2076,7 +2078,7 @@ func TestShortestFloat64(t *testing.T) {
 		})
 	}
 }
-
+*/
 func TestShortestFloatNone(t *testing.T) {
 	testCases := []struct {
 		name         string
@@ -2154,6 +2156,299 @@ func TestInvalidShortestFloat(t *testing.T) {
 	}
 }
 
+func TestInfConvert(t *testing.T) {
+	infConvertNoneOpt := cbor.EncOptions{InfConvert: cbor.InfConvertNone}
+	infConvertFloat16Opt := cbor.EncOptions{InfConvert: cbor.InfConvertFloat16}
+	testCases := []struct {
+		name         string
+		v            interface{}
+		opts         cbor.EncOptions
+		wantCborData []byte
+	}{
+		{"float32 -inf no conversion", float32(math.Inf(-1)), infConvertNoneOpt, hexDecode("faff800000")},
+		{"float32 +inf no conversion", float32(math.Inf(1)), infConvertNoneOpt, hexDecode("fa7f800000")},
+		{"float64 -inf no conversion", math.Inf(-1), infConvertNoneOpt, hexDecode("fbfff0000000000000")},
+		{"float64 +inf no conversion", math.Inf(1), infConvertNoneOpt, hexDecode("fb7ff0000000000000")},
+		{"float32 -inf to float16", float32(math.Inf(-1)), infConvertFloat16Opt, hexDecode("f9fc00")},
+		{"float32 +inf to float16", float32(math.Inf(1)), infConvertFloat16Opt, hexDecode("f97c00")},
+		{"float64 -inf to float16", math.Inf(-1), infConvertFloat16Opt, hexDecode("f9fc00")},
+		{"float64 +inf to float16", math.Inf(1), infConvertFloat16Opt, hexDecode("f97c00")},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := cbor.Marshal(tc.v, tc.opts)
+			if err != nil {
+				t.Errorf("Marshal(%v) returns error %s", tc.v, err)
+			} else if !bytes.Equal(b, tc.wantCborData) {
+				t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", tc.v, b, tc.wantCborData)
+			}
+		})
+	}
+}
+
+func TestInvalidInfConvert(t *testing.T) {
+	var i int
+	wantErrorMsg := "cbor: invalid InfConvertMode 100"
+	if _, err := cbor.Marshal(i, cbor.EncOptions{InfConvert: cbor.InfConvertMode(100)}); err == nil {
+		t.Errorf("Marshal() doens't return error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("Marshal() returns error %s, want %s", err, wantErrorMsg)
+	}
+}
+
+// Keith Randall's workaround for constant propagation issue https://github.com/golang/go/issues/36400
+const (
+	// qnan 32 bits constants
+	qnanConst0xffc00001 uint32 = 0xffc00001
+	qnanConst0x7fc00001 uint32 = 0x7fc00001
+	qnanConst0xffc02000 uint32 = 0xffc02000
+	qnanConst0x7fc02000 uint32 = 0x7fc02000
+	// snan 32 bits constants
+	snanConst0xff800001 uint32 = 0xff800001
+	snanConst0x7f800001 uint32 = 0x7f800001
+	snanConst0xff802000 uint32 = 0xff802000
+	snanConst0x7f802000 uint32 = 0x7f802000
+	// qnan 64 bits constants
+	qnanConst0xfff8000000000001 uint64 = 0xfff8000000000001
+	qnanConst0x7ff8000000000001 uint64 = 0x7ff8000000000001
+	qnanConst0xfff8000020000000 uint64 = 0xfff8000020000000
+	qnanConst0x7ff8000020000000 uint64 = 0x7ff8000020000000
+	qnanConst0xfffc000000000000 uint64 = 0xfffc000000000000
+	qnanConst0x7ffc000000000000 uint64 = 0x7ffc000000000000
+	// snan 64 bits constants
+	snanConst0xfff0000000000001 uint64 = 0xfff0000000000001
+	snanConst0x7ff0000000000001 uint64 = 0x7ff0000000000001
+	snanConst0xfff0000020000000 uint64 = 0xfff0000020000000
+	snanConst0x7ff0000020000000 uint64 = 0x7ff0000020000000
+	snanConst0xfff4000000000000 uint64 = 0xfff4000000000000
+	snanConst0x7ff4000000000000 uint64 = 0x7ff4000000000000
+)
+
+var (
+	// qnan 32 bits variables
+	qnanVar0xffc00001 uint32 = qnanConst0xffc00001
+	qnanVar0x7fc00001 uint32 = qnanConst0x7fc00001
+	qnanVar0xffc02000 uint32 = qnanConst0xffc02000
+	qnanVar0x7fc02000 uint32 = qnanConst0x7fc02000
+	// snan 32 bits variables
+	snanVar0xff800001 uint32 = snanConst0xff800001
+	snanVar0x7f800001 uint32 = snanConst0x7f800001
+	snanVar0xff802000 uint32 = snanConst0xff802000
+	snanVar0x7f802000 uint32 = snanConst0x7f802000
+	// qnan 64 bits variables
+	qnanVar0xfff8000000000001 uint64 = qnanConst0xfff8000000000001
+	qnanVar0x7ff8000000000001 uint64 = qnanConst0x7ff8000000000001
+	qnanVar0xfff8000020000000 uint64 = qnanConst0xfff8000020000000
+	qnanVar0x7ff8000020000000 uint64 = qnanConst0x7ff8000020000000
+	qnanVar0xfffc000000000000 uint64 = qnanConst0xfffc000000000000
+	qnanVar0x7ffc000000000000 uint64 = qnanConst0x7ffc000000000000
+	// snan 64 bits variables
+	snanVar0xfff0000000000001 uint64 = snanConst0xfff0000000000001
+	snanVar0x7ff0000000000001 uint64 = snanConst0x7ff0000000000001
+	snanVar0xfff0000020000000 uint64 = snanConst0xfff0000020000000
+	snanVar0x7ff0000020000000 uint64 = snanConst0x7ff0000020000000
+	snanVar0xfff4000000000000 uint64 = snanConst0xfff4000000000000
+	snanVar0x7ff4000000000000 uint64 = snanConst0x7ff4000000000000
+)
+
+func TestNaNConvert(t *testing.T) {
+	nanConvert7e00Opt := cbor.EncOptions{NaNConvert: cbor.NaNConvert7e00}
+	nanConvertNoneOpt := cbor.EncOptions{NaNConvert: cbor.NaNConvertNone}
+	nanConvertPreserveSignalOpt := cbor.EncOptions{NaNConvert: cbor.NaNConvertPreserveSignal}
+	nanConvertQuietOpt := cbor.EncOptions{NaNConvert: cbor.NaNConvertQuiet}
+
+	type nanConvert struct {
+		opt          cbor.EncOptions
+		wantCborData []byte
+	}
+	testCases := []struct {
+		v       interface{}
+		convert []nanConvert
+	}{
+		// float32 qNaN dropped payload not zero
+		{math.Float32frombits(qnanVar0xffc00001), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("faffc00001")},
+			{nanConvertPreserveSignalOpt, hexDecode("faffc00001")},
+			{nanConvertQuietOpt, hexDecode("faffc00001")},
+		}},
+		// float32 qNaN dropped payload not zero
+		{math.Float32frombits(qnanVar0x7fc00001), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("fa7fc00001")},
+			{nanConvertPreserveSignalOpt, hexDecode("fa7fc00001")},
+			{nanConvertQuietOpt, hexDecode("fa7fc00001")},
+		}},
+		// float32 -qNaN dropped payload zero
+		{math.Float32frombits(qnanVar0xffc02000), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("faffc02000")},
+			{nanConvertPreserveSignalOpt, hexDecode("f9fe01")},
+			{nanConvertQuietOpt, hexDecode("f9fe01")},
+		}},
+		// float32 qNaN dropped payload zero
+		{math.Float32frombits(qnanVar0x7fc02000), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("fa7fc02000")},
+			{nanConvertPreserveSignalOpt, hexDecode("f97e01")},
+			{nanConvertQuietOpt, hexDecode("f97e01")},
+		}},
+		// float32 -sNaN dropped payload not zero
+		{math.Float32frombits(snanVar0xff800001), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("faff800001")},
+			{nanConvertPreserveSignalOpt, hexDecode("faff800001")},
+			{nanConvertQuietOpt, hexDecode("faffc00001")},
+		}},
+		// float32 sNaN dropped payload not zero
+		{math.Float32frombits(snanVar0x7f800001), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("fa7f800001")},
+			{nanConvertPreserveSignalOpt, hexDecode("fa7f800001")},
+			{nanConvertQuietOpt, hexDecode("fa7fc00001")},
+		}},
+		// float32 -sNaN dropped payload zero
+		{math.Float32frombits(snanVar0xff802000), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("faff802000")},
+			{nanConvertPreserveSignalOpt, hexDecode("f9fc01")},
+			{nanConvertQuietOpt, hexDecode("f9fe01")},
+		}},
+		// float32 sNaN dropped payload zero
+		{math.Float32frombits(snanVar0x7f802000), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("fa7f802000")},
+			{nanConvertPreserveSignalOpt, hexDecode("f97c01")},
+			{nanConvertQuietOpt, hexDecode("f97e01")},
+		}},
+		// float64 -qNaN dropped payload not zero
+		{math.Float64frombits(qnanVar0xfff8000000000001), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("fbfff8000000000001")},
+			{nanConvertPreserveSignalOpt, hexDecode("fbfff8000000000001")},
+			{nanConvertQuietOpt, hexDecode("fbfff8000000000001")},
+		}},
+		// float64 qNaN dropped payload not zero
+		{math.Float64frombits(qnanVar0x7ff8000000000001), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("fb7ff8000000000001")},
+			{nanConvertPreserveSignalOpt, hexDecode("fb7ff8000000000001")},
+			{nanConvertQuietOpt, hexDecode("fb7ff8000000000001")},
+		}},
+		// float64 -qNaN dropped payload zero
+		{math.Float64frombits(qnanVar0xfff8000020000000), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("fbfff8000020000000")},
+			{nanConvertPreserveSignalOpt, hexDecode("faffc00001")},
+			{nanConvertQuietOpt, hexDecode("faffc00001")},
+		}},
+		// float64 qNaN dropped payload zero
+		{math.Float64frombits(qnanVar0x7ff8000020000000), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("fb7ff8000020000000")},
+			{nanConvertPreserveSignalOpt, hexDecode("fa7fc00001")},
+			{nanConvertQuietOpt, hexDecode("fa7fc00001")},
+		}},
+		// float64 -qNaN dropped payload zero
+		{math.Float64frombits(qnanVar0xfffc000000000000), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("fbfffc000000000000")},
+			{nanConvertPreserveSignalOpt, hexDecode("f9ff00")},
+			{nanConvertQuietOpt, hexDecode("f9ff00")},
+		}},
+		// float64 qNaN dropped payload zero
+		{math.Float64frombits(qnanVar0x7ffc000000000000), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("fb7ffc000000000000")},
+			{nanConvertPreserveSignalOpt, hexDecode("f97f00")},
+			{nanConvertQuietOpt, hexDecode("f97f00")},
+		}},
+		// float64 -sNaN dropped payload not zero
+		{math.Float64frombits(snanVar0xfff0000000000001), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("fbfff0000000000001")},
+			{nanConvertPreserveSignalOpt, hexDecode("fbfff0000000000001")},
+			{nanConvertQuietOpt, hexDecode("fbfff8000000000001")},
+		}},
+		// float64 sNaN dropped payload not zero
+		{math.Float64frombits(snanVar0x7ff0000000000001), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("fb7ff0000000000001")},
+			{nanConvertPreserveSignalOpt, hexDecode("fb7ff0000000000001")},
+			{nanConvertQuietOpt, hexDecode("fb7ff8000000000001")},
+		}},
+		// float64 -sNaN dropped payload zero
+		{math.Float64frombits(snanVar0xfff0000020000000), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("fbfff0000020000000")},
+			{nanConvertPreserveSignalOpt, hexDecode("faff800001")},
+			{nanConvertQuietOpt, hexDecode("faffc00001")},
+		}},
+		// float64 sNaN dropped payload zero
+		{math.Float64frombits(snanVar0x7ff0000020000000), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("fb7ff0000020000000")},
+			{nanConvertPreserveSignalOpt, hexDecode("fa7f800001")},
+			{nanConvertQuietOpt, hexDecode("fa7fc00001")},
+		}},
+		// float64 -sNaN dropped payload zero
+		{math.Float64frombits(snanVar0xfff4000000000000), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("fbfff4000000000000")},
+			{nanConvertPreserveSignalOpt, hexDecode("f9fd00")},
+			{nanConvertQuietOpt, hexDecode("f9ff00")},
+		}},
+		// float64 sNaN dropped payload zero
+		{math.Float64frombits(snanVar0x7ff4000000000000), []nanConvert{
+			{nanConvert7e00Opt, hexDecode("f97e00")},
+			{nanConvertNoneOpt, hexDecode("fb7ff4000000000000")},
+			{nanConvertPreserveSignalOpt, hexDecode("f97d00")},
+			{nanConvertQuietOpt, hexDecode("f97f00")},
+		}},
+	}
+	for _, tc := range testCases {
+		for _, convert := range tc.convert {
+			var convertName string
+			switch convert.opt.NaNConvert {
+			case cbor.NaNConvert7e00:
+				convertName = "Convert7e00"
+			case cbor.NaNConvertNone:
+				convertName = "ConvertNone"
+			case cbor.NaNConvertPreserveSignal:
+				convertName = "ConvertPreserveSignal"
+			case cbor.NaNConvertQuiet:
+				convertName = "ConvertQuiet"
+			}
+			var vName string
+			switch v := tc.v.(type) {
+			case float32:
+				vName = fmt.Sprintf("0x%8x", math.Float32bits(v))
+			case float64:
+				vName = fmt.Sprintf("0x%16x", math.Float64bits(v))
+			}
+			name := convertName + "_" + vName
+			t.Run(name, func(t *testing.T) {
+				b, err := cbor.Marshal(tc.v, convert.opt)
+				if err != nil {
+					t.Errorf("Marshal(%v) returns error %s", tc.v, err)
+				} else if !bytes.Equal(b, convert.wantCborData) {
+					t.Errorf("Marshal(%v) = 0x%0x, want 0x%0x", tc.v, b, convert.wantCborData)
+				}
+			})
+		}
+	}
+}
+
+func TestInvalidNanConvert(t *testing.T) {
+	var i int
+	wantErrorMsg := "cbor: invalid NaNConvertMode 100"
+	if _, err := cbor.Marshal(i, cbor.EncOptions{NaNConvert: cbor.NaNConvertMode(100)}); err == nil {
+		t.Errorf("Marshal() doens't return error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("Marshal() returns error %s, want %s", err, wantErrorMsg)
+	}
+}
+
 func TestMarshalSenML(t *testing.T) {
 	// Data from https://tools.ietf.org/html/rfc8428#section-6
 	// Data contains 13 floating-point numbers.
@@ -2164,8 +2459,8 @@ func TestMarshalSenML(t *testing.T) {
 	}{
 		{"EncOptions ShortestFloatNone", cbor.EncOptions{}},
 		{"EncOptions ShortestFloat16", cbor.EncOptions{ShortestFloat: cbor.ShortestFloat16}},
-		{"EncOptions ShortestFloat32", cbor.EncOptions{ShortestFloat: cbor.ShortestFloat32}},
-		{"EncOptions ShortestFloat64", cbor.EncOptions{ShortestFloat: cbor.ShortestFloat64}},
+		//{"EncOptions ShortestFloat32", cbor.EncOptions{ShortestFloat: cbor.ShortestFloat32}},
+		//{"EncOptions ShortestFloat64", cbor.EncOptions{ShortestFloat: cbor.ShortestFloat64}},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -2190,7 +2485,9 @@ func TestMarshalSenML(t *testing.T) {
 
 func TestCanonicalEncOptions(t *testing.T) {
 	wantSortMode := cbor.SortCanonical
-	wantShortestFloat := cbor.ShortestFloatNone
+	wantShortestFloat := cbor.ShortestFloat16
+	wantNanConvert := cbor.NaNConvert7e00
+	wantInfConvert := cbor.InfConvertFloat16
 	wantIndefiniteLengthErrorMsg := "cbor: indefinite-length items are not allowed"
 	opts := cbor.CanonicalEncOptions()
 	if opts.Sort != wantSortMode {
@@ -2198,6 +2495,12 @@ func TestCanonicalEncOptions(t *testing.T) {
 	}
 	if opts.ShortestFloat != wantShortestFloat {
 		t.Errorf("CanonicalEncOptions() returns EncOptions with ShortestFloat %d, want %d", opts.ShortestFloat, wantShortestFloat)
+	}
+	if opts.NaNConvert != wantNanConvert {
+		t.Errorf("CanonicalEncOptions() returns EncOptions with NanConvert %d, want %d", opts.NaNConvert, wantNanConvert)
+	}
+	if opts.InfConvert != wantInfConvert {
+		t.Errorf("CanonicalEncOptions() returns EncOptions with InfConvert %d, want %d", opts.InfConvert, wantInfConvert)
 	}
 	enc := cbor.NewEncoder(ioutil.Discard, opts)
 	if err := enc.StartIndefiniteArray(); err == nil {
@@ -2210,6 +2513,8 @@ func TestCanonicalEncOptions(t *testing.T) {
 func TestCTAP2EncOptions(t *testing.T) {
 	wantSortMode := cbor.SortCTAP2
 	wantShortestFloat := cbor.ShortestFloatNone
+	wantNanConvert := cbor.NaNConvertNone
+	wantInfConvert := cbor.InfConvertNone
 	wantIndefiniteLengthErrorMsg := "cbor: indefinite-length items are not allowed"
 	opts := cbor.CTAP2EncOptions()
 	if opts.Sort != wantSortMode {
@@ -2217,6 +2522,12 @@ func TestCTAP2EncOptions(t *testing.T) {
 	}
 	if opts.ShortestFloat != wantShortestFloat {
 		t.Errorf("CTAP2EncOptions() returns EncOptions with ShortestFloat %d, want %d", opts.ShortestFloat, wantShortestFloat)
+	}
+	if opts.NaNConvert != wantNanConvert {
+		t.Errorf("CTAP2EncOptions() returns EncOptions with NanConvert %d, want %d", opts.NaNConvert, wantNanConvert)
+	}
+	if opts.InfConvert != wantInfConvert {
+		t.Errorf("CTAP2EncOptions() returns EncOptions with InfConvert %d, want %d", opts.InfConvert, wantInfConvert)
 	}
 	enc := cbor.NewEncoder(ioutil.Discard, opts)
 	if err := enc.StartIndefiniteArray(); err == nil {
@@ -2229,6 +2540,8 @@ func TestCTAP2EncOptions(t *testing.T) {
 func TestCoreDetEncOptions(t *testing.T) {
 	wantSortMode := cbor.SortCoreDeterministic
 	wantShortestFloat := cbor.ShortestFloat16
+	wantNanConvert := cbor.NaNConvert7e00
+	wantInfConvert := cbor.InfConvertFloat16
 	wantIndefiniteLengthErrorMsg := "cbor: indefinite-length items are not allowed"
 	opts := cbor.CoreDetEncOptions()
 	if opts.Sort != wantSortMode {
@@ -2236,6 +2549,12 @@ func TestCoreDetEncOptions(t *testing.T) {
 	}
 	if opts.ShortestFloat != wantShortestFloat {
 		t.Errorf("CoreDetEncOptions() returns EncOptions with ShortestFloat %d, want %d", opts.ShortestFloat, wantShortestFloat)
+	}
+	if opts.NaNConvert != wantNanConvert {
+		t.Errorf("CoreDetEncOptions() returns EncOptions with NanConvert %d, want %d", opts.NaNConvert, wantNanConvert)
+	}
+	if opts.InfConvert != wantInfConvert {
+		t.Errorf("CoreDetEncOptions() returns EncOptions with InfConvert %d, want %d", opts.InfConvert, wantInfConvert)
 	}
 	enc := cbor.NewEncoder(ioutil.Discard, opts)
 	if err := enc.StartIndefiniteArray(); err == nil {
