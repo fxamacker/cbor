@@ -19,7 +19,7 @@ __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: 
 
 * __Fast__. v1.3 became faster than a well-known library that uses `unsafe` optimizations and code gen.  Faster libraries will always exist, but speed is only one factor.  This library doesn't use `unsafe` optimizations or code gen.  
 
-* __Safe__ and reliable. It prevents crashes on malicious CBOR data by using extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's [`unsafe`](https://golang.org/pkg/unsafe/) package. 
+* __Safe__ and reliable. It prevents crashes on malicious CBOR data by using extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's [`unsafe`](https://golang.org/pkg/unsafe/) pkg. Nested levels for CBOR arrays, maps, and tags are limited to 32.
 
 * __Easy__ and saves time.  It has the same API as [Go](https://golang.org)'s [`encoding/json`](https://golang.org/pkg/encoding/json/) when possible.  Existing structs don't require changes.  Go struct tags like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` work as expected.
 
@@ -100,12 +100,16 @@ Features not in Go's standard library are usually not added.  However, the __`to
 * Support "cbor" and "json" keys in Go's struct tags. If both are specified, then "cbor" is used.
 * `toarray` struct tag allows named struct fields for elements of CBOR arrays.
 * `keyasint` struct tag allows named struct fields for elements of CBOR maps with int keys.
-* Encoder has simple functions that create well-known configurations:
+* Encoder has easy functions that create and return modifiable configurations:
   * func CanonicalEncOptions() EncOptions
   * func CTAP2EncOptions() EncOptions
   * func CoreDetEncOptions() EncOptions
-* Encoder sort options: SortNone (default), BytewiseLexical, Canonical, CTAP2Canonical, etc.
-* Encoder floating-point options: ShortestFloatNone (default), ShortestFloat16, ShortestFloat32, ShortestFloat64.
+* For Go integers, encoder always uses "preferred serialization" which encodes their values to the smallest number of bytes.
+* Encoder floating-point option types: ShortestFloatMode, InfConvertMode, and NaNConvertMode.
+  * ShortestFloatMode: ShortestFloatNone or ShortestFloat16 (IEEE 754 binary16, etc. if value fits).
+  * InfConvertMode: InfConvertNone or InfConvertFloat16.
+  * NanConvertMode: NaNConvertNone, NanConvert7e00, NanConvertQuiet, or NaNConvertPreserveSignal
+* Encoder sort options: SortNone, SortBytewiseLexical, SortCanonical, SortCTAP2, SortCoreDeterministic  
 * Support `encoding.BinaryMarshaler` and `encoding.BinaryUnmarshaler` interfaces.
 * Support `cbor.RawMessage` which can delay CBOR decoding or precompute CBOR encoding.
 * Support `cbor.Marshaler` and `cbor.Unmarshaler` interfaces to allow user-defined types to have custom CBOR encoding and decoding.
@@ -123,33 +127,45 @@ Coming soon: support for CBOR tags (major type 6).  After that, options for hand
 ## Standards
 This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049) with minor [limitations](#limitations).
 
-Encoder has options that can be set individually to create custom configurations. Simple functions are also provided to create predefined configurations:
+For Go integers, encoder always uses "preferred serialization" which encodes their values to the smallest number of bytes.
+
+Encoder has options that can be set individually to create custom configurations. Easy functions are also provided to create and return modifiable configurations (EncOptions):
 
 * CanonicalEncOptions() -- [Canonical CBOR (RFC 7049)](https://tools.ietf.org/html/rfc7049#section-3.9).
 * CTAP2EncOptions() -- [CTAP2 Canonical CBOR](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).
 * CoreDetEncOptions() -- Core Deterministic Encoding (floats use [IEEE 754 binary16](https://en.wikipedia.org/wiki/Half-precision_floating-point_format) if value is preserved).
 
-Encoder has 4 options for encoding floating-point data:
+__Encoder's SortMode__ has 3 options (and 3 aliases):
 
-* ShortestFloatNone (default): no conversion.
+* SortNone: no sorting.
+* SortLengthFirst: length-first map key ordering.
+* SortBytewiseLexical: bytewise lexicographic ordering.
+* SortCanonical [(RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9): same as SortLengthFirst.
+* SortCTAP2Canonical [(CTAP2 Canonical CBOR)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form): same as SortBytewiseLexical.
+* SortCoreDeterministic: same as SortBytewiseLexical.
+
+Encoder has 3 types of options for floating-point data: ShortestFloatMode, InfConvertMode, and NaNConvertMode.
+
+__Encoder's ShortestFloatMode__ can be:
+
+* ShortestFloatNone: no conversion.
 * ShortestFloat16: uses float16 ([IEEE 754 binary16](https://en.wikipedia.org/wiki/Half-precision_floating-point_format)) as the shortest form that preserves value.
-* ShortestFloat32: uses float32 as the shortest form that preserves value.
-* ShortestFloat64: uses float64 as the shortest form (this can needlessly increase size of CBOR data).
 
-Floating-point conversions are only performed when the original value is preserved.  E.g., a round-trip back to the original floating-point format must produce the same value.
+With ShortestFloat16, each encoded float can be float64, float32 or float16 -- whichever is the smallest size that preserves original value.
+
+__Encoder's InfConvertMode__ overrides ShortestFloatMode for infinity values and can be:
+
+* InfConvertNone: don't convert +- infinity to other representations -- used by CTAP2 Canonical CBOR
+* InfConvertFloat16: convert +- infinity to float16 since they always preserve value (recommended)
+
+__Encoder's NaNConvertMode__ overrides ShortestFloatMode for NaN values and can be:
+
+* NaNConvertNone: don't convert NaN to other representations -- used by CTAP2 Canonical CBOR.
+* NaNConvert7e00: encode to 0xf97e00 (CBOR float16 = 0x7e00) -- used by RFC 7049 Canonical CBOR.
+* NaNConvertQuiet: force quiet bit = 1 and use shortest form that preserves NaN payload.
+* NaNConvertPreserveSignal: convert to smallest form that preserves value (quit bit unmodified and NaN payload preserved) -- described in RFC 7049bis Draft 12 when protocols don't want predifined value such as 0x7e00.
 
 Float16 conversions use [cbor-go/float16](https://github.com/cbor-go/float16) maintained by the same team as this library.  All 4+ billion possible conversions are verified to be correct in that library.
-
-For integer data types in Go, the encoder always uses the smallest form of CBOR integer that preserves data.  
-
-Encoder has 3 options (and 3 aliases) for sorting:
-
-* SortNone (default): no sorting.
-* LengthFirst: length-first map key ordering.
-* BytewiseLexical: bytewise lexicographic ordering.
-* Canonical [(RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9): same as LengthFirst.
-* CTAP2Canonical [(CTAP2 Canonical CBOR)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form): same as BytewiseLexical.
-* CoreDeterministic: same as BytewiseLexical.
 
 Decoder checks for all required well-formedness errors described in the latest RFC 7049bis, including all "subkinds" of syntax errors and too little data.
 
@@ -163,13 +179,13 @@ When decoding well-formed CBOR arrays and maps, decoder saves the first error it
 ## Limitations
 CBOR tags (type 6) is being added in the next release ([milestone v2.0](https://github.com/fxamacker/cbor/milestone/3)) and is coming soon.
 
-Current limitations:
+Known limitations:
 
-* CBOR tag numbers are ignored.  Decoder simply decodes tag content.
+* Currently, CBOR tag numbers are ignored.  Decoder simply decodes tag content. Work is in progress to add support.
+* Currently, duplicate map keys are not checked during decoding.  Option to handle duplicate map keys in different ways will be added.
+* Nested levels for CBOR arrays, maps, and tags are limited to 32 to quickly reject potentially malicious data.  This limit will be reconsidered upon request.
 * CBOR negative int (type 1) that cannot fit into Go's int64 are not supported, such as RFC 7049 example -18446744073709551616.  Decoding these values returns `cbor.UnmarshalTypeError` like Go's `encoding/json`.
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  Use CBOR `Null` (0xf6) to round-trip with Go's `nil`.
-* Duplicate map keys are not checked during decoding.  Option to handle duplicate map keys in different ways may be added as a feature.
-* Nested levels for CBOR arrays, maps, and tags are limited to 32 to prevent exploits.  If you need a larger limit, please open an issue describing your data format and this limit will be reconsidered.
 
 Like Go's `encoding/json`, data validation checks the entire message to prevent partially filled (corrupted) data. This library also prevents crashes and resource exhaustion attacks from malicious CBOR data. Use Go's `io.LimitReader` when decoding very large data to limit size.
 
@@ -449,6 +465,7 @@ Please read the license for additional disclaimers and terms.
 ## Special Thanks
 * Carsten Bormann for RFC 7049 (CBOR), his fast confirmation to my RFC 7049 errata, approving my pull request to 7049bis, and his patience when I misread a line in 7049bis.
 * Montgomery Edwards⁴⁴⁸ for contributing [float16 conversion code](https://github.com/cbor-go/float16), updating the README.md, creating comparison charts & slideshow, and filing many helpful issues.
+* Keith Randall for [fixing Go bugs and providing workarounds](https://github.com/golang/go/issues/36400) so we don't have to wait for new versions of Go.
 * Stefan Tatschner for being the 1st to discover my CBOR library, filing issues #1 and #2, and recommending this library.
 * Yawning Angel for replacing a library with this one in a big project after an external security audit, and filing issue #5.
 * Jernej Kos for filing issue #11 (add feature similar to json.RawMessage) and his kind words about this library.
