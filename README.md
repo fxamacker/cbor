@@ -11,9 +11,9 @@ This library is a CBOR encoder and decoder.  Each release passes 375+ tests and 
 
 __What is CBOR__?  [CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049)) is a binary data format inspired by JSON and MessagePack.  CBOR is used in [IETF](https://www.ietf.org) Internet Standards such as COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)) and CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)). Even WebAuthn uses CBOR.
 
-__Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: small, fast, safe and easy. 
+__Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: small, fast, safe and easy. It can provide "preferred serialization" by correctly converting floating-point values to float16 (if they fit) using IEEE 754 default rounding.
 
-* __Small apps__.  Same programs are 4-9 MB smaller by switching to this library.  No code gen and the only imported pkg is [cbor-go/float16](https://github.com/cbor-go/float16) which is maintained by the same team.
+* __Small apps__.  Same programs are 4-9 MB smaller by switching to this library.  No code gen and the only imported pkg is [cbor-go/float16](https://github.com/cbor-go/float16) which is maintained by the same team as this library.
 
 * __Small data__.  The `toarray` and `keyasint` struct tags can shrink size of Go structs encoded to CBOR.  Also, integers always encode to smallest type that fits.  Optionally, floats can shrink from float64 to float32 or float16 when values fit.
 
