@@ -457,8 +457,19 @@ func encodeFloat(e *encodeState, v reflect.Value, opts EncOptions) (int, error) 
 
 	f32 := float32(f64)
 	if fopt == ShortestFloat16 {
-		f16 := float16.Fromfloat32(f32)
-		if f16.Float32() == f32 {
+		var f16 float16.Float16
+		p := float16.PrecisionFromfloat32(f32)
+		if p == float16.PrecisionExact {
+			// Roundtrip float32->float16->float32 test isn't needed.
+			f16 = float16.Fromfloat32(f32)
+		} else if p == float16.PrecisionUnknown {
+			// Try roundtrip float32->float16->float32 to determine if float32 can fit into float16.
+			f16 = float16.Fromfloat32(f32)
+			if f16.Float32() == f32 {
+				p = float16.PrecisionExact
+			}
+		}
+		if p == float16.PrecisionExact {
 			// Encode float16
 			// Don't use encodeFloat16() because it cannot be inlined.
 			e.scratch[0] = byte(cborTypePrimitives) | byte(25)
