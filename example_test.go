@@ -25,7 +25,7 @@ func ExampleMarshal() {
 	if err != nil {
 		fmt.Println("error:", err)
 	}
-	fmt.Printf("%0x\n", b)
+	fmt.Printf("%x\n", b)
 	// Output:
 	// a46341676504644e616d656543616e6479664f776e65727382644d617279634a6f65644d616c65f4
 }
@@ -37,13 +37,13 @@ func ExampleMarshal_time() {
 	if err != nil {
 		fmt.Println("error:", err)
 	}
-	fmt.Printf("%0x\n", b)
+	fmt.Printf("%x\n", b)
 	// Encode time as numerical representation of seconds since January 1, 1970 UTC.
 	b, err = cbor.Marshal(tm, cbor.EncOptions{TimeRFC3339: false})
 	if err != nil {
 		fmt.Println("error:", err)
 	}
-	fmt.Printf("%0x\n", b)
+	fmt.Printf("%x\n", b)
 	// Output:
 	// 74323031332d30332d32315432303a30343a30305a
 	// 1a514b67b0
@@ -62,7 +62,7 @@ func ExampleMarshal_canonical() {
 	if err != nil {
 		fmt.Println("error:", err)
 	}
-	fmt.Printf("%0x\n", b)
+	fmt.Printf("%x\n", b)
 	// Output:
 	// a46341676504644d616c65f4644e616d656543616e647968436f6e7461637473a2634a6f656c3232322d3232322d32323232644d6172796c3131312d3131312d31313131
 }
@@ -80,7 +80,7 @@ func ExampleMarshal_toarray() {
 	if err != nil {
 		fmt.Println("error:", err)
 	}
-	fmt.Printf("%0x\n", b)
+	fmt.Printf("%x\n", b)
 	// Output:
 	// 836763757272656e74615601
 }
@@ -98,7 +98,7 @@ func ExampleMarshal_keyasint() {
 	if err != nil {
 		fmt.Println("error:", err)
 	}
-	fmt.Printf("%0x\n", b)
+	fmt.Printf("%x\n", b)
 	// Output:
 	// a3016763757272656e740261560301
 }
@@ -159,7 +159,7 @@ func ExampleEncoder() {
 			fmt.Println("error:", err)
 		}
 	}
-	fmt.Printf("%0x\n", buf.Bytes())
+	fmt.Printf("%x\n", buf.Bytes())
 	// Output:
 	// a46341676504644d616c65f4644e616d656543616e6479664f776e65727382644d617279634a6f65a46341676506644d616c65f5644e616d656452756479664f776e657273816543696e6479a46341676502644d616c65f5644e616d656444756b65664f776e65727381664e6f72746f6e
 }
@@ -185,7 +185,7 @@ func ExampleEncoder_indefiniteLengthByteString() {
 	if err := encoder.EndIndefinite(); err != nil {
 		fmt.Println("error:", err)
 	}
-	fmt.Printf("%0x\n", buf.Bytes())
+	fmt.Printf("%x\n", buf.Bytes())
 	// Output:
 	// 5f42010243030405ff
 }
@@ -211,7 +211,7 @@ func ExampleEncoder_indefiniteLengthTextString() {
 	if err := encoder.EndIndefinite(); err != nil {
 		fmt.Println("error:", err)
 	}
-	fmt.Printf("%0x\n", buf.Bytes())
+	fmt.Printf("%x\n", buf.Bytes())
 	// Output:
 	// 7f657374726561646d696e67ff
 }
@@ -253,7 +253,7 @@ func ExampleEncoder_indefiniteLengthArray() {
 	if err := enc.EndIndefinite(); err != nil {
 		fmt.Println("error:", err)
 	}
-	fmt.Printf("%0x\n", buf.Bytes())
+	fmt.Printf("%x\n", buf.Bytes())
 	// Output:
 	// 9f018202039f0405ffff
 }
@@ -299,7 +299,7 @@ func ExampleEncoder_indefiniteLengthMap() {
 	if err := enc.EndIndefinite(); err != nil {
 		fmt.Println("error:", err)
 	}
-	fmt.Printf("%0x\n", buf.Bytes())
+	fmt.Printf("%x\n", buf.Bytes())
 	// Output:
 	// bf61610161629f0203ffff
 }

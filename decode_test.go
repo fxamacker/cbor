@@ -680,25 +680,25 @@ func TestUnmarshal(t *testing.T) {
 		// Test unmarshalling CBOR into empty interface.
 		var v interface{}
 		if err := cbor.Unmarshal(tc.cborData, &v); err != nil {
-			t.Errorf("Unmarshal(0x%0x) returns error %v", tc.cborData, err)
+			t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
 		} else if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
-			t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
 		}
 		// Test unmarshalling CBOR into RawMessage.
 		var r cbor.RawMessage
 		if err := cbor.Unmarshal(tc.cborData, &r); err != nil {
-			t.Errorf("Unmarshal(0x%0x) returns error %v", tc.cborData, err)
+			t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
 		} else if !bytes.Equal(r, tc.cborData) {
-			t.Errorf("Unmarshal(0x%0x) returns RawMessage %v, want %v", tc.cborData, r, tc.cborData)
+			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", tc.cborData, r, tc.cborData)
 		}
 		// Test unmarshalling CBOR into compatible data types.
 		for _, value := range tc.values {
 			v := reflect.New(reflect.TypeOf(value))
 			vPtr := v.Interface()
 			if err := cbor.Unmarshal(tc.cborData, vPtr); err != nil {
-				t.Errorf("Unmarshal(0x%0x) returns error %v", tc.cborData, err)
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
 			} else if !reflect.DeepEqual(v.Elem().Interface(), value) {
-				t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), value, value)
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), value, value)
 			}
 		}
 		// Test unmarshalling CBOR into incompatible data types.
@@ -706,11 +706,11 @@ func TestUnmarshal(t *testing.T) {
 			v := reflect.New(typ)
 			vPtr := v.Interface()
 			if err := cbor.Unmarshal(tc.cborData, vPtr); err == nil {
-				t.Errorf("Unmarshal(0x%0x) returns %v (%T), want (*cbor.UnmarshalTypeError)", tc.cborData, v.Elem().Interface(), v.Elem().Interface())
+				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
 			} else if _, ok := err.(*cbor.UnmarshalTypeError); !ok {
-				t.Errorf("Unmarshal(0x%0x) returns wrong error %T, want (*cbor.UnmarshalTypeError)", tc.cborData, err)
+				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*cbor.UnmarshalTypeError)", tc.cborData, err)
 			} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-				t.Errorf("Unmarshal(0x%0x) returns error %s, want error containing %q", tc.cborData, err.Error(), "cannot unmarshal")
+				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborData, err.Error(), "cannot unmarshal")
 			}
 		}
 	}
@@ -721,40 +721,40 @@ func TestUnmarshalFloat(t *testing.T) {
 		// Test unmarshalling CBOR into empty interface.
 		var v interface{}
 		if err := cbor.Unmarshal(tc.cborData, &v); err != nil {
-			t.Errorf("Unmarshal(0x%0x) returns error %v", tc.cborData, err)
+			t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
 		} else if f, ok := v.(float64); !ok {
-			t.Errorf("Unmarshal(0x%0x) returns value of type %T, want float64", tc.cborData, f)
+			t.Errorf("Unmarshal(0x%x) returned value of type %T, want float64", tc.cborData, f)
 		} else {
 			wantf := tc.emptyInterfaceValue.(float64)
 			if math.IsNaN(wantf) {
 				if !math.IsNaN(f) {
-					t.Errorf("Unmarshal(0x%0x) = %f, want Nan", tc.cborData, f)
+					t.Errorf("Unmarshal(0x%x) = %f, want Nan", tc.cborData, f)
 				}
 			} else if math.IsInf(wantf, 1) {
 				if !math.IsInf(f, 1) {
-					t.Errorf("Unmarshal(0x%0x) = %f, want +Inf", tc.cborData, f)
+					t.Errorf("Unmarshal(0x%x) = %f, want +Inf", tc.cborData, f)
 				}
 			} else if math.IsInf(wantf, -1) {
 				if !math.IsInf(f, -1) {
-					t.Errorf("Unmarshal(0x%0x) = %f, want -Inf", tc.cborData, f)
+					t.Errorf("Unmarshal(0x%x) = %f, want -Inf", tc.cborData, f)
 				}
 			} else if math.Abs(f-wantf) > tc.equalityThreshold {
-				t.Errorf("Unmarshal(0x%0x) = %.18f, want %.18f, diff %.18f > threshold %.18f", tc.cborData, f, wantf, math.Abs(f-wantf), tc.equalityThreshold)
+				t.Errorf("Unmarshal(0x%x) = %.18f, want %.18f, diff %.18f > threshold %.18f", tc.cborData, f, wantf, math.Abs(f-wantf), tc.equalityThreshold)
 			}
 		}
 		// Test unmarshalling CBOR into RawMessage.
 		var r cbor.RawMessage
 		if err := cbor.Unmarshal(tc.cborData, &r); err != nil {
-			t.Errorf("Unmarshal(0x%0x) returns error %v", tc.cborData, err)
+			t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
 		} else if !bytes.Equal(r, tc.cborData) {
-			t.Errorf("Unmarshal(0x%0x) returns RawMessage %v, want %v", tc.cborData, r, tc.cborData)
+			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", tc.cborData, r, tc.cborData)
 		}
 		// Test unmarshalling CBOR into compatible data types.
 		for _, value := range tc.values {
 			v := reflect.New(reflect.TypeOf(value))
 			vPtr := v.Interface()
 			if err := cbor.Unmarshal(tc.cborData, vPtr); err != nil {
-				t.Errorf("Unmarshal(0x%0x) returns error %v", tc.cborData, err)
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
 			} else {
 				switch reflect.TypeOf(value).Kind() {
 				case reflect.Float32:
@@ -762,36 +762,36 @@ func TestUnmarshalFloat(t *testing.T) {
 					wantf := value.(float32)
 					if math.IsNaN(float64(wantf)) {
 						if !math.IsNaN(float64(f)) {
-							t.Errorf("Unmarshal(0x%0x) = %f, want Nan", tc.cborData, f)
+							t.Errorf("Unmarshal(0x%x) = %f, want Nan", tc.cborData, f)
 						}
 					} else if math.IsInf(float64(wantf), 1) {
 						if !math.IsInf(float64(f), 1) {
-							t.Errorf("Unmarshal(0x%0x) = %f, want +Inf", tc.cborData, f)
+							t.Errorf("Unmarshal(0x%x) = %f, want +Inf", tc.cborData, f)
 						}
 					} else if math.IsInf(float64(wantf), -1) {
 						if !math.IsInf(float64(f), -1) {
-							t.Errorf("Unmarshal(0x%0x) = %f, want -Inf", tc.cborData, f)
+							t.Errorf("Unmarshal(0x%x) = %f, want -Inf", tc.cborData, f)
 						}
 					} else if math.Abs(float64(f-wantf)) > tc.equalityThreshold {
-						t.Errorf("Unmarshal(0x%0x) = %.18f, want %.18f, diff %.18f > threshold %.18f", tc.cborData, f, wantf, math.Abs(float64(f-wantf)), tc.equalityThreshold)
+						t.Errorf("Unmarshal(0x%x) = %.18f, want %.18f, diff %.18f > threshold %.18f", tc.cborData, f, wantf, math.Abs(float64(f-wantf)), tc.equalityThreshold)
 					}
 				case reflect.Float64:
 					f := v.Elem().Interface().(float64)
 					wantf := value.(float64)
 					if math.IsNaN(wantf) {
 						if !math.IsNaN(f) {
-							t.Errorf("Unmarshal(0x%0x) = %f, want Nan", tc.cborData, f)
+							t.Errorf("Unmarshal(0x%x) = %f, want Nan", tc.cborData, f)
 						}
 					} else if math.IsInf(wantf, 1) {
 						if !math.IsInf(f, 1) {
-							t.Errorf("Unmarshal(0x%0x) = %f, want +Inf", tc.cborData, f)
+							t.Errorf("Unmarshal(0x%x) = %f, want +Inf", tc.cborData, f)
 						}
 					} else if math.IsInf(wantf, -1) {
 						if !math.IsInf(f, -1) {
-							t.Errorf("Unmarshal(0x%0x) = %f, want -Inf", tc.cborData, f)
+							t.Errorf("Unmarshal(0x%x) = %f, want -Inf", tc.cborData, f)
 						}
 					} else if math.Abs(f-wantf) > tc.equalityThreshold {
-						t.Errorf("Unmarshal(0x%0x) = %.18f, want %.18f, diff %.18f > threshold %.18f", tc.cborData, f, wantf, math.Abs(f-wantf), tc.equalityThreshold)
+						t.Errorf("Unmarshal(0x%x) = %.18f, want %.18f, diff %.18f > threshold %.18f", tc.cborData, f, wantf, math.Abs(f-wantf), tc.equalityThreshold)
 					}
 				}
 			}
@@ -801,11 +801,11 @@ func TestUnmarshalFloat(t *testing.T) {
 			v := reflect.New(typ)
 			vPtr := v.Interface()
 			if err := cbor.Unmarshal(tc.cborData, vPtr); err == nil {
-				t.Errorf("Unmarshal(0x%0x) returns %v (%T), want (*cbor.UnmarshalTypeError)", tc.cborData, v.Elem().Interface(), v.Elem().Interface())
+				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
 			} else if _, ok := err.(*cbor.UnmarshalTypeError); !ok {
-				t.Errorf("Unmarshal(0x%0x) returns wrong error %T, want (*cbor.UnmarshalTypeError)", tc.cborData, err)
+				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*cbor.UnmarshalTypeError)", tc.cborData, err)
 			} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-				t.Errorf("Unmarshal(0x%0x) returns error %s, want error containing %q", tc.cborData, err.Error(), "cannot unmarshal")
+				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborData, err.Error(), "cannot unmarshal")
 			}
 		}
 	}
@@ -821,11 +821,11 @@ func TestNegIntOverflow(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		if err := cbor.Unmarshal(tc.cborData, tc.v); err == nil {
-			t.Errorf("Unmarshal(0x%0x) returns no error, %v (%T), want (*cbor.UnmarshalTypeError)", tc.cborData, tc.v, tc.v)
+			t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
 		} else if _, ok := err.(*cbor.UnmarshalTypeError); !ok {
-			t.Errorf("Unmarshal(0x%0x) returns wrong error %T, want (*cbor.UnmarshalTypeError)", tc.cborData, err)
+			t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*cbor.UnmarshalTypeError)", tc.cborData, err)
 		} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-			t.Errorf("Unmarshal(0x%0x) returns error %s, want error containing %q", tc.cborData, err, "cannot unmarshal")
+			t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborData, err.Error(), "cannot unmarshal")
 		}
 	}
 }
@@ -853,60 +853,60 @@ func TestUnmarshalIntoPointer(t *testing.T) {
 
 	// Unmarshal CBOR nil into a nil pointer.
 	if err := cbor.Unmarshal(cborDataNil, &p1); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborDataNil, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborDataNil, err)
 	} else if p1 != nil {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want nil", cborDataNil, p1, p1)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want nil", cborDataNil, p1, p1)
 	}
 	if err := cbor.Unmarshal(cborDataNil, &p2); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborDataNil, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborDataNil, err)
 	} else if p2 != nil {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want nil", cborDataNil, p1, p1)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want nil", cborDataNil, p1, p1)
 	}
 	if err := cbor.Unmarshal(cborDataNil, &p3); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborDataNil, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborDataNil, err)
 	} else if p3 != nil {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want nil", cborDataNil, p1, p1)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want nil", cborDataNil, p1, p1)
 	}
 	// Unmarshal CBOR integer into a non-nil pointer.
 	if err := cbor.Unmarshal(cborDataInt, &ppi); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborDataInt, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborDataInt, err)
 	} else if i != 24 {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want 24", cborDataInt, i, i)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want 24", cborDataInt, i, i)
 	}
 
 	// Unmarshal CBOR integer into a nil pointer.
 	if err := cbor.Unmarshal(cborDataInt, &p1); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborDataInt, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborDataInt, err)
 	} else if *p1 != 24 {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want 24", cborDataInt, *pi, pi)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want 24", cborDataInt, *pi, pi)
 	}
 
 	// Unmarshal CBOR string into a non-nil pointer.
 	if err := cbor.Unmarshal(cborDataString, &pps); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborDataString, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborDataString, err)
 	} else if s != "streaming" {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want \"streaming\"", cborDataString, s, s)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want \"streaming\"", cborDataString, s, s)
 	}
 
 	// Unmarshal CBOR string into a nil pointer.
 	if err := cbor.Unmarshal(cborDataString, &p2); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborDataString, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborDataString, err)
 	} else if *p2 != "streaming" {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want \"streaming\"", cborDataString, *p2, p2)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want \"streaming\"", cborDataString, *p2, p2)
 	}
 
 	// Unmarshal CBOR string into a non-nil cbor.RawMessage.
 	if err := cbor.Unmarshal(cborDataString, &ppr); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborDataString, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborDataString, err)
 	} else if !bytes.Equal(r, cborDataString) {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v", cborDataString, r, r, cborDataString)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborDataString, r, r, cborDataString)
 	}
 
 	// Unmarshal CBOR string into a nil pointer to cbor.RawMessage.
 	if err := cbor.Unmarshal(cborDataString, &p3); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborDataString, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborDataString, err)
 	} else if !bytes.Equal(*p3, cborDataString) {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v", cborDataString, *p3, p3, cborDataString)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborDataString, *p3, p3, cborDataString)
 	}
 }
 
@@ -916,25 +916,25 @@ func TestUnmarshalIntoArray(t *testing.T) {
 	// Unmarshal CBOR array into Go array.
 	var arr1 [3]int
 	if err := cbor.Unmarshal(cborData, &arr1); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
 	} else if arr1 != [3]int{1, 2, 3} {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want [3]int{1, 2, 3}", cborData, arr1, arr1)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want [3]int{1, 2, 3}", cborData, arr1, arr1)
 	}
 
 	// Unmarshal CBOR array into Go array with more elements.
 	var arr2 [5]int
 	if err := cbor.Unmarshal(cborData, &arr2); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
 	} else if arr2 != [5]int{1, 2, 3, 0, 0} {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want [5]int{1, 2, 3, 0, 0}", cborData, arr2, arr2)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want [5]int{1, 2, 3, 0, 0}", cborData, arr2, arr2)
 	}
 
 	// Unmarshal CBOR array into Go array with less elements.
 	var arr3 [1]int
 	if err := cbor.Unmarshal(cborData, &arr3); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
 	} else if arr3 != [1]int{1} {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want [0]int{1}", cborData, arr3, arr3)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want [0]int{1}", cborData, arr3, arr3)
 	}
 }
 
@@ -945,21 +945,21 @@ func TestUnmarshalNil(t *testing.T) {
 	for _, data := range cborData {
 		bSlice := []byte{1, 2, 3}
 		if err := cbor.Unmarshal(data, &bSlice); err != nil {
-			t.Errorf("Unmarshal(0x%0x) returns error %v", data, err)
+			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		} else if bSlice != nil {
-			t.Errorf("Unmarshal(0x%0x) = %v (%T), want nil", data, bSlice, bSlice)
+			t.Errorf("Unmarshal(0x%x) = %v (%T), want nil", data, bSlice, bSlice)
 		}
 		strSlice := []string{"hello", "world"}
 		if err := cbor.Unmarshal(data, &strSlice); err != nil {
-			t.Errorf("Unmarshal(0x%0x) returns error %v", data, err)
+			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		} else if strSlice != nil {
-			t.Errorf("Unmarshal(0x%0x) = %v (%T), want nil", data, strSlice, strSlice)
+			t.Errorf("Unmarshal(0x%x) = %v (%T), want nil", data, strSlice, strSlice)
 		}
 		m := map[string]bool{"hello": true, "goodbye": false}
 		if err := cbor.Unmarshal(data, &m); err != nil {
-			t.Errorf("Unmarshal(0x%0x) returns error %v", data, err)
+			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		} else if m != nil {
-			t.Errorf("Unmarshal(0x%0x) = %v (%T), want nil", data, m, m)
+			t.Errorf("Unmarshal(0x%x) = %v (%T), want nil", data, m, m)
 		}
 	}
 
@@ -967,27 +967,27 @@ func TestUnmarshalNil(t *testing.T) {
 	for _, data := range cborData {
 		i := 10
 		if err := cbor.Unmarshal(data, &i); err != nil {
-			t.Errorf("Unmarshal(0x%0x) returns error %v", data, err)
+			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		} else if i != 10 {
-			t.Errorf("Unmarshal(0x%0x) = %v (%T), want 10", data, i, i)
+			t.Errorf("Unmarshal(0x%x) = %v (%T), want 10", data, i, i)
 		}
 		f := 1.23
 		if err := cbor.Unmarshal(data, &f); err != nil {
-			t.Errorf("Unmarshal(0x%0x) returns error %v", data, err)
+			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		} else if f != 1.23 {
-			t.Errorf("Unmarshal(0x%0x) = %v (%T), want 1.23", data, f, f)
+			t.Errorf("Unmarshal(0x%x) = %v (%T), want 1.23", data, f, f)
 		}
 		s := "hello"
 		if err := cbor.Unmarshal(data, &s); err != nil {
-			t.Errorf("Unmarshal(0x%0x) returns error %v", data, err)
+			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		} else if s != "hello" {
-			t.Errorf("Unmarshal(0x%0x) = %v (%T), want \"hello\"", data, s, s)
+			t.Errorf("Unmarshal(0x%x) = %v (%T), want \"hello\"", data, s, s)
 		}
 		b := true
 		if err := cbor.Unmarshal(data, &t); err != nil {
-			t.Errorf("Unmarshal(0x%0x) returns error %v", data, err)
+			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		} else if b != true {
-			t.Errorf("Unmarshal(0x%0x) = %v (%T), want true", data, b, b)
+			t.Errorf("Unmarshal(0x%x) = %v (%T), want true", data, b, b)
 		}
 	}
 }
@@ -1009,11 +1009,11 @@ func TestInvalidUnmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := cbor.Unmarshal(cborData, tc.v)
 			if err == nil {
-				t.Errorf("Unmarshal(0x%0x, %v) expecting error, got nil", cborData, tc.v)
+				t.Errorf("Unmarshal(0x%x, %v) didn't return an error", cborData, tc.v)
 			} else if _, ok := err.(*cbor.InvalidUnmarshalError); !ok {
-				t.Errorf("Unmarshal(0x%0x, %v) error type %T, want *cbor.InvalidUnmarshalError", cborData, tc.v, err)
+				t.Errorf("Unmarshal(0x%x, %v) error type %T, want *cbor.InvalidUnmarshalError", cborData, tc.v, err)
 			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%0x, %v) error %s, want %s", cborData, tc.v, err, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x, %v) error %q, want %q", cborData, tc.v, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}
@@ -1130,11 +1130,11 @@ func TestInvalidCBORUnmarshal(t *testing.T) {
 			var i interface{}
 			err := cbor.Unmarshal(tc.cborData, &i)
 			if err == nil {
-				t.Errorf("Unmarshal(0x%0x) expecting error, got nil", tc.cborData)
+				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
 			} else if !tc.errorMsgPartialMatch && err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%0x) error %s, want %s", tc.cborData, err, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
 			} else if tc.errorMsgPartialMatch && !strings.Contains(err.Error(), tc.wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%0x) error %s, want %s", tc.cborData, err, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}
@@ -1153,16 +1153,16 @@ func TestInvalidUTF8TextString(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var i interface{}
 			if err := cbor.Unmarshal(tc.cborData, &i); err == nil {
-				t.Errorf("Unmarshal(0x%0x) expecting error, got nil", tc.cborData)
+				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
 			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%0x) error %s, want %s", tc.cborData, err, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
 			}
 
 			var s string
 			if err := cbor.Unmarshal(tc.cborData, &s); err == nil {
-				t.Errorf("Unmarshal(0x%0x) expecting error, got nil", tc.cborData)
+				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
 			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%0x) error %s, want %s", tc.cborData, err, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}
@@ -1171,14 +1171,14 @@ func TestInvalidUTF8TextString(t *testing.T) {
 	dec := cbor.NewDecoder(bytes.NewReader(cborData))
 	var s string
 	if err := dec.Decode(&s); err == nil {
-		t.Errorf("Decode() expecting error, got nil")
+		t.Errorf("Decode() didn't return an error")
 	} else if s != "" {
-		t.Errorf("Decode() returns %s, want %q", s, "")
+		t.Errorf("Decode() returned %q, want %q", s, "")
 	}
 	if err := dec.Decode(&s); err != nil {
-		t.Errorf("Decode() returns error %q", err)
+		t.Errorf("Decode() returned error %v", err)
 	} else if s != "streaming" {
-		t.Errorf("Decode() returns %s, want %s", s, "streaming")
+		t.Errorf("Decode() returned %q, want %q", s, "streaming")
 	}
 }
 
@@ -1207,9 +1207,9 @@ func TestUnmarshalStruct(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var v outer
 			if err := cbor.Unmarshal(tc.cborData, &v); err != nil {
-				t.Errorf("Unmarshal(0x%0x) returns error %v", tc.cborData, err)
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
 			} else if !reflect.DeepEqual(v, want) {
-				t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", tc.cborData, v, v, want, want)
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, want, want)
 			}
 		})
 	}
@@ -1243,30 +1243,30 @@ func TestUnmarshalStructError1(t *testing.T) {
 
 	var v outer2
 	if err := cbor.Unmarshal(cborData, &v); err == nil {
-		t.Errorf("Unmarshal(0x%0x) doesn't return an error", cborData)
+		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
 	} else {
 		if typeError, ok := err.(*cbor.UnmarshalTypeError); !ok {
-			t.Errorf("Unmarshal(0x%0x) returns wrong type of error %T, want (*cbor.UnmarshalTypeError)", cborData, err)
+			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*cbor.UnmarshalTypeError)", cborData, err)
 		} else {
 			if typeError.Value != "UTF-8 text string" {
-				t.Errorf("Unmarshal(0x%0x) (*cbor.UnmarshalTypeError).Value %s, want %s", cborData, typeError.Value, "UTF-8 text string")
+				t.Errorf("Unmarshal(0x%x) (*cbor.UnmarshalTypeError).Value %s, want %s", cborData, typeError.Value, "UTF-8 text string")
 			}
 			if typeError.Type != typeInt {
-				t.Errorf("Unmarshal(0x%0x) (*cbor.UnmarshalTypeError).Type %s, want %s", cborData, typeError.Type.String(), typeInt.String())
+				t.Errorf("Unmarshal(0x%x) (*cbor.UnmarshalTypeError).Type %s, want %s", cborData, typeError.Type.String(), typeInt.String())
 			}
 			if typeError.Struct != "cbor_test.outer2" {
-				t.Errorf("Unmarshal(0x%0x) (*cbor.UnmarshalTypeError).Struct %s, want %s", cborData, typeError.Struct, "cbor_test.outer2")
+				t.Errorf("Unmarshal(0x%x) (*cbor.UnmarshalTypeError).Struct %s, want %s", cborData, typeError.Struct, "cbor_test.outer2")
 			}
 			if typeError.Field != "ArrayField" {
-				t.Errorf("Unmarshal(0x%0x) (*cbor.UnmarshalTypeError).Field %s, want %s", cborData, typeError.Field, "ArrayField")
+				t.Errorf("Unmarshal(0x%x) (*cbor.UnmarshalTypeError).Field %s, want %s", cborData, typeError.Field, "ArrayField")
 			}
 			if !strings.Contains(err.Error(), "cannot unmarshal UTF-8 text string into Go struct field") {
-				t.Errorf("Unmarshal(0x%0x) returns error %s, want error containing %q", cborData, err.Error(), "cannot unmarshal UTF-8 text string into Go struct field")
+				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), "cannot unmarshal UTF-8 text string into Go struct field")
 			}
 		}
 	}
 	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
 	}
 }
 
@@ -1285,56 +1285,56 @@ func TestUnmarshalStructError2(t *testing.T) {
 	cborData := hexDecode("a3fa47c35000026161614161fe6142") // {100000.0:2, "a":"A", 0xfe: B}
 	v := strc{}
 	if err := cbor.Unmarshal(cborData, &v); err == nil {
-		t.Errorf("Unmarshal(0x%0x) doesn't return an error", cborData)
+		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
 	} else {
 		if typeError, ok := err.(*cbor.UnmarshalTypeError); !ok {
-			t.Errorf("Unmarshal(0x%0x) returns wrong type of error %T, want (*cbor.UnmarshalTypeError)", cborData, err)
+			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*cbor.UnmarshalTypeError)", cborData, err)
 		} else {
 			if typeError.Value != "primitives" {
-				t.Errorf("Unmarshal(0x%0x) (*cbor.UnmarshalTypeError).Value %s, want %s", cborData, typeError.Value, "primitives")
+				t.Errorf("Unmarshal(0x%x) (*cbor.UnmarshalTypeError).Value %s, want %s", cborData, typeError.Value, "primitives")
 			}
 			if typeError.Type != typeString {
-				t.Errorf("Unmarshal(0x%0x) (*cbor.UnmarshalTypeError).Type %s, want %s", cborData, typeError.Type, typeString)
+				t.Errorf("Unmarshal(0x%x) (*cbor.UnmarshalTypeError).Type %s, want %s", cborData, typeError.Type, typeString)
 			}
 			if !strings.Contains(err.Error(), "cannot unmarshal primitives into Go value of type string") {
-				t.Errorf("Unmarshal(0x%0x) returns error %s, want error containing %q", cborData, err.Error(), "cannot unmarshal float into Go value of type string")
+				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), "cannot unmarshal float into Go value of type string")
 			}
 		}
 	}
 	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
 	}
 
 	// Unmarshal returns first error encountered, which is *cbor.SemanticError (invalid UTF8 string)
 	cborData = hexDecode("a361fe6142010261616141") // {0xfe: B, 1:2, "a":"A"}
 	v = strc{}
 	if err := cbor.Unmarshal(cborData, &v); err == nil {
-		t.Errorf("Unmarshal(0x%0x) doesn't return an error", cborData)
+		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
 	} else {
 		if _, ok := err.(*cbor.SemanticError); !ok {
-			t.Errorf("Unmarshal(0x%0x) returns wrong type of error %T, want (*cbor.SemanticError)", cborData, err)
+			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*cbor.SemanticError)", cborData, err)
 		} else if err.Error() != "cbor: invalid UTF-8 string" {
-			t.Errorf("Unmarshal(0x%0x) returns error %s, want error %q", cborData, err.Error(), "cbor: invalid UTF-8 string")
+			t.Errorf("Unmarshal(0x%x) returned error %q, want error %q", cborData, err.Error(), "cbor: invalid UTF-8 string")
 		}
 	}
 	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
 	}
 
 	// Unmarshal returns first error encountered, which is *cbor.SemanticError (invalid UTF8 string)
 	cborData = hexDecode("a3616261fe010261616141") // {"b": 0xfe, 1:2, "a":"A"}
 	v = strc{}
 	if err := cbor.Unmarshal(cborData, &v); err == nil {
-		t.Errorf("Unmarshal(0x%0x) doesn't return an error", cborData)
+		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
 	} else {
 		if _, ok := err.(*cbor.SemanticError); !ok {
-			t.Errorf("Unmarshal(0x%0x) returns wrong type of error %T, want (*cbor.SemanticError)", cborData, err)
+			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*cbor.SemanticError)", cborData, err)
 		} else if err.Error() != "cbor: invalid UTF-8 string" {
-			t.Errorf("Unmarshal(0x%0x) returns error %s, want error %q", cborData, err.Error(), "cbor: invalid UTF-8 string")
+			t.Errorf("Unmarshal(0x%x) returned error %q, want error %q", cborData, err.Error(), "cbor: invalid UTF-8 string")
 		}
 	}
 	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
 	}
 }
 
@@ -1343,21 +1343,21 @@ func TestUnmarshalPrefilledArray(t *testing.T) {
 	want := []int{10, 11, 3, 4, 5}
 	cborData := hexDecode("820a0b") // []int{10, 11}
 	if err := cbor.Unmarshal(cborData, &prefilledArr); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
 	}
 	if len(prefilledArr) != 2 || cap(prefilledArr) != 5 {
-		t.Errorf("Unmarshal(0x%0x) = %v (len %d, cap %d), want len == 2, cap == 5", cborData, prefilledArr, len(prefilledArr), cap(prefilledArr))
+		t.Errorf("Unmarshal(0x%x) = %v (len %d, cap %d), want len == 2, cap == 5", cborData, prefilledArr, len(prefilledArr), cap(prefilledArr))
 	}
 	if !reflect.DeepEqual(prefilledArr[:cap(prefilledArr)], want) {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, prefilledArr, prefilledArr, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, prefilledArr, prefilledArr, want, want)
 	}
 
 	cborData = hexDecode("80") // empty array
 	if err := cbor.Unmarshal(cborData, &prefilledArr); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
 	}
 	if len(prefilledArr) != 0 || cap(prefilledArr) != 0 {
-		t.Errorf("Unmarshal(0x%0x) = %v (len %d, cap %d), want len == 0, cap == 0", cborData, prefilledArr, len(prefilledArr), cap(prefilledArr))
+		t.Errorf("Unmarshal(0x%x) = %v (len %d, cap %d), want len == 0, cap == 0", cborData, prefilledArr, len(prefilledArr), cap(prefilledArr))
 	}
 }
 
@@ -1366,20 +1366,20 @@ func TestUnmarshalPrefilledMap(t *testing.T) {
 	want := map[string]string{"key": "value", "a": "A", "b": "B", "c": "C", "d": "D", "e": "E"}
 	cborData := hexDecode("a56161614161626142616361436164614461656145") // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"}
 	if err := cbor.Unmarshal(cborData, &prefilledMap); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
 	}
 	if !reflect.DeepEqual(prefilledMap, want) {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, prefilledMap, prefilledMap, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, prefilledMap, prefilledMap, want, want)
 	}
 
 	prefilledMap = map[string]string{"key": "value"}
 	want = map[string]string{"key": "value"}
 	cborData = hexDecode("a0") // map[string]string{}
 	if err := cbor.Unmarshal(cborData, &prefilledMap); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
 	}
 	if !reflect.DeepEqual(prefilledMap, want) {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, prefilledMap, prefilledMap, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, prefilledMap, prefilledMap, want, want)
 	}
 }
 
@@ -1393,16 +1393,16 @@ func TestUnmarshalPrefilledStruct(t *testing.T) {
 	want := s{a: 100, B: []int{2, 3}, C: true}
 	cborData := hexDecode("a26161016162820203") // map[string]interface{} {"a": 1, "b": []int{2, 3}}
 	if err := cbor.Unmarshal(cborData, &prefilledStruct); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
 	}
 	if !reflect.DeepEqual(prefilledStruct, want) {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, prefilledStruct, prefilledStruct, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, prefilledStruct, prefilledStruct, want, want)
 	}
 	if len(prefilledStruct.B) != 2 || cap(prefilledStruct.B) != 4 {
-		t.Errorf("Unmarshal(0x%0x) = %v (len %d, cap %d), want len == 2, cap == 5", cborData, prefilledStruct.B, len(prefilledStruct.B), cap(prefilledStruct.B))
+		t.Errorf("Unmarshal(0x%x) = %v (len %d, cap %d), want len == 2, cap == 5", cborData, prefilledStruct.B, len(prefilledStruct.B), cap(prefilledStruct.B))
 	}
 	if !reflect.DeepEqual(prefilledStruct.B[:cap(prefilledStruct.B)], []int{2, 3, 400, 500}) {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, prefilledStruct.B, prefilledStruct.B, []int{2, 3, 400, 500}, []int{2, 3, 400, 500})
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, prefilledStruct.B, prefilledStruct.B, []int{2, 3, 400, 500}, []int{2, 3, 400, 500})
 	}
 }
 
@@ -1415,11 +1415,11 @@ func TestValid(t *testing.T) {
 	var err error
 	for i := 0; i < len(marshalTests); i++ {
 		if cborData, err = cbor.Valid(cborData); err != nil {
-			t.Errorf("Valid() returns error %s", err)
+			t.Errorf("Valid() returned error %v", err)
 		}
 	}
 	if len(cborData) != 0 {
-		t.Errorf("Valid() returns leftover data 0x%x, want none", cborData)
+		t.Errorf("Valid() returned leftover data 0x%x, want none", cborData)
 	}
 }
 
@@ -1432,14 +1432,14 @@ func TestStructFieldNil(t *testing.T) {
 	var struc TestStruct
 	cborData, err := cbor.Marshal(struc, cbor.EncOptions{})
 	if err != nil {
-		t.Fatalf("Marshal(%+v) returns error %s", struc, err)
+		t.Fatalf("Marshal(%+v) returned error %v", struc, err)
 	}
 	var struc2 TestStruct
 	err = cbor.Unmarshal(cborData, &struc2)
 	if err != nil {
-		t.Errorf("Unmarshal(%0x) returns error %s", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
 	} else if !reflect.DeepEqual(struc, struc2) {
-		t.Errorf("Unmarshal(%0x) returns %+v, want %+v", cborData, struc2, struc)
+		t.Errorf("Unmarshal(0x%x) returned %+v, want %+v", cborData, struc2, struc)
 	}
 }
 
@@ -1454,9 +1454,9 @@ func TestLengthOverflowsInt(t *testing.T) {
 	for _, data := range cborData {
 		var intf interface{}
 		if err := cbor.Unmarshal(data, &intf); err == nil {
-			t.Errorf("Unmarshal(0x%02x) returns no error, want error containing substring %s", data, wantErrorMsg)
+			t.Errorf("Unmarshal(0x%x) didn't return an error, want error containing substring %q", data, wantErrorMsg)
 		} else if !strings.Contains(err.Error(), wantErrorMsg) {
-			t.Errorf("Unmarshal(0x%02x) returns error %s, want error containing substring %s", data, err, wantErrorMsg)
+			t.Errorf("Unmarshal(0x%x) returned error %q, want error containing substring %q", data, err.Error(), wantErrorMsg)
 		}
 	}
 }
@@ -1481,16 +1481,16 @@ func TestMapKeyUnhashable(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var v interface{}
 			if err := cbor.Unmarshal(tc.cborData, &v); err == nil {
-				t.Errorf("Unmarshal(0x%0x) doesn't return error, want %q", tc.cborData, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.cborData, tc.wantErrorMsg)
 			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%0x) returns error %q, want %q", tc.cborData, err, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
 			}
 			if _, ok := v.(map[interface{}]interface{}); ok {
 				var v map[interface{}]interface{}
 				if err := cbor.Unmarshal(tc.cborData, &v); err == nil {
-					t.Errorf("Unmarshal(0x%0x) doesn't return error, want %q", tc.cborData, tc.wantErrorMsg)
+					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.cborData, tc.wantErrorMsg)
 				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%0x) returns error %q, want %q", tc.cborData, err, tc.wantErrorMsg)
+					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
 				}
 			}
 		})
@@ -1502,10 +1502,10 @@ func TestMapKeyNan(t *testing.T) {
 	cborData := hexDecode("b0303030303030303030303030303030303038303030faffff30303030303030303030303030") // {-17: -17, NaN: -17}
 	var intf interface{}
 	if err := cbor.Unmarshal(cborData, &intf); err != nil {
-		t.Fatalf("Unmarshal(0x%02x) returns error %s\n", cborData, err)
+		t.Fatalf("Unmarshal(0x%x) returned error %v", cborData, err)
 	}
 	if _, err := cbor.Marshal(intf, cbor.EncOptions{Sort: cbor.SortCanonical}); err != nil {
-		t.Errorf("Marshal(%v) returns error %s", intf, err)
+		t.Errorf("Marshal(%v) returned error %v", intf, err)
 	}
 }
 
@@ -1515,9 +1515,9 @@ func TestUnmarshalUndefinedElement(t *testing.T) {
 	var intf interface{}
 	wantErrorMsg := "invalid map key type"
 	if err := cbor.Unmarshal(cborData, &intf); err == nil {
-		t.Errorf("Unmarshal(0x%02x) returns no error, want error containing substring %s", cborData, wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) didn't return an error, want error containing substring %q", cborData, wantErrorMsg)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%02x) returns error %s, want error containing substring %s", cborData, err, wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing substring %q", cborData, err.Error(), wantErrorMsg)
 	}
 }
 
@@ -1529,22 +1529,22 @@ func TestMapKeyNil(t *testing.T) {
 	for _, data := range testData {
 		var intf interface{}
 		if err := cbor.Unmarshal(data, &intf); err != nil {
-			t.Fatalf("Unmarshal(0x%02x) returns error %s\n", data, err)
+			t.Fatalf("Unmarshal(0x%x) returned error %v", data, err)
 		} else if !reflect.DeepEqual(intf, want) {
-			t.Errorf("Unmarshal(0x%0x) returns %+v, want %+v", data, intf, want)
+			t.Errorf("Unmarshal(0x%x) returned %+v, want %+v", data, intf, want)
 		}
 		if _, err := cbor.Marshal(intf, cbor.EncOptions{Sort: cbor.SortCanonical}); err != nil {
-			t.Errorf("Marshal(%v) returns error %s", intf, err)
+			t.Errorf("Marshal(%v) returned error %v", intf, err)
 		}
 
 		var v map[interface{}]interface{}
 		if err := cbor.Unmarshal(data, &v); err != nil {
-			t.Errorf("Unmarshal(0x%0x) returns error %q", data, err)
+			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		} else if !reflect.DeepEqual(v, want) {
-			t.Errorf("Unmarshal(0x%0x) returns %+v, want %+v", data, v, want)
+			t.Errorf("Unmarshal(0x%x) returned %+v, want %+v", data, v, want)
 		}
 		if _, err := cbor.Marshal(v, cbor.EncOptions{Sort: cbor.SortCanonical}); err != nil {
-			t.Errorf("Marshal(%v) returns error %s", v, err)
+			t.Errorf("Marshal(%v) returned error %v", v, err)
 		}
 	}
 }
@@ -1585,15 +1585,15 @@ func TestDecodeTime(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tm := time.Now()
 			if err := cbor.Unmarshal(tc.cborRFC3339Time, &tm); err != nil {
-				t.Errorf("Unmarshal(0x%0x) returns error %s\n", tc.cborRFC3339Time, err)
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborRFC3339Time, err)
 			} else if !tc.wantTime.Equal(tm) {
-				t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", tc.cborRFC3339Time, tm, tm, tc.wantTime, tc.wantTime)
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborRFC3339Time, tm, tm, tc.wantTime, tc.wantTime)
 			}
 			tm = time.Now()
 			if err := cbor.Unmarshal(tc.cborUnixTime, &tm); err != nil {
-				t.Errorf("Unmarshal(0x%0x) returns error %s\n", tc.cborUnixTime, err)
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborUnixTime, err)
 			} else if !tc.wantTime.Equal(tm) {
-				t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", tc.cborUnixTime, tm, tm, tc.wantTime, tc.wantTime)
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborUnixTime, tm, tm, tc.wantTime, tc.wantTime)
 			}
 		})
 	}
@@ -1620,9 +1620,9 @@ func TestDecodeTimeError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tm := time.Now()
 			if err := cbor.Unmarshal(tc.cborData, &tm); err == nil {
-				t.Errorf("Unmarshal(0x%0x) doesn't return error, want error msg %s\n", tc.cborData, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.cborData, tc.wantErrorMsg)
 			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%0x) returns error %s, want %s", tc.cborData, err, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}
@@ -1643,10 +1643,10 @@ func TestUnmarshalStructTag1(t *testing.T) {
 
 	var v strc
 	if err := cbor.Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
 	}
 	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
 	}
 }
 
@@ -1665,10 +1665,10 @@ func TestUnmarshalStructTag2(t *testing.T) {
 
 	var v strc
 	if err := cbor.Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
 	}
 	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
 	}
 }
 
@@ -1687,10 +1687,10 @@ func TestUnmarshalStructTag3(t *testing.T) {
 
 	var v strc
 	if err := cbor.Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
 	}
 	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%0x) = %+v (%T), want %+v (%T)", cborData, v, v, want, want)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, v, v, want, want)
 	}
 }
 
@@ -1708,10 +1708,10 @@ func TestUnmarshalStructTag4(t *testing.T) {
 
 	var v strc
 	if err := cbor.Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %v", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
 	}
 	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%0x) = %+v (%T), want %+v (%T)", cborData, v, v, want, want)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, v, v, want, want)
 	}
 }
 
@@ -1775,17 +1775,17 @@ func TestBinaryUnmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			b, err := cbor.Marshal(tc.obj, cbor.EncOptions{})
 			if err != nil {
-				t.Errorf("Marshal(%+v) returns error %v\n", tc.obj, err)
+				t.Errorf("Marshal(%+v) returned error %v", tc.obj, err)
 			}
 			if !bytes.Equal(b, tc.wantCborData) {
-				t.Errorf("Marshal(%+v) = 0x%0x, want 0x%0x", tc.obj, b, tc.wantCborData)
+				t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.obj, b, tc.wantCborData)
 			}
 			v := reflect.New(reflect.TypeOf(tc.obj))
 			if err := cbor.Unmarshal(b, v.Interface()); err != nil {
-				t.Errorf("Unmarshal() returns error %v\n", err)
+				t.Errorf("Unmarshal() returned error %v", err)
 			}
 			if !reflect.DeepEqual(tc.obj, v.Elem().Interface()) {
-				t.Errorf("Marshal-Unmarshal return different values: %v, %v\n", tc.obj, v.Elem().Interface())
+				t.Errorf("Marshal-Unmarshal returned different values: %v, %v", tc.obj, v.Elem().Interface())
 			}
 		})
 	}
@@ -1815,9 +1815,9 @@ func TestBinaryUnmarshalError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			v := reflect.New(tc.typ)
 			if err := cbor.Unmarshal(tc.cborData, v.Interface()); err == nil {
-				t.Errorf("Unmarshal(0x%0x) doesn't return error, want error msg %s\n", tc.cborData, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.cborData, tc.wantErrorMsg)
 			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%0x) returns error %s, want %s", tc.cborData, err, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}
@@ -1827,9 +1827,9 @@ func TestBinaryMarshalError(t *testing.T) {
 	wantErrorMsg := "MarshalBinary: error"
 	v := marshalBinaryError(wantErrorMsg)
 	if _, err := cbor.Marshal(v, cbor.EncOptions{}); err == nil {
-		t.Errorf("Unmarshal(0x%0x) doesn't return error, want error msg %s\n", v, wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", v, wantErrorMsg)
 	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%0x) returns error %s, want %s", v, err, wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", v, err.Error(), wantErrorMsg)
 	}
 }
 
@@ -1902,17 +1902,17 @@ func TestUnmarshalCBOR(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			b, err := cbor.Marshal(tc.obj, cbor.EncOptions{})
 			if err != nil {
-				t.Errorf("Marshal(%+v) returns error %v\n", tc.obj, err)
+				t.Errorf("Marshal(%+v) returned error %v", tc.obj, err)
 			}
 			if !bytes.Equal(b, tc.wantCborData) {
-				t.Errorf("Marshal(%+v) = 0x%0x, want 0x%0x", tc.obj, b, tc.wantCborData)
+				t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.obj, b, tc.wantCborData)
 			}
 			v := reflect.New(reflect.TypeOf(tc.obj))
 			if err := cbor.Unmarshal(b, v.Interface()); err != nil {
-				t.Errorf("Unmarshal() returns error %v\n", err)
+				t.Errorf("Unmarshal() returned error %v", err)
 			}
 			if !reflect.DeepEqual(tc.obj, v.Elem().Interface()) {
-				t.Errorf("Marshal-Unmarshal return different values: %v, %v\n", tc.obj, v.Elem().Interface())
+				t.Errorf("Marshal-Unmarshal returned different values: %v, %v", tc.obj, v.Elem().Interface())
 			}
 		})
 	}
@@ -1942,9 +1942,9 @@ func TestUnmarshalCBORError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			v := reflect.New(tc.typ)
 			if err := cbor.Unmarshal(tc.cborData, v.Interface()); err == nil {
-				t.Errorf("Unmarshal(0x%0x) doesn't return error, want error msg %s\n", tc.cborData, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.cborData, tc.wantErrorMsg)
 			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%0x) returns error %s, want %s", tc.cborData, err, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}
@@ -1954,9 +1954,9 @@ func TestMarshalCBORError(t *testing.T) {
 	wantErrorMsg := "MarshalCBOR: error"
 	v := marshalCBORError(wantErrorMsg)
 	if _, err := cbor.Marshal(v, cbor.EncOptions{}); err == nil {
-		t.Errorf("Marshal(%+v) doesn't return error, want error msg %s\n", v, wantErrorMsg)
+		t.Errorf("Marshal(%+v) didn't return an error, want error msg %q", v, wantErrorMsg)
 	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Marshal(%+v) returns error %s, want %s", v, err, wantErrorMsg)
+		t.Errorf("Marshal(%+v) returned error %q, want %q", v, err.Error(), wantErrorMsg)
 	}
 }
 
@@ -1965,7 +1965,7 @@ func TestOutOfMem1(t *testing.T) {
 	cborData := []byte("\x9b\x00\x00000000")
 	var f []byte
 	if err := cbor.Unmarshal(cborData, &f); err == nil {
-		t.Errorf("Unmarshal(0x%0x) doesn't return error", cborData)
+		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
 	}
 }
 
@@ -1974,7 +1974,7 @@ func TestOutOfMem2(t *testing.T) {
 	cborData := []byte("\x9b\x00\x00\x81112233")
 	var f []byte
 	if err := cbor.Unmarshal(cborData, &f); err == nil {
-		t.Errorf("Unmarshal(0x%0x) doesn't return error", cborData)
+		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
 	}
 }
 
@@ -2002,7 +2002,7 @@ func TestCOSEExamples(t *testing.T) {
 	for _, d := range cborData {
 		var v interface{}
 		if err := cbor.Unmarshal(d, &v); err != nil {
-			t.Errorf("Unmarshal(0x%0x) returns error %s", d, err)
+			t.Errorf("Unmarshal(0x%x) returned error %v", d, err)
 		}
 	}
 }
@@ -2014,11 +2014,11 @@ func TestUnmarshalStructKeyAsIntError(t *testing.T) {
 	cborData := hexDecode("a13bffffffffffffffff01") // {1: -18446744073709551616}
 	var v T1
 	if err := cbor.Unmarshal(cborData, &v); err == nil {
-		t.Errorf("Unmarshal(0x%0x) returns no error, %v (%T), want (*cbor.UnmarshalTypeError)", cborData, v, v)
+		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
 	} else if _, ok := err.(*cbor.UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%0x) returns wrong error %T, want (*cbor.UnmarshalTypeError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*cbor.UnmarshalTypeError)", cborData, err)
 	} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-		t.Errorf("Unmarshal(0x%0x) returns error %s, want error containing %q", cborData, err, "cannot unmarshal")
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), "cannot unmarshal")
 	}
 }
 
@@ -2040,7 +2040,7 @@ func TestUnmarshalArrayToStruct(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var v T
 			if err := cbor.Unmarshal(tc.cborData, &v); err != nil {
-				t.Errorf("Unmarshal(0x%0x) returns error %s", tc.cborData, err)
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
 			}
 		})
 	}
@@ -2057,11 +2057,11 @@ func TestUnmarshalArrayToStructNoToArrayOptionError(t *testing.T) {
 	wantT := T{}
 	dec := cbor.NewDecoder(bytes.NewReader(cborData))
 	if err := dec.Decode(&v1); err == nil {
-		t.Errorf("Decode() returns no error, %v (%T), want (*cbor.UnmarshalTypeError)", v1, v1)
+		t.Errorf("Decode(%+v) didn't return an error", v1)
 	} else if _, ok := err.(*cbor.UnmarshalTypeError); !ok {
-		t.Errorf("Decode() returns wrong error %T, want (*cbor.UnmarshalTypeError)", err)
+		t.Errorf("Decode(%+v) returned wrong error type %T, want (*cbor.UnmarshalTypeError)", v1, err)
 	} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-		t.Errorf("Decode() returns error %s, want error containing %q", err, "cannot unmarshal")
+		t.Errorf("Decode(%+v) returned error %q, want error containing %q", err.Error(), v1, "cannot unmarshal")
 	}
 	if !reflect.DeepEqual(v1, wantT) {
 		t.Errorf("Decode() = %+v (%T), want %+v (%T)", v1, v1, wantT, wantT)
@@ -2069,7 +2069,7 @@ func TestUnmarshalArrayToStructNoToArrayOptionError(t *testing.T) {
 	var v2 []int
 	want := []int{1, 2, 3}
 	if err := dec.Decode(&v2); err != nil {
-		t.Errorf("Decode() returns error %q", err)
+		t.Errorf("Decode() returned error %v", err)
 	}
 	if !reflect.DeepEqual(v2, want) {
 		t.Errorf("Decode() = %+v (%T), want %+v (%T)", v2, v2, want, want)
@@ -2087,11 +2087,11 @@ func TestUnmarshalArrayToStructWrongSizeError(t *testing.T) {
 	wantT := T{}
 	dec := cbor.NewDecoder(bytes.NewReader(cborData))
 	if err := dec.Decode(&v1); err == nil {
-		t.Errorf("Decode() returns no error, %v (%T), want (*cbor.UnmarshalTypeError)", v1, v1)
+		t.Errorf("Decode(%+v) didn't return an error", v1)
 	} else if _, ok := err.(*cbor.UnmarshalTypeError); !ok {
-		t.Errorf("Decode() returns wrong error %T, want (*cbor.UnmarshalTypeError)", err)
+		t.Errorf("Decode(%+v) returned wrong error type %T, want (*cbor.UnmarshalTypeError)", v1, err)
 	} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-		t.Errorf("Decode() returns error %s, want error containing %q", err, "cannot unmarshal")
+		t.Errorf("Decode(%+v) returned error %q, want error containing %q", v1, err.Error(), "cannot unmarshal")
 	}
 	if !reflect.DeepEqual(v1, wantT) {
 		t.Errorf("Decode() = %+v (%T), want %+v (%T)", v1, v1, wantT, wantT)
@@ -2099,7 +2099,7 @@ func TestUnmarshalArrayToStructWrongSizeError(t *testing.T) {
 	var v2 []int
 	want := []int{1, 2, 3}
 	if err := dec.Decode(&v2); err != nil {
-		t.Errorf("Decode() returns error %q", err)
+		t.Errorf("Decode() returned error %v", err)
 	}
 	if !reflect.DeepEqual(v2, want) {
 		t.Errorf("Decode() = %+v (%T), want %+v (%T)", v2, v2, want, want)
@@ -2128,9 +2128,9 @@ func TestUnmarshalArrayToStructWrongFieldTypeError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var v T
 			if err := cbor.Unmarshal(tc.cborData, &v); err == nil {
-				t.Errorf("Unmarshal(0x%0x) returns no error, %v (%T), want (*cbor.UnmarshalTypeError)", tc.cborData, v, v)
+				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
 			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%0x) returns error %s, want error containing %q", tc.cborData, err, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborData, err.Error(), tc.wantErrorMsg)
 			}
 			if !reflect.DeepEqual(v, tc.wantV) {
 				t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", tc.cborData, v, v, tc.wantV, tc.wantV)
@@ -2155,9 +2155,9 @@ func TestUnmarshalArrayToStructCannotSetEmbeddedPointerError(t *testing.T) {
 	var v S
 	err := cbor.Unmarshal(cborData, &v)
 	if err == nil {
-		t.Errorf("Unmarshal(%0x) doesn't return error.  want error: %q", cborData, wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) didn't return an error, want error %q", cborData, wantErrorMsg)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(%0x) returns error '%s'.  want error: %q", cborData, err, wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error %q", cborData, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(v, wantV) {
 		t.Errorf("Decode() = %+v (%T), want %+v (%T)", v, v, wantV, wantV)
@@ -2173,48 +2173,48 @@ func TestUnmarshalIntoSliceError(t *testing.T) {
 	var v1 interface{}
 	want = []interface{}{"a", interface{}(nil), "b"}
 	if err := cbor.Unmarshal(cborData, &v1); err == nil {
-		t.Errorf("Unmarshal(0x%0x) doesn't return error, want %q", cborData, wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", cborData, wantErrorMsg)
 	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%0x) returns error %q, want %q", cborData, err, wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(v1, want) {
-		t.Errorf("Unmarshal(0x%0x) = %v, want %v", cborData, v1, want)
+		t.Errorf("Unmarshal(0x%x) = %v, want %v", cborData, v1, want)
 	}
 
 	// Unmarshal CBOR array into Go slice.
 	var v2 []string
 	want = []string{"a", "", "b"}
 	if err := cbor.Unmarshal(cborData, &v2); err == nil {
-		t.Errorf("Unmarshal(0x%0x) doesn't return error, want %q", cborData, wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", cborData, wantErrorMsg)
 	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%0x) returns error %q, want %q", cborData, err, wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(v2, want) {
-		t.Errorf("Unmarshal(0x%0x) = %v, want %v", cborData, v2, want)
+		t.Errorf("Unmarshal(0x%x) = %v, want %v", cborData, v2, want)
 	}
 
 	// Unmarshal CBOR array into Go array.
 	var v3 [3]string
 	want = [3]string{"a", "", "b"}
 	if err := cbor.Unmarshal(cborData, &v3); err == nil {
-		t.Errorf("Unmarshal(0x%0x) doesn't return error, want %q", cborData, wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", cborData, wantErrorMsg)
 	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%0x) returns error %q, want %q", cborData, err, wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(v3, want) {
-		t.Errorf("Unmarshal(0x%0x) = %v, want %v", cborData, v3, want)
+		t.Errorf("Unmarshal(0x%x) = %v, want %v", cborData, v3, want)
 	}
 
 	// Unmarshal CBOR array into populated Go slice.
 	v4 := []string{"hello", "to", "you"}
 	want = []string{"a", "to", "b"}
 	if err := cbor.Unmarshal(cborData, &v4); err == nil {
-		t.Errorf("Unmarshal(0x%0x) doesn't return error, want %q", cborData, wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", cborData, wantErrorMsg)
 	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%0x) returns error %q, want %q", cborData, err, wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(v4, want) {
-		t.Errorf("Unmarshal(0x%0x) = %v, want %v", cborData, v4, want)
+		t.Errorf("Unmarshal(0x%x) = %v, want %v", cborData, v4, want)
 	}
 }
 
@@ -2231,48 +2231,48 @@ func TestUnmarshalIntoMapError(t *testing.T) {
 		var v1 interface{}
 		want = map[interface{}]interface{}{"a": "A", "b": "B"}
 		if err := cbor.Unmarshal(data, &v1); err == nil {
-			t.Errorf("Unmarshal(0x%0x) doesn't return error, want %q", data, wantErrorMsg)
+			t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
 		} else if err.Error() != wantErrorMsg {
-			t.Errorf("Unmarshal(0x%0x) returns error %q, want %q", data, err, wantErrorMsg)
+			t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
 		}
 		if !reflect.DeepEqual(v1, want) {
-			t.Errorf("Unmarshal(0x%0x) = %v, want %v", data, v1, want)
+			t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v1, want)
 		}
 
 		// Unmarshal CBOR map into Go map[interface{}]interface{}.
 		var v2 map[interface{}]interface{}
 		want = map[interface{}]interface{}{"a": "A", "b": "B"}
 		if err := cbor.Unmarshal(data, &v2); err == nil {
-			t.Errorf("Unmarshal(0x%0x) doesn't return error, want %q", data, wantErrorMsg)
+			t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
 		} else if err.Error() != wantErrorMsg {
-			t.Errorf("Unmarshal(0x%0x) returns error %q, want %q", data, err, wantErrorMsg)
+			t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
 		}
 		if !reflect.DeepEqual(v2, want) {
-			t.Errorf("Unmarshal(0x%0x) = %v, want %v", data, v2, want)
+			t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v2, want)
 		}
 
 		// Unmarshal CBOR array into Go map[string]string.
 		var v3 map[string]string
 		want = map[string]string{"a": "A", "b": "B"}
 		if err := cbor.Unmarshal(data, &v3); err == nil {
-			t.Errorf("Unmarshal(0x%0x) doesn't return error, want %q", data, wantErrorMsg)
+			t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
 		} else if err.Error() != wantErrorMsg {
-			t.Errorf("Unmarshal(0x%0x) returns error %q, want %q", data, err, wantErrorMsg)
+			t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
 		}
 		if !reflect.DeepEqual(v3, want) {
-			t.Errorf("Unmarshal(0x%0x) = %v, want %v", data, v3, want)
+			t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v3, want)
 		}
 
 		// Unmarshal CBOR array into populated Go map[string]string.
 		v4 := map[string]string{"c": "D"}
 		want = map[string]string{"a": "A", "b": "B", "c": "D"}
 		if err := cbor.Unmarshal(data, &v4); err == nil {
-			t.Errorf("Unmarshal(0x%0x) doesn't return error, want %q", data, wantErrorMsg)
+			t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
 		} else if err.Error() != wantErrorMsg {
-			t.Errorf("Unmarshal(0x%0x) returns error %q, want %q", data, err, wantErrorMsg)
+			t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
 		}
 		if !reflect.DeepEqual(v4, want) {
-			t.Errorf("Unmarshal(0x%0x) = %v, want %v", data, v4, want)
+			t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v4, want)
 		}
 	}
 }
@@ -2300,9 +2300,9 @@ func TestStructToArrayError(t *testing.T) {
 	} {
 		var v nestedCWT
 		if err := cbor.Unmarshal(tc.cborData, &v); err == nil {
-			t.Errorf("Unmarshal(0x%0x) doesn't return error, want %q", tc.cborData, tc.wantErrorMsg)
+			t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.cborData, tc.wantErrorMsg)
 		} else if err.Error() != tc.wantErrorMsg {
-			t.Errorf("Unmarshal(0x%0x) returns error %q, want %q", tc.cborData, err, tc.wantErrorMsg)
+			t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
 		}
 	}
 }
@@ -2322,12 +2322,12 @@ func TestStructKeyAsIntError(t *testing.T) {
 	wantV := claims{Cti: []byte{6, 0, 0}}
 	var v claims
 	if err := cbor.Unmarshal(cborData, &v); err == nil {
-		t.Errorf("Unmarshal(0x%0x) doesn't return error, want %q", cborData, wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", cborData, wantErrorMsg)
 	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%0x) returns error %q, want %q", cborData, err, wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(v, wantV) {
-		t.Errorf("Unmarshal(0x%0x) = %v, want %v", cborData, v, wantV)
+		t.Errorf("Unmarshal(0x%x) = %v, want %v", cborData, v, wantV)
 	}
 }
 
@@ -2337,11 +2337,11 @@ func TestUnmarshalToNotNilInterface(t *testing.T) {
 	var v interface{} = s // Unmarshal() sees v as type inteface{} and sets CBOR data as default Go type.  s is unmodified.  Same behavior as encoding/json.
 	wantV := []interface{}{uint64(1), uint64(2), uint64(3)}
 	if err := cbor.Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %s", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
 	} else if !reflect.DeepEqual(v, wantV) {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, v, v, wantV, wantV)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantV, wantV)
 	} else if s != "hello" {
-		t.Errorf("Unmarshal(0x%0x) modified s %s", cborData, s)
+		t.Errorf("Unmarshal(0x%x) modified s %q", cborData, s)
 	}
 }
 
@@ -2351,14 +2351,14 @@ func TestDuplicateMapKeys(t *testing.T) {
 	wantM := map[string]string{"a": "A", "b": "B", "c": "F", "d": "D", "e": "E"}
 	var v interface{}
 	if err := cbor.Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %s", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
 	} else if !reflect.DeepEqual(v, wantV) {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, v, v, wantV, wantV)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantV, wantV)
 	}
 	var m map[string]string
 	if err := cbor.Unmarshal(cborData, &m); err != nil {
-		t.Errorf("Unmarshal(0x%0x) returns error %s", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
 	} else if !reflect.DeepEqual(m, wantM) {
-		t.Errorf("Unmarshal(0x%0x) = %v (%T), want %v (%T)", cborData, m, m, wantM, wantM)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, m, m, wantM, wantM)
 	}
 }

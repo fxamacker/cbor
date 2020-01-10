@@ -50,10 +50,10 @@ func TestDepth(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			_, depth, err := valid(tc.cborData, 0, 1)
 			if err != nil {
-				t.Errorf("valid(0x%x) returns error %s", tc.cborData, err)
+				t.Errorf("valid(0x%x) returned error %v", tc.cborData, err)
 			}
 			if depth != tc.wantDepth {
-				t.Errorf("valid(0x%x) returns depth %d, want %d", tc.cborData, depth, tc.wantDepth)
+				t.Errorf("valid(0x%x) returned depth %d, want %d", tc.cborData, depth, tc.wantDepth)
 			}
 		})
 	}
@@ -75,9 +75,9 @@ func TestDepthError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			_, _, err := valid(tc.cborData, 0, 1)
 			if err == nil {
-				t.Errorf("valid(0x%x) doesn't return error, want %s", tc.cborData, tc.wantErrorMsg)
+				t.Errorf("valid(0x%x) didn't return an error, want %q", tc.cborData, tc.wantErrorMsg)
 			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("valid(0x%x) returns error %s, want %s", tc.cborData, err, tc.wantErrorMsg)
+				t.Errorf("valid(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}
