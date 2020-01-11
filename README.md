@@ -69,7 +69,8 @@ Recent activity:
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- Add `keyasint` struct tag to simplify using CBOR maps with int keys.
 * [x] [Release v1.3.4](https://github.com/fxamacker/cbor/releases) -- Bugfixes and refactoring.  Limit nested levels to 32 for arrays, maps, tags.
 * [x] [Release v1.4](https://github.com/fxamacker/cbor/releases) -- Deprecate bool encoding options and add int SortMode.  Use float16 to float32 conversion func that had all 65536 results verified to be correct. Fix decoding of float16 subnormal numbers.
-* [x] unreleased -- Add option to shrink floating-point values to smaller sizes like float16 (if they preserve value) and use IEEE 754 default rounding, which is the most accurate and statistically unbiased estimate of the true value. 
+* [x] unreleased -- Add option to shrink floating-point values to smaller sizes like float16 (if they preserve value) and use IEEE 754 default rounding, which is the most accurate and statistically unbiased estimate of the true value.
+* [x] unreleased -- Add options for encoding floating-point NaN values: NaNConvertNone, NanConvert7e00, NanConvertQuiet, or NaNConvertPreserveSignal.
 
 Coming soon: support for CBOR tags (major type 6). After that, options for handling duplicate map keys.
 
