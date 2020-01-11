@@ -51,6 +51,16 @@ type encodingStructType struct {
 	hasAnonymousField       bool
 }
 
+func (st encodingStructType) getFields(opts EncOptions) fields {
+	switch opts.Sort {
+	case SortLengthFirst:
+		return st.lenFirstCanonicalFields
+	case SortBytewiseLexical:
+		return st.bytewiseCanonicalFields
+	}
+	return st.fields
+}
+
 type byBytewiseFields struct {
 	fields
 }
@@ -77,7 +87,9 @@ func getEncodingStructType(t reflect.Type) encodingStructType {
 
 	flds, structOptions := getFields(t)
 
-	toArray := hasToArrayOption(structOptions)
+	if hasToArrayOption(structOptions) {
+		return getEncodingStructToArrayType(t, flds)
+	}
 
 	var err error
 	var omitEmpty bool
@@ -94,45 +106,41 @@ func getEncodingStructType(t reflect.Type) encodingStructType {
 		}
 
 		// Encode field name
-		if !toArray {
-			if flds[i].keyAsInt {
-				nameAsInt, numErr := strconv.Atoi(flds[i].name)
-				if numErr != nil {
-					err = numErr
-					break
-				}
-				if nameAsInt >= 0 {
-					encodeHead(e, byte(cborTypePositiveInt), uint64(nameAsInt))
-				} else {
-					n := nameAsInt*(-1) - 1
-					encodeHead(e, byte(cborTypeNegativeInt), uint64(n))
-				}
-				flds[i].cborName = make([]byte, e.Len())
-				copy(flds[i].cborName, e.Bytes())
-				e.Reset()
-			} else {
-				encodeHead(e, byte(cborTypeTextString), uint64(len(flds[i].name)))
-				flds[i].cborName = make([]byte, e.Len()+len(flds[i].name))
-				n := copy(flds[i].cborName, e.Bytes())
-				copy(flds[i].cborName[n:], flds[i].name)
-				e.Reset()
+		if flds[i].keyAsInt {
+			nameAsInt, numErr := strconv.Atoi(flds[i].name)
+			if numErr != nil {
+				err = numErr
+				break
 			}
+			if nameAsInt >= 0 {
+				encodeHead(e, byte(cborTypePositiveInt), uint64(nameAsInt))
+			} else {
+				n := nameAsInt*(-1) - 1
+				encodeHead(e, byte(cborTypeNegativeInt), uint64(n))
+			}
+			flds[i].cborName = make([]byte, e.Len())
+			copy(flds[i].cborName, e.Bytes())
+			e.Reset()
+
+			hasKeyAsInt = true
+		} else {
+			encodeHead(e, byte(cborTypeTextString), uint64(len(flds[i].name)))
+			flds[i].cborName = make([]byte, e.Len()+len(flds[i].name))
+			n := copy(flds[i].cborName, e.Bytes())
+			copy(flds[i].cborName[n:], flds[i].name)
+			e.Reset()
+
+			hasKeyAsStr = true
 		}
 
 		// Check if field is from embedded struct
-		if !hasAnonymousField && len(flds[i].idx) > 1 {
+		if len(flds[i].idx) > 1 {
 			hasAnonymousField = true
 		}
 
 		// Check if field can be omitted when empty
-		if !omitEmpty && flds[i].omitEmpty {
+		if flds[i].omitEmpty {
 			omitEmpty = true
-		}
-
-		if flds[i].keyAsInt {
-			hasKeyAsInt = true
-		} else {
-			hasKeyAsStr = true
 		}
 	}
 	putEncodeState(e)
@@ -155,7 +163,39 @@ func getEncodingStructType(t reflect.Type) encodingStructType {
 		sort.Sort(byLengthFirstFields{lenFirstCanonicalFields})
 	}
 
-	structType := encodingStructType{fields: flds, bytewiseCanonicalFields: bytewiseCanonicalFields, lenFirstCanonicalFields: lenFirstCanonicalFields, toArray: toArray, omitEmpty: omitEmpty, hasAnonymousField: hasAnonymousField}
+	structType := encodingStructType{
+		fields:                  flds,
+		bytewiseCanonicalFields: bytewiseCanonicalFields,
+		lenFirstCanonicalFields: lenFirstCanonicalFields,
+		omitEmpty:               omitEmpty,
+		hasAnonymousField:       hasAnonymousField,
+	}
+	encodingStructTypeCache.Store(t, structType)
+	return structType
+}
+
+func getEncodingStructToArrayType(t reflect.Type, flds fields) encodingStructType {
+	var hasAnonymousField bool
+	for i := 0; i < len(flds); i++ {
+		// Get field's encodeFunc
+		flds[i].ef = getEncodeFunc(flds[i].typ)
+		if flds[i].ef == nil {
+			structType := encodingStructType{err: &UnsupportedTypeError{t}}
+			encodingStructTypeCache.Store(t, structType)
+			return structType
+		}
+
+		// Check if field is from embedded struct
+		if len(flds[i].idx) > 1 {
+			hasAnonymousField = true
+		}
+	}
+
+	structType := encodingStructType{
+		fields:            flds,
+		toArray:           true,
+		hasAnonymousField: hasAnonymousField,
+	}
 	encodingStructTypeCache.Store(t, structType)
 	return structType
 }

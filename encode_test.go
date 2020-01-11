@@ -255,22 +255,30 @@ var exMarshalTests = []marshalTest{
 	},
 }
 
-var marshalErrorTests = []marshalErrorTest{
-	{"channel can't be marshalled", make(chan bool), "cbor: unsupported type: chan bool"},
-	{"slice of channel can't be marshalled", make([]chan bool, 10), "cbor: unsupported type: []chan bool"},
-	{"slice of pointer to channel can't be marshalled", make([]*chan bool, 10), "cbor: unsupported type: []*chan bool"},
-	{"map of channel can't be marshalled", make(map[string]chan bool), "cbor: unsupported type: map[string]chan bool"},
-	{"struct of channel can't be marshalled", struct{ Chan chan bool }{}, "cbor: unsupported type: struct { Chan chan bool }"},
-	{"function can't be marshalled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
-	{"complex can't be marshalled", complex(100, 8), "cbor: unsupported type: complex128"},
-}
-
 func TestMarshal(t *testing.T) {
 	testMarshal(t, marshalTests)
 	testMarshal(t, exMarshalTests)
 }
 
 func TestInvalidTypeMarshal(t *testing.T) {
+	type s1 struct {
+		Chan chan bool
+	}
+	type s2 struct {
+		_    struct{} `cbor:",toarray"`
+		Chan chan bool
+	}
+	var marshalErrorTests = []marshalErrorTest{
+		{"channel can't be marshalled", make(chan bool), "cbor: unsupported type: chan bool"},
+		{"slice of channel can't be marshalled", make([]chan bool, 10), "cbor: unsupported type: []chan bool"},
+		{"slice of pointer to channel can't be marshalled", make([]*chan bool, 10), "cbor: unsupported type: []*chan bool"},
+		{"map of channel can't be marshalled", make(map[string]chan bool), "cbor: unsupported type: map[string]chan bool"},
+		{"struct of channel can't be marshalled", s1{}, "cbor: unsupported type: cbor_test.s1"},
+		{"struct of channel can't be marshalled", s2{}, "cbor: unsupported type: cbor_test.s2"},
+		{"function can't be marshalled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
+		{"complex can't be marshalled", complex(100, 8), "cbor: unsupported type: complex128"},
+	}
+
 	for _, tc := range marshalErrorTests {
 		t.Run(tc.name, func(t *testing.T) {
 			b, err := cbor.Marshal(&tc.value, cbor.EncOptions{})

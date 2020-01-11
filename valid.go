@@ -180,6 +180,9 @@ func validHead(data []byte, off int) (_ int, t cborType, ai byte, val uint64, er
 		}
 		val = uint64(data[off])
 		off++
+		if t == cborTypePrimitives && val < 32 {
+			return 0, 0, 0, 0, &SyntaxError{"cbor: invalid simple value " + strconv.Itoa(int(val)) + " for type " + t.String()}
+		}
 	case 25:
 		if dataLen < 3 {
 			return 0, 0, 0, 0, io.ErrUnexpectedEOF
@@ -207,9 +210,6 @@ func validHead(data []byte, off int) (_ int, t cborType, ai byte, val uint64, er
 		case cborTypePrimitives: // 0xff (break code) should not be outside validIndefinite().
 			return 0, 0, 0, 0, &SyntaxError{"cbor: unexpected \"break\" code"}
 		}
-	}
-	if t == cborTypePrimitives && ai == 24 && val < 32 {
-		return 0, 0, 0, 0, &SyntaxError{"cbor: invalid simple value " + strconv.Itoa(int(val)) + " for type " + t.String()}
 	}
 	return off, t, ai, val, nil
 }

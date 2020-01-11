@@ -828,12 +828,7 @@ func encodeStruct(e *encodeState, v reflect.Value, opts EncOptions) (int, error)
 		return encodeStructToArray(e, v, opts, structType.fields)
 	}
 
-	flds := structType.fields
-	if opts.Sort == SortLengthFirst {
-		flds = structType.lenFirstCanonicalFields
-	} else if opts.Sort == SortBytewiseLexical {
-		flds = structType.bytewiseCanonicalFields
-	}
+	flds := structType.getFields(opts)
 
 	if !structType.hasAnonymousField && !structType.omitEmpty {
 		return encodeFixedLengthStruct(e, v, opts, flds)
@@ -966,14 +961,7 @@ var (
 
 func getEncodeFuncInternal(t reflect.Type) encodeFunc {
 	if t.Kind() == reflect.Ptr {
-		for t.Kind() == reflect.Ptr {
-			t = t.Elem()
-		}
-		f := getEncodeFunc(t)
-		if f == nil {
-			return f
-		}
-		return getEncodeIndirectValueFunc(f)
+		return getEncodeIndirectValueFunc(t)
 	}
 	if reflect.PtrTo(t).Implements(typeMarshaler) {
 		return encodeMarshalerType
@@ -1006,12 +994,18 @@ func getEncodeFuncInternal(t reflect.Type) encodeFunc {
 		return encodeStruct
 	case reflect.Interface:
 		return encodeIntf
-	default:
-		return nil
 	}
+	return nil
 }
 
-func getEncodeIndirectValueFunc(f encodeFunc) encodeFunc {
+func getEncodeIndirectValueFunc(t reflect.Type) encodeFunc {
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	f := getEncodeFunc(t)
+	if f == nil {
+		return f
+	}
 	return func(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 		for v.Kind() == reflect.Ptr && !v.IsNil() {
 			v = v.Elem()
