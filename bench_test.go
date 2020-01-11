@@ -145,60 +145,58 @@ func BenchmarkUnmarshal(b *testing.B) {
 			})
 		}
 	}
-	// Unmarshal CBOR map with string key
-	cborData := hexDecode("a86154f56255691bffffffffffffffff61493903e76146fbc0106666666666666142581a0102030405060708090a0b0c0d0e0f101112131415161718191a6153782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6764536c6369981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a634d7373ad6163614361656145616661466167614761686148616e614e616d614d61616141616261426164614461696149616a614a616c614c")
-	b.Run("CBOR map to Go map[string]interface{}", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			var v map[string]interface{}
-			if err := cbor.Unmarshal(cborData, &v); err != nil {
-				b.Fatal("Unmarshal:", err)
+	var moreBenchmarks = []struct {
+		name         string
+		cborData     []byte
+		decodeToType reflect.Type
+	}{
+		// Unmarshal CBOR map with string key to map[string]interface{}.
+		{
+			"CBOR map to Go map[string]interface{}",
+			hexDecode("a86154f56255691bffffffffffffffff61493903e76146fbc0106666666666666142581a0102030405060708090a0b0c0d0e0f101112131415161718191a6153782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6764536c6369981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a634d7373ad6163614361656145616661466167614761686148616e614e616d614d61616141616261426164614461696149616a614a616c614c"),
+			reflect.TypeOf(map[string]interface{}{}),
+		},
+		// Unmarshal CBOR map with string key to struct.
+		{
+			"CBOR map to Go struct",
+			hexDecode("a86154f56255691bffffffffffffffff61493903e76146fbc0106666666666666142581a0102030405060708090a0b0c0d0e0f101112131415161718191a6153782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6764536c6369981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a634d7373ad6163614361656145616661466167614761686148616e614e616d614d61616141616261426164614461696149616a614a616c614c"),
+			reflect.TypeOf(T1{}),
+		},
+		// Unmarshal CBOR map with integer key, such as COSE Key and SenML, to map[int]interface{}.
+		{
+			"CBOR map to Go map[int]interface{}",
+			hexDecode("a801f5021bffffffffffffffff033903e704fbc01066666666666605581a0102030405060708090a0b0c0d0e0f101112131415161718191a06782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6707981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a08ad61646144616661466167614761686148616d614d616e614e6161614161626142616361436165614561696149616a614a616c614c"),
+			reflect.TypeOf(map[int]interface{}{}),
+		},
+		// Unmarshal CBOR map with integer key, such as COSE Key and SenML, to struct.
+		{
+			"CBOR map to Go struct keyasint",
+			hexDecode("a801f5021bffffffffffffffff033903e704fbc01066666666666605581a0102030405060708090a0b0c0d0e0f101112131415161718191a06782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6707981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a08ad61646144616661466167614761686148616d614d616e614e6161614161626142616361436165614561696149616a614a616c614c"),
+			reflect.TypeOf(T2{}),
+		},
+		// Unmarshal CBOR array of known sequence of data types, such as signed/maced/encrypted CWT, to []interface{}.
+		{
+			"CBOR array to Go []interface{}",
+			hexDecode("88f51bffffffffffffffff3903e7fbc010666666666666581a0102030405060708090a0b0c0d0e0f101112131415161718191a782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67981a0102030405060708090a0b0c0d0e0f101112131415161718181819181aad616261426163614361646144616561456166614661696149616e614e616161416167614761686148616a614a616c614c616d614d"),
+			reflect.TypeOf([]interface{}{}),
+		},
+		// Unmarshal CBOR array of known sequence of data types, such as signed/maced/encrypted CWT, to struct.
+		{
+			"CBOR array to Go struct toarray",
+			hexDecode("88f51bffffffffffffffff3903e7fbc010666666666666581a0102030405060708090a0b0c0d0e0f101112131415161718191a782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67981a0102030405060708090a0b0c0d0e0f101112131415161718181819181aad616261426163614361646144616561456166614661696149616e614e616161416167614761686148616a614a616c614c616d614d"),
+			reflect.TypeOf(T3{}),
+		},
+	}
+	for _, bm := range moreBenchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				vPtr := reflect.New(bm.decodeToType).Interface()
+				if err := cbor.Unmarshal(bm.cborData, vPtr); err != nil {
+					b.Fatal("Unmarshal:", err)
+				}
 			}
-		}
-	})
-	b.Run("CBOR map to Go struct", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			var v T1
-			if err := cbor.Unmarshal(cborData, &v); err != nil {
-				b.Fatal("Unmarshal:", err)
-			}
-		}
-	})
-	// Unmarshal CBOR map with integer key, such as COSE Key and SenML.
-	cborData = hexDecode("a801f5021bffffffffffffffff033903e704fbc01066666666666605581a0102030405060708090a0b0c0d0e0f101112131415161718191a06782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6707981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a08ad61646144616661466167614761686148616d614d616e614e6161614161626142616361436165614561696149616a614a616c614c")
-	b.Run("CBOR map to Go map[int]interface{}", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			var v map[int]interface{}
-			if err := cbor.Unmarshal(cborData, &v); err != nil {
-				b.Fatal("Unmarshal:", err)
-			}
-		}
-	})
-	b.Run("CBOR map to Go struct keyasint", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			var v T2
-			if err := cbor.Unmarshal(cborData, &v); err != nil {
-				b.Fatal("Unmarshal:", err)
-			}
-		}
-	})
-	// Unmarshal CBOR array of known sequence of data types, such as signed/maced/encrypted CWT
-	cborData = hexDecode("88f51bffffffffffffffff3903e7fbc010666666666666581a0102030405060708090a0b0c0d0e0f101112131415161718191a782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67981a0102030405060708090a0b0c0d0e0f101112131415161718181819181aad616261426163614361646144616561456166614661696149616e614e616161416167614761686148616a614a616c614c616d614d")
-	b.Run("CBOR array to Go []interface{}", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			var v []interface{}
-			if err := cbor.Unmarshal(cborData, &v); err != nil {
-				b.Fatal("Unmarshal:", err)
-			}
-		}
-	})
-	b.Run("CBOR array to Go struct toarray", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			var v T3
-			if err := cbor.Unmarshal(cborData, &v); err != nil {
-				b.Fatal("Unmarshal:", err)
-			}
-		}
-	})
+		})
+	}
 }
 
 func BenchmarkDecode(b *testing.B) {
@@ -287,20 +285,6 @@ func BenchmarkMarshal(b *testing.B) {
 		Slci: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
 		Mss:  map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"},
 	}
-	b.Run("Go map[string]interface{} to CBOR map", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			if _, err := cbor.Marshal(m1, cbor.EncOptions{}); err != nil {
-				b.Fatal("Marshal:", err)
-			}
-		}
-	})
-	b.Run("Go struct to CBOR map", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			if _, err := cbor.Marshal(v1, cbor.EncOptions{}); err != nil {
-				b.Fatal("Marshal:", err)
-			}
-		}
-	})
 	// Marshal map[int]interface{} to CBOR map
 	m2 := map[int]interface{}{
 		1: true,
@@ -323,20 +307,6 @@ func BenchmarkMarshal(b *testing.B) {
 		Slci: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
 		Mss:  map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"},
 	}
-	b.Run("Go map[int]interface{} to CBOR map", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			if _, err := cbor.Marshal(m2, cbor.EncOptions{}); err != nil {
-				b.Fatal("Marshal:", err)
-			}
-		}
-	})
-	b.Run("Go struct keyasint to CBOR map", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			if _, err := cbor.Marshal(v2, cbor.EncOptions{}); err != nil {
-				b.Fatal("Marshal:", err)
-			}
-		}
-	})
 	// Marshal []interface to CBOR array.
 	slc := []interface{}{
 		true,
@@ -359,20 +329,26 @@ func BenchmarkMarshal(b *testing.B) {
 		Slci: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
 		Mss:  map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"},
 	}
-	b.Run("Go []interface{} to CBOR map", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			if _, err := cbor.Marshal(slc, cbor.EncOptions{}); err != nil {
-				b.Fatal("Marshal:", err)
+	var moreBenchmarks = []struct {
+		name  string
+		value interface{}
+	}{
+		{"Go map[string]interface{} to CBOR map", m1},
+		{"Go struct to CBOR map", v1},
+		{"Go map[int]interface{} to CBOR map", m2},
+		{"Go struct keyasint to CBOR map", v2},
+		{"Go []interface{} to CBOR map", slc},
+		{"Go struct toarray to CBOR array", v3},
+	}
+	for _, bm := range moreBenchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				if _, err := cbor.Marshal(bm.value, cbor.EncOptions{}); err != nil {
+					b.Fatal("Marshal:", err)
+				}
 			}
-		}
-	})
-	b.Run("Go struct toarray to CBOR array", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			if _, err := cbor.Marshal(v3, cbor.EncOptions{}); err != nil {
-				b.Fatal("Marshal:", err)
-			}
-		}
-	})
+		})
+	}
 }
 
 func BenchmarkMarshalCanonical(b *testing.B) {
