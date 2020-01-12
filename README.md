@@ -1,7 +1,7 @@
 [![CBOR Library - Slideshow and Latest Docs.](https://github.com/fxamacker/images/raw/master/cbor/v1.4.0/cbor_slides.gif)](https://github.com/fxamacker/cbor/blob/master/README.md)
 
 # CBOR library in Go
-This library is a CBOR encoder and decoder.  Each release passes 375+ tests and 250+ million execs in fuzzing with 1000+ CBOR files.   Choose this CBOR library if you value your time, program size, and system reliability.
+This library is a CBOR encoder and decoder.  Each release passes 375+ tests and 250+ million execs in fuzzing with 1000+ CBOR files.   Choose this CBOR library if you value your time, program size, data size, and system reliability.
 
 [![Build Status](https://travis-ci.com/fxamacker/cbor.svg?branch=master)](https://travis-ci.com/fxamacker/cbor)
 [![codecov](https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4)](https://codecov.io/gh/fxamacker/cbor)
@@ -11,19 +11,23 @@ This library is a CBOR encoder and decoder.  Each release passes 375+ tests and 
 
 __What is CBOR__?  [CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049)) is a binary data format inspired by JSON and MessagePack.  CBOR is used in [IETF](https://www.ietf.org) Internet Standards such as COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)) and CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)). Even WebAuthn uses CBOR.
 
-__Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: small, fast, safe and easy. It can provide "preferred serialization" by correctly converting floating-point values to float16 (if they fit).
+__Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: small, fast, safe and easy. It can also provide "preferred serialization" by encoding integers and floating-point values to their smallest forms.
 
 * __Small apps__.  Same programs are 4-9 MB smaller by switching to this library.  No code gen and the only imported pkg is [x448/float16](https://github.com/x448/float16) which is maintained by the same team as this library.
 
-* __Small data__.  The `toarray` and `keyasint` struct tags can shrink size of Go structs encoded to CBOR.  Also, integers always encode to smallest type that fits.  Optionally, floats can shrink from float64 to float32 or float16 when values fit.
+* __Small data__.  The `toarray`, `keyasint`, and `omitempty` struct tags shrink size of Go structs encoded to CBOR.  Integers  encode to smallest form that fits.  Floats can shrink from float64 to float32 to float16 if values can round-trip.
 
 * __Fast__. v1.3 became faster than a well-known library that uses `unsafe` optimizations and code gen.  Faster libraries will always exist, but speed is only one factor.  This library doesn't use `unsafe` optimizations or code gen.  
 
 * __Safe__ and reliable. It prevents crashes on malicious CBOR data by using extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's [`unsafe`](https://golang.org/pkg/unsafe/) pkg. Nested levels for CBOR arrays, maps, and tags are limited to 32.
 
-* __Easy__ and saves time.  It has the same API as [Go](https://golang.org)'s [`encoding/json`](https://golang.org/pkg/encoding/json/) when possible.  Existing structs don't require changes.  Go struct tags like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` work as expected.
+* __Easy__ and saves time.  It has the same API as [Go](https://golang.org)'s [`encoding/json`](https://golang.org/pkg/encoding/json/) when possible.  Existing structs don't require changes.  Go struct tags like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` work as expected.  
 
-New struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data like COSE, CWT, and SenML easier to use.
+Predefined configs for "Canonical CBOR", "CTAP2 Canonical CBOR", etc. makes it easier to comply with standards. 
+
+Custom configs can be created by setting individual options.  E.g., NaNConvert option can be set to NaNConvertNone, NaNConvert7e00, NaNConvertQuiet, or NaNConvertPreserveSignal.
+
+Struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data such as COSE, CWT, and SenML easier to use.
 
 <hr>
 
@@ -70,7 +74,7 @@ Recent activity:
 * [x] [Release v1.3.4](https://github.com/fxamacker/cbor/releases) -- Bugfixes and refactoring.  Limit nested levels to 32 for arrays, maps, tags.
 * [x] [Release v1.4](https://github.com/fxamacker/cbor/releases) -- Deprecate bool encoding options and add int SortMode.  Use float16 to float32 conversion func that had all 65536 results verified to be correct. Fix decoding of float16 subnormal numbers.
 * [x] unreleased -- Add option to shrink floating-point values to smaller sizes like float16 (if they preserve value).
-* [x] unreleased -- Add options for encoding floating-point NaN values: NaNConvertNone, NanConvert7e00, NanConvertQuiet, or NaNConvertPreserveSignal.
+* [x] unreleased -- Add options for encoding floating-point NaN values: NaNConvertNone, NaNConvert7e00, NaNConvertQuiet, or NaNConvertPreserveSignal.
 
 Coming soon: support for CBOR tags (major type 6). After that, options for handling duplicate map keys.
 
@@ -111,7 +115,7 @@ Features not in Go's standard library are usually not added.  However, the __`to
 * Encoder floating-point option types: ShortestFloatMode, InfConvertMode, and NaNConvertMode.
   * ShortestFloatMode: ShortestFloatNone or ShortestFloat16 (IEEE 754 binary16, etc. if value fits).
   * InfConvertMode: InfConvertNone or InfConvertFloat16.
-  * NanConvertMode: NaNConvertNone, NanConvert7e00, NanConvertQuiet, or NaNConvertPreserveSignal
+  * NaNConvertMode: NaNConvertNone, NaNConvert7e00, NaNConvertQuiet, or NaNConvertPreserveSignal
 * Encoder sort options: SortNone, SortBytewiseLexical, SortCanonical, SortCTAP2, SortCoreDeterministic  
 * Support `encoding.BinaryMarshaler` and `encoding.BinaryUnmarshaler` interfaces.
 * Support `cbor.RawMessage` which can delay CBOR decoding or precompute CBOR encoding.
