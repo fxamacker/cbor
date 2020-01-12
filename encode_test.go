@@ -2447,7 +2447,7 @@ func TestNaNConvert(t *testing.T) {
 	}
 }
 
-func TestInvalidNanConvert(t *testing.T) {
+func TestInvalidNaNConvert(t *testing.T) {
 	var i int
 	wantErrorMsg := "cbor: invalid NaNConvertMode 100"
 	if _, err := cbor.Marshal(i, cbor.EncOptions{NaNConvert: cbor.NaNConvertMode(100)}); err == nil {
@@ -2494,7 +2494,7 @@ func TestMarshalSenML(t *testing.T) {
 func TestCanonicalEncOptions(t *testing.T) {
 	wantSortMode := cbor.SortCanonical
 	wantShortestFloat := cbor.ShortestFloat16
-	wantNanConvert := cbor.NaNConvert7e00
+	wantNaNConvert := cbor.NaNConvert7e00
 	wantInfConvert := cbor.InfConvertFloat16
 	wantIndefiniteLengthErrorMsg := "cbor: indefinite-length items are not allowed"
 	opts := cbor.CanonicalEncOptions()
@@ -2504,8 +2504,8 @@ func TestCanonicalEncOptions(t *testing.T) {
 	if opts.ShortestFloat != wantShortestFloat {
 		t.Errorf("CanonicalEncOptions() returned EncOptions with ShortestFloat %d, want %d", opts.ShortestFloat, wantShortestFloat)
 	}
-	if opts.NaNConvert != wantNanConvert {
-		t.Errorf("CanonicalEncOptions() returned EncOptions with NanConvert %d, want %d", opts.NaNConvert, wantNanConvert)
+	if opts.NaNConvert != wantNaNConvert {
+		t.Errorf("CanonicalEncOptions() returned EncOptions with NaNConvert %d, want %d", opts.NaNConvert, wantNaNConvert)
 	}
 	if opts.InfConvert != wantInfConvert {
 		t.Errorf("CanonicalEncOptions() returned EncOptions with InfConvert %d, want %d", opts.InfConvert, wantInfConvert)
@@ -2521,7 +2521,7 @@ func TestCanonicalEncOptions(t *testing.T) {
 func TestCTAP2EncOptions(t *testing.T) {
 	wantSortMode := cbor.SortCTAP2
 	wantShortestFloat := cbor.ShortestFloatNone
-	wantNanConvert := cbor.NaNConvertNone
+	wantNaNConvert := cbor.NaNConvertNone
 	wantInfConvert := cbor.InfConvertNone
 	wantIndefiniteLengthErrorMsg := "cbor: indefinite-length items are not allowed"
 	opts := cbor.CTAP2EncOptions()
@@ -2531,8 +2531,8 @@ func TestCTAP2EncOptions(t *testing.T) {
 	if opts.ShortestFloat != wantShortestFloat {
 		t.Errorf("CTAP2EncOptions() returned EncOptions with ShortestFloat %d, want %d", opts.ShortestFloat, wantShortestFloat)
 	}
-	if opts.NaNConvert != wantNanConvert {
-		t.Errorf("CTAP2EncOptions() returned EncOptions with NanConvert %d, want %d", opts.NaNConvert, wantNanConvert)
+	if opts.NaNConvert != wantNaNConvert {
+		t.Errorf("CTAP2EncOptions() returned EncOptions with NaNConvert %d, want %d", opts.NaNConvert, wantNaNConvert)
 	}
 	if opts.InfConvert != wantInfConvert {
 		t.Errorf("CTAP2EncOptions() returned EncOptions with InfConvert %d, want %d", opts.InfConvert, wantInfConvert)
@@ -2548,7 +2548,7 @@ func TestCTAP2EncOptions(t *testing.T) {
 func TestCoreDetEncOptions(t *testing.T) {
 	wantSortMode := cbor.SortCoreDeterministic
 	wantShortestFloat := cbor.ShortestFloat16
-	wantNanConvert := cbor.NaNConvert7e00
+	wantNaNConvert := cbor.NaNConvert7e00
 	wantInfConvert := cbor.InfConvertFloat16
 	wantIndefiniteLengthErrorMsg := "cbor: indefinite-length items are not allowed"
 	opts := cbor.CoreDetEncOptions()
@@ -2558,8 +2558,8 @@ func TestCoreDetEncOptions(t *testing.T) {
 	if opts.ShortestFloat != wantShortestFloat {
 		t.Errorf("CoreDetEncOptions() returned EncOptions with ShortestFloat %d, want %d", opts.ShortestFloat, wantShortestFloat)
 	}
-	if opts.NaNConvert != wantNanConvert {
-		t.Errorf("CoreDetEncOptions() returned EncOptions with NanConvert %d, want %d", opts.NaNConvert, wantNanConvert)
+	if opts.NaNConvert != wantNaNConvert {
+		t.Errorf("CoreDetEncOptions() returned EncOptions with NaNConvert %d, want %d", opts.NaNConvert, wantNaNConvert)
 	}
 	if opts.InfConvert != wantInfConvert {
 		t.Errorf("CoreDetEncOptions() returned EncOptions with InfConvert %d, want %d", opts.InfConvert, wantInfConvert)
@@ -2575,7 +2575,7 @@ func TestCoreDetEncOptions(t *testing.T) {
 func TestPreferredUnsortedEncOptions(t *testing.T) {
 	wantSortMode := cbor.SortNone
 	wantShortestFloat := cbor.ShortestFloat16
-	wantNanConvert := cbor.NaNConvert7e00
+	wantNaNConvert := cbor.NaNConvert7e00
 	wantInfConvert := cbor.InfConvertFloat16
 	opts := cbor.PreferredUnsortedEncOptions()
 	if opts.Sort != wantSortMode {
@@ -2584,8 +2584,8 @@ func TestPreferredUnsortedEncOptions(t *testing.T) {
 	if opts.ShortestFloat != wantShortestFloat {
 		t.Errorf("PreferredUnsortedEncOptions() returned EncOptions with ShortestFloat %d, want %d", opts.ShortestFloat, wantShortestFloat)
 	}
-	if opts.NaNConvert != wantNanConvert {
-		t.Errorf("PreferredUnsortedEncOptions() returned EncOptions with NanConvert %d, want %d", opts.NaNConvert, wantNanConvert)
+	if opts.NaNConvert != wantNaNConvert {
+		t.Errorf("PreferredUnsortedEncOptions() returned EncOptions with NaNConvert %d, want %d", opts.NaNConvert, wantNaNConvert)
 	}
 	if opts.InfConvert != wantInfConvert {
 		t.Errorf("PreferredUnsortedEncOptions() returned EncOptions with InfConvert %d, want %d", opts.InfConvert, wantInfConvert)

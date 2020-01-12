@@ -767,7 +767,7 @@ func testFloat(t *testing.T, cborData []byte, f interface{}, wantf interface{}, 
 		}
 		if math.IsNaN(float64(wantf)) {
 			if !math.IsNaN(float64(f)) {
-				t.Errorf("Unmarshal(0x%x) = %f, want Nan", cborData, f)
+				t.Errorf("Unmarshal(0x%x) = %f, want NaN", cborData, f)
 			}
 		} else if math.IsInf(float64(wantf), 0) {
 			if f != wantf {
@@ -784,7 +784,7 @@ func testFloat(t *testing.T, cborData []byte, f interface{}, wantf interface{}, 
 		}
 		if math.IsNaN(wantf) {
 			if !math.IsNaN(f) {
-				t.Errorf("Unmarshal(0x%x) = %f, want Nan", cborData, f)
+				t.Errorf("Unmarshal(0x%x) = %f, want NaN", cborData, f)
 			}
 		} else if math.IsInf(wantf, 0) {
 			if f != wantf {
@@ -1445,7 +1445,7 @@ func TestMapKeyUnhashable(t *testing.T) {
 	}
 }
 
-func TestMapKeyNan(t *testing.T) {
+func TestMapKeyNaN(t *testing.T) {
 	// Data is generating by go-fuzz.
 	cborData := hexDecode("b0303030303030303030303030303030303038303030faffff30303030303030303030303030") // {-17: -17, NaN: -17}
 	var intf interface{}
