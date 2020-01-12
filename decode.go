@@ -14,7 +14,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/cbor-go/float16"
+	"github.com/x448/float16"
 )
 
 // Unmarshal parses the CBOR-encoded data and stores the result in the value

@@ -13,7 +13,7 @@ __What is CBOR__?  [CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/htm
 
 __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: small, fast, safe and easy. It can provide "preferred serialization" by correctly converting floating-point values to float16 (if they fit).
 
-* __Small apps__.  Same programs are 4-9 MB smaller by switching to this library.  No code gen and the only imported pkg is [cbor-go/float16](https://github.com/cbor-go/float16) which is maintained by the same team as this library.
+* __Small apps__.  Same programs are 4-9 MB smaller by switching to this library.  No code gen and the only imported pkg is [x448/float16](https://github.com/x448/float16) which is maintained by the same team as this library.
 
 * __Small data__.  The `toarray` and `keyasint` struct tags can shrink size of Go structs encoded to CBOR.  Also, integers always encode to smallest type that fits.  Optionally, floats can shrink from float64 to float32 or float16 when values fit.
 
@@ -80,7 +80,7 @@ This library is designed to be a generic CBOR encoder and decoder.  It was initi
 This library is designed to be:
 
 * __Easy__ – API is like `encoding/json` plus `keyasint` and `toarray` struct tags.
-* __Small__ – Programs in cisco/senml are 4 MB smaller by switching to this library. In extreme cases programs can be smaller by 9+ MB. No code gen and the only imported pkg is [cbor-go/float16](https://github.com/cbor-go/float16) which is maintained by the same team.
+* __Small__ – Programs in cisco/senml are 4 MB smaller by switching to this library. In extreme cases programs can be smaller by 9+ MB. No code gen and the only imported pkg is [x448/float16](https://github.com/x448/float16) which is maintained by the same team.
 * __Safe and reliable__ – No `unsafe` pkg, coverage >95%, coverage-guided fuzzing, and data validation to avoid crashes on malformed or malicious data.
 
 Competing factors are balanced:
@@ -169,7 +169,7 @@ __Encoder's NaNConvertMode__ overrides ShortestFloatMode for NaN values and can 
 * NaNConvertQuiet: force quiet bit = 1 and use shortest form that preserves NaN payload.
 * NaNConvertPreserveSignal: convert to smallest form that preserves value (quit bit unmodified and NaN payload preserved) -- described in RFC 7049bis Draft 12 when protocols don't want predifined value such as 0x7e00.
 
-Float16 conversions use [cbor-go/float16](https://github.com/cbor-go/float16) maintained by the same team as this library.  All 4+ billion possible conversions are verified to be correct in that library.
+Float16 conversions use [x448/float16](https://github.com/x448/float16) maintained by the same team as this library.  All 4+ billion possible conversions are verified to be correct in that library.
 
 Decoder checks for all required well-formedness errors described in the latest RFC 7049bis, including all "subkinds" of syntax errors and too little data.
 
@@ -469,7 +469,7 @@ Please read the license for additional disclaimers and terms.
 
 ## Special Thanks
 * Carsten Bormann for RFC 7049 (CBOR), his fast confirmation to my RFC 7049 errata, approving my pull request to 7049bis, and his patience when I misread a line in 7049bis.
-* Montgomery Edwards⁴⁴⁸ for contributing [float16 conversion code](https://github.com/cbor-go/float16), updating the README.md, creating comparison charts & slideshow, and filing many helpful issues.
+* Montgomery Edwards⁴⁴⁸ for contributing [float16 conversion code](https://github.com/x448/float16), updating the README.md, creating comparison charts & slideshow, and filing many helpful issues.
 * Keith Randall for [fixing Go bugs and providing workarounds](https://github.com/golang/go/issues/36400) so we don't have to wait for new versions of Go.
 * Stefan Tatschner for being the 1st to discover my CBOR library, filing issues #1 and #2, and recommending this library.
 * Yawning Angel for replacing a library with this one in a big project after an external security audit, and filing issue #5.

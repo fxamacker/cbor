@@ -2,4 +2,4 @@ module github.com/fxamacker/cbor
 
 go 1.12
 
-require github.com/cbor-go/float16 v0.8.1
+require github.com/x448/float16 v0.8.2

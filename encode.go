@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cbor-go/float16"
+	"github.com/x448/float16"
 )
 
 // Marshal returns the CBOR encoding of v.
