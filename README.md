@@ -1,7 +1,7 @@
 [![CBOR Library - Slideshow and Latest Docs.](https://github.com/fxamacker/images/raw/master/cbor/v1.5.0/cbor_slides.gif)](https://github.com/fxamacker/cbor/blob/master/README.md)
 
 # CBOR library in Go
-This library is a CBOR encoder and decoder.  Each release passes 375+ tests and 250+ million execs in fuzzing with 1000+ CBOR files.   Choose this CBOR library if you value your time, program size, data size, and system reliability.
+This is a generic CBOR encoder and decoder.  It can encode integers and floats to their smallest forms (like float16) when values fit.  Each release passes 375+ tests and 250+ million execs fuzzing with 1100+ CBOR files.
 
 [![Build Status](https://travis-ci.com/fxamacker/cbor.svg?branch=master)](https://travis-ci.com/fxamacker/cbor)
 [![codecov](https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4)](https://codecov.io/gh/fxamacker/cbor)
@@ -11,11 +11,11 @@ This library is a CBOR encoder and decoder.  Each release passes 375+ tests and 
 
 __What is CBOR__?  [CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049)) is a binary data format inspired by JSON and MessagePack.  CBOR is used in [IETF](https://www.ietf.org) Internet Standards such as COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)) and CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)). Even WebAuthn uses CBOR.
 
-__Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: small, fast, safe and easy. It can also provide "preferred serialization" by encoding integers and floating-point values to their smallest forms.
+__Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: small, fast, safe and easy. It also supports "preferred serialization" by encoding integers and floats to their smallest forms when values fit.
 
 * __Small apps__.  Same programs are 4-9 MB smaller by switching to this library.  No code gen and the only imported pkg is [x448/float16](https://github.com/x448/float16) which is maintained by the same team as this library.
 
-* __Small data__.  The `toarray`, `keyasint`, and `omitempty` struct tags shrink size of Go structs encoded to CBOR.  Integers  encode to smallest form that fits.  Floats can shrink from float64 to float32 to float16 if values can round-trip.
+* __Small data__.  The `toarray`, `keyasint`, and `omitempty` struct tags shrink size of Go structs encoded to CBOR.  Integers encode to smallest form that fits.  Floats can shrink from float64 -> float32 -> float16 if values can round-trip.
 
 * __Fast__. v1.3 became faster than a well-known library that uses `unsafe` optimizations and code gen.  Faster libraries will always exist, but speed is only one factor.  This library doesn't use `unsafe` optimizations or code gen.  
 
@@ -25,7 +25,7 @@ __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: 
 
 __Predefined configs__ make it easier to comply with standards like Canonical CBOR, CTAP2 Canonical CBOR, etc.
 
-__Custom configs__ can be created by setting individual options.  E.g., NaNConvert option can be set to NaNConvertNone, NaNConvert7e00, NaNConvertQuiet, or NaNConvertPreserveSignal.
+__Custom configs__ can be created by setting individual options.  E.g., EncOptions.NaNConvert can be set to NaNConvertNone, NaNConvert7e00, NaNConvertQuiet, or NaNConvertPreserveSignal.
 
 Struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data such as COSE, CWT, and SenML easier to use.
 
@@ -60,11 +60,13 @@ Doing your own comparisons is highly recommended.  Use your most common message 
 ## Current Status
 Version 1.x has:
 
-* __Stable API__ – won't make breaking API changes.  
+* __Stable API__ – won't make breaking API changes except:
+  * CoreDetEncOptions() is subject to change because it uses draft standard not yet approved.
+  * PreferredUnsortedEncOptions() is subject to change because it uses draft standard not yet approved.
 * __Stable requirements__ – will always support Go v1.12 (unless there's compelling reason).
-* __Passed fuzzing__ – v1.4 passed 532+ million execs in coverage-guided fuzzing at the time of release. And v1.4 reached 4+ billion execs 18 days after release.
+* __Passed fuzzing__ – Fuzzing for v1.5 passed 2.75+ billion execs and is in progress. v1.4 passed 532+ million execs in coverage-guided fuzzing at the time of release and reached 4+ billion execs 18 days after release.
 
-Each commit passes 375+ tests. Each release also passes 250+ million execs in coverage-guided fuzzing using 1,000+ CBOR files (corpus). See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
+Each commit passes 375+ tests. Each release also passes 250+ million execs in coverage-guided fuzzing using 1,100+ CBOR files (corpus). See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
 
 Recent activity:
 
@@ -84,13 +86,17 @@ This library is designed to be a generic CBOR encoder and decoder.  It was initi
 This library is designed to be:
 
 * __Easy__ – API is like `encoding/json` plus `keyasint` and `toarray` struct tags.
-* __Small__ – Programs in cisco/senml are 4 MB smaller by switching to this library. In extreme cases programs can be smaller by 9+ MB. No code gen and the only imported pkg is [x448/float16](https://github.com/x448/float16) which is maintained by the same team.
+* __Small__ – Programs in cisco/senml are 4 MB smaller by switching to this library. In extreme cases programs can be smaller by 9+ MB. No code gen and the only imported pkg is x448/float16 which is maintained by the same team.
 * __Safe and reliable__ – No `unsafe` pkg, coverage >95%, coverage-guided fuzzing, and data validation to avoid crashes on malformed or malicious data.
 
 Competing factors are balanced:
 
 * __Speed__ vs __safety__ vs __size__ – to keep size small, avoid code generation. For safety, validate data and avoid Go's `unsafe` pkg.  For speed, use safe optimizations such as caching struct metadata. v1.4 is faster than a well-known library that uses `unsafe` and code gen.
 * __Standards compliance__ – CBOR ([RFC 7049](https://tools.ietf.org/html/rfc7049)) with minor [limitations](#limitations).  Encoder supports options for sorting, floating-point conversions, and more.  Predefined configurations are also available so you can use "CTAP2 Canonical CBOR", etc. without knowing individual options.  Decoder checks for well-formedness, validates data, and limits nested levels to defend against attacks.  See [Standards](#standards).
+
+Avoiding `unsafe` package has benefits.  The `unsafe` package [warns](https://golang.org/pkg/unsafe/):
+
+> Packages that import unsafe may be non-portable and are not protected by the Go 1 compatibility guidelines.
 
 All releases prioritize reliability to avoid crashes on decoding malformed CBOR data. See [Fuzzing and Coverage](#fuzzing-and-code-coverage).
 
@@ -138,44 +144,44 @@ For Go integers, encoder always uses "preferred serialization" which encodes the
 
 Encoder has options that can be set individually to create custom configurations. Easy functions are also provided to create and return modifiable configurations (EncOptions):
 
-* CanonicalEncOptions() -- [Canonical CBOR (RFC 7049)](https://tools.ietf.org/html/rfc7049#section-3.9).
-* CTAP2EncOptions() -- [CTAP2 Canonical CBOR](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).
-* CoreDetEncOptions() -- Core Deterministic Encoding (floats use [IEEE 754 binary16](https://en.wikipedia.org/wiki/Half-precision_floating-point_format) if value is preserved).
+* CanonicalEncOptions() -- [Canonical CBOR (RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9).
+* CTAP2EncOptions() -- [CTAP2 Canonical CBOR (FIDO2 CTAP2)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).
 * PreferredUnsortedEncOptions() -- Preferred Serialization (unsorted, shortest integer and floating-point forms that preserve values, NaN values encoded as 0xf97e00).
+* CoreDetEncOptions() -- Bytewise lexicographic sort order for map keys, plus options from PreferredUnsortedEncOptions()
 
-__Encoder's SortMode__ has 3 options (and 3 aliases):
+__EncOptions.Sort__:
 
-* SortNone: no sorting.
+* SortNone: no sorting for map keys.
 * SortLengthFirst: length-first map key ordering.
-* SortBytewiseLexical: bytewise lexicographic ordering.
-* SortCanonical [(RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9): same as SortLengthFirst.
-* SortCTAP2Canonical [(CTAP2 Canonical CBOR)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form): same as SortBytewiseLexical.
+* SortBytewiseLexical: bytewise lexicographic map key ordering.
+* SortCanonical: same as SortLengthFirst [(RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9)
+* SortCTAP2Canonical: same as SortBytewiseLexical  [(CTAP2 Canonical CBOR)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).
 * SortCoreDeterministic: same as SortBytewiseLexical.
 
 Encoder has 3 types of options for floating-point data: ShortestFloatMode, InfConvertMode, and NaNConvertMode.
 
-__Encoder's ShortestFloatMode__ can be:
+__EncOptions.ShortestFloat__:
 
 * ShortestFloatNone: no conversion.
 * ShortestFloat16: uses float16 ([IEEE 754 binary16](https://en.wikipedia.org/wiki/Half-precision_floating-point_format)) as the shortest form that preserves value.
 
-With ShortestFloat16, each encoded float can be float64, float32 or float16 -- whichever is the smallest size that preserves original value.
+With ShortestFloat16, each floating-point value (including subnormals) can encode float64 -> float32 -> float16 when values can round-trip.  Conversions for infinity and NaN use InfConvert and NaNConvert settings.
 
-__Encoder's InfConvertMode__ overrides ShortestFloatMode for infinity values and can be:
+__EncOptions.InfConvert__:
 
 * InfConvertNone: don't convert +- infinity to other representations -- used by CTAP2 Canonical CBOR
 * InfConvertFloat16: convert +- infinity to float16 since they always preserve value (recommended)
 
-__Encoder's NaNConvertMode__ overrides ShortestFloatMode for NaN values and can be:
+__EncOptions.NaNConvert__:
 
 * NaNConvertNone: don't convert NaN to other representations -- used by CTAP2 Canonical CBOR.
 * NaNConvert7e00: encode to 0xf97e00 (CBOR float16 = 0x7e00) -- used by RFC 7049 Canonical CBOR.
 * NaNConvertQuiet: force quiet bit = 1 and use shortest form that preserves NaN payload.
-* NaNConvertPreserveSignal: convert to smallest form that preserves value (quit bit unmodified and NaN payload preserved) -- described in RFC 7049bis Draft 12 when protocols don't want predifined value such as 0x7e00.
+* NaNConvertPreserveSignal: convert to smallest form that preserves value (quit bit unmodified and NaN payload preserved).
 
 Float16 conversions use [x448/float16](https://github.com/x448/float16) maintained by the same team as this library.  All 4+ billion possible conversions are verified to be correct in that library.
 
-Decoder checks for all required well-formedness errors described in the latest RFC 7049bis, including all "subkinds" of syntax errors and too little data.
+Decoder checks for all required well-formedness errors, including all "subkinds" of syntax errors and too little data.
 
 After well-formedness is verified, basic validity errors are handled as follows:
 
@@ -199,11 +205,11 @@ Like Go's `encoding/json`, data validation checks the entire message to prevent 
 
 ## Fuzzing and Code Coverage
 
-__Over 375 tests__ must pass before tagging a release.  They include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and over 87 tests with malformed data based on RFC 7049bis.
+__Over 375 tests__ must pass before tagging a release.  They include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and over 87 tests with malformed data.
 
 __Code coverage__ must not fall below 95% when tagging a release.  Code coverage is 97.9% (`go test -cover`) for cbor v1.5 which is among the highest for libraries (in Go) of this type.
 
-__Coverage-guided fuzzing__ must pass 250+ million execs before tagging a release.  E.g. v1.3.2 was tagged when it reached 364.9 million execs and continued fuzzing (4+ billion execs) with [fxamacker/cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  Default corpus has:
+__Coverage-guided fuzzing__ must pass 250+ million execs before tagging a release.  E.g. v1.4 passed 532+ million execs in coverage-guided fuzzing at the time of release and reached 4+ billion execs 18 days later. Fuzzing uses [fxamacker/cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  Default corpus has:
 
 * 2 files related to WebAuthn (FIDO U2F key).
 * 3 files with custom struct.
@@ -211,12 +217,12 @@ __Coverage-guided fuzzing__ must pass 250+ million execs before tagging a releas
 * 17 files with [COSE examples (RFC 8152 Appendix B & C)](https://github.com/cose-wg/Examples/tree/master/RFC8152).
 * 81 files with [CBOR examples (RFC 7049 Appendix A) ](https://tools.ietf.org/html/rfc7049#appendix-A). It excludes 1 errata first reported in [issue #46](https://github.com/fxamacker/cbor/issues/46).
 
-Over 1,000 files (corpus) are used for fuzzing because it includes fuzz-generated corpus.
+Over 1,100 files (corpus) are used for fuzzing because it includes fuzz-generated corpus.
 
 ## System Requirements
 
 * Go 1.12 (or newer)
-* Tested and fuzzed on linux_amd64, but it should work on other platforms.
+* Tested and fuzzed on linux_amd64, but it should work on other little-endian platforms.
 
 ## Versions and API Changes
 This project uses [Semantic Versioning](https://semver.org), so the API is always backwards compatible unless the major version number changes.
@@ -479,8 +485,8 @@ Please read the license for additional disclaimers and terms.
 * Carsten Bormann for RFC 7049 (CBOR), his fast confirmation to my RFC 7049 errata, approving my pull request to 7049bis, and his patience when I misread a line in 7049bis.
 * Montgomery Edwards⁴⁴⁸ for contributing [float16 conversion code](https://github.com/x448/float16), updating the README.md, creating comparison charts & slideshow, and filing many helpful issues.
 * Keith Randall for [fixing Go bugs and providing workarounds](https://github.com/golang/go/issues/36400) so we don't have to wait for new versions of Go.
-* Stefan Tatschner for being the 1st to discover my CBOR library, filing issues #1 and #2, and recommending this library.
-* Yawning Angel for replacing a library with this one in a big project after an external security audit, and filing issue #5.
+* Stefan Tatschner for being the 1st to discover my CBOR library, filing issues #1 and #2, and using it in [sep](https://git.sr.ht/~rumpelsepp/sep).
+* Yawning Angel for replacing a library with this one in [oasis-core](https://github.com/oasislabs/oasis-core), and filing issue #5.
 * Jernej Kos for filing issue #11 (add feature similar to json.RawMessage) and his kind words about this library.
 * Jeffrey Yasskin and Laurence Lundblade for their help clarifying 7049bis on the IETF mailing list.
 * Jakob Borg for his words of encouragement about this library at Go Forum.
