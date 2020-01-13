@@ -1,4 +1,4 @@
-[![CBOR Library - Slideshow and Latest Docs.](https://github.com/fxamacker/images/raw/master/cbor/v1.4.0/cbor_slides.gif)](https://github.com/fxamacker/cbor/blob/master/README.md)
+[![CBOR Library - Slideshow and Latest Docs.](https://github.com/fxamacker/images/raw/master/cbor/v1.5.0/cbor_slides.gif)](https://github.com/fxamacker/cbor/blob/master/README.md)
 
 # CBOR library in Go
 This library is a CBOR encoder and decoder.  Each release passes 375+ tests and 250+ million execs in fuzzing with 1000+ CBOR files.   Choose this CBOR library if you value your time, program size, data size, and system reliability.
@@ -31,7 +31,7 @@ Struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data such as
 
 <hr>
 
-[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v1.4.0/cbor_easy_api.png)](#usage)
+[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v1.5.0/cbor_easy_api.png)](#usage)
 
 <hr>
 
@@ -43,15 +43,15 @@ Comparisons are between this newer library and a well-known library that had 1,0
 
 __This library is safer__.  Small malicious CBOR messages are rejected quickly before they exhaust system resources.
 
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.4.0/cbor_safety_comparison.png "CBOR library safety comparison")
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.5.0/cbor_safety_comparison.png "CBOR library safety comparison")
 
 __This library is smaller__. Programs like senmlCat can be 4 MB smaller by switching to this library.  Programs using more complex CBOR data types can be 9.2 MB smaller.
 
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.4.0/cbor_size_comparison.png "CBOR library and program size comparison chart")
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.5.0/cbor_size_comparison.png "CBOR library and program size comparison chart")
 
 __This library is faster__ for encoding and decoding CBOR Web Token (CWT).  However, speed is only one factor and it can vary depending on data types and sizes.  Unlike the other library, this one doesn't use Go's ```unsafe``` package or code gen.
 
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.4.0/cbor_speed_comparison.png "CBOR library speed comparison chart")
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.5.0/cbor_speed_comparison.png "CBOR library speed comparison chart")
 
 The resource intensive `codec.CborHandle` initialization (in the other library) was placed outside the benchmark loop to make sure their library wasn't penalized.
 
@@ -62,7 +62,7 @@ Version 1.x has:
 
 * __Stable API__ – won't make breaking API changes.  
 * __Stable requirements__ – will always support Go v1.12 (unless there's compelling reason).
-* __Passed fuzzing__ – v1.4 passed 532+ million execs in coverage-guided fuzzing at the time of release. And v1.4 will continue fuzzing until it reaches 1+ billion execs (or until a newer release needs fuzzing.)
+* __Passed fuzzing__ – v1.4 passed 532+ million execs in coverage-guided fuzzing at the time of release. And v1.4 reached 4+ billion execs 18 days after release.
 
 Each commit passes 375+ tests. Each release also passes 250+ million execs in coverage-guided fuzzing using 1,000+ CBOR files (corpus). See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
 
@@ -73,8 +73,8 @@ Recent activity:
 * [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- Add `keyasint` struct tag to simplify using CBOR maps with int keys.
 * [x] [Release v1.3.4](https://github.com/fxamacker/cbor/releases) -- Bugfixes and refactoring.  Limit nested levels to 32 for arrays, maps, tags.
 * [x] [Release v1.4](https://github.com/fxamacker/cbor/releases) -- Deprecate bool encoding options and add int SortMode.  Use float16 to float32 conversion func that had all 65536 results verified to be correct. Fix decoding of float16 subnormal numbers.
-* [x] unreleased -- Add option to shrink floating-point values to smaller sizes like float16 (if they preserve value).
-* [x] unreleased -- Add options for encoding floating-point NaN values: NaNConvertNone, NaNConvert7e00, NaNConvertQuiet, or NaNConvertPreserveSignal.
+* [x] [Release v1.5](https://github.com/fxamacker/cbor/releases) -- Add option to shrink floating-point values to smaller sizes like float16 (if they preserve value).
+* [x] [Release v1.5](https://github.com/fxamacker/cbor/releases) -- Add options for encoding floating-point NaN values: NaNConvertNone, NaNConvert7e00, NaNConvertQuiet, or NaNConvertPreserveSignal.
 
 Coming soon: support for CBOR tags (major type 6). After that, options for handling duplicate map keys.
 
@@ -201,7 +201,7 @@ Like Go's `encoding/json`, data validation checks the entire message to prevent 
 
 __Over 375 tests__ must pass before tagging a release.  They include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and over 87 tests with malformed data based on RFC 7049bis.
 
-__Code coverage__ must not fall below 95% when tagging a release.  Code coverage is 97.8% (`go test -cover`) for cbor v1.4 which is among the highest for libraries (in Go) of this type.
+__Code coverage__ must not fall below 95% when tagging a release.  Code coverage is 97.9% (`go test -cover`) for cbor v1.5 which is among the highest for libraries (in Go) of this type.
 
 __Coverage-guided fuzzing__ must pass 250+ million execs before tagging a release.  E.g. v1.3.2 was tagged when it reached 364.9 million execs and continued fuzzing (4+ billion execs) with [fxamacker/cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  Default corpus has:
 
@@ -249,8 +249,12 @@ type Encoder struct{ ... }
     func (enc *Encoder) StartIndefiniteArray() error
     func (enc *Encoder) StartIndefiniteMap() error
     func (enc *Encoder) EndIndefinite() error
+type InfConvertMode int
+    const InfConvertFloat16 InfConvertMode = iota ...
 type InvalidUnmarshalError struct{ ... }
 type Marshaler interface{ ... }
+type NaNConvertMode int
+    const NaNConvert7e00 NaNConvertMode = iota ...
 type RawMessage []byte
 type SemanticError struct{ ... }
 type ShortestFloatMode int
@@ -438,18 +442,18 @@ More [examples](example_test.go).
 
 Go structs are faster than maps with string keys:
 
-* decoding into struct is >31% faster than decoding into map.
-* encoding struct is >33% faster than encoding map.
+* decoding into struct is >29% faster than decoding into map.
+* encoding struct is >35% faster than encoding map.
 
 Go structs with `keyasint` struct tag are faster than maps with integer keys:
 
 * decoding into struct is >25% faster than decoding into map.
-* encoding struct is >31% faster than encoding map.
+* encoding struct is >32% faster than encoding map.
 
 Go structs with `toarray` struct tag are faster than slice:
 
-* decoding into struct is >15% faster than decoding into slice.
-* encoding struct is >10% faster than encoding slice.
+* decoding into struct is >14% faster than decoding into slice.
+* encoding struct is >9% faster than encoding slice.
 
 Doing your own benchmarks is highly recommended.  Use your most common message sizes and data types.
 
