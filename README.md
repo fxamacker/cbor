@@ -25,7 +25,7 @@ __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: 
 
 __Predefined configs__ make it easier to comply with standards like Canonical CBOR, CTAP2 Canonical CBOR, etc.
 
-__Custom configs__ can be created by setting individual options.  E.g., NaNConvert option can be set to NaNConvertNone, NaNConvert7e00, NaNConvertQuiet, or NaNConvertPreserveSignal.
+__Custom configs__ can be created by setting individual options.  E.g., EncOptions.NaNConvert can be set to NaNConvertNone, NaNConvert7e00, NaNConvertQuiet, or NaNConvertPreserveSignal.
 
 Struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data such as COSE, CWT, and SenML easier to use.
 
