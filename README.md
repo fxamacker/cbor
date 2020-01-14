@@ -60,11 +60,13 @@ Doing your own comparisons is highly recommended.  Use your most common message 
 ## Current Status
 Version 1.x has:
 
-* __Stable API__ – won't make breaking API changes.  
+* __Stable API__ – won't make breaking API changes except:
+  * CoreDetEncOptions() is subject to change because it uses draft standard not yet approved.
+  * PreferredUnsortedEncOptions() is subject to change because it uses draft standard not yet approved.
 * __Stable requirements__ – will always support Go v1.12 (unless there's compelling reason).
-* __Passed fuzzing__ – v1.4 passed 532+ million execs in coverage-guided fuzzing at the time of release. And v1.4 reached 4+ billion execs 18 days after release.
+* __Passed fuzzing__ – Fuzzing for v1.5 passed 250+ million execs and is in progress. v1.4 passed 532+ million execs in coverage-guided fuzzing at the time of release and reached 4+ billion execs 18 days after release.
 
-Each commit passes 375+ tests. Each release also passes 250+ million execs in coverage-guided fuzzing using 1,000+ CBOR files (corpus). See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
+Each commit passes 375+ tests. Each release also passes 250+ million execs in coverage-guided fuzzing using 1,100+ CBOR files (corpus). See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
 
 Recent activity:
 
