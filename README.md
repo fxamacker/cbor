@@ -60,11 +60,13 @@ Doing your own comparisons is highly recommended.  Use your most common message 
 ## Current Status
 Version 1.x has:
 
-* __Stable API__ – won't make breaking API changes.  
+* __Stable API__ – won't make breaking API changes except:
+  * CoreDetEncOptions() is subject to change because it uses draft standard not yet approved.
+  * PreferredUnsortedEncOptions() is subject to change because it uses draft standard not yet approved.
 * __Stable requirements__ – will always support Go v1.12 (unless there's compelling reason).
-* __Passed fuzzing__ – v1.4 passed 532+ million execs in coverage-guided fuzzing at the time of release. And v1.4 reached 4+ billion execs 18 days after release.
+* __Passed fuzzing__ – Fuzzing for v1.5 passed 250+ million execs and is in progress. v1.4 passed 532+ million execs in coverage-guided fuzzing at the time of release and reached 4+ billion execs 18 days after release.
 
-Each commit passes 375+ tests. Each release also passes 250+ million execs in coverage-guided fuzzing using 1,000+ CBOR files (corpus). See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
+Each commit passes 375+ tests. Each release also passes 250+ million execs in coverage-guided fuzzing using 1,100+ CBOR files (corpus). See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
 
 Recent activity:
 
@@ -140,42 +142,42 @@ Encoder has options that can be set individually to create custom configurations
 
 * CanonicalEncOptions() -- [Canonical CBOR (RFC 7049)](https://tools.ietf.org/html/rfc7049#section-3.9).
 * CTAP2EncOptions() -- [CTAP2 Canonical CBOR](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).
-* CoreDetEncOptions() -- Core Deterministic Encoding (floats use [IEEE 754 binary16](https://en.wikipedia.org/wiki/Half-precision_floating-point_format) if value is preserved).
 * PreferredUnsortedEncOptions() -- Preferred Serialization (unsorted, shortest integer and floating-point forms that preserve values, NaN values encoded as 0xf97e00).
+* CoreDetEncOptions() -- Bytewise lexicographic sort order for map keys, plus options from PreferredUnsortedEncOptions()
 
-__Encoder's SortMode__ has 3 options (and 3 aliases):
+__EncOptions.Sort__:
 
-* SortNone: no sorting.
+* SortNone: no sorting for map keys.
 * SortLengthFirst: length-first map key ordering.
-* SortBytewiseLexical: bytewise lexicographic ordering.
-* SortCanonical [(RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9): same as SortLengthFirst.
-* SortCTAP2Canonical [(CTAP2 Canonical CBOR)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form): same as SortBytewiseLexical.
+* SortBytewiseLexical: bytewise lexicographic map key ordering.
+* SortCanonical: same as SortLengthFirst [(RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9)
+* SortCTAP2Canonical: same as SortBytewiseLexical  [(CTAP2 Canonical CBOR)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).
 * SortCoreDeterministic: same as SortBytewiseLexical.
 
 Encoder has 3 types of options for floating-point data: ShortestFloatMode, InfConvertMode, and NaNConvertMode.
 
-__Encoder's ShortestFloatMode__ can be:
+__EncOptions.ShortestFloat__:
 
 * ShortestFloatNone: no conversion.
 * ShortestFloat16: uses float16 ([IEEE 754 binary16](https://en.wikipedia.org/wiki/Half-precision_floating-point_format)) as the shortest form that preserves value.
 
-With ShortestFloat16, each encoded float can be float64, float32 or float16 -- whichever is the smallest size that preserves original value.
+With ShortestFloat16, each floating-point value (including subnormals) can encode float64 -> float32 -> float16 when values can round-trip.  Conversions for infinity and NaN use InfConvert and NaNConvert settings.
 
-__Encoder's InfConvertMode__ overrides ShortestFloatMode for infinity values and can be:
+__EncOptions.InfConvert__:
 
 * InfConvertNone: don't convert +- infinity to other representations -- used by CTAP2 Canonical CBOR
 * InfConvertFloat16: convert +- infinity to float16 since they always preserve value (recommended)
 
-__Encoder's NaNConvertMode__ overrides ShortestFloatMode for NaN values and can be:
+__EncOptions.NaNConvert__:
 
 * NaNConvertNone: don't convert NaN to other representations -- used by CTAP2 Canonical CBOR.
 * NaNConvert7e00: encode to 0xf97e00 (CBOR float16 = 0x7e00) -- used by RFC 7049 Canonical CBOR.
 * NaNConvertQuiet: force quiet bit = 1 and use shortest form that preserves NaN payload.
-* NaNConvertPreserveSignal: convert to smallest form that preserves value (quit bit unmodified and NaN payload preserved) -- described in RFC 7049bis Draft 12 when protocols don't want predifined value such as 0x7e00.
+* NaNConvertPreserveSignal: convert to smallest form that preserves value (quit bit unmodified and NaN payload preserved).
 
 Float16 conversions use [x448/float16](https://github.com/x448/float16) maintained by the same team as this library.  All 4+ billion possible conversions are verified to be correct in that library.
 
-Decoder checks for all required well-formedness errors described in the latest RFC 7049bis, including all "subkinds" of syntax errors and too little data.
+Decoder checks for all required well-formedness errors, including all "subkinds" of syntax errors and too little data.
 
 After well-formedness is verified, basic validity errors are handled as follows:
 
@@ -199,7 +201,7 @@ Like Go's `encoding/json`, data validation checks the entire message to prevent 
 
 ## Fuzzing and Code Coverage
 
-__Over 375 tests__ must pass before tagging a release.  They include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and over 87 tests with malformed data based on RFC 7049bis.
+__Over 375 tests__ must pass before tagging a release.  They include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and over 87 tests with malformed data.
 
 __Code coverage__ must not fall below 95% when tagging a release.  Code coverage is 97.9% (`go test -cover`) for cbor v1.5 which is among the highest for libraries (in Go) of this type.
 
