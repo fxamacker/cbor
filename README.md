@@ -482,7 +482,7 @@ Please read the license for additional disclaimers and terms.
 * Montgomery Edwards⁴⁴⁸ for contributing [float16 conversion code](https://github.com/x448/float16), updating the README.md, creating comparison charts & slideshow, and filing many helpful issues.
 * Keith Randall for [fixing Go bugs and providing workarounds](https://github.com/golang/go/issues/36400) so we don't have to wait for new versions of Go.
 * Stefan Tatschner for being the 1st to discover my CBOR library, filing issues #1 and #2, and recommending this library.
-* Yawning Angel for replacing a library with this one in a big project after an external security audit, and filing issue #5.
+* Yawning Angel for replacing a library with this one in [oasis-core](https://github.com/oasislabs/oasis-core), and filing issue #5.
 * Jernej Kos for filing issue #11 (add feature similar to json.RawMessage) and his kind words about this library.
 * Jeffrey Yasskin and Laurence Lundblade for their help clarifying 7049bis on the IETF mailing list.
 * Jakob Borg for his words of encouragement about this library at Go Forum.
