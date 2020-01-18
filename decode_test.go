@@ -665,6 +665,77 @@ var unmarshalFloatTests = []unmarshalFloatTest{
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 		1e-9,
 	},
+	// CBOR test data "canonNums" are from https://github.com/cbor-wg/cbor-test-vectors
+	{
+		hexDecode("f9bd00"),
+		float64(-1.25),
+		[]interface{}{float32(-1.25), float64(-1.25)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
+	},
+	{
+		hexDecode("f93e00"),
+		float64(1.5),
+		[]interface{}{float32(1.5), float64(1.5)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
+	},
+	{
+		hexDecode("fb4024333333333333"),
+		float64(10.1),
+		[]interface{}{float32(10.1), float64(10.1)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
+	},
+	{
+		hexDecode("f90001"),
+		float64(5.960464477539063e-8),
+		[]interface{}{float32(5.960464477539063e-8), float64(5.960464477539063e-8)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
+	},
+	{
+		hexDecode("fa7f7fffff"),
+		float64(3.4028234663852886e+38),
+		[]interface{}{float32(3.4028234663852886e+38), float64(3.4028234663852886e+38)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
+	},
+	{
+		hexDecode("f90400"),
+		float64(0.00006103515625),
+		[]interface{}{float32(0.00006103515625), float64(0.00006103515625)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
+	},
+	{
+		hexDecode("f933ff"),
+		float64(0.2498779296875),
+		[]interface{}{float32(0.2498779296875), float64(0.2498779296875)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
+	},
+	{
+		hexDecode("fa33000000"),
+		float64(2.9802322387695312e-8),
+		[]interface{}{float32(2.9802322387695312e-8), float64(2.9802322387695312e-8)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
+	},
+	{
+		hexDecode("fa33333866"),
+		float64(4.1727979294137185e-8),
+		[]interface{}{float32(4.1727979294137185e-8), float64(4.1727979294137185e-8)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
+	},
+	{
+		hexDecode("fa37002000"),
+		float64(0.000007636845111846924),
+		[]interface{}{float32(0.000007636845111846924), float64(0.000007636845111846924)},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		0.0,
+	},
 }
 
 func hexDecode(s string) []byte {
