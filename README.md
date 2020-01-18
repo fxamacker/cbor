@@ -492,9 +492,9 @@ Please read the license for additional disclaimers and terms.
 * Jakob Borg for his words of encouragement about this library at Go Forum.
 
 ## License 
-Copyright (c) 2019 [Faye Amacker](https://github.com/fxamacker)
+Copyright (c) [Faye Amacker](https://github.com/fxamacker).  All rights reserved.
 
-Licensed under [MIT License](LICENSE)
+Licensed under the [MIT License](LICENSE).
 
 <hr>
 

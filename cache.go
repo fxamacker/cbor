@@ -1,5 +1,5 @@
-// Copyright (c) 2019 Faye Amacker. All rights reserved.
-// Use of this source code is governed by a MIT license found in the LICENSE file.
+// Copyright (c) Faye Amacker. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root for license information.
 
 package cbor
 

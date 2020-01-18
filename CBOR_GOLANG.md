@@ -25,7 +25,7 @@ CBOR Web Token (CWT) is defined in [RFC 8392](http://tools.ietf.org/html/rfc8392
 
 __[fxamacker/webauthn](https://github.com/fxamacker/webauthn)__ is a library (written in Go) that performs server-side authentication for clients using FIDO2 keys, legacy FIDO U2F keys, tpm, and etc.
 
-Copyright (c) 2019 Faye Amacker and contributors.
+Copyright (c) Faye Amacker and contributors.
 
 <hr>
 
