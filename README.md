@@ -463,7 +463,7 @@ Go structs with `toarray` struct tag are faster than slice:
 
 Doing your own benchmarks is highly recommended.  Use your most common message sizes and data types.
 
-See [Benchmarks for fxamacker/cbor](BENCHMARKS.md).
+See [Benchmarks for fxamacker/cbor](CBOR_BENCHMARKS.md).
 
 ## Code of Conduct 
 This project has adopted the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).  Contact [faye.github@gmail.com](mailto:faye.github@gmail.com) with any questions or comments.

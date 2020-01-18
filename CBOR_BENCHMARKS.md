@@ -1,4 +1,4 @@
-# Benchmarks for fxamacker/cbor 
+# CBOR Benchmarks for fxamacker/cbor 
 
 See [bench_test.go](bench_test.go).
 
