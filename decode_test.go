@@ -1431,7 +1431,7 @@ func TestValid(t *testing.T) {
 	cborData := buf.Bytes()
 	var err error
 	for i := 0; i < len(marshalTests); i++ {
-		if cborData, err = Valid(cborData); err != nil {
+		if cborData, err = valid(cborData); err != nil {
 			t.Errorf("Valid() returned error %v", err)
 		}
 	}

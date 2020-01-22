@@ -152,7 +152,7 @@ func (d *decodeState) value(v interface{}) error {
 		return &InvalidUnmarshalError{reflect.TypeOf(v)}
 	}
 
-	if _, err := Valid(d.data[d.off:]); err != nil {
+	if _, err := valid(d.data[d.off:]); err != nil {
 		return err
 	}
 

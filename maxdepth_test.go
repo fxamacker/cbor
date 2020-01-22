@@ -47,7 +47,7 @@ func TestDepth(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, depth, err := valid(tc.cborData, 0, 1)
+			_, depth, err := validInternal(tc.cborData, 0, 1)
 			if err != nil {
 				t.Errorf("valid(0x%x) returned error %v", tc.cborData, err)
 			}
@@ -72,7 +72,7 @@ func TestDepthError(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, _, err := valid(tc.cborData, 0, 1)
+			_, _, err := validInternal(tc.cborData, 0, 1)
 			if err == nil {
 				t.Errorf("valid(0x%x) didn't return an error, want %q", tc.cborData, tc.wantErrorMsg)
 			} else if err.Error() != tc.wantErrorMsg {

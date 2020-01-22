@@ -24,12 +24,12 @@ type SemanticError struct {
 
 func (e *SemanticError) Error() string { return e.msg }
 
-// Valid checks whether CBOR data is complete and well-formed.
-func Valid(data []byte) (rest []byte, err error) {
+// valid checks whether CBOR data is complete and well-formed.
+func valid(data []byte) (rest []byte, err error) {
 	if len(data) == 0 {
 		return nil, io.EOF
 	}
-	offset, _, err := valid(data, 0, 1)
+	offset, _, err := validInternal(data, 0, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ const (
 	maxNestingLevel = 32
 )
 
-func valid(data []byte, off int, depth int) (int, int, error) {
+func validInternal(data []byte, off int, depth int) (int, int, error) {
 	if depth > maxNestingLevel {
 		return 0, 0, errors.New("cbor: reached max depth " + strconv.Itoa(maxNestingLevel))
 	}
@@ -80,7 +80,7 @@ func valid(data []byte, off int, depth int) (int, int, error) {
 		for j := 0; j < count; j++ {
 			for i := 0; i < valInt; i++ {
 				var d int
-				if off, d, err = valid(data, off, depth+1); err != nil {
+				if off, d, err = validInternal(data, off, depth+1); err != nil {
 					return 0, 0, err
 				}
 				if d > maxDepth {
@@ -104,7 +104,7 @@ func valid(data []byte, off int, depth int) (int, int, error) {
 			depth++
 		}
 		// Check tag content.
-		if off, depth, err = valid(data, off, depth); err != nil {
+		if off, depth, err = validInternal(data, off, depth); err != nil {
 			return 0, 0, err
 		}
 	}
@@ -129,7 +129,7 @@ func validIndefiniteString(data []byte, off int, t cborType, depth int) (int, in
 		if (data[off] & 0x1f) == 31 {
 			return 0, 0, &SyntaxError{"cbor: indefinite-length " + t.String() + " chunk is not definite-length"}
 		}
-		if off, depth, err = valid(data, off, depth); err != nil {
+		if off, depth, err = validInternal(data, off, depth); err != nil {
 			return 0, 0, err
 		}
 	}
@@ -149,7 +149,7 @@ func validIndefiniteArrOrMap(data []byte, off int, t cborType, depth int) (int, 
 			break
 		}
 		var d int
-		if off, d, err = valid(data, off, depth+1); err != nil {
+		if off, d, err = validInternal(data, off, depth+1); err != nil {
 			return 0, 0, err
 		}
 		if d > maxDepth {
