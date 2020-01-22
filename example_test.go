@@ -10,7 +10,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/fxamacker/cbor"
+	"github.com/fxamacker/cbor/v2"
 )
 
 func ExampleMarshal() {

@@ -4,7 +4,6 @@
 package cbor
 
 import (
-	"encoding/hex"
 	"testing"
 )
 
@@ -81,12 +80,4 @@ func TestDepthError(t *testing.T) {
 			}
 		})
 	}
-}
-
-func hexDecode(s string) []byte {
-	data, err := hex.DecodeString(s)
-	if err != nil {
-		panic(err)
-	}
-	return data
 }

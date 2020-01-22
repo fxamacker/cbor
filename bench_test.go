@@ -1,15 +1,13 @@
 // Copyright (c) Faye Amacker. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
-package cbor_test
+package cbor
 
 import (
 	"bytes"
 	"io/ioutil"
 	"reflect"
 	"testing"
-
-	"github.com/fxamacker/cbor"
 )
 
 const rounds = 100
@@ -25,21 +23,21 @@ type claims struct {
 }
 
 type coseKey struct {
-	Kty       int             `cbor:"1,keyasint,omitempty"`
-	Kid       []byte          `cbor:"2,keyasint,omitempty"`
-	Alg       int             `cbor:"3,keyasint,omitempty"`
-	KeyOpts   int             `cbor:"4,keyasint,omitempty"`
-	IV        []byte          `cbor:"5,keyasint,omitempty"`
-	CrvOrNOrK cbor.RawMessage `cbor:"-1,keyasint,omitempty"` // K for symmetric keys, Crv for elliptic curve keys, N for RSA modulus
-	XOrE      cbor.RawMessage `cbor:"-2,keyasint,omitempty"` // X for curve x-coordinate, E for RSA public exponent
-	Y         cbor.RawMessage `cbor:"-3,keyasint,omitempty"` // Y for curve y-cooridate
-	D         []byte          `cbor:"-4,keyasint,omitempty"`
+	Kty       int        `cbor:"1,keyasint,omitempty"`
+	Kid       []byte     `cbor:"2,keyasint,omitempty"`
+	Alg       int        `cbor:"3,keyasint,omitempty"`
+	KeyOpts   int        `cbor:"4,keyasint,omitempty"`
+	IV        []byte     `cbor:"5,keyasint,omitempty"`
+	CrvOrNOrK RawMessage `cbor:"-1,keyasint,omitempty"` // K for symmetric keys, Crv for elliptic curve keys, N for RSA modulus
+	XOrE      RawMessage `cbor:"-2,keyasint,omitempty"` // X for curve x-coordinate, E for RSA public exponent
+	Y         RawMessage `cbor:"-3,keyasint,omitempty"` // Y for curve y-cooridate
+	D         []byte     `cbor:"-4,keyasint,omitempty"`
 }
 
 type attestationObject struct {
-	AuthnData []byte          `cbor:"authData"`
-	Fmt       string          `cbor:"fmt"`
-	AttStmt   cbor.RawMessage `cbor:"attStmt"`
+	AuthnData []byte     `cbor:"authData"`
+	Fmt       string     `cbor:"fmt"`
+	AttStmt   RawMessage `cbor:"attStmt"`
 }
 
 type SenMLRecord struct {
@@ -138,7 +136,7 @@ func BenchmarkUnmarshal(b *testing.B) {
 			b.Run(name, func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
 					vPtr := reflect.New(t).Interface()
-					if err := cbor.Unmarshal(bm.cborData, vPtr); err != nil {
+					if err := Unmarshal(bm.cborData, vPtr); err != nil {
 						b.Fatal("Unmarshal:", err)
 					}
 				}
@@ -191,7 +189,7 @@ func BenchmarkUnmarshal(b *testing.B) {
 		b.Run(bm.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				vPtr := reflect.New(bm.decodeToType).Interface()
-				if err := cbor.Unmarshal(bm.cborData, vPtr); err != nil {
+				if err := Unmarshal(bm.cborData, vPtr); err != nil {
 					b.Fatal("Unmarshal:", err)
 				}
 			}
@@ -207,7 +205,7 @@ func BenchmarkDecode(b *testing.B) {
 				name = "CBOR " + bm.name + " to Go " + t.Kind().String()
 			}
 			buf := bytes.NewReader(bm.cborData)
-			decoder := cbor.NewDecoder(buf)
+			decoder := NewDecoder(buf)
 			b.Run(name, func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
 					vPtr := reflect.New(t).Interface()
@@ -232,7 +230,7 @@ func BenchmarkDecodeStream(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf := bytes.NewReader(cborData)
-		decoder := cbor.NewDecoder(buf)
+		decoder := NewDecoder(buf)
 		for j := 0; j < rounds; j++ {
 			for _, bm := range decodeBenchmarks {
 				for _, t := range bm.decodeToTypes {
@@ -256,7 +254,7 @@ func BenchmarkMarshal(b *testing.B) {
 			}
 			b.Run(name, func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
+					if _, err := Marshal(v, EncOptions{}); err != nil {
 						b.Fatal("Marshal:", err)
 					}
 				}
@@ -343,7 +341,7 @@ func BenchmarkMarshal(b *testing.B) {
 	for _, bm := range moreBenchmarks {
 		b.Run(bm.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := cbor.Marshal(bm.value, cbor.EncOptions{}); err != nil {
+				if _, err := Marshal(bm.value, EncOptions{}); err != nil {
 					b.Fatal("Marshal:", err)
 				}
 			}
@@ -381,7 +379,7 @@ func BenchmarkMarshalCanonical(b *testing.B) {
 			}
 			b.Run(name, func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
+					if _, err := Marshal(v, EncOptions{}); err != nil {
 						b.Fatal("Marshal:", err)
 					}
 				}
@@ -393,7 +391,7 @@ func BenchmarkMarshalCanonical(b *testing.B) {
 			}
 			b.Run(name, func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := cbor.Marshal(v, cbor.EncOptions{Sort: cbor.SortCanonical}); err != nil {
+					if _, err := Marshal(v, EncOptions{Sort: SortCanonical}); err != nil {
 						b.Fatal("Marshal:", err)
 					}
 				}
@@ -410,7 +408,7 @@ func BenchmarkEncode(b *testing.B) {
 				name = "Go " + reflect.TypeOf(v).Kind().String() + " to CBOR " + bm.name
 			}
 			b.Run(name, func(b *testing.B) {
-				encoder := cbor.NewEncoder(ioutil.Discard, cbor.EncOptions{})
+				encoder := NewEncoder(ioutil.Discard, EncOptions{})
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
 					if err := encoder.Encode(v); err != nil {
@@ -424,7 +422,7 @@ func BenchmarkEncode(b *testing.B) {
 
 func BenchmarkEncodeStream(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		encoder := cbor.NewEncoder(ioutil.Discard, cbor.EncOptions{})
+		encoder := NewEncoder(ioutil.Discard, EncOptions{})
 		for i := 0; i < rounds; i++ {
 			for _, bm := range encodeBenchmarks {
 				for _, v := range bm.values {
@@ -451,7 +449,7 @@ func BenchmarkUnmarshalCOSE(b *testing.B) {
 		b.Run(tc.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				var v coseKey
-				if err := cbor.Unmarshal(tc.cborData, &v); err != nil {
+				if err := Unmarshal(tc.cborData, &v); err != nil {
 					b.Fatal("Unmarshal:", err)
 				}
 			}
@@ -471,12 +469,12 @@ func BenchmarkMarshalCOSE(b *testing.B) {
 	}
 	for _, tc := range testCases {
 		var v coseKey
-		if err := cbor.Unmarshal(tc.cborData, &v); err != nil {
+		if err := Unmarshal(tc.cborData, &v); err != nil {
 			b.Fatal("Unmarshal:", err)
 		}
 		b.Run(tc.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
+				if _, err := Marshal(v, EncOptions{}); err != nil {
 					b.Fatal("Marshal:", err)
 				}
 			}
@@ -489,7 +487,7 @@ func BenchmarkUnmarshalCWTClaims(b *testing.B) {
 	cborData := hexDecode("a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b71")
 	for i := 0; i < b.N; i++ {
 		var v claims
-		if err := cbor.Unmarshal(cborData, &v); err != nil {
+		if err := Unmarshal(cborData, &v); err != nil {
 			b.Fatal("Unmarshal:", err)
 		}
 	}
@@ -499,11 +497,11 @@ func BenchmarkMarshalCWTClaims(b *testing.B) {
 	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.1
 	cborData := hexDecode("a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b71")
 	var v claims
-	if err := cbor.Unmarshal(cborData, &v); err != nil {
+	if err := Unmarshal(cborData, &v); err != nil {
 		b.Fatal("Unmarshal:", err)
 	}
 	for i := 0; i < b.N; i++ {
-		if _, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
+		if _, err := Marshal(v, EncOptions{}); err != nil {
 			b.Fatal("Unmarshal:", err)
 		}
 	}
@@ -514,7 +512,7 @@ func BenchmarkUnmarshalSenML(b *testing.B) {
 	cborData := hexDecode("87a721781b75726e3a6465763a6f773a3130653230373361303130383030363a22fb41d303a15b00106223614120050067766f6c7461676501615602fb405e066666666666a3006763757272656e74062402fb3ff3333333333333a3006763757272656e74062302fb3ff4cccccccccccda3006763757272656e74062202fb3ff6666666666666a3006763757272656e74062102f93e00a3006763757272656e74062002fb3ff999999999999aa3006763757272656e74060002fb3ffb333333333333")
 	for i := 0; i < b.N; i++ {
 		var v []SenMLRecord
-		if err := cbor.Unmarshal(cborData, &v); err != nil {
+		if err := Unmarshal(cborData, &v); err != nil {
 			b.Fatal("Unmarshal:", err)
 		}
 	}
@@ -524,11 +522,11 @@ func BenchmarkMarshalSenML(b *testing.B) {
 	// Data from https://tools.ietf.org/html/rfc8428#section-6
 	cborData := hexDecode("87a721781b75726e3a6465763a6f773a3130653230373361303130383030363a22fb41d303a15b00106223614120050067766f6c7461676501615602fb405e066666666666a3006763757272656e74062402fb3ff3333333333333a3006763757272656e74062302fb3ff4cccccccccccda3006763757272656e74062202fb3ff6666666666666a3006763757272656e74062102f93e00a3006763757272656e74062002fb3ff999999999999aa3006763757272656e74060002fb3ffb333333333333")
 	var v []SenMLRecord
-	if err := cbor.Unmarshal(cborData, &v); err != nil {
+	if err := Unmarshal(cborData, &v); err != nil {
 		b.Fatal("Unmarshal:", err)
 	}
 	for i := 0; i < b.N; i++ {
-		if _, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
+		if _, err := Marshal(v, EncOptions{}); err != nil {
 			b.Fatal("Unmarshal:", err)
 		}
 	}
@@ -538,11 +536,11 @@ func BenchmarkMarshalSenMLShortestFloat16(b *testing.B) {
 	// Data from https://tools.ietf.org/html/rfc8428#section-6
 	cborData := hexDecode("87a721781b75726e3a6465763a6f773a3130653230373361303130383030363a22fb41d303a15b00106223614120050067766f6c7461676501615602fb405e066666666666a3006763757272656e74062402fb3ff3333333333333a3006763757272656e74062302fb3ff4cccccccccccda3006763757272656e74062202fb3ff6666666666666a3006763757272656e74062102f93e00a3006763757272656e74062002fb3ff999999999999aa3006763757272656e74060002fb3ffb333333333333")
 	var v []SenMLRecord
-	if err := cbor.Unmarshal(cborData, &v); err != nil {
+	if err := Unmarshal(cborData, &v); err != nil {
 		b.Fatal("Unmarshal:", err)
 	}
 	for i := 0; i < b.N; i++ {
-		if _, err := cbor.Marshal(v, cbor.EncOptions{ShortestFloat: cbor.ShortestFloat16}); err != nil {
+		if _, err := Marshal(v, EncOptions{ShortestFloat: ShortestFloat16}); err != nil {
 			b.Fatal("Unmarshal:", err)
 		}
 	}
@@ -553,7 +551,7 @@ func BenchmarkUnmarshalWebAuthn(b *testing.B) {
 	cborData := hexDecode("a363666d74686669646f2d7532666761747453746d74a26373696758483046022100e7ab373cfbd99fcd55fd59b0f6f17fef5b77a20ddec3db7f7e4d55174e366236022100828336b4822125fb56541fb14a8a273876acd339395ec2dad95cf41c1dd2a9ae637835638159024e3082024a30820132a0030201020204124a72fe300d06092a864886f70d01010b0500302e312c302a0603550403132359756269636f2055324620526f6f742043412053657269616c203435373230303633313020170d3134303830313030303030305a180f32303530303930343030303030305a302c312a302806035504030c2159756269636f205532462045452053657269616c203234393431343937323135383059301306072a8648ce3d020106082a8648ce3d030107034200043d8b1bbd2fcbf6086e107471601468484153c1c6d3b4b68a5e855e6e40757ee22bcd8988bf3befd7cdf21cb0bf5d7a150d844afe98103c6c6607d9faae287c02a33b3039302206092b0601040182c40a020415312e332e362e312e342e312e34313438322e312e313013060b2b0601040182e51c020101040403020520300d06092a864886f70d01010b05000382010100a14f1eea0076f6b8476a10a2be72e60d0271bb465b2dfbfc7c1bd12d351989917032631d795d097fa30a26a325634e85721bc2d01a86303f6bc075e5997319e122148b0496eec8d1f4f94cf4110de626c289443d1f0f5bbb239ca13e81d1d5aa9df5af8e36126475bfc23af06283157252762ff68879bcf0ef578d55d67f951b4f32b63c8aea5b0f99c67d7d814a7ff5a6f52df83e894a3a5d9c8b82e7f8bc8daf4c80175ff8972fda79333ec465d806eacc948f1bab22045a95558a48c20226dac003d41fbc9e05ea28a6bb5e10a49de060a0a4f6a2676a34d68c4abe8c61874355b9027e828ca9e064b002d62e8d8cf0744921753d35e3c87c5d5779453e7768617574684461746158c449960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976341000000000000000000000000000000000000000000408903fd7dfd2c9770e98cae0123b13a2c27828a106349bc6277140e7290b7e9eb7976aa3c04ed347027caf7da3a2fa76304751c02208acfc4e7fc6c7ebbc375c8a5010203262001215820ad7f7992c335b90d882b2802061b97a4fabca7e2ee3e7a51e728b8055e4eb9c7225820e0966ba7005987fece6f0e0e13447aa98cec248e4000a594b01b74c1cb1d40b3")
 	for i := 0; i < b.N; i++ {
 		var v attestationObject
-		if err := cbor.Unmarshal(cborData, &v); err != nil {
+		if err := Unmarshal(cborData, &v); err != nil {
 			b.Fatal("Unmarshal:", err)
 		}
 	}
@@ -563,11 +561,11 @@ func BenchmarkMarshalWebAuthn(b *testing.B) {
 	// Data generated from Yubico security key
 	cborData := hexDecode("a363666d74686669646f2d7532666761747453746d74a26373696758483046022100e7ab373cfbd99fcd55fd59b0f6f17fef5b77a20ddec3db7f7e4d55174e366236022100828336b4822125fb56541fb14a8a273876acd339395ec2dad95cf41c1dd2a9ae637835638159024e3082024a30820132a0030201020204124a72fe300d06092a864886f70d01010b0500302e312c302a0603550403132359756269636f2055324620526f6f742043412053657269616c203435373230303633313020170d3134303830313030303030305a180f32303530303930343030303030305a302c312a302806035504030c2159756269636f205532462045452053657269616c203234393431343937323135383059301306072a8648ce3d020106082a8648ce3d030107034200043d8b1bbd2fcbf6086e107471601468484153c1c6d3b4b68a5e855e6e40757ee22bcd8988bf3befd7cdf21cb0bf5d7a150d844afe98103c6c6607d9faae287c02a33b3039302206092b0601040182c40a020415312e332e362e312e342e312e34313438322e312e313013060b2b0601040182e51c020101040403020520300d06092a864886f70d01010b05000382010100a14f1eea0076f6b8476a10a2be72e60d0271bb465b2dfbfc7c1bd12d351989917032631d795d097fa30a26a325634e85721bc2d01a86303f6bc075e5997319e122148b0496eec8d1f4f94cf4110de626c289443d1f0f5bbb239ca13e81d1d5aa9df5af8e36126475bfc23af06283157252762ff68879bcf0ef578d55d67f951b4f32b63c8aea5b0f99c67d7d814a7ff5a6f52df83e894a3a5d9c8b82e7f8bc8daf4c80175ff8972fda79333ec465d806eacc948f1bab22045a95558a48c20226dac003d41fbc9e05ea28a6bb5e10a49de060a0a4f6a2676a34d68c4abe8c61874355b9027e828ca9e064b002d62e8d8cf0744921753d35e3c87c5d5779453e7768617574684461746158c449960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976341000000000000000000000000000000000000000000408903fd7dfd2c9770e98cae0123b13a2c27828a106349bc6277140e7290b7e9eb7976aa3c04ed347027caf7da3a2fa76304751c02208acfc4e7fc6c7ebbc375c8a5010203262001215820ad7f7992c335b90d882b2802061b97a4fabca7e2ee3e7a51e728b8055e4eb9c7225820e0966ba7005987fece6f0e0e13447aa98cec248e4000a594b01b74c1cb1d40b3")
 	var v attestationObject
-	if err := cbor.Unmarshal(cborData, &v); err != nil {
+	if err := Unmarshal(cborData, &v); err != nil {
 		b.Fatal("Unmarshal:", err)
 	}
 	for i := 0; i < b.N; i++ {
-		if _, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
+		if _, err := Marshal(v, EncOptions{}); err != nil {
 			b.Fatal("Marshal:", err)
 		}
 	}
