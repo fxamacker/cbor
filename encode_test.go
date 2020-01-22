@@ -1583,12 +1583,6 @@ func TestMapSort(t *testing.T) {
 		{"CBOR canonical sort", EncOptions{Sort: SortCanonical}, lenFirstSortedCborData},
 		{"CTAP2 canonical sort", EncOptions{Sort: SortCTAP2}, bytewiseSortedCborData},
 		{"Core deterministic sort", EncOptions{Sort: SortCoreDeterministic}, bytewiseSortedCborData},
-		{"CBOR canonical sort (deprecated option)", EncOptions{Canonical: true}, lenFirstSortedCborData},
-		{"CBOR canonical sort (deprecated option)", EncOptions{Sort: SortNone, Canonical: true}, lenFirstSortedCborData},
-		{"CBOR canonical sort (deprecated option)", EncOptions{Sort: SortCanonical, Canonical: true}, lenFirstSortedCborData},
-		{"CTAP2 canonical sort (deprecated option)", EncOptions{CTAP2Canonical: true}, bytewiseSortedCborData},
-		{"CTAP2 canonical sort (deprecated option)", EncOptions{Sort: SortNone, CTAP2Canonical: true}, bytewiseSortedCborData},
-		{"CTAP2 canonical sort (deprecated option)", EncOptions{Sort: SortCTAP2, CTAP2Canonical: true}, bytewiseSortedCborData},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1629,12 +1623,6 @@ func TestStructSort(t *testing.T) {
 		{"CBOR canonical sort", EncOptions{Sort: SortCanonical}, lenFirstSortedCborData},
 		{"CTAP2 canonical sort", EncOptions{Sort: SortCTAP2}, bytewiseSortedCborData},
 		{"Core deterministic sort", EncOptions{Sort: SortCoreDeterministic}, bytewiseSortedCborData},
-		{"CBOR canonical sort (deprecated option)", EncOptions{Canonical: true}, lenFirstSortedCborData},
-		{"CBOR canonical sort (deprecated option)", EncOptions{Sort: SortNone, Canonical: true}, lenFirstSortedCborData},
-		{"CBOR canonical sort (deprecated option)", EncOptions{Sort: SortCanonical, Canonical: true}, lenFirstSortedCborData},
-		{"CTAP2 canonical sort (deprecated option)", EncOptions{CTAP2Canonical: true}, bytewiseSortedCborData},
-		{"CTAP2 canonical sort (deprecated option)", EncOptions{Sort: SortNone, CTAP2Canonical: true}, bytewiseSortedCborData},
-		{"CTAP2 canonical sort (deprecated option)", EncOptions{Sort: SortCTAP2, CTAP2Canonical: true}, bytewiseSortedCborData},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1657,11 +1645,6 @@ func TestInvalidSort(t *testing.T) {
 		wantErrorMsg string
 	}{
 		{"Invalid SortMode value", EncOptions{Sort: SortMode(100)}, "cbor: invalid SortMode 100"},
-		{"Deprecated Canonical conflicting with SortMode value", EncOptions{Sort: SortBytewiseLexical, Canonical: true}, "cbor: conflicting sorting modes not allowed"},
-		{"Deprecated Canonical conflicting with SortMode value", EncOptions{Sort: SortCTAP2, Canonical: true}, "cbor: conflicting sorting modes not allowed"},
-		{"Deprecated Canonical conflicting with SortMode value", EncOptions{Sort: SortCoreDeterministic, Canonical: true}, "cbor: conflicting sorting modes not allowed"},
-		{"Deprecated CTAP2Canonical conflicting with SortMode value", EncOptions{Sort: SortLengthFirst, CTAP2Canonical: true}, "cbor: conflicting sorting modes not allowed"},
-		{"Deprecated CTAP2Canonical conflicting with SortMode value", EncOptions{Sort: SortCanonical, CTAP2Canonical: true}, "cbor: conflicting sorting modes not allowed"},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

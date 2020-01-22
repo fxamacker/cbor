@@ -234,27 +234,6 @@ type EncOptions struct {
 	// InfConvert specifies how to encode Inf and it overrides ShortestFloatMode.
 	InfConvert InfConvertMode
 
-	// Canonical causes map and struct to be encoded in a predictable sequence
-	// of bytes by sorting map keys or struct fields according to canonical rules:
-	//     - If two keys have different lengths, the shorter one sorts earlier;
-	//     - If two keys have the same length, the one with the lower value in
-	//       (byte-wise) lexical order sorts earlier.
-	//
-	// Deprecated: Set Sort to SortCanonical instead.
-	Canonical bool
-
-	// CTAP2Canonical uses bytewise lexicographic order of map keys encodings:
-	//     - If the major types are different, the one with the lower value in
-	//       numerical order sorts earlier.
-	//     - If two keys have different lengths, the shorter one sorts earlier;
-	//     - If two keys have the same length, the one with the lower value in
-	//       (byte-wise) lexical order sorts earlier.
-	// Please note that when maps keys have the same data type, "canonical CBOR"
-	// AND "CTAP2 canonical CBOR" render the same sort order.
-	//
-	// Deprecated: Set Sort to SortCTAP2 instead.
-	CTAP2Canonical bool
-
 	// TimeRFC3339 causes time.Time to be encoded as string in RFC3339 format;
 	// otherwise, time.Time is encoded as numerical representation of seconds
 	// since January 1, 1970 UTC.
@@ -384,18 +363,6 @@ func putEncodeState(e *encodeState) {
 func (e *encodeState) marshal(v interface{}, opts EncOptions) error {
 	if !opts.Sort.valid() {
 		return errors.New("cbor: invalid SortMode " + strconv.Itoa(int(opts.Sort)))
-	}
-	if opts.Canonical {
-		if opts.Sort != SortNone && opts.Sort != SortCanonical {
-			return errors.New("cbor: conflicting sorting modes not allowed")
-		}
-		opts.Sort = SortCanonical
-	}
-	if opts.CTAP2Canonical {
-		if opts.Sort != SortNone && opts.Sort != SortCTAP2 {
-			return errors.New("cbor: conflicting sorting modes not allowed")
-		}
-		opts.Sort = SortCTAP2
 	}
 	if !opts.ShortestFloat.valid() {
 		return errors.New("cbor: invalid ShortestFloatMode " + strconv.Itoa(int(opts.ShortestFloat)))
