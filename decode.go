@@ -7,6 +7,7 @@ import (
 	"encoding"
 	"encoding/binary"
 	"errors"
+	"io"
 	"math"
 	"reflect"
 	"strconv"
@@ -18,7 +19,8 @@ import (
 )
 
 // Unmarshal parses the CBOR-encoded data and stores the result in the value
-// pointed to by v.  If v is nil or not a pointer, Unmarshal returns an error.
+// pointed to by v using the default decoding options.  If v is nil or not a
+// pointer, Unmarshal returns an error.
 //
 // Unmarshal uses the inverse of the encodings that Marshal uses, allocating
 // maps, slices, and pointers as necessary, with the following additional rules:
@@ -92,8 +94,7 @@ import (
 //
 // Unmarshal ignores CBOR tag data and parses tagged data following CBOR tag.
 func Unmarshal(data []byte, v interface{}) error {
-	d := decodeState{data: data}
-	return d.value(v)
+	return defaultDecMode.Unmarshal(data, v)
 }
 
 // Unmarshaler is the interface implemented by types that can unmarshal a CBOR
@@ -101,7 +102,7 @@ func Unmarshal(data []byte, v interface{}) error {
 // of a CBOR value. UnmarshalCBOR must copy the CBOR data if it wishes to retain
 // the data after returning.
 type Unmarshaler interface {
-	UnmarshalCBOR([]byte) error
+	UnmarshalCBOR(DecMode, []byte) error
 }
 
 // InvalidUnmarshalError describes an invalid argument passed to Unmarshal.
@@ -141,9 +142,52 @@ func (e *UnmarshalTypeError) Error() string {
 	return s
 }
 
+// DecOptions specifies decoding options.
+type DecOptions struct {
+}
+
+// DecMode returns an DecMode interface from DecOptions.
+func (opts DecOptions) DecMode() (DecMode, error) {
+	dm := decMode{}
+	return DecMode(dm), nil
+}
+
+var defaultDecMode, _ = DecOptions{}.DecMode()
+
+type decMode struct {
+}
+
+// DecMode is the main interface for CBOR decoding.
+type DecMode interface {
+	Unmarshal(data []byte, v interface{}) error
+	NewDecoder(r io.Reader) *Decoder
+	DecOptions() DecOptions
+}
+
+// DecOptions returns user specified options used to create this DecMode.
+func (dm decMode) DecOptions() DecOptions {
+	return DecOptions{}
+}
+
+// Unmarshal parses the CBOR-encoded data and stores the result in the value
+// pointed to by v using dm decMode.  If v is nil or not a pointer, Unmarshal
+// returns an error.
+//
+// See the documentation for Unmarshal for details.
+func (dm decMode) Unmarshal(data []byte, v interface{}) error {
+	d := decodeState{data: data, dm: dm}
+	return d.value(v)
+}
+
+// NewDecoder returns a new decoder that reads from r using dm decMode.
+func (dm decMode) NewDecoder(r io.Reader) *Decoder {
+	return &Decoder{r: r, d: decodeState{dm: dm}}
+}
+
 type decodeState struct {
 	data []byte
 	off  int // next read offset in data
+	dm   decMode
 }
 
 func (d *decodeState) value(v interface{}) error {
@@ -326,7 +370,7 @@ func (d *decodeState) parseToUnmarshaler(v reflect.Value) error {
 	if u, ok := v.Interface().(Unmarshaler); ok {
 		start := d.off
 		d.skip()
-		return u.UnmarshalCBOR(d.data[start:d.off])
+		return u.UnmarshalCBOR(d.dm, d.data[start:d.off])
 	}
 	d.skip()
 	return errors.New("cbor: failed to assert " + v.Type().String() + " as cbor.Unmarshaler")

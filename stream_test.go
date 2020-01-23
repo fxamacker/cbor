@@ -121,7 +121,11 @@ func TestDecoderStructTag(t *testing.T) {
 func TestEncoder(t *testing.T) {
 	var want bytes.Buffer
 	var w bytes.Buffer
-	encoder := NewEncoder(&w, EncOptions{Sort: SortCanonical})
+	em, err := CanonicalEncOptions().EncMode()
+	if err != nil {
+		t.Errorf("EncMode() returned an error %v", err)
+	}
+	encoder := em.NewEncoder(&w)
 	for _, tc := range marshalTests {
 		for _, value := range tc.values {
 			want.Write(tc.cborData)
@@ -147,7 +151,7 @@ func TestEncoderError(t *testing.T) {
 		{"complex can't be marshalled", complex(100, 8), "cbor: unsupported type: complex128"},
 	}
 	var w bytes.Buffer
-	encoder := NewEncoder(&w, EncOptions{})
+	encoder := NewEncoder(&w)
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			err := encoder.Encode(&tc.value)
@@ -168,7 +172,7 @@ func TestEncoderError(t *testing.T) {
 func TestIndefiniteByteString(t *testing.T) {
 	want := hexDecode("5f42010243030405ff")
 	var w bytes.Buffer
-	encoder := NewEncoder(&w, EncOptions{})
+	encoder := NewEncoder(&w)
 	if err := encoder.StartIndefiniteByteString(); err != nil {
 		t.Fatalf("StartIndefiniteByteString() returned error %v", err)
 	}
@@ -188,7 +192,7 @@ func TestIndefiniteByteString(t *testing.T) {
 
 func TestIndefiniteByteStringError(t *testing.T) {
 	var w bytes.Buffer
-	encoder := NewEncoder(&w, EncOptions{})
+	encoder := NewEncoder(&w)
 	if err := encoder.StartIndefiniteByteString(); err != nil {
 		t.Fatalf("StartIndefiniteByteString() returned error %v", err)
 	}
@@ -207,7 +211,7 @@ func TestIndefiniteByteStringError(t *testing.T) {
 func TestIndefiniteTextString(t *testing.T) {
 	want := hexDecode("7f657374726561646d696e67ff")
 	var w bytes.Buffer
-	encoder := NewEncoder(&w, EncOptions{})
+	encoder := NewEncoder(&w)
 	if err := encoder.StartIndefiniteTextString(); err != nil {
 		t.Fatalf("StartIndefiniteTextString() returned error %v", err)
 	}
@@ -227,7 +231,7 @@ func TestIndefiniteTextString(t *testing.T) {
 
 func TestIndefiniteTextStringError(t *testing.T) {
 	var w bytes.Buffer
-	encoder := NewEncoder(&w, EncOptions{})
+	encoder := NewEncoder(&w)
 	if err := encoder.StartIndefiniteTextString(); err != nil {
 		t.Fatalf("StartIndefiniteTextString() returned error %v", err)
 	}
@@ -241,7 +245,7 @@ func TestIndefiniteTextStringError(t *testing.T) {
 func TestIndefiniteArray(t *testing.T) {
 	want := hexDecode("9f018202039f0405ffff")
 	var w bytes.Buffer
-	encoder := NewEncoder(&w, EncOptions{})
+	encoder := NewEncoder(&w)
 	if err := encoder.StartIndefiniteArray(); err != nil {
 		t.Fatalf("StartIndefiniteArray() returned error %v", err)
 	}
@@ -274,7 +278,11 @@ func TestIndefiniteArray(t *testing.T) {
 func TestIndefiniteMap(t *testing.T) {
 	want := hexDecode("bf61610161629f0203ffff")
 	var w bytes.Buffer
-	encoder := NewEncoder(&w, EncOptions{Sort: SortCanonical})
+	em, err := EncOptions{Sort: SortCanonical}.EncMode()
+	if err != nil {
+		t.Errorf("EncMode() returned an error %v", err)
+	}
+	encoder := em.NewEncoder(&w)
 	if err := encoder.StartIndefiniteMap(); err != nil {
 		t.Fatalf("StartIndefiniteMap() returned error %v", err)
 	}
@@ -309,7 +317,7 @@ func TestIndefiniteMap(t *testing.T) {
 
 func TestIndefiniteLengthError(t *testing.T) {
 	var w bytes.Buffer
-	encoder := NewEncoder(&w, EncOptions{})
+	encoder := NewEncoder(&w)
 	if err := encoder.StartIndefiniteByteString(); err != nil {
 		t.Fatalf("StartIndefiniteByteString() returned error %v", err)
 	}
@@ -335,7 +343,7 @@ func TestEncoderStructTag(t *testing.T) {
 	want := hexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
 
 	var w bytes.Buffer
-	encoder := NewEncoder(&w, EncOptions{Sort: SortCanonical})
+	encoder := NewEncoder(&w)
 	if err := encoder.Encode(v); err != nil {
 		t.Errorf("Encode(%+v) returned error %v", v, err)
 	}
@@ -363,7 +371,7 @@ func TestRawMessage(t *testing.T) {
 	if !reflect.DeepEqual(v, want) {
 		t.Errorf("Unmarshal(0x%x) returned v %v, want %v", cborData, v, want)
 	}
-	b, err := Marshal(v, EncOptions{Sort: SortCanonical})
+	b, err := Marshal(v)
 	if err != nil {
 		t.Fatalf("Marshal(%+v) returned error %v", v, err)
 	}
@@ -375,7 +383,7 @@ func TestRawMessage(t *testing.T) {
 func TestNullRawMessage(t *testing.T) {
 	r := RawMessage(nil)
 	wantCborData := []byte{0xf6}
-	b, err := Marshal(r, EncOptions{})
+	b, err := Marshal(r)
 	if err != nil {
 		t.Errorf("Marshal(%+v) returned error %v", r, err)
 	}
@@ -387,7 +395,7 @@ func TestNullRawMessage(t *testing.T) {
 func TestEmptyRawMessage(t *testing.T) {
 	var r RawMessage
 	wantCborData := []byte{0xf6}
-	b, err := Marshal(r, EncOptions{})
+	b, err := Marshal(r)
 	if err != nil {
 		t.Errorf("Marshal(%+v) returned error %v", r, err)
 	}

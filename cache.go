@@ -69,8 +69,8 @@ type encodingStructType struct {
 	hasAnonymousField       bool
 }
 
-func (st encodingStructType) getFields(opts EncOptions) fields {
-	switch opts.Sort {
+func (st encodingStructType) getFields(em encMode) fields {
+	switch em.sort {
 	case SortLengthFirst:
 		return st.lenFirstCanonicalFields
 	case SortBytewiseLexical:

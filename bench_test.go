@@ -254,7 +254,7 @@ func BenchmarkMarshal(b *testing.B) {
 			}
 			b.Run(name, func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := Marshal(v, EncOptions{}); err != nil {
+					if _, err := Marshal(v); err != nil {
 						b.Fatal("Marshal:", err)
 					}
 				}
@@ -341,7 +341,7 @@ func BenchmarkMarshal(b *testing.B) {
 	for _, bm := range moreBenchmarks {
 		b.Run(bm.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := Marshal(bm.value, EncOptions{}); err != nil {
+				if _, err := Marshal(bm.value); err != nil {
 					b.Fatal("Marshal:", err)
 				}
 			}
@@ -379,7 +379,7 @@ func BenchmarkMarshalCanonical(b *testing.B) {
 			}
 			b.Run(name, func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := Marshal(v, EncOptions{}); err != nil {
+					if _, err := Marshal(v); err != nil {
 						b.Fatal("Marshal:", err)
 					}
 				}
@@ -389,9 +389,10 @@ func BenchmarkMarshalCanonical(b *testing.B) {
 			if reflect.TypeOf(v).Kind() == reflect.Struct {
 				name = "Go " + reflect.TypeOf(v).Kind().String() + " to CBOR " + bm.name + " canonical"
 			}
+			em, _ := EncOptions{Sort: SortCanonical}.EncMode()
 			b.Run(name, func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
-					if _, err := Marshal(v, EncOptions{Sort: SortCanonical}); err != nil {
+					if _, err := em.Marshal(v); err != nil {
 						b.Fatal("Marshal:", err)
 					}
 				}
@@ -408,7 +409,7 @@ func BenchmarkEncode(b *testing.B) {
 				name = "Go " + reflect.TypeOf(v).Kind().String() + " to CBOR " + bm.name
 			}
 			b.Run(name, func(b *testing.B) {
-				encoder := NewEncoder(ioutil.Discard, EncOptions{})
+				encoder := NewEncoder(ioutil.Discard)
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
 					if err := encoder.Encode(v); err != nil {
@@ -422,7 +423,7 @@ func BenchmarkEncode(b *testing.B) {
 
 func BenchmarkEncodeStream(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		encoder := NewEncoder(ioutil.Discard, EncOptions{})
+		encoder := NewEncoder(ioutil.Discard)
 		for i := 0; i < rounds; i++ {
 			for _, bm := range encodeBenchmarks {
 				for _, v := range bm.values {
@@ -474,7 +475,7 @@ func BenchmarkMarshalCOSE(b *testing.B) {
 		}
 		b.Run(tc.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, err := Marshal(v, EncOptions{}); err != nil {
+				if _, err := Marshal(v); err != nil {
 					b.Fatal("Marshal:", err)
 				}
 			}
@@ -501,7 +502,7 @@ func BenchmarkMarshalCWTClaims(b *testing.B) {
 		b.Fatal("Unmarshal:", err)
 	}
 	for i := 0; i < b.N; i++ {
-		if _, err := Marshal(v, EncOptions{}); err != nil {
+		if _, err := Marshal(v); err != nil {
 			b.Fatal("Unmarshal:", err)
 		}
 	}
@@ -526,7 +527,7 @@ func BenchmarkMarshalSenML(b *testing.B) {
 		b.Fatal("Unmarshal:", err)
 	}
 	for i := 0; i < b.N; i++ {
-		if _, err := Marshal(v, EncOptions{}); err != nil {
+		if _, err := Marshal(v); err != nil {
 			b.Fatal("Unmarshal:", err)
 		}
 	}
@@ -539,8 +540,9 @@ func BenchmarkMarshalSenMLShortestFloat16(b *testing.B) {
 	if err := Unmarshal(cborData, &v); err != nil {
 		b.Fatal("Unmarshal:", err)
 	}
+	em, _ := EncOptions{ShortestFloat: ShortestFloat16}.EncMode()
 	for i := 0; i < b.N; i++ {
-		if _, err := Marshal(v, EncOptions{ShortestFloat: ShortestFloat16}); err != nil {
+		if _, err := em.Marshal(v); err != nil {
 			b.Fatal("Unmarshal:", err)
 		}
 	}
@@ -565,7 +567,7 @@ func BenchmarkMarshalWebAuthn(b *testing.B) {
 		b.Fatal("Unmarshal:", err)
 	}
 	for i := 0; i < b.N; i++ {
-		if _, err := Marshal(v, EncOptions{}); err != nil {
+		if _, err := Marshal(v); err != nil {
 			b.Fatal("Marshal:", err)
 		}
 	}

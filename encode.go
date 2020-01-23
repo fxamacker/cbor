@@ -8,6 +8,7 @@ import (
 	"encoding"
 	"encoding/binary"
 	"errors"
+	"io"
 	"math"
 	"reflect"
 	"sort"
@@ -18,7 +19,7 @@ import (
 	"github.com/x448/float16"
 )
 
-// Marshal returns the CBOR encoding of v.
+// Marshal returns the CBOR encoding of v using the default encoding options.
 //
 // Marshal uses the following type-dependent default encodings:
 //
@@ -80,26 +81,14 @@ import (
 //
 // Channel, complex, and functon values cannot be encoded in CBOR.  Attempting
 // to encode such a value causes Marshal to return an UnsupportedTypeError.
-func Marshal(v interface{}, encOpts EncOptions) ([]byte, error) {
-	e := getEncodeState()
-
-	err := e.marshal(v, encOpts)
-	if err != nil {
-		putEncodeState(e)
-		return nil, err
-	}
-
-	buf := make([]byte, e.Len())
-	copy(buf, e.Bytes())
-
-	putEncodeState(e)
-	return buf, nil
+func Marshal(v interface{}) ([]byte, error) {
+	return defaultEncMode.Marshal(v)
 }
 
 // Marshaler is the interface implemented by types that can marshal themselves
 // into valid CBOR.
 type Marshaler interface {
-	MarshalCBOR() ([]byte, error)
+	MarshalCBOR(EncMode) ([]byte, error)
 }
 
 // UnsupportedTypeError is returned by Marshal when attempting to encode an
@@ -335,6 +324,95 @@ func PreferredUnsortedEncOptions() EncOptions {
 	}
 }
 
+func fastEncOptions() EncOptions {
+	return EncOptions{
+		Sort:          SortNone,
+		ShortestFloat: ShortestFloatNone,
+		NaNConvert:    NaNConvert7e00,
+		InfConvert:    InfConvertFloat16,
+		TimeRFC3339:   false,
+	}
+}
+
+// EncMode returns an EncMode interface from EncOptions.
+func (opts EncOptions) EncMode() (EncMode, error) {
+	if !opts.Sort.valid() {
+		return nil, errors.New("cbor: invalid SortMode " + strconv.Itoa(int(opts.Sort)))
+	}
+	if !opts.ShortestFloat.valid() {
+		return nil, errors.New("cbor: invalid ShortestFloatMode " + strconv.Itoa(int(opts.ShortestFloat)))
+	}
+	if !opts.NaNConvert.valid() {
+		return nil, errors.New("cbor: invalid NaNConvertMode " + strconv.Itoa(int(opts.NaNConvert)))
+	}
+	if !opts.InfConvert.valid() {
+		return nil, errors.New("cbor: invalid InfConvertMode " + strconv.Itoa(int(opts.InfConvert)))
+	}
+	em := encMode{
+		sort:                    opts.Sort,
+		shortestFloat:           opts.ShortestFloat,
+		naNConvert:              opts.NaNConvert,
+		infConvert:              opts.InfConvert,
+		timeRFC3339:             opts.TimeRFC3339,
+		disableIndefiniteLength: opts.disableIndefiniteLength,
+	}
+	return EncMode(em), nil
+}
+
+var defaultEncMode, _ = fastEncOptions().EncMode()
+
+type encMode struct {
+	sort                    SortMode
+	shortestFloat           ShortestFloatMode
+	naNConvert              NaNConvertMode
+	infConvert              InfConvertMode
+	timeRFC3339             bool
+	disableIndefiniteLength bool
+}
+
+// EncMode is the main interface for CBOR encoding.
+type EncMode interface {
+	Marshal(v interface{}) ([]byte, error)
+	NewEncoder(w io.Writer) *Encoder
+	EncOptions() EncOptions
+}
+
+// EncOptions returns user specified options used to create this EncMode.
+func (em encMode) EncOptions() EncOptions {
+	return EncOptions{
+		Sort:                    em.sort,
+		ShortestFloat:           em.shortestFloat,
+		NaNConvert:              em.naNConvert,
+		InfConvert:              em.infConvert,
+		TimeRFC3339:             em.timeRFC3339,
+		disableIndefiniteLength: em.disableIndefiniteLength,
+	}
+}
+
+// Marshal returns the CBOR encoding of v using em encMode.
+//
+// See the documentation for Marshal for details.
+func (em encMode) Marshal(v interface{}) ([]byte, error) {
+	e := getEncodeState()
+
+	_, err := encode(e, reflect.ValueOf(v), em)
+	if err != nil {
+		putEncodeState(e)
+		return nil, err
+	}
+
+	buf := make([]byte, e.Len())
+	copy(buf, e.Bytes())
+
+	putEncodeState(e)
+	return buf, nil
+}
+
+// NewEncoder returns a new encoder that writes to w using em encMode.
+func (em encMode) NewEncoder(w io.Writer) *Encoder {
+	return &Encoder{w: w, em: em, e: encodeState{}}
+}
+
 // An encodeState encodes CBOR into a bytes.Buffer.
 type encodeState struct {
 	bytes.Buffer
@@ -360,24 +438,7 @@ func putEncodeState(e *encodeState) {
 	encodeStatePool.Put(e)
 }
 
-func (e *encodeState) marshal(v interface{}, opts EncOptions) error {
-	if !opts.Sort.valid() {
-		return errors.New("cbor: invalid SortMode " + strconv.Itoa(int(opts.Sort)))
-	}
-	if !opts.ShortestFloat.valid() {
-		return errors.New("cbor: invalid ShortestFloatMode " + strconv.Itoa(int(opts.ShortestFloat)))
-	}
-	if !opts.NaNConvert.valid() {
-		return errors.New("cbor: invalid NaNConvertMode " + strconv.Itoa(int(opts.NaNConvert)))
-	}
-	if !opts.InfConvert.valid() {
-		return errors.New("cbor: invalid InfConvertMode " + strconv.Itoa(int(opts.InfConvert)))
-	}
-	_, err := encode(e, reflect.ValueOf(v), opts)
-	return err
-}
-
-type encodeFunc func(e *encodeState, v reflect.Value, opts EncOptions) (int, error)
+type encodeFunc func(e *encodeState, v reflect.Value, em encMode) (int, error)
 
 var (
 	cborFalse            = []byte{0xf4}
@@ -388,7 +449,7 @@ var (
 	cborNegativeInfinity = []byte{0xf9, 0xfc, 0x00}
 )
 
-func encode(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+func encode(e *encodeState, v reflect.Value, em encMode) (int, error) {
 	if !v.IsValid() {
 		// v is zero value
 		e.Write(cborNil)
@@ -399,17 +460,17 @@ func encode(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 		return 0, &UnsupportedTypeError{v.Type()}
 	}
 
-	return f(e, v, opts)
+	return f(e, v, em)
 }
 
-func encodeBool(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+func encodeBool(e *encodeState, v reflect.Value, em encMode) (int, error) {
 	if v.Bool() {
 		return e.Write(cborTrue)
 	}
 	return e.Write(cborFalse)
 }
 
-func encodeInt(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+func encodeInt(e *encodeState, v reflect.Value, em encMode) (int, error) {
 	i := v.Int()
 	if i >= 0 {
 		return encodeHead(e, byte(cborTypePositiveInt), uint64(i)), nil
@@ -418,19 +479,19 @@ func encodeInt(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 	return encodeHead(e, byte(cborTypeNegativeInt), uint64(n)), nil
 }
 
-func encodeUint(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+func encodeUint(e *encodeState, v reflect.Value, em encMode) (int, error) {
 	return encodeHead(e, byte(cborTypePositiveInt), v.Uint()), nil
 }
 
-func encodeFloat(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+func encodeFloat(e *encodeState, v reflect.Value, em encMode) (int, error) {
 	f64 := v.Float()
 	if math.IsNaN(f64) {
-		return encodeNaN(e, v, opts)
+		return encodeNaN(e, v, em)
 	}
 	if math.IsInf(f64, 0) {
-		return encodeInf(e, v, opts)
+		return encodeInf(e, v, em)
 	}
-	fopt := opts.ShortestFloat
+	fopt := em.shortestFloat
 	if v.Kind() == reflect.Float64 && (fopt == ShortestFloatNone || cannotFitFloat32(f64)) {
 		// Encode float64
 		// Don't use encodeFloat64() because it cannot be inlined.
@@ -469,9 +530,9 @@ func encodeFloat(e *encodeState, v reflect.Value, opts EncOptions) (int, error) 
 	return e.Write(e.scratch[:5])
 }
 
-func encodeInf(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+func encodeInf(e *encodeState, v reflect.Value, em encMode) (int, error) {
 	f64 := v.Float()
-	if opts.InfConvert == InfConvertFloat16 {
+	if em.infConvert == InfConvertFloat16 {
 		if f64 > 0 {
 			return e.Write(cborPositiveInfinity)
 		}
@@ -483,8 +544,8 @@ func encodeInf(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 	return encodeFloat32(e, float32(f64))
 }
 
-func encodeNaN(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
-	switch opts.NaNConvert {
+func encodeNaN(e *encodeState, v reflect.Value, em encMode) (int, error) {
+	switch em.naNConvert {
 	case NaNConvert7e00:
 		return e.Write(cborNan)
 
@@ -499,7 +560,7 @@ func encodeNaN(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 		if v.Kind() == reflect.Float64 {
 			f64 := v.Float()
 			f64bits := math.Float64bits(f64)
-			if opts.NaNConvert == NaNConvertQuiet && f64bits&(1<<51) == 0 {
+			if em.naNConvert == NaNConvertQuiet && f64bits&(1<<51) == 0 {
 				f64bits = f64bits | (1 << 51) // Set quiet bit = 1
 				f64 = math.Float64frombits(f64bits)
 			}
@@ -526,7 +587,7 @@ func encodeNaN(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
 
 		f32 := float32NaNFromReflectValue(v)
 		f32bits := math.Float32bits(f32)
-		if opts.NaNConvert == NaNConvertQuiet && f32bits&(1<<22) == 0 {
+		if em.naNConvert == NaNConvertQuiet && f32bits&(1<<22) == 0 {
 			f32bits = f32bits | (1 << 22) // Set quiet bit = 1
 			f32 = math.Float32frombits(f32bits)
 		}
@@ -558,7 +619,7 @@ func encodeFloat64(e *encodeState, f64 float64) (int, error) {
 	return e.Write(e.scratch[:9])
 }
 
-func encodeByteString(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+func encodeByteString(e *encodeState, v reflect.Value, em encMode) (int, error) {
 	if v.Kind() == reflect.Slice && v.IsNil() {
 		return e.Write(cborNil)
 	}
@@ -577,11 +638,8 @@ func encodeByteString(e *encodeState, v reflect.Value, opts EncOptions) (int, er
 	return n1 + n2, nil
 }
 
-func encodeString(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
-	return encodeStringInternal(e, v.String(), opts)
-}
-
-func encodeStringInternal(e *encodeState, s string, opts EncOptions) (int, error) {
+func encodeString(e *encodeState, v reflect.Value, em encMode) (int, error) {
+	s := v.String()
 	n1 := encodeHead(e, byte(cborTypeTextString), uint64(len(s)))
 	n2, _ := e.WriteString(s)
 	return n1 + n2, nil
@@ -591,7 +649,7 @@ type arrayEncoder struct {
 	f encodeFunc
 }
 
-func (ae arrayEncoder) encodeArray(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+func (ae arrayEncoder) encodeArray(e *encodeState, v reflect.Value, em encMode) (int, error) {
 	if ae.f == nil {
 		return 0, &UnsupportedTypeError{v.Type()}
 	}
@@ -604,7 +662,7 @@ func (ae arrayEncoder) encodeArray(e *encodeState, v reflect.Value, opts EncOpti
 	}
 	n := encodeHead(e, byte(cborTypeArray), uint64(alen))
 	for i := 0; i < alen; i++ {
-		n1, err := ae.f(e, v.Index(i), opts)
+		n1, err := ae.f(e, v.Index(i), em)
 		if err != nil {
 			return 0, err
 		}
@@ -617,9 +675,9 @@ type mapEncoder struct {
 	kf, ef encodeFunc
 }
 
-func (me mapEncoder) encodeMap(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
-	if opts.Sort != SortNone {
-		return me.encodeMapCanonical(e, v, opts)
+func (me mapEncoder) encodeMap(e *encodeState, v reflect.Value, em encMode) (int, error) {
+	if em.sort != SortNone {
+		return me.encodeMapCanonical(e, v, em)
 	}
 	if me.kf == nil || me.ef == nil {
 		return 0, &UnsupportedTypeError{v.Type()}
@@ -634,11 +692,11 @@ func (me mapEncoder) encodeMap(e *encodeState, v reflect.Value, opts EncOptions)
 	n := encodeHead(e, byte(cborTypeMap), uint64(mlen))
 	iter := v.MapRange()
 	for iter.Next() {
-		n1, err := me.kf(e, iter.Key(), opts)
+		n1, err := me.kf(e, iter.Key(), em)
 		if err != nil {
 			return 0, err
 		}
-		n2, err := me.ef(e, iter.Value(), opts)
+		n2, err := me.ef(e, iter.Value(), em)
 		if err != nil {
 			return 0, err
 		}
@@ -703,7 +761,7 @@ func putKeyValues(x []keyValue) {
 	keyValuePool.Put(x)
 }
 
-func (me mapEncoder) encodeMapCanonical(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+func (me mapEncoder) encodeMapCanonical(e *encodeState, v reflect.Value, em encMode) (int, error) {
 	if me.kf == nil || me.ef == nil {
 		return 0, &UnsupportedTypeError{v.Type()}
 	}
@@ -718,13 +776,13 @@ func (me mapEncoder) encodeMapCanonical(e *encodeState, v reflect.Value, opts En
 	kvs := getKeyValues(v.Len()) // for sorting keys
 	iter := v.MapRange()
 	for iter.Next() {
-		n1, err := me.kf(kve, iter.Key(), opts)
+		n1, err := me.kf(kve, iter.Key(), em)
 		if err != nil {
 			putEncodeState(kve)
 			putKeyValues(kvs)
 			return 0, err
 		}
-		n2, err := me.ef(kve, iter.Value(), opts)
+		n2, err := me.ef(kve, iter.Value(), em)
 		if err != nil {
 			putEncodeState(kve)
 			putKeyValues(kvs)
@@ -740,7 +798,7 @@ func (me mapEncoder) encodeMapCanonical(e *encodeState, v reflect.Value, opts En
 		off += kvs[i].keyValueLen
 	}
 
-	if opts.Sort == SortBytewiseLexical {
+	if em.sort == SortBytewiseLexical {
 		sort.Sort(byBytewiseKeyValues{kvs})
 	} else {
 		sort.Sort(byLengthFirstKeyValues{kvs})
@@ -757,7 +815,7 @@ func (me mapEncoder) encodeMapCanonical(e *encodeState, v reflect.Value, opts En
 	return n, nil
 }
 
-func encodeStructToArray(e *encodeState, v reflect.Value, opts EncOptions, flds fields) (int, error) {
+func encodeStructToArray(e *encodeState, v reflect.Value, em encMode, flds fields) (int, error) {
 	n := encodeHead(e, byte(cborTypeArray), uint64(len(flds)))
 FieldLoop:
 	for i := 0; i < len(flds); i++ {
@@ -775,7 +833,7 @@ FieldLoop:
 			}
 			fv = fv.Field(n)
 		}
-		n1, err := flds[i].ef(e, fv, opts)
+		n1, err := flds[i].ef(e, fv, em)
 		if err != nil {
 			return 0, err
 		}
@@ -784,14 +842,14 @@ FieldLoop:
 	return n, nil
 }
 
-func encodeFixedLengthStruct(e *encodeState, v reflect.Value, opts EncOptions, flds fields) (int, error) {
+func encodeFixedLengthStruct(e *encodeState, v reflect.Value, em encMode, flds fields) (int, error) {
 	n := encodeHead(e, byte(cborTypeMap), uint64(len(flds)))
 
 	for i := 0; i < len(flds); i++ {
 		n1, _ := e.Write(flds[i].cborName)
 
 		fv := v.Field(flds[i].idx[0])
-		n2, err := flds[i].ef(e, fv, opts)
+		n2, err := flds[i].ef(e, fv, em)
 		if err != nil {
 			return 0, err
 		}
@@ -802,20 +860,20 @@ func encodeFixedLengthStruct(e *encodeState, v reflect.Value, opts EncOptions, f
 	return n, nil
 }
 
-func encodeStruct(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+func encodeStruct(e *encodeState, v reflect.Value, em encMode) (int, error) {
 	structType := getEncodingStructType(v.Type())
 	if structType.err != nil {
 		return 0, structType.err
 	}
 
 	if structType.toArray {
-		return encodeStructToArray(e, v, opts, structType.fields)
+		return encodeStructToArray(e, v, em, structType.fields)
 	}
 
-	flds := structType.getFields(opts)
+	flds := structType.getFields(em)
 
 	if !structType.hasAnonymousField && !structType.omitEmpty {
-		return encodeFixedLengthStruct(e, v, opts, flds)
+		return encodeFixedLengthStruct(e, v, em, flds)
 	}
 
 	kve := getEncodeState() // encode key-value pairs based on struct field tag options
@@ -841,7 +899,7 @@ FieldLoop:
 
 		kve.Write(flds[i].cborName)
 
-		if _, err := flds[i].ef(kve, fv, opts); err != nil {
+		if _, err := flds[i].ef(kve, fv, em); err != nil {
 			putEncodeState(kve)
 			return 0, err
 		}
@@ -855,31 +913,32 @@ FieldLoop:
 	return n1 + n2, err
 }
 
-func encodeIntf(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+func encodeIntf(e *encodeState, v reflect.Value, em encMode) (int, error) {
 	if v.IsNil() {
 		return e.Write(cborNil)
 	}
-	return encode(e, v.Elem(), opts)
+	return encode(e, v.Elem(), em)
 }
 
-func encodeTime(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+func encodeTime(e *encodeState, v reflect.Value, em encMode) (int, error) {
 	t := v.Interface().(time.Time)
 	if t.IsZero() {
 		return e.Write(cborNil)
-	} else if opts.TimeRFC3339 {
-		return encodeStringInternal(e, t.Format(time.RFC3339Nano), opts)
+	} else if em.timeRFC3339 {
+		s := t.Format(time.RFC3339Nano)
+		return encodeString(e, reflect.ValueOf(s), em)
 	} else {
 		t = t.UTC().Round(time.Microsecond)
 		secs, nsecs := t.Unix(), uint64(t.Nanosecond())
 		if nsecs == 0 {
-			return encodeInt(e, reflect.ValueOf(secs), opts)
+			return encodeInt(e, reflect.ValueOf(secs), em)
 		}
 		f := float64(secs) + float64(nsecs)/1e9
-		return encodeFloat(e, reflect.ValueOf(f), opts)
+		return encodeFloat(e, reflect.ValueOf(f), em)
 	}
 }
 
-func encodeBinaryMarshalerType(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+func encodeBinaryMarshalerType(e *encodeState, v reflect.Value, em encMode) (int, error) {
 	m, ok := v.Interface().(encoding.BinaryMarshaler)
 	if !ok {
 		pv := reflect.New(v.Type())
@@ -895,14 +954,14 @@ func encodeBinaryMarshalerType(e *encodeState, v reflect.Value, opts EncOptions)
 	return n1 + n2, nil
 }
 
-func encodeMarshalerType(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+func encodeMarshalerType(e *encodeState, v reflect.Value, em encMode) (int, error) {
 	m, ok := v.Interface().(Marshaler)
 	if !ok {
 		pv := reflect.New(v.Type())
 		pv.Elem().Set(v)
 		m = pv.Interface().(Marshaler)
 	}
-	data, err := m.MarshalCBOR()
+	data, err := m.MarshalCBOR(em)
 	if err != nil {
 		return 0, err
 	}
@@ -990,14 +1049,14 @@ func getEncodeIndirectValueFunc(t reflect.Type) encodeFunc {
 	if f == nil {
 		return f
 	}
-	return func(e *encodeState, v reflect.Value, opts EncOptions) (int, error) {
+	return func(e *encodeState, v reflect.Value, em encMode) (int, error) {
 		for v.Kind() == reflect.Ptr && !v.IsNil() {
 			v = v.Elem()
 		}
 		if v.Kind() == reflect.Ptr && v.IsNil() {
 			return e.Write(cborNil)
 		}
-		return f(e, v, opts)
+		return f(e, v, em)
 	}
 }
 

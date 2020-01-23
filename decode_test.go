@@ -1447,7 +1447,7 @@ func TestStructFieldNil(t *testing.T) {
 		PPI **int
 	}
 	var struc TestStruct
-	cborData, err := Marshal(struc, EncOptions{})
+	cborData, err := Marshal(struc)
 	if err != nil {
 		t.Fatalf("Marshal(%+v) returned error %v", struc, err)
 	}
@@ -1521,7 +1521,11 @@ func TestMapKeyNaN(t *testing.T) {
 	if err := Unmarshal(cborData, &intf); err != nil {
 		t.Fatalf("Unmarshal(0x%x) returned error %v", cborData, err)
 	}
-	if _, err := Marshal(intf, EncOptions{Sort: SortCanonical}); err != nil {
+	em, err := EncOptions{Sort: SortCanonical}.EncMode()
+	if err != nil {
+		t.Errorf("EncMode() returned an error %v", err)
+	}
+	if _, err := em.Marshal(intf); err != nil {
 		t.Errorf("Marshal(%v) returned error %v", intf, err)
 	}
 }
@@ -1550,7 +1554,7 @@ func TestMapKeyNil(t *testing.T) {
 		} else if !reflect.DeepEqual(intf, want) {
 			t.Errorf("Unmarshal(0x%x) returned %+v, want %+v", data, intf, want)
 		}
-		if _, err := Marshal(intf, EncOptions{Sort: SortCanonical}); err != nil {
+		if _, err := Marshal(intf); err != nil {
 			t.Errorf("Marshal(%v) returned error %v", intf, err)
 		}
 
@@ -1560,7 +1564,7 @@ func TestMapKeyNil(t *testing.T) {
 		} else if !reflect.DeepEqual(v, want) {
 			t.Errorf("Unmarshal(0x%x) returned %+v, want %+v", data, v, want)
 		}
-		if _, err := Marshal(v, EncOptions{Sort: SortCanonical}); err != nil {
+		if _, err := Marshal(v); err != nil {
 			t.Errorf("Marshal(%v) returned error %v", v, err)
 		}
 	}
@@ -1790,7 +1794,7 @@ func TestBinaryUnmarshal(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			b, err := Marshal(tc.obj, EncOptions{})
+			b, err := Marshal(tc.obj)
 			if err != nil {
 				t.Errorf("Marshal(%+v) returned error %v", tc.obj, err)
 			}
@@ -1843,7 +1847,7 @@ func TestBinaryUnmarshalError(t *testing.T) {
 func TestBinaryMarshalError(t *testing.T) {
 	wantErrorMsg := "MarshalBinary: error"
 	v := marshalBinaryError(wantErrorMsg)
-	if _, err := Marshal(v, EncOptions{}); err == nil {
+	if _, err := Marshal(v); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", v, wantErrorMsg)
 	} else if err.Error() != wantErrorMsg {
 		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", v, err.Error(), wantErrorMsg)
@@ -1852,14 +1856,14 @@ func TestBinaryMarshalError(t *testing.T) {
 
 type number2 uint64
 
-func (n number2) MarshalCBOR() (data []byte, err error) {
+func (n number2) MarshalCBOR(em EncMode) (data []byte, err error) {
 	m := map[string]uint64{"num": uint64(n)}
-	return Marshal(m, EncOptions{})
+	return em.Marshal(m)
 }
 
-func (n *number2) UnmarshalCBOR(data []byte) (err error) {
+func (n *number2) UnmarshalCBOR(dm DecMode, data []byte) (err error) {
 	var v map[string]uint64
-	if err := Unmarshal(data, &v); err != nil {
+	if err := dm.Unmarshal(data, &v); err != nil {
 		return err
 	}
 	*n = number2(v["num"])
@@ -1870,14 +1874,14 @@ type stru2 struct {
 	a, b, c string
 }
 
-func (s *stru2) MarshalCBOR() ([]byte, error) {
+func (s *stru2) MarshalCBOR(em EncMode) ([]byte, error) {
 	v := []string{s.a, s.b, s.c}
-	return Marshal(v, EncOptions{})
+	return em.Marshal(v)
 }
 
-func (s *stru2) UnmarshalCBOR(data []byte) (err error) {
+func (s *stru2) UnmarshalCBOR(dm DecMode, data []byte) (err error) {
 	var v []string
-	if err := Unmarshal(data, &v); err != nil {
+	if err := dm.Unmarshal(data, &v); err != nil {
 		return err
 	}
 	if len(v) > 0 {
@@ -1894,7 +1898,7 @@ func (s *stru2) UnmarshalCBOR(data []byte) (err error) {
 
 type marshalCBORError string
 
-func (n marshalCBORError) MarshalCBOR() (data []byte, err error) {
+func (n marshalCBORError) MarshalCBOR(em EncMode) (data []byte, err error) {
 	return nil, errors.New(string(n))
 }
 
@@ -1917,7 +1921,7 @@ func TestUnmarshalCBOR(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			b, err := Marshal(tc.obj, EncOptions{})
+			b, err := Marshal(tc.obj)
 			if err != nil {
 				t.Errorf("Marshal(%+v) returned error %v", tc.obj, err)
 			}
@@ -1970,7 +1974,7 @@ func TestUnmarshalCBORError(t *testing.T) {
 func TestMarshalCBORError(t *testing.T) {
 	wantErrorMsg := "MarshalCBOR: error"
 	v := marshalCBORError(wantErrorMsg)
-	if _, err := Marshal(v, EncOptions{}); err == nil {
+	if _, err := Marshal(v); err == nil {
 		t.Errorf("Marshal(%+v) didn't return an error, want error msg %q", v, wantErrorMsg)
 	} else if err.Error() != wantErrorMsg {
 		t.Errorf("Marshal(%+v) returned error %q, want %q", v, err.Error(), wantErrorMsg)
@@ -2377,5 +2381,18 @@ func TestDuplicateMapKeys(t *testing.T) {
 		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
 	} else if !reflect.DeepEqual(m, wantM) {
 		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, m, m, wantM, wantM)
+	}
+}
+
+func TestDecOptions(t *testing.T) {
+	opts1 := DecOptions{}
+	dm, err := opts1.DecMode()
+	if err != nil {
+		t.Errorf("DecMode() returned an error %v", err)
+	} else {
+		opts2 := dm.DecOptions()
+		if !reflect.DeepEqual(opts1, opts2) {
+			t.Errorf("DecOptions->DecMode->DecOptions returned different values: %v, %v", opts1, opts2)
+		}
 	}
 }
