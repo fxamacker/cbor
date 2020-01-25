@@ -22,7 +22,7 @@ script: go test -short ./... -v
 # These jobs are run only on linux_amd64.  Remove allow_failures for golangci-lint after code cleanup.
 jobs:
   allow_failures:
-  - script: golangci-lint
+  - script: golangci-lint run --deadline=5m
   include:
     - os: linux
       arch: amd64
