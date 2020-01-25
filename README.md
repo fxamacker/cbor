@@ -58,15 +58,14 @@ The resource intensive `codec.CborHandle` initialization (in the other library) 
 Doing your own comparisons is highly recommended.  Use your most common message sizes and data types.
 
 ## Current Status
-Version 1.x has:
+Latest version is v1.5, which has:
 
 * __Stable API__ – won't make breaking API changes except:
   * CoreDetEncOptions() is subject to change because it uses draft standard not yet approved by IETF.
   * PreferredUnsortedEncOptions() is subject to change because it uses draft standard not yet approved by IETF.
 * __Stable requirements__ – will support Go v1.12 (unless there's compelling reason to require newer).
-* __Passed fuzzing__ – Fuzzing for v1.5 passed 4.75 billion execs in coverage-guided fuzzing on linux_amd64.
-
-Each commit passes 375+ tests on amd64, arm64, ppc64le and s390x with linux. Each release also passes 250+ million execs in coverage-guided fuzzing using 1,100+ CBOR files (corpus) on linux_amd64. See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
+* __Passed all tests__ – v1.5 passed all 375+ tests on amd64, arm64, ppc64le and s390x with linux.
+* __Passed fuzzing__ – v1.5 passed 4.75 billion execs in coverage-guided fuzzing on linux_amd64.
 
 Recent activity:
 
@@ -224,7 +223,7 @@ Over 1,100 files (corpus) are used for fuzzing because it includes fuzz-generate
 ## System Requirements
 
 * Go 1.12 (or newer)
-* amd64, arm64, ppc64le and s390x. Other architectures may also work but they are not tested on each commit. 
+* amd64, arm64, ppc64le and s390x. Other architectures may also work but they are not tested as frequently. 
 
 ## Versions and API Changes
 This project uses [Semantic Versioning](https://semver.org), so the API is always backwards compatible unless the major version number changes.  Newly added API documented as "subject to change" are excluded from this rule.
