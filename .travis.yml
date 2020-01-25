@@ -21,3 +21,4 @@ jobs:
     - name: "race"
       script:
       - go test -race ./... -v
+  
