@@ -19,11 +19,13 @@ env:
 # This is run on all arch. Go doesn't support -race on s390x.
 script: go test -short ./... -v
 
-# These jobs are run only on linux_amd64.  Remove allow_failures for golangci-lint after code cleanup.
+# These jobs are run only on linux_amd64.  Optionally, remove allow_failures for golangci-lint after code cleanup.
 jobs:
+  fast_finish: true
   allow_failures:
   - script: golangci-lint run --deadline=5m
   include:
+    - go: 1.13.x
     - os: linux
       arch: amd64
     - name: "race"
