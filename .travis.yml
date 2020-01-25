@@ -17,10 +17,13 @@ env:
   - GO111MODULE=on
 
 # This is run on all arch. Go doesn't support -race on s390x.
-script: go test -short ./... -v
+script:
+  - go build ./...
+  - go test -short ./... -v
 
-# These jobs are run only on linux_amd64.  
-# Remove allow_failures for golangci-lint if desired, but this is faster and allows more aggressive linting.
+# These jobs are run only on linux_amd64 using first version of Go listed above.
+# Tinylint is not allowed to fail, while Biglint is allowed to fail.
+# Remove allow_failures for biglint if desired, but this allows more aggressive linting.
 jobs:
   fast_finish: true
   allow_failures:
@@ -28,14 +31,15 @@ jobs:
   include:
     - os: linux
       arch: amd64
-    - name: "race"
-      script: 
-        - go build ./...
-        - go test -short -race ./... -v
-    - name: "lint"
+    - name: "Race"
+      script: go test -short -race ./... -v     
+    - name: "Tinylint"
+      install: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.23.1
+      script: golangci-lint run --no-config --deadline=3m --disable-all -E errcheck -E gofmt -E golint -E govet -E ineffassign -E typecheck -E unconvert
+    - name: "Biglint"
       install: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.23.1
       script: golangci-lint run --deadline=5m
-    - name: "coverage"
+    - name: "Coverage"
       script:
       - go test -short -coverprofile=coverage.txt -covermode=atomic ./...
       after_success: bash <(curl -s https://codecov.io/bash)
