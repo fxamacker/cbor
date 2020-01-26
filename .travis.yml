@@ -29,8 +29,8 @@ script:
 jobs:
   fast_finish: true
   allow_failures:
-  - script: golangci-lint run --disable-all --timeout=3m -E errcheck -E gofmt -E golint -E govet -E ineffassign -E staticcheck -E structcheck -E typecheck -E unconvert -E unused -E varcheck
-  - script: golangci-lint run --timeout=5m
+  - script: golangci-lint run --timeout=3m
+  - script: golangci-lint run --timeout=5m -E gocritic -E gosimple -E gomnd -E lll -E dupl
   include:
     - os: linux
       arch: amd64
@@ -41,7 +41,7 @@ jobs:
       after_success: bash <(curl -s https://codecov.io/bash)      
     - name: "Lint"
       install: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.23.1
-      script: golangci-lint run --disable-all --timeout=3m -E errcheck -E gofmt -E golint -E govet -E ineffassign -E staticcheck -E structcheck -E typecheck -E unconvert -E unused -E varcheck
+      script: golangci-lint run --timeout=3m
     - name: "Biglint"
       install: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.23.1
-      script: golangci-lint run --timeout=5m
+      script: golangci-lint run --timeout=5m -E gocritic -E gosimple -E gomnd -E lll -E dupl
