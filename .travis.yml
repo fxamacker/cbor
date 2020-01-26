@@ -28,7 +28,7 @@ script:
 jobs:
   fast_finish: true
   allow_failures:
-  - script: golangci-lint run --disable-all --timeout=3m -E errcheck -E gofmt -E golint -E govet -E ineffassign -E typecheck -E unconvert
+  - script: golangci-lint run --disable-all --timeout=3m -E errcheck -E gofmt -E golint -E govet -E ineffassign -E staticcheck -E typecheck -E unconvert
   - script: golangci-lint run --timeout=5m
   include:
     - os: linux
