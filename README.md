@@ -58,15 +58,14 @@ The resource intensive `codec.CborHandle` initialization (in the other library) 
 Doing your own comparisons is highly recommended.  Use your most common message sizes and data types.
 
 ## Current Status
-Version 1.x has:
+Latest version is v1.5, which has:
 
 * __Stable API__ – won't make breaking API changes except:
-  * CoreDetEncOptions() is subject to change because it uses draft standard not yet approved.
-  * PreferredUnsortedEncOptions() is subject to change because it uses draft standard not yet approved.
-* __Stable requirements__ – will always support Go v1.12 (unless there's compelling reason).
-* __Passed fuzzing__ – Fuzzing for v1.5 passed 2.75+ billion execs and is in progress. v1.4 passed 532+ million execs in coverage-guided fuzzing at the time of release and reached 4+ billion execs 18 days after release.
-
-Each commit passes 375+ tests. Each release also passes 250+ million execs in coverage-guided fuzzing using 1,100+ CBOR files (corpus). See [Fuzzing and Code Coverage](#fuzzing-and-code-coverage).
+  * CoreDetEncOptions() is subject to change because it uses draft standard not yet approved by IETF.
+  * PreferredUnsortedEncOptions() is subject to change because it uses draft standard not yet approved by IETF.
+* __Stable requirements__ – will support Go v1.12 (unless there's compelling reason to require newer).
+* __Passed all tests__ – v1.5 passed all 375+ tests on amd64, arm64, ppc64le and s390x with linux.
+* __Passed fuzzing__ – v1.5 passed 4.75 billion execs in coverage-guided fuzzing on linux_amd64.
 
 Recent activity:
 
@@ -181,6 +180,8 @@ __EncOptions.NaNConvert__:
 
 Float16 conversions use [x448/float16](https://github.com/x448/float16) maintained by the same team as this library.  All 4+ billion possible conversions are verified to be correct in that library.
 
+Go nil values for slices, maps, pointers, etc. are encoded as CBOR null.  Empty slices, maps, etc. are encoded as empty CBOR arrays and maps.
+
 Decoder checks for all required well-formedness errors, including all "subkinds" of syntax errors and too little data.
 
 After well-formedness is verified, basic validity errors are handled as follows:
@@ -199,13 +200,13 @@ Known limitations:
 * Currently, duplicate map keys are not checked during decoding.  Option to handle duplicate map keys in different ways will be added.
 * Nested levels for CBOR arrays, maps, and tags are limited to 32 to quickly reject potentially malicious data.  This limit will be reconsidered upon request.
 * CBOR negative int (type 1) that cannot fit into Go's int64 are not supported, such as RFC 7049 example -18446744073709551616.  Decoding these values returns `cbor.UnmarshalTypeError` like Go's `encoding/json`.
-* CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  Use CBOR `Null` (0xf6) to round-trip with Go's `nil`.
+* CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  CBOR `Null` (0xf6) more closely matches Go's `nil`.
 
 Like Go's `encoding/json`, data validation checks the entire message to prevent partially filled (corrupted) data. This library also prevents crashes and resource exhaustion attacks from malicious CBOR data. Use Go's `io.LimitReader` when decoding very large data to limit size.
 
 ## Fuzzing and Code Coverage
 
-__Over 375 tests__ must pass before tagging a release.  They include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and over 87 tests with malformed data.
+__Over 375 tests__ must pass on 4 architectures before tagging a release.  They include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and over 87 tests with malformed data.
 
 __Code coverage__ must not fall below 95% when tagging a release.  Code coverage is 97.9% (`go test -cover`) for cbor v1.5 which is among the highest for libraries (in Go) of this type.
 
@@ -222,10 +223,10 @@ Over 1,100 files (corpus) are used for fuzzing because it includes fuzz-generate
 ## System Requirements
 
 * Go 1.12 (or newer)
-* Tested and fuzzed on linux_amd64, but it should work on other little-endian platforms.
+* amd64, arm64, ppc64le and s390x. Other architectures may also work but they are not tested as frequently. 
 
 ## Versions and API Changes
-This project uses [Semantic Versioning](https://semver.org), so the API is always backwards compatible unless the major version number changes.
+This project uses [Semantic Versioning](https://semver.org), so the API is always backwards compatible unless the major version number changes.  Newly added API documented as "subject to change" are excluded from this rule.
 
 ## API 
 The API is the same as `encoding/json` when possible.
