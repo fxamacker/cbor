@@ -24,11 +24,11 @@ script:
 
 # These jobs are run only on linux_amd64 using first version of Go listed above.
 # Tinylint shouldn't be allowed to fail, while Biglint can be allowed to fail.
-# TODO: Remove allow_failures for Tinylint after it succeeds. Maybe add staticcheck to Tinylint.
+# TODO: Remove allow_failures for Tinylint after it succeeds.
 jobs:
   fast_finish: true
   allow_failures:
-  - script: golangci-lint run --no-config --timeout=3m --disable-all -E errcheck -E gofmt -E golint -E govet -E ineffassign -E typecheck -E unconvert
+  - script: golangci-lint run --disable-all --timeout=3m -E errcheck -E gofmt -E golint -E govet -E ineffassign -E typecheck -E unconvert
   - script: golangci-lint run --timeout=5m
   include:
     - os: linux
@@ -40,7 +40,7 @@ jobs:
       after_success: bash <(curl -s https://codecov.io/bash)      
     - name: "Tinylint"
       install: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.23.1
-      script: golangci-lint run --no-config --timeout=3m --disable-all -E errcheck -E gofmt -E golint -E govet -E ineffassign -E typecheck -E unconvert
+      script: golangci-lint run --disable-all --timeout=3m -E errcheck -E gofmt -E golint -E govet -E ineffassign -E staticcheck -E typecheck -E unconvert
     - name: "Biglint"
       install: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.23.1
       script: golangci-lint run --timeout=5m
