@@ -1,14 +1,47 @@
 language: go
 
+# Use 1-3 Go versions.  Any more is overkill.
 go:
-  - 1.12.x
   - 1.13.x
+  - 1.12.x
+
+# Uncomment all arch only when preparing to release. It's too slow to always have all of them enabled.
+arch:
+  - amd64
+#  - arm64
+#  - ppc64le
+#  - s390x
+
+os:
+  - linux  
 
 env:
-  - GO111MODULE=on 
-  
-script:
-  - go test -coverprofile=coverage.txt -covermode=count ./...
+  - GO111MODULE=on
 
-after_success:
-  - bash <(curl -s https://codecov.io/bash)  
+# This script is run on all arch. Go doesn't support -race on s390x.
+script:
+  - go build ./...
+  - go test -short ./... -v
+
+# These jobs are run only on linux_amd64 using first version of Go listed above.
+# Lint shouldn't be allowed to fail, while Biglint can be allowed to fail.
+# Remove allow_failures for Lint at the cost of speed (fast_finish).
+jobs:
+  fast_finish: true
+  allow_failures:
+  - script: golangci-lint run --timeout=3m
+  - script: golangci-lint run --timeout=5m -E gocritic -E gosimple -E gomnd -E lll -E dupl
+  include:
+    - os: linux
+      arch: amd64
+    - name: "RaceAndCover"
+      script:
+      - go test -short -race ./... -v
+      - go test -short -coverprofile=coverage.txt -covermode=atomic ./...
+      after_success: bash <(curl -s https://codecov.io/bash)      
+    - name: "Lint"
+      install: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.23.1
+      script: golangci-lint run --timeout=3m
+    - name: "Biglint"
+      install: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.23.1
+      script: golangci-lint run --timeout=5m -E gocritic -E gosimple -E gomnd -E lll -E dupl
