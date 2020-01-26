@@ -25,7 +25,7 @@ script:
 
 # These jobs are run only on linux_amd64 using first version of Go listed above.
 # Lint shouldn't be allowed to fail, while Biglint can be allowed to fail.
-# Remove allow_failures for Tinylint to make failures more obvious at the cost of speed (fast_finish).
+# Remove allow_failures for Lint at the cost of speed (fast_finish).
 jobs:
   fast_finish: true
   allow_failures:
