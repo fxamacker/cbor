@@ -1,3 +1,5 @@
+# Do not delete linter settings. Linters like gocritic can be enabled on the command line.
+
 linters-settings:
   dupl:
     threshold: 100
@@ -39,35 +41,19 @@ linters-settings:
 linters:
   disable-all: true
   enable:
-    - bodyclose
     - deadcode
-    - depguard
-    - dogsled
-    - dupl
     - errcheck
-    - funlen
-    - gochecknoinits
     - goconst
-    - gocritic
     - gocyclo
     - gofmt
-    - goimports
     - golint
-    - goprintffuncname
     - gosec
-    - gosimple
     - govet
     - ineffassign
-    - interfacer
-    - lll
     - maligned
     - misspell
-    - nakedret
-    - rowserrcheck
-    - scopelint
     - staticcheck
     - structcheck
-    - stylecheck
     - typecheck
     - unconvert
     - unparam
@@ -75,14 +61,6 @@ linters:
     - varcheck
 
 
-  # don't enable:
-  # - gochecknoglobals
-  # - gocognit
-  # - godox
-  # - gomnd
-  # - prealloc
-  # - whitespace
-    
 issues:
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
