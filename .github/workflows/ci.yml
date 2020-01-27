@@ -50,7 +50,7 @@ jobs:
         go version
         go test -short -race -v ./...
 
-  # Check code coverage on latest-ubuntu with default version of Go. 
+  # Check code coverage on latest-ubuntu with default version of Go.   Using codecov token.
   cover:
     name: Coverage
     needs: [lint]
@@ -64,5 +64,8 @@ jobs:
       run: |
         go version
         go test -short -coverprofile=coverage.txt -covermode=atomic ./...
-    - name: Detect coverage regression with codecov.io      
-      run: bash <(curl -s https://codecov.io/bash)
+    - name: Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{secrets.CODECOV_TOKEN}}
+
