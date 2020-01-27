@@ -1,0 +1,68 @@
+# GitHub Actions - CI for Go with 3 jobs: lint, tests, and cover.
+# https://github.com/fxamacker/cbor/workflows/ci.yml
+# Original version:
+#   https://github.com/x448/float16/workflows/ci.yml
+#   Author: Montgomery Edwards⁴⁴⁸ (github.com/x448)
+name: CI
+on: [push]
+jobs:
+
+  # Check linters on latest-ubuntu with default version of Go.
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v1
+      with:
+        fetch-depth: 2
+    - name: Install golangci-lint 
+      run: |
+        go version
+        curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.23.1
+    - name: Run required linters in .golangci.yml plus hard-coded ones here
+      # TODO: remove --issues-exit-code=0 after deciding which linters are required vs optional.
+      run: $(go env GOPATH)/bin/golangci-lint run --timeout=5m --issues-exit-code=0 -E deadcode -E errcheck -E gofmt -E golint -E gosec -E govet -E ineffassign -E maligned -E staticcheck -E structcheck -E unconvert -E varcheck
+    - name: Run optional linters (not required to pass)
+      run: $(go env GOPATH)/bin/golangci-lint run --timeout=5m --issues-exit-code=0 -E dupl -E gocritic -E gosimple -E lll -E prealloc -E deadcode -E errcheck -E gofmt -E golint -E gosec -E govet -E ineffassign -E maligned -E staticcheck -E structcheck -E unconvert -E varcheck
+
+  # Test on various OS with default Go version. 
+  # As of January 26, 2020: 
+  # 1. Specifying Go version adds 10s because it gets installed. Someday, maybe latest 2-3 versions will be preinstalled + symlink used.
+  # 2. It takes windows-latest around 47s while others take 6s-16s.  Not sure if Nano is used or a more full-featured (slower) Windows.
+  tests:
+    name: Test on ${{matrix.os}}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+    - name: Get dependencies
+      run: go get -v -t -d ./...
+    - name: Build project
+      run: go build ./...
+    - name: Run tests
+      run: |
+        go version
+        go test -short -race -v ./...
+
+  # Check code coverage on latest-ubuntu with default version of Go. 
+  cover:
+    name: Coverage
+    needs: [lint]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v1
+      with:
+        fetch-depth: 2
+    - name: Generate coverprofile
+      run: |
+        go version
+        go test -short -coverprofile=coverage.txt -covermode=atomic ./...
+    - name: Detect coverage regression with codecov.io      
+      run: bash <(curl -s https://codecov.io/bash)

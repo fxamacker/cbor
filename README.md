@@ -3,7 +3,7 @@
 # CBOR library in Go
 This is a generic CBOR encoder and decoder.  It can encode integers and floats to their smallest forms (like float16) when values fit.  Each release passes 375+ tests and 250+ million execs fuzzing with 1100+ CBOR files.
 
-[![Build Status](https://travis-ci.com/fxamacker/cbor.svg?branch=master)](https://travis-ci.com/fxamacker/cbor)
+![](https://github.com/fxamacker/cbor/workflows/CI/badge.svg)
 [![codecov](https://codecov.io/gh/fxamacker/cbor/branch/master/graph/badge.svg?v=4)](https://codecov.io/gh/fxamacker/cbor)
 [![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor)
 [![Release](https://img.shields.io/github/release/fxamacker/cbor.svg?style=flat-square)](https://github.com/fxamacker/cbor/releases)
