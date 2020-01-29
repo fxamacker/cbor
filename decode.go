@@ -149,12 +149,7 @@ type DecOptions struct {
 // DecMode returns an DecMode interface from DecOptions.
 func (opts DecOptions) DecMode() (DecMode, error) {
 	dm := decMode{}
-	return DecMode(dm), nil
-}
-
-var defaultDecMode, _ = DecOptions{}.DecMode()
-
-type decMode struct {
+	return &dm, nil
 }
 
 // DecMode is the main interface for CBOR decoding.
@@ -164,8 +159,13 @@ type DecMode interface {
 	DecOptions() DecOptions
 }
 
+type decMode struct {
+}
+
+var defaultDecMode = &decMode{}
+
 // DecOptions returns user specified options used to create this DecMode.
-func (dm decMode) DecOptions() DecOptions {
+func (dm *decMode) DecOptions() DecOptions {
 	return DecOptions{}
 }
 
@@ -174,20 +174,20 @@ func (dm decMode) DecOptions() DecOptions {
 // returns an error.
 //
 // See the documentation for Unmarshal for details.
-func (dm decMode) Unmarshal(data []byte, v interface{}) error {
+func (dm *decMode) Unmarshal(data []byte, v interface{}) error {
 	d := decodeState{data: data, dm: dm}
 	return d.value(v)
 }
 
 // NewDecoder returns a new decoder that reads from r using dm decMode.
-func (dm decMode) NewDecoder(r io.Reader) *Decoder {
+func (dm *decMode) NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{r: r, d: decodeState{dm: dm}}
 }
 
 type decodeState struct {
 	data []byte
 	off  int // next read offset in data
-	dm   decMode
+	dm   *decMode
 }
 
 func (d *decodeState) value(v interface{}) error {
