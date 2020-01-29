@@ -456,7 +456,7 @@ func Example_senML() {
 	}
 	// Data from https://tools.ietf.org/html/rfc8428#section-6
 	cborData, _ := hex.DecodeString("87a721781b75726e3a6465763a6f773a3130653230373361303130383030363a22fb41d303a15b00106223614120050067766f6c7461676501615602fb405e066666666666a3006763757272656e74062402fb3ff3333333333333a3006763757272656e74062302fb3ff4cccccccccccda3006763757272656e74062202fb3ff6666666666666a3006763757272656e74062102f93e00a3006763757272656e74062002fb3ff999999999999aa3006763757272656e74060002fb3ffb333333333333")
-	var v []SenMLRecord
+	var v []*SenMLRecord
 	if err := cbor.Unmarshal(cborData, &v); err != nil {
 		fmt.Println("error:", err)
 	}
@@ -469,7 +469,7 @@ func Example_senML() {
 		fmt.Println("error:", err)
 	}
 	for _, rec := range v {
-		fmt.Printf("%+v\n", rec)
+		fmt.Printf("%+v\n", *rec)
 	}
 	// Output:
 	// {BaseName:urn:dev:ow:10e2073a0108006: BaseTime:1.276020076001e+09 BaseUnit:A BaseValue:0 BaseSum:0 BaseVersion:5 Name:voltage Unit:V Time:0 UpdateTime:0 Value:120.1 ValueS: ValueB:false ValueD: Sum:0}

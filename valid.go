@@ -40,6 +40,7 @@ const (
 	maxNestingLevel = 32
 )
 
+// validInternal checks data's well-formedness and returns data's next offset, max depth, and error.
 func validInternal(data []byte, off int, depth int) (int, int, error) {
 	if depth > maxNestingLevel {
 		return 0, 0, errors.New("cbor: reached max depth " + strconv.Itoa(maxNestingLevel))
@@ -91,7 +92,7 @@ func validInternal(data []byte, off int, depth int) (int, int, error) {
 		depth = maxDepth
 	case cborTypeTag:
 		// Scan nested tag numbers to avoid recursion.
-		for true {
+		for {
 			if len(data)-off < 1 { // Tag number must be followed by tag content.
 				return 0, 0, io.ErrUnexpectedEOF
 			}
@@ -111,9 +112,10 @@ func validInternal(data []byte, off int, depth int) (int, int, error) {
 	return off, depth, nil
 }
 
+// validIndefiniteString checks indefinite length byte/text string's well-formedness and returns data's next offset, max depth, and error.
 func validIndefiniteString(data []byte, off int, t cborType, depth int) (int, int, error) {
 	var err error
-	for true {
+	for {
 		if len(data)-off < 1 {
 			return 0, 0, io.ErrUnexpectedEOF
 		}
@@ -136,11 +138,12 @@ func validIndefiniteString(data []byte, off int, t cborType, depth int) (int, in
 	return off, depth, nil
 }
 
+// validIndefiniteArrOrMap checks indefinite length array/map's well-formedness and returns data's next offset, max depth, and error.
 func validIndefiniteArrOrMap(data []byte, off int, t cborType, depth int) (int, int, error) {
 	var err error
 	maxDepth := depth
 	i := 0
-	for ; true; i++ {
+	for {
 		if len(data)-off < 1 {
 			return 0, 0, io.ErrUnexpectedEOF
 		}
@@ -155,6 +158,7 @@ func validIndefiniteArrOrMap(data []byte, off int, t cborType, depth int) (int, 
 		if d > maxDepth {
 			maxDepth = d
 		}
+		i++
 	}
 	if t == cborTypeMap && i%2 == 1 {
 		return 0, 0, &SyntaxError{"cbor: unexpected \"break\" code"}

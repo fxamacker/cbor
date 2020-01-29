@@ -17,17 +17,6 @@ import (
 	"time"
 )
 
-const (
-	cborPositiveIntType byte = 0x00
-	cborNegativeIntType byte = 0x20
-	cborByteStringType  byte = 0x40
-	cborTextStringType  byte = 0x60
-	cborArrayType       byte = 0x80
-	cborMapType         byte = 0xa0
-	cborTagType         byte = 0xc0
-	cborPrimitivesType  byte = 0xe0
-)
-
 type marshalTest struct {
 	cborData []byte
 	values   []interface{}
@@ -121,7 +110,7 @@ var marshalTests = []marshalTest{
 		[]interface{}{
 			[...]int{1, 2, 3},
 			[]uint{1, 2, 3},
-			//[]uint8{1, 2, 3},
+			// []uint8{1, 2, 3},
 			[]uint16{1, 2, 3},
 			[]uint32{1, 2, 3},
 			[]uint64{1, 2, 3},
@@ -138,7 +127,7 @@ var marshalTests = []marshalTest{
 		[]interface{}{
 			[...]interface{}{1, [...]int{2, 3}, [...]int{4, 5}},
 			[]interface{}{1, []uint{2, 3}, []uint{4, 5}},
-			//[]interface{}{1, []uint8{2, 3}, []uint8{4, 5}},
+			// []interface{}{1, []uint8{2, 3}, []uint8{4, 5}},
 			[]interface{}{1, []uint16{2, 3}, []uint16{4, 5}},
 			[]interface{}{1, []uint32{2, 3}, []uint32{4, 5}},
 			[]interface{}{1, []uint64{2, 3}, []uint64{4, 5}},
@@ -155,7 +144,7 @@ var marshalTests = []marshalTest{
 		[]interface{}{
 			[...]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
-			//[]uint8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
+			//[] uint8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]uint16{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]uint32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
@@ -267,14 +256,14 @@ func TestInvalidTypeMarshal(t *testing.T) {
 		Chan chan bool
 	}
 	var marshalErrorTests = []marshalErrorTest{
-		{"channel can't be marshalled", make(chan bool), "cbor: unsupported type: chan bool"},
-		{"slice of channel can't be marshalled", make([]chan bool, 10), "cbor: unsupported type: []chan bool"},
-		{"slice of pointer to channel can't be marshalled", make([]*chan bool, 10), "cbor: unsupported type: []*chan bool"},
-		{"map of channel can't be marshalled", make(map[string]chan bool), "cbor: unsupported type: map[string]chan bool"},
-		{"struct of channel can't be marshalled", s1{}, "cbor: unsupported type: cbor.s1"},
-		{"struct of channel can't be marshalled", s2{}, "cbor: unsupported type: cbor.s2"},
-		{"function can't be marshalled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
-		{"complex can't be marshalled", complex(100, 8), "cbor: unsupported type: complex128"},
+		{"channel can't be marshaled", make(chan bool), "cbor: unsupported type: chan bool"},
+		{"slice of channel can't be marshaled", make([]chan bool, 10), "cbor: unsupported type: []chan bool"},
+		{"slice of pointer to channel can't be marshaled", make([]*chan bool, 10), "cbor: unsupported type: []*chan bool"},
+		{"map of channel can't be marshaled", make(map[string]chan bool), "cbor: unsupported type: map[string]chan bool"},
+		{"struct of channel can't be marshaled", s1{}, "cbor: unsupported type: cbor.s1"},
+		{"struct of channel can't be marshaled", s2{}, "cbor: unsupported type: cbor.s2"},
+		{"function can't be marshaled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
+		{"complex can't be marshaled", complex(100, 8), "cbor: unsupported type: complex128"},
 	}
 	em, err := EncOptions{Sort: SortCanonical}.EncMode()
 	if err != nil {
@@ -308,74 +297,70 @@ func TestInvalidTypeMarshal(t *testing.T) {
 }
 
 func TestMarshalLargeByteString(t *testing.T) {
-	var tests []marshalTest
-
 	// []byte{100, 100, 100, ...}
-	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 4294967294, 4294967295, 4294967296}
-	for length := range lengths {
-		cborData := bytes.NewBuffer(encodeCborHeader(cborByteStringType, uint64(length)))
+	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 10000000}
+	tests := make([]marshalTest, len(lengths))
+	for i, length := range lengths {
+		cborData := bytes.NewBuffer(encodeCborHeader(cborTypeByteString, uint64(length)))
 		value := make([]byte, length)
-		for i := 0; i < length; i++ {
+		for j := 0; j < length; j++ {
 			cborData.WriteByte(100)
-			value[i] = 100
+			value[j] = 100
 		}
-		tests = append(tests, marshalTest{cborData.Bytes(), []interface{}{value}})
+		tests[i] = marshalTest{cborData.Bytes(), []interface{}{value}}
 	}
 
 	testMarshal(t, tests)
 }
 
 func TestMarshalLargeTextString(t *testing.T) {
-	var tests []marshalTest
-
 	// "ddd..."
-	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 4294967294, 4294967295, 4294967296}
-	for length := range lengths {
-		cborData := bytes.NewBuffer(encodeCborHeader(cborTextStringType, uint64(length)))
+	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 10000000}
+	tests := make([]marshalTest, len(lengths))
+	for i, length := range lengths {
+		cborData := bytes.NewBuffer(encodeCborHeader(cborTypeTextString, uint64(length)))
 		value := make([]byte, length)
-		for i := 0; i < length; i++ {
+		for j := 0; j < length; j++ {
 			cborData.WriteByte(100)
-			value[i] = 100
+			value[j] = 100
 		}
-		tests = append(tests, marshalTest{cborData.Bytes(), []interface{}{string(value)}})
+		tests[i] = marshalTest{cborData.Bytes(), []interface{}{string(value)}}
 	}
 
 	testMarshal(t, tests)
 }
 
 func TestMarshalLargeArray(t *testing.T) {
-	var tests []marshalTest
-
 	// []string{"水", "水", "水", ...}
-	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 4294967294, 4294967295, 4294967296}
-	for length := range lengths {
-		cborData := bytes.NewBuffer(encodeCborHeader(cborArrayType, uint64(length)))
+	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 10000000}
+	tests := make([]marshalTest, len(lengths))
+	for i, length := range lengths {
+		cborData := bytes.NewBuffer(encodeCborHeader(cborTypeArray, uint64(length)))
 		value := make([]string, length)
-		for i := 0; i < length; i++ {
+		for j := 0; j < length; j++ {
 			cborData.Write([]byte{0x63, 0xe6, 0xb0, 0xb4})
-			value[i] = "水"
+			value[j] = "水"
 		}
-		tests = append(tests, marshalTest{cborData.Bytes(), []interface{}{value}})
+		tests[i] = marshalTest{cborData.Bytes(), []interface{}{value}}
 	}
 
 	testMarshal(t, tests)
 }
 
 func TestMarshalLargeMapCanonical(t *testing.T) {
-	var tests []marshalTest
-
 	// map[int]int {0:0, 1:1, 2:2, ...}
-	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 4294967294, 4294967295, 4294967296}
-	for length := range lengths {
-		cborData := bytes.NewBuffer(encodeCborHeader(cborMapType, uint64(length)))
+	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 1000000}
+	tests := make([]marshalTest, len(lengths))
+	for i, length := range lengths {
+		cborData := bytes.NewBuffer(encodeCborHeader(cborTypeMap, uint64(length)))
 		value := make(map[int]int, length)
-		for i := 0; i < length; i++ {
-			d := encodeCborHeader(cborPositiveIntType, uint64(i))
+		for j := 0; j < length; j++ {
+			d := encodeCborHeader(cborTypePositiveInt, uint64(j))
 			cborData.Write(d)
 			cborData.Write(d)
-			value[i] = i
+			value[j] = j
 		}
-		tests = append(tests, marshalTest{cborData.Bytes(), []interface{}{value}})
+		tests[i] = marshalTest{cborData.Bytes(), []interface{}{value}}
 	}
 
 	testMarshal(t, tests)
@@ -383,8 +368,8 @@ func TestMarshalLargeMapCanonical(t *testing.T) {
 
 func TestMarshalLargeMap(t *testing.T) {
 	// map[int]int {0:0, 1:1, 2:2, ...}
-	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 4294967294, 4294967295, 4294967296}
-	for length := range lengths {
+	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 1000000}
+	for _, length := range lengths {
 		m1 := make(map[int]int, length)
 		for i := 0; i < length; i++ {
 			m1[i] = i
@@ -406,25 +391,25 @@ func TestMarshalLargeMap(t *testing.T) {
 	}
 }
 
-func encodeCborHeader(t byte, n uint64) []byte {
+func encodeCborHeader(t cborType, n uint64) []byte {
 	b := make([]byte, 9)
 	if n <= 23 {
-		b[0] = t | byte(n)
+		b[0] = byte(t) | byte(n)
 		return b[:1]
 	} else if n <= math.MaxUint8 {
-		b[0] = t | byte(24)
+		b[0] = byte(t) | byte(24)
 		b[1] = byte(n)
 		return b[:2]
 	} else if n <= math.MaxUint16 {
-		b[0] = t | byte(25)
+		b[0] = byte(t) | byte(25)
 		binary.BigEndian.PutUint16(b[1:], uint16(n))
 		return b[:3]
 	} else if n <= math.MaxUint32 {
-		b[0] = t | byte(26)
+		b[0] = byte(t) | byte(26)
 		binary.BigEndian.PutUint32(b[1:], uint32(n))
 		return b[:5]
 	} else {
-		b[0] = t | byte(27)
+		b[0] = byte(t) | byte(27)
 		binary.BigEndian.PutUint64(b[1:], uint64(n))
 		return b[:9]
 	}
@@ -505,61 +490,61 @@ func TestMarshalStructCanonical(t *testing.T) {
 		unexportedField:   6,
 	}
 	var cborData bytes.Buffer
-	cborData.WriteByte(byte(cborMapType) | 8) // CBOR header: map type with 8 items (exported fields)
+	cborData.WriteByte(byte(cborTypeMap) | 8) // CBOR header: map type with 8 items (exported fields)
 
-	cborData.WriteByte(byte(cborTextStringType) | 8) // "IntField"
+	cborData.WriteByte(byte(cborTypeTextString) | 8) // "IntField"
 	cborData.WriteString("IntField")
-	cborData.WriteByte(byte(cborPositiveIntType) | 24)
+	cborData.WriteByte(byte(cborTypePositiveInt) | 24)
 	cborData.WriteByte(123)
 
-	cborData.WriteByte(byte(cborTextStringType) | 8) // "MapField"
+	cborData.WriteByte(byte(cborTypeTextString) | 8) // "MapField"
 	cborData.WriteString("MapField")
-	cborData.WriteByte(byte(cborMapType) | 2)
-	cborData.WriteByte(byte(cborTextStringType) | 7)
+	cborData.WriteByte(byte(cborTypeMap) | 2)
+	cborData.WriteByte(byte(cborTypeTextString) | 7)
 	cborData.WriteString("morning")
-	cborData.WriteByte(byte(cborPrimitivesType) | 21)
-	cborData.WriteByte(byte(cborTextStringType) | 9)
+	cborData.WriteByte(byte(cborTypePrimitives) | 21)
+	cborData.WriteByte(byte(cborTypeTextString) | 9)
 	cborData.WriteString("afternoon")
-	cborData.WriteByte(byte(cborPrimitivesType) | 20)
+	cborData.WriteByte(byte(cborTypePrimitives) | 20)
 
-	cborData.WriteByte(byte(cborTextStringType) | 9) // "BoolField"
+	cborData.WriteByte(byte(cborTypeTextString) | 9) // "BoolField"
 	cborData.WriteString("BoolField")
-	cborData.WriteByte(byte(cborPrimitivesType) | 21)
+	cborData.WriteByte(byte(cborTypePrimitives) | 21)
 
-	cborData.WriteByte(byte(cborTextStringType) | 10) // "ArrayField"
+	cborData.WriteByte(byte(cborTypeTextString) | 10) // "ArrayField"
 	cborData.WriteString("ArrayField")
-	cborData.WriteByte(byte(cborArrayType) | 2)
-	cborData.WriteByte(byte(cborTextStringType) | 5)
+	cborData.WriteByte(byte(cborTypeArray) | 2)
+	cborData.WriteByte(byte(cborTypeTextString) | 5)
 	cborData.WriteString("hello")
-	cborData.WriteByte(byte(cborTextStringType) | 5)
+	cborData.WriteByte(byte(cborTypeTextString) | 5)
 	cborData.WriteString("world")
 
-	cborData.WriteByte(byte(cborTextStringType) | 10) // "FloatField"
+	cborData.WriteByte(byte(cborTypeTextString) | 10) // "FloatField"
 	cborData.WriteString("FloatField")
 	cborData.Write([]byte{0xfa, 0x47, 0xc3, 0x50, 0x00})
 
-	cborData.WriteByte(byte(cborTextStringType) | 11) // "StringField"
+	cborData.WriteByte(byte(cborTypeTextString) | 11) // "StringField"
 	cborData.WriteString("StringField")
-	cborData.WriteByte(byte(cborTextStringType) | 4)
+	cborData.WriteByte(byte(cborTypeTextString) | 4)
 	cborData.WriteString("test")
 
-	cborData.WriteByte(byte(cborTextStringType) | 15) // "ByteStringField"
+	cborData.WriteByte(byte(cborTypeTextString) | 15) // "ByteStringField"
 	cborData.WriteString("ByteStringField")
-	cborData.WriteByte(byte(cborByteStringType) | 3)
+	cborData.WriteByte(byte(cborTypeByteString) | 3)
 	cborData.Write([]byte{1, 3, 5})
 
-	cborData.WriteByte(byte(cborTextStringType) | 17) // "NestedStructField"
+	cborData.WriteByte(byte(cborTypeTextString) | 17) // "NestedStructField"
 	cborData.WriteString("NestedStructField")
-	cborData.WriteByte(byte(cborMapType) | 2)
-	cborData.WriteByte(byte(cborTextStringType) | 1)
+	cborData.WriteByte(byte(cborTypeMap) | 2)
+	cborData.WriteByte(byte(cborTypeTextString) | 1)
 	cborData.WriteString("X")
-	cborData.WriteByte(byte(cborPositiveIntType) | 25)
+	cborData.WriteByte(byte(cborTypePositiveInt) | 25)
 	b := make([]byte, 2)
 	binary.BigEndian.PutUint16(b, uint16(1000))
 	cborData.Write(b)
-	cborData.WriteByte(byte(cborTextStringType) | 1)
+	cborData.WriteByte(byte(cborTypeTextString) | 1)
 	cborData.WriteString("Y")
-	cborData.WriteByte(byte(cborPositiveIntType) | 26)
+	cborData.WriteByte(byte(cborTypePositiveInt) | 26)
 	b = make([]byte, 4)
 	binary.BigEndian.PutUint32(b, uint32(1000000))
 	cborData.Write(b)
@@ -1103,22 +1088,20 @@ func TestAnonymousInterfaceField(t *testing.T) {
 	}
 
 	var v S4
+	const wantErrorMsg = "cannot unmarshal map into Go struct field cbor.S4.Reader of type io.Reader"
 	if err = Unmarshal(b, &v); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error, want error (*UnmarshalTypeError)", b)
 	} else {
 		if typeError, ok := err.(*UnmarshalTypeError); !ok {
 			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*UnmarshalTypeError)", b, err)
-		} else {
-			if !strings.Contains(typeError.Error(), "cannot unmarshal map into Go struct field cbor.S4.Reader of type io.Reader") {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", b, err.Error(), "cannot unmarshal map into Go struct field cbor_test.S4.Reader of type io.Reader")
-			}
+		} else if !strings.Contains(typeError.Error(), wantErrorMsg) {
+			t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", b, err.Error(), wantErrorMsg)
 		}
 	}
 }
 
 func TestEncodeInterface(t *testing.T) {
-	var r io.Reader
-	r = S2{X: 2}
+	var r io.Reader = S2{X: 2}
 	want := []byte{0xa1, 0x61, 0x58, 0x02} // {X:2}
 	b, err := Marshal(r)
 	if err != nil {
@@ -1128,15 +1111,14 @@ func TestEncodeInterface(t *testing.T) {
 	}
 
 	var v io.Reader
+	const wantErrorMsg = "cannot unmarshal map into Go value of type io.Reader"
 	if err = Unmarshal(b, &v); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error, want error (*UnmarshalTypeError)", b)
 	} else {
 		if typeError, ok := err.(*UnmarshalTypeError); !ok {
 			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*UnmarshalTypeError)", b, err)
-		} else {
-			if !strings.Contains(typeError.Error(), "cannot unmarshal map into Go value of type io.Reader") {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", b, err.Error(), "cannot unmarshal map into Go value of type io.Reader")
-			}
+		} else if !strings.Contains(typeError.Error(), wantErrorMsg) {
+			t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", b, err.Error(), wantErrorMsg)
 		}
 	}
 }
@@ -1697,11 +1679,7 @@ func TestTypeAlias(t *testing.T) {
 	type myIntArray = [4]int
 	type myMapIntInt = map[int]int
 
-	testCases := []struct {
-		name         string
-		obj          interface{}
-		wantCborData []byte
-	}{
+	testCases := []roundTripTest{
 		{
 			name:         "bool alias",
 			obj:          myBool(true),
@@ -1797,24 +1775,11 @@ func TestTypeAlias(t *testing.T) {
 	if err != nil {
 		t.Errorf("EncMode() returned an error %v", err)
 	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			b, err := em.Marshal(tc.obj)
-			if err != nil {
-				t.Errorf("Marshal(%+v) returned error %v", tc.obj, err)
-			}
-			if !bytes.Equal(b, tc.wantCborData) {
-				t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.obj, b, tc.wantCborData)
-			}
-			v := reflect.New(reflect.TypeOf(tc.obj))
-			if err := Unmarshal(b, v.Interface()); err != nil {
-				t.Errorf("Unmarshal() returned error %v", err)
-			}
-			if !reflect.DeepEqual(tc.obj, v.Elem().Interface()) {
-				t.Errorf("Marshal-Unmarshal returned different values: %v, %v", tc.obj, v.Elem().Interface())
-			}
-		})
+	dm, err := DecOptions{}.DecMode()
+	if err != nil {
+		t.Errorf("DecMode() returned an error %v", err)
 	}
+	testRoundTrip(t, testCases, em, dm)
 }
 
 func TestNewTypeWithBuiltinUnderlyingType(t *testing.T) {
@@ -1837,11 +1802,7 @@ func TestNewTypeWithBuiltinUnderlyingType(t *testing.T) {
 	type myIntArray [4]int
 	type myMapIntInt map[int]int
 
-	testCases := []struct {
-		name         string
-		obj          interface{}
-		wantCborData []byte
-	}{
+	testCases := []roundTripTest{
 		{
 			name:         "bool alias",
 			obj:          myBool(true),
@@ -1937,24 +1898,11 @@ func TestNewTypeWithBuiltinUnderlyingType(t *testing.T) {
 	if err != nil {
 		t.Errorf("EncMode() returned an error %v", err)
 	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			b, err := em.Marshal(tc.obj)
-			if err != nil {
-				t.Errorf("Marshal(%+v) returned error %v", tc.obj, err)
-			}
-			if !bytes.Equal(b, tc.wantCborData) {
-				t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.obj, b, tc.wantCborData)
-			}
-			v := reflect.New(reflect.TypeOf(tc.obj))
-			if err := Unmarshal(b, v.Interface()); err != nil {
-				t.Errorf("Unmarshal() returned error %v", err)
-			}
-			if !reflect.DeepEqual(tc.obj, v.Elem().Interface()) {
-				t.Errorf("Marshal-Unmarshal returned different values: %v, %v", tc.obj, v.Elem().Interface())
-			}
-		})
+	dm, err := DecOptions{}.DecMode()
+	if err != nil {
+		t.Errorf("DecMode() returned an error %v", err)
 	}
+	testRoundTrip(t, testCases, em, dm)
 }
 
 func TestShortestFloat16(t *testing.T) {
@@ -2524,12 +2472,12 @@ func TestMarshalSenML(t *testing.T) {
 	}
 }
 
-func TestCanonicalEncOptions(t *testing.T) {
+func TestCanonicalEncOptions(t *testing.T) { //nolint:dupl
 	wantSortMode := SortCanonical
 	wantShortestFloat := ShortestFloat16
 	wantNaNConvert := NaNConvert7e00
 	wantInfConvert := InfConvertFloat16
-	wantIndefiniteLengthErrorMsg := "cbor: indefinite-length items are not allowed"
+	const wantIndefiniteLengthErrorMsg = "cbor: indefinite-length items are not allowed"
 	em, err := CanonicalEncOptions().EncMode()
 	if err != nil {
 		t.Errorf("EncMode() returned an error %v", err)
@@ -2555,7 +2503,7 @@ func TestCanonicalEncOptions(t *testing.T) {
 	}
 }
 
-func TestCTAP2EncOptions(t *testing.T) {
+func TestCTAP2EncOptions(t *testing.T) { //nolint:dupl
 	wantSortMode := SortCTAP2
 	wantShortestFloat := ShortestFloatNone
 	wantNaNConvert := NaNConvertNone
@@ -2586,7 +2534,7 @@ func TestCTAP2EncOptions(t *testing.T) {
 	}
 }
 
-func TestCoreDetEncOptions(t *testing.T) {
+func TestCoreDetEncOptions(t *testing.T) { //nolint:dupl
 	wantSortMode := SortCoreDeterministic
 	wantShortestFloat := ShortestFloat16
 	wantNaNConvert := NaNConvert7e00

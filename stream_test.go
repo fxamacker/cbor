@@ -146,9 +146,9 @@ func TestEncoderError(t *testing.T) {
 		value        interface{}
 		wantErrorMsg string
 	}{
-		{"channel can't be marshalled", make(chan bool), "cbor: unsupported type: chan bool"},
-		{"function can't be marshalled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
-		{"complex can't be marshalled", complex(100, 8), "cbor: unsupported type: complex128"},
+		{"channel can't be marshaled", make(chan bool), "cbor: unsupported type: chan bool"},
+		{"function can't be marshaled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
+		{"complex can't be marshaled", complex(100, 8), "cbor: unsupported type: complex128"},
 	}
 	var w bytes.Buffer
 	encoder := NewEncoder(&w)

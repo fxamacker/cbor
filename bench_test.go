@@ -60,7 +60,7 @@ type SenMLRecord struct {
 
 type T1 struct {
 	T    bool
-	Ui   uint
+	UI   uint
 	I    int
 	F    float64
 	B    []byte
@@ -71,7 +71,7 @@ type T1 struct {
 
 type T2 struct {
 	T    bool              `cbor:"1,keyasint"`
-	Ui   uint              `cbor:"2,keyasint"`
+	UI   uint              `cbor:"2,keyasint"`
 	I    int               `cbor:"3,keyasint"`
 	F    float64           `cbor:"4,keyasint"`
 	B    []byte            `cbor:"5,keyasint"`
@@ -83,7 +83,7 @@ type T2 struct {
 type T3 struct {
 	_    struct{} `cbor:",toarray"`
 	T    bool
-	Ui   uint
+	UI   uint
 	I    int
 	F    float64
 	B    []byte
@@ -157,7 +157,7 @@ func BenchmarkUnmarshal(b *testing.B) {
 		// Unmarshal CBOR map with string key to struct.
 		{
 			"CBOR map to Go struct",
-			hexDecode("a86154f56255691bffffffffffffffff61493903e76146fbc0106666666666666142581a0102030405060708090a0b0c0d0e0f101112131415161718191a6153782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6764536c6369981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a634d7373ad6163614361656145616661466167614761686148616e614e616d614d61616141616261426164614461696149616a614a616c614c"),
+			hexDecode("a86154f56255491bffffffffffffffff61493903e76146fbc0106666666666666142581a0102030405060708090a0b0c0d0e0f101112131415161718191a6153782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6764536c6369981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a634d7373ad6163614361656145616661466167614761686148616e614e616d614d61616141616261426164614461696149616a614a616c614c"),
 			reflect.TypeOf(T1{}),
 		},
 		// Unmarshal CBOR map with integer key, such as COSE Key and SenML, to map[int]interface{}.
@@ -212,7 +212,7 @@ func BenchmarkDecode(b *testing.B) {
 					if err := decoder.Decode(vPtr); err != nil {
 						b.Fatal("Decode:", err)
 					}
-					buf.Seek(0, 0)
+					buf.Seek(0, 0) //nolint:errcheck
 				}
 			})
 		}
@@ -240,7 +240,7 @@ func BenchmarkDecodeStream(b *testing.B) {
 					}
 				}
 			}
-			buf.Seek(0, 0)
+			buf.Seek(0, 0) //nolint:errcheck
 		}
 	}
 }
@@ -264,7 +264,7 @@ func BenchmarkMarshal(b *testing.B) {
 	// Marshal map[string]interface{} to CBOR map
 	m1 := map[string]interface{}{
 		"T":    true,
-		"Ui":   uint(18446744073709551615),
+		"UI":   uint(18446744073709551615),
 		"I":    -1000,
 		"F":    -4.1,
 		"B":    []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
@@ -273,9 +273,9 @@ func BenchmarkMarshal(b *testing.B) {
 		"Mss":  map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"},
 	}
 	// Marshal struct to CBOR map
-	v1 := T1{
+	v1 := T1{ //nolint:dupl
 		T:    true,
-		Ui:   18446744073709551615,
+		UI:   18446744073709551615,
 		I:    -1000,
 		F:    -4.1,
 		B:    []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
@@ -295,9 +295,9 @@ func BenchmarkMarshal(b *testing.B) {
 		8: map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"},
 	}
 	// Marshal struct keyasint, such as COSE Key and SenML
-	v2 := T2{
+	v2 := T2{ //nolint:dupl
 		T:    true,
-		Ui:   18446744073709551615,
+		UI:   18446744073709551615,
 		I:    -1000,
 		F:    -4.1,
 		B:    []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
@@ -317,9 +317,9 @@ func BenchmarkMarshal(b *testing.B) {
 		map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"},
 	}
 	// Marshal struct toarray to CBOR array, such as signed/maced/encrypted CWT.
-	v3 := T3{
+	v3 := T3{ //nolint:dupl
 		T:    true,
-		Ui:   18446744073709551615,
+		UI:   18446744073709551615,
 		I:    -1000,
 		F:    -4.1,
 		B:    []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},

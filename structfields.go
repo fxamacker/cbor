@@ -186,7 +186,7 @@ func getFields(typ reflect.Type) (flds fields, structOptions string) {
 }
 
 func getFieldNameAndOptionsFromTag(tag string) (name string, omitEmpty bool, keyAsInt bool) {
-	if len(tag) == 0 {
+	if tag == "" {
 		return
 	}
 	idx := strings.Index(tag, ",")

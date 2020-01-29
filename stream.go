@@ -37,14 +37,14 @@ func (dec *Decoder) Decode(v interface{}) error {
 	dec.off += dec.d.off
 	dec.bytesRead += dec.d.off
 	if err != nil {
-		if err == io.ErrUnexpectedEOF {
-			// Need to read more data.
-			if n, err := dec.read(); n == 0 {
-				return err
-			}
-			return dec.Decode(v)
+		if err != io.ErrUnexpectedEOF {
+			return err
 		}
-		return err
+		// Need to read more data.
+		if n, e := dec.read(); n == 0 {
+			return e
+		}
+		return dec.Decode(v)
 	}
 	return nil
 }

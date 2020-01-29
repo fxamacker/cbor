@@ -69,7 +69,7 @@ import (
 // "omitempty" is disabled by "toarray" to ensure that the same number
 // of elements are encoded every time.
 //
-// Anonymous struct fields are usually marshalled as if their exported fields
+// Anonymous struct fields are usually marshaled as if their exported fields
 // were fields in the outer struct.  Marshal follows the same struct fields
 // visibility rules used by JSON encoding package.  An anonymous struct field
 // with a name given in its CBOR tag is treated as having that name, rather
@@ -150,7 +150,7 @@ const (
 	ShortestFloatNone ShortestFloatMode = iota
 
 	// ShortestFloat16 specifies float16 as the shortest form that preserves value.
-	// E.g. if float64 can convert to float32 while perserving value, then
+	// E.g. if float64 can convert to float32 while preserving value, then
 	// encoding will also try to convert float32 to float16.  So a float64 might
 	// encode as CBOR float64, float32 or float16 depending on the value.
 	ShortestFloat16
@@ -551,7 +551,7 @@ func encodeNaN(e *encodeState, em *encMode, v reflect.Value) (int, error) {
 			f64 := v.Float()
 			f64bits := math.Float64bits(f64)
 			if em.naNConvert == NaNConvertQuiet && f64bits&(1<<51) == 0 {
-				f64bits = f64bits | (1 << 51) // Set quiet bit = 1
+				f64bits |= 1 << 51 // Set quiet bit = 1
 				f64 = math.Float64frombits(f64bits)
 			}
 			// The lower 29 bits are dropped when converting from float64 to float32.
@@ -578,7 +578,7 @@ func encodeNaN(e *encodeState, em *encMode, v reflect.Value) (int, error) {
 		f32 := float32NaNFromReflectValue(v)
 		f32bits := math.Float32bits(f32)
 		if em.naNConvert == NaNConvertQuiet && f32bits&(1<<22) == 0 {
-			f32bits = f32bits | (1 << 22) // Set quiet bit = 1
+			f32bits |= 1 << 22 // Set quiet bit = 1
 			f32 = math.Float32frombits(f32bits)
 		}
 		// The lower 13 bits are dropped coef bits when converting from float32 to float16.
@@ -788,6 +788,8 @@ func (me mapEncoder) encodeMapCanonical(e *encodeState, em *encMode, v reflect.V
 			putKeyValues(kvsp)
 			return 0, err
 		}
+
+		// Save key and keyvalue length to create slice later.
 		kvs[i] = keyValue{keyLen: n1, keyValueLen: n1 + n2}
 	}
 
@@ -992,7 +994,7 @@ func encodeHead(e *encodeState, t byte, n uint64) int {
 		return 5
 	}
 	e.scratch[0] = t | byte(27)
-	binary.BigEndian.PutUint64(e.scratch[1:], uint64(n))
+	binary.BigEndian.PutUint64(e.scratch[1:], n)
 	e.Write(e.scratch[:9])
 	return 9
 }
@@ -1047,7 +1049,7 @@ func getEncodeIndirectValueFunc(t reflect.Type) encodeFunc {
 	}
 	f := getEncodeFunc(t)
 	if f == nil {
-		return f
+		return nil
 	}
 	return func(e *encodeState, em *encMode, v reflect.Value) (int, error) {
 		for v.Kind() == reflect.Ptr && !v.IsNil() {

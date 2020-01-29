@@ -251,7 +251,8 @@ func (t cborType) String() string {
 }
 
 // parseToValue assumes data is well-formed, and does not perform bounds checking.
-func (d *decodeState) parseToValue(v reflect.Value, isUnmarshaler bool) error {
+// This function is complicated because it's the main function that decodes CBOR data to reflect.Value.
+func (d *decodeState) parseToValue(v reflect.Value, isUnmarshaler bool) error { //nolint:gocyclo
 	if isUnmarshaler {
 		return d.parseToUnmarshaler(v)
 	}
@@ -305,7 +306,7 @@ func (d *decodeState) parseToValue(v reflect.Value, isUnmarshaler bool) error {
 	case cborTypePrimitives:
 		_, ai, val := d.getHead()
 		if ai < 20 || ai == 24 {
-			return fillPositiveInt(t, uint64(val), v)
+			return fillPositiveInt(t, val, v)
 		}
 		switch ai {
 		case 20, 21:
@@ -357,11 +358,9 @@ func (d *decodeState) parseToUnmarshaler(v reflect.Value) error {
 			}
 			v = v.Elem()
 		}
-	} else {
-		if v.Kind() == reflect.Ptr && v.IsNil() {
-			d.skip()
-			return nil
-		}
+	} else if v.Kind() == reflect.Ptr && v.IsNil() {
+		d.skip()
+		return nil
 	}
 
 	if v.Kind() != reflect.Ptr && v.CanAddr() {
@@ -386,7 +385,11 @@ func (d *decodeState) parse() (interface{}, error) {
 	case cborTypeNegativeInt:
 		_, _, val := d.getHead()
 		if val > math.MaxInt64 {
-			return nil, &UnmarshalTypeError{Value: t.String(), Type: reflect.TypeOf([]interface{}(nil)).Elem(), errMsg: "-1-" + strconv.FormatUint(val, 10) + " overflows Go's int64"}
+			return nil, &UnmarshalTypeError{
+				Value:  t.String(),
+				Type:   reflect.TypeOf([]interface{}(nil)).Elem(),
+				errMsg: "-1-" + strconv.FormatUint(val, 10) + " overflows Go's int64",
+			}
 		}
 		nValue := int64(-1) ^ int64(val)
 		return nValue, nil
@@ -404,7 +407,7 @@ func (d *decodeState) parse() (interface{}, error) {
 	case cborTypePrimitives:
 		_, ai, val := d.getHead()
 		if ai < 20 || ai == 24 {
-			return uint64(val), nil
+			return val, nil
 		}
 		switch ai {
 		case 20, 21:
@@ -665,7 +668,11 @@ func (d *decodeState) parseArrayToStruct(v reflect.Value) error {
 	if !structType.toArray {
 		t := d.nextCBORType()
 		d.skip()
-		return &UnmarshalTypeError{Value: t.String(), Type: v.Type(), errMsg: "cannot decode CBOR array to struct without toarray option"}
+		return &UnmarshalTypeError{
+			Value:  t.String(),
+			Type:   v.Type(),
+			errMsg: "cannot decode CBOR array to struct without toarray option",
+		}
 	}
 	start := d.off
 	t, ai, val := d.getHead()
@@ -677,7 +684,11 @@ func (d *decodeState) parseArrayToStruct(v reflect.Value) error {
 	if count != len(structType.fields) {
 		d.off = start
 		d.skip()
-		return &UnmarshalTypeError{Value: t.String(), Type: v.Type(), errMsg: "cannot decode CBOR array to struct with different number of elements"}
+		return &UnmarshalTypeError{
+			Value:  t.String(),
+			Type:   v.Type(),
+			errMsg: "cannot decode CBOR array to struct with different number of elements",
+		}
 	}
 	var err error
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
@@ -740,7 +751,11 @@ func (d *decodeState) parseMapToStruct(v reflect.Value) error {
 			}
 		} else {
 			if err == nil {
-				err = &UnmarshalTypeError{Value: t.String(), Type: reflect.TypeOf(""), errMsg: "map key is of type " + t.String() + " and cannot be used to match struct " + v.Type().String() + " field name"}
+				err = &UnmarshalTypeError{
+					Value:  t.String(),
+					Type:   reflect.TypeOf(""),
+					errMsg: "map key is of type " + t.String() + " and cannot be used to match struct " + v.Type().String() + " field name",
+				}
 			}
 			d.skip() // skip key
 			d.skip() // skip value
@@ -800,30 +815,12 @@ func (d *decodeState) parseMapToStruct(v reflect.Value) error {
 // skip moves data offset to the next item.  skip assumes data is well-formed,
 // and does not perform bounds checking.
 func (d *decodeState) skip() {
-	t := cborType(d.data[d.off] & 0xe0)
-	ai := d.data[d.off] & 0x1f
-	val := uint64(ai)
-	d.off++
-
-	switch ai {
-	case 24:
-		val = uint64(d.data[d.off])
-		d.off++
-	case 25:
-		val = uint64(binary.BigEndian.Uint16(d.data[d.off : d.off+2]))
-		d.off += 2
-	case 26:
-		val = uint64(binary.BigEndian.Uint32(d.data[d.off : d.off+4]))
-		d.off += 4
-	case 27:
-		val = binary.BigEndian.Uint64(d.data[d.off : d.off+8])
-		d.off += 8
-	}
+	t, ai, val := d.getHead()
 
 	if ai == 31 {
 		switch t {
 		case cborTypeByteString, cborTypeTextString, cborTypeArray, cborTypeMap:
-			for true {
+			for {
 				if d.data[d.off] == 0xff {
 					d.off++
 					return
@@ -989,7 +986,11 @@ func fillFloat(t cborType, val float64, v reflect.Value) error {
 	switch v.Kind() {
 	case reflect.Float32, reflect.Float64:
 		if v.OverflowFloat(val) {
-			return &UnmarshalTypeError{Value: t.String(), Type: v.Type(), errMsg: strconv.FormatFloat(val, 'E', -1, 64) + " overflows " + v.Type().String()}
+			return &UnmarshalTypeError{
+				Value:  t.String(),
+				Type:   v.Type(),
+				errMsg: strconv.FormatFloat(val, 'E', -1, 64) + " overflows " + v.Type().String(),
+			}
 		}
 		v.SetFloat(val)
 		return nil
