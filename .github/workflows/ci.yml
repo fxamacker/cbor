@@ -1,9 +1,6 @@
-# GitHub Actions - CI for Go with 3 jobs: lint, tests, and cover.
+# GitHub Actions - CI for Go to build & test.  See ci-go-cover.yml for code coverage.
 # https://github.com/fxamacker/cbor/workflows/ci.yml
-# Original version:
-#   https://github.com/x448/float16/workflows/ci.yml
-#   Author: Montgomery Edwards⁴⁴⁸ (github.com/x448)
-name: CI
+name: ci
 on: [push]
 jobs:
 
@@ -49,23 +46,3 @@ jobs:
       run: |
         go version
         go test -short -race -v ./...
-
-  # Check code coverage on latest-ubuntu with default version of Go.   Using codecov token.
-  cover:
-    name: Coverage
-    needs: [lint]
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v1
-      with:
-        fetch-depth: 2
-    - name: Generate coverprofile
-      run: |
-        go version
-        go test -short -coverprofile=coverage.txt -covermode=atomic ./...
-    - name: Codecov
-      uses: codecov/codecov-action@v1
-      with:
-        token: ${{secrets.CODECOV_TOKEN}}
-
