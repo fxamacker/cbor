@@ -92,7 +92,7 @@ var marshalTests = []marshalTest{
 		[]interface{}{
 			[0]int{},
 			[]uint{},
-			//[]uint8{},
+			// []uint8{},
 			[]uint16{},
 			[]uint32{},
 			[]uint64{},
@@ -144,7 +144,7 @@ var marshalTests = []marshalTest{
 		[]interface{}{
 			[...]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
-			//[] uint8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
+			// []uint8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]uint16{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]uint32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
@@ -410,7 +410,7 @@ func encodeCborHeader(t cborType, n uint64) []byte {
 		return b[:5]
 	} else {
 		b[0] = byte(t) | byte(27)
-		binary.BigEndian.PutUint64(b[1:], uint64(n))
+		binary.BigEndian.PutUint64(b[1:], n)
 		return b[:9]
 	}
 }
@@ -1659,7 +1659,7 @@ func TestInvalidSort(t *testing.T) {
 	}
 }
 
-func TestTypeAlias(t *testing.T) {
+func TestTypeAlias(t *testing.T) { //nolint:dupl,unconvert
 	type myBool = bool
 	type myUint = uint
 	type myUint8 = uint8
@@ -1782,7 +1782,7 @@ func TestTypeAlias(t *testing.T) {
 	testRoundTrip(t, testCases, em, dm)
 }
 
-func TestNewTypeWithBuiltinUnderlyingType(t *testing.T) {
+func TestNewTypeWithBuiltinUnderlyingType(t *testing.T) { //nolint:dupl
 	type myBool bool
 	type myUint uint
 	type myUint8 uint8

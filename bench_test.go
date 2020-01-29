@@ -262,7 +262,7 @@ func BenchmarkMarshal(b *testing.B) {
 		}
 	}
 	// Marshal map[string]interface{} to CBOR map
-	m1 := map[string]interface{}{
+	m1 := map[string]interface{}{ //nolint:dupl
 		"T":    true,
 		"UI":   uint(18446744073709551615),
 		"I":    -1000,
@@ -284,7 +284,7 @@ func BenchmarkMarshal(b *testing.B) {
 		Mss:  map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"},
 	}
 	// Marshal map[int]interface{} to CBOR map
-	m2 := map[int]interface{}{
+	m2 := map[int]interface{}{ //nolint:dupl
 		1: true,
 		2: uint(18446744073709551615),
 		3: -1000,

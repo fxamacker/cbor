@@ -36,7 +36,7 @@ var (
 	typeMapStringInt    = reflect.TypeOf(map[string]int{})
 	typeMapStringString = reflect.TypeOf(map[string]string{})
 	typeMapStringIntf   = reflect.TypeOf(map[string]interface{}{})
-	//typeIntf            = reflect.TypeOf([]interface{}(nil)).Elem()
+	// typeIntf            = reflect.TypeOf([]interface{}(nil)).Elem()
 )
 
 type unmarshalTest struct {
@@ -46,7 +46,7 @@ type unmarshalTest struct {
 	wrongTypes          []reflect.Type
 }
 
-var unmarshalTests = []unmarshalTest{ //nolint:dupl
+var unmarshalTests = []unmarshalTest{
 	// CBOR test data are from https://tools.ietf.org/html/rfc7049#appendix-A.
 	// positive integer
 	{
@@ -735,6 +735,8 @@ var unmarshalFloatTests = []unmarshalFloatTest{
 	},
 }
 
+const invalidUTF8ErrorMsg = "cbor: invalid UTF-8 string"
+
 func hexDecode(s string) []byte {
 	data, err := hex.DecodeString(s)
 	if err != nil {
@@ -1164,8 +1166,8 @@ func TestInvalidUTF8TextString(t *testing.T) {
 		cborData     []byte
 		wantErrorMsg string
 	}{
-		{"definite length text string", hexDecode("61fe"), "cbor: invalid UTF-8 string"},
-		{"indefinite length text string", hexDecode("7f62e6b061b4ff"), "cbor: invalid UTF-8 string"},
+		{"definite length text string", hexDecode("61fe"), invalidUTF8ErrorMsg},
+		{"indefinite length text string", hexDecode("7f62e6b061b4ff"), invalidUTF8ErrorMsg},
 	}
 	for _, tc := range invalidUTF8TextStringTests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1326,7 +1328,6 @@ func TestUnmarshalStructError2(t *testing.T) {
 
 	// Unmarshal returns first error encountered, which is *cbor.SemanticError (invalid UTF8 string)
 	cborData = hexDecode("a361fe6142010261616141") // {0xfe: B, 1:2, "a":"A"}
-	const invalidUTF8ErrorMsg = "cbor: invalid UTF-8 string"
 	v = strc{}
 	if err := Unmarshal(cborData, &v); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
@@ -1796,7 +1797,7 @@ func TestBinaryMarshalerUnmarshaler(t *testing.T) {
 	testRoundTrip(t, testCases, em, dm)
 }
 
-func TestBinaryUnmarshalerError(t *testing.T) {
+func TestBinaryUnmarshalerError(t *testing.T) { //nolint:dupl
 	testCases := []struct {
 		name         string
 		typ          reflect.Type
@@ -1904,7 +1905,7 @@ func TestMarshalerUnmarshaler(t *testing.T) {
 	testRoundTrip(t, testCases, em, dm)
 }
 
-func TestUnmarshalerError(t *testing.T) {
+func TestUnmarshalerError(t *testing.T) { //nolint:dupl
 	testCases := []struct {
 		name         string
 		typ          reflect.Type
@@ -2108,7 +2109,7 @@ func TestUnmarshalArrayToStructWrongFieldTypeError(t *testing.T) {
 		// [1, 2, 3]
 		{"wrong field type", hexDecode("83010203"), "cannot unmarshal", T{A: 1, C: 3}},
 		// [1, 0xfe, 3]
-		{"invalid UTF-8 string", hexDecode("830161fe03"), "cbor: invalid UTF-8 string", T{A: 1, C: 3}},
+		{"invalid UTF-8 string", hexDecode("830161fe03"), invalidUTF8ErrorMsg, T{A: 1, C: 3}},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -2126,10 +2127,16 @@ func TestUnmarshalArrayToStructWrongFieldTypeError(t *testing.T) {
 }
 
 func TestUnmarshalArrayToStructCannotSetEmbeddedPointerError(t *testing.T) {
-	type ( //nolint:unused
-		s1 struct{ x, X int }
-		S2 struct{ y, Y int }
-		S  struct {
+	type (
+		s1 struct {
+			x int //nolint:unused,structcheck
+			X int
+		}
+		S2 struct {
+			y int //nolint:unused,structcheck
+			Y int
+		}
+		S struct {
 			_ struct{} `cbor:",toarray"`
 			*s1
 			*S2
@@ -2152,7 +2159,7 @@ func TestUnmarshalArrayToStructCannotSetEmbeddedPointerError(t *testing.T) {
 
 func TestUnmarshalIntoSliceError(t *testing.T) {
 	cborData := []byte{0x83, 0x61, 0x61, 0x61, 0xfe, 0x61, 0x62} // ["a", 0xfe, "b"]
-	wantErrorMsg := "cbor: invalid UTF-8 string"
+	wantErrorMsg := invalidUTF8ErrorMsg
 	var want interface{}
 
 	// Unmarshal CBOR array into Go empty interface.
@@ -2209,7 +2216,7 @@ func TestUnmarshalIntoMapError(t *testing.T) {
 		{0xa3, 0x61, 0x61, 0x61, 0x41, 0x61, 0xfe, 0x61, 0x43, 0x61, 0x62, 0x61, 0x42}, // {"a":"A", 0xfe: "C", "b":"B"}
 		{0xa3, 0x61, 0x61, 0x61, 0x41, 0x61, 0x63, 0x61, 0xfe, 0x61, 0x62, 0x61, 0x42}, // {"a":"A", "c": 0xfe, "b":"B"}
 	}
-	wantErrorMsg := "cbor: invalid UTF-8 string"
+	wantErrorMsg := invalidUTF8ErrorMsg
 	var want interface{}
 
 	for _, data := range cborData {
@@ -2304,7 +2311,7 @@ func TestStructKeyAsIntError(t *testing.T) {
 		Cti []byte  `cbor:"7,keyasint"`
 	}
 	cborData := hexDecode("bf0783e662f03030ff") // {7: [simple(6), "\xF00", -17]}
-	wantErrorMsg := "cbor: invalid UTF-8 string"
+	wantErrorMsg := invalidUTF8ErrorMsg
 	wantV := claims{Cti: []byte{6, 0, 0}}
 	var v claims
 	if err := Unmarshal(cborData, &v); err == nil {
@@ -2319,7 +2326,7 @@ func TestStructKeyAsIntError(t *testing.T) {
 
 func TestUnmarshalToNotNilInterface(t *testing.T) {
 	cborData := hexDecode("83010203") // []uint64{1, 2, 3}
-	s := "hello"                      //golint:goconst
+	s := "hello"                      //nolint:goconst
 	var v interface{} = s             // Unmarshal() sees v as type inteface{} and sets CBOR data as default Go type.  s is unmodified.  Same behavior as encoding/json.
 	wantV := []interface{}{uint64(1), uint64(2), uint64(3)}
 	if err := Unmarshal(cborData, &v); err != nil {
