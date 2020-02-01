@@ -535,21 +535,21 @@ var unmarshalFloatTests = []unmarshalFloatTest{
 	{
 		hexDecode("f97c00"),
 		math.Inf(1),
-		[]interface{}{float32(math.Float32frombits(0x7f800000)), float64(math.Inf(1))},
+		[]interface{}{math.Float32frombits(0x7f800000), math.Inf(1)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 		0.0,
 	},
 	{
 		hexDecode("f97e00"),
 		math.NaN(),
-		[]interface{}{float32(math.Float32frombits(0x7fc00000)), float64(math.NaN())},
+		[]interface{}{math.Float32frombits(0x7fc00000), math.NaN()},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 		0.0,
 	},
 	{
 		hexDecode("f9fc00"),
 		math.Inf(-1),
-		[]interface{}{float32(math.Float32frombits(0xff800000)), float64(math.Inf(-1))},
+		[]interface{}{math.Float32frombits(0xff800000), math.Inf(-1)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 		0.0,
 	},
@@ -571,21 +571,21 @@ var unmarshalFloatTests = []unmarshalFloatTest{
 	{
 		hexDecode("fa7f800000"),
 		math.Inf(1),
-		[]interface{}{float32(math.Float32frombits(0x7f800000)), float64(math.Inf(1))},
+		[]interface{}{math.Float32frombits(0x7f800000), math.Inf(1)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 		0.0,
 	},
 	{
 		hexDecode("fa7fc00000"),
 		math.NaN(),
-		[]interface{}{float32(math.Float32frombits(0x7fc00000)), float64(math.NaN())},
+		[]interface{}{math.Float32frombits(0x7fc00000), math.NaN()},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 		0.0,
 	},
 	{
 		hexDecode("faff800000"),
 		math.Inf(-1),
-		[]interface{}{float32(math.Float32frombits(0xff800000)), float64(math.Inf(-1))},
+		[]interface{}{math.Float32frombits(0xff800000), math.Inf(-1)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 		0.0,
 	},
@@ -614,21 +614,21 @@ var unmarshalFloatTests = []unmarshalFloatTest{
 	{
 		hexDecode("fb7ff0000000000000"),
 		math.Inf(1),
-		[]interface{}{float32(math.Float32frombits(0x7f800000)), float64(math.Inf(1))},
+		[]interface{}{math.Float32frombits(0x7f800000), math.Inf(1)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 		0.0,
 	},
 	{
 		hexDecode("fb7ff8000000000000"),
 		math.NaN(),
-		[]interface{}{float32(math.Float32frombits(0x7fc00000)), float64(math.NaN())},
+		[]interface{}{math.Float32frombits(0x7fc00000), math.NaN()},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 		0.0,
 	},
 	{
 		hexDecode("fbfff0000000000000"),
 		math.Inf(-1),
-		[]interface{}{float32(math.Float32frombits(0xff800000)), float64(math.Inf(-1))},
+		[]interface{}{math.Float32frombits(0xff800000), math.Inf(-1)},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 		0.0,
 	},
@@ -1260,6 +1260,7 @@ func TestUnmarshalStructError1(t *testing.T) {
 	}
 
 	cborData := hexDecode("a868496e744669656c64187b6a466c6f61744669656c64fa47c3500069426f6f6c4669656c64f56b537472696e674669656c6464746573746f42797465537472696e674669656c64430103056a41727261794669656c64826568656c6c6f65776f726c64684d61704669656c64a2676d6f726e696e67f56961667465726e6f6f6ef4714e65737465645374727563744669656c64a261581903e861591a000f4240")
+	const wantUnmarshalTypeErrorType = "UTF-8 text string"
 
 	var v outer2
 	if err := Unmarshal(cborData, &v); err == nil {
@@ -1268,8 +1269,8 @@ func TestUnmarshalStructError1(t *testing.T) {
 		if typeError, ok := err.(*UnmarshalTypeError); !ok {
 			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*UnmarshalTypeError)", cborData, err)
 		} else {
-			if typeError.Value != "UTF-8 text string" {
-				t.Errorf("Unmarshal(0x%x) (*UnmarshalTypeError).Value %s, want %s", cborData, typeError.Value, "UTF-8 text string")
+			if typeError.Value != wantUnmarshalTypeErrorType {
+				t.Errorf("Unmarshal(0x%x) (*UnmarshalTypeError).Value %s, want %s", cborData, typeError.Value, wantUnmarshalTypeErrorType)
 			}
 			if typeError.Type != typeInt {
 				t.Errorf("Unmarshal(0x%x) (*UnmarshalTypeError).Type %s, want %s", cborData, typeError.Type.String(), typeInt.String())
@@ -1303,7 +1304,8 @@ func TestUnmarshalStructError2(t *testing.T) {
 
 	// Unmarshal returns first error encountered, which is *UnmarshalTypeError (failed to unmarshal int into Go string)
 	cborData := hexDecode("a3fa47c35000026161614161fe6142") // {100000.0:2, "a":"A", 0xfe: B}
-	const unmarshalTypeErrorMsg = "cannot unmarshal primitives into Go value of type string"
+	const wantUnmarshalTypeErrorMsg = "cannot unmarshal primitives into Go value of type string"
+	const wantUnmarshalTypeErrorType = "primitives"
 	v := strc{}
 	if err := Unmarshal(cborData, &v); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
@@ -1311,14 +1313,14 @@ func TestUnmarshalStructError2(t *testing.T) {
 		if typeError, ok := err.(*UnmarshalTypeError); !ok {
 			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*UnmarshalTypeError)", cborData, err)
 		} else {
-			if typeError.Value != "primitives" {
-				t.Errorf("Unmarshal(0x%x) (*UnmarshalTypeError).Value %s, want %s", cborData, typeError.Value, "primitives")
+			if typeError.Value != wantUnmarshalTypeErrorType {
+				t.Errorf("Unmarshal(0x%x) (*UnmarshalTypeError).Value %s, want %s", cborData, typeError.Value, wantUnmarshalTypeErrorType)
 			}
 			if typeError.Type != typeString {
 				t.Errorf("Unmarshal(0x%x) (*UnmarshalTypeError).Type %s, want %s", cborData, typeError.Type, typeString)
 			}
-			if !strings.Contains(err.Error(), unmarshalTypeErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), unmarshalTypeErrorMsg)
+			if !strings.Contains(err.Error(), wantUnmarshalTypeErrorMsg) {
+				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantUnmarshalTypeErrorMsg)
 			}
 		}
 	}

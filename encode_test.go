@@ -44,6 +44,10 @@ type outer struct {
 	unexportedField   int64
 }
 
+const (
+	wantIndefiniteLengthErrorMsg = "cbor: indefinite-length items are not allowed"
+)
+
 // CBOR test data are from https://tools.ietf.org/html/rfc7049#appendix-A.
 var marshalTests = []marshalTest{
 	// positive integer
@@ -2580,7 +2584,6 @@ func TestCanonicalEncOptions(t *testing.T) { //nolint:dupl
 	wantShortestFloat := ShortestFloat16
 	wantNaNConvert := NaNConvert7e00
 	wantInfConvert := InfConvertFloat16
-	const wantIndefiniteLengthErrorMsg = "cbor: indefinite-length items are not allowed"
 	em, err := CanonicalEncOptions().EncMode()
 	if err != nil {
 		t.Errorf("EncMode() returned an error %v", err)
@@ -2611,7 +2614,6 @@ func TestCTAP2EncOptions(t *testing.T) { //nolint:dupl
 	wantShortestFloat := ShortestFloatNone
 	wantNaNConvert := NaNConvertNone
 	wantInfConvert := InfConvertNone
-	wantIndefiniteLengthErrorMsg := "cbor: indefinite-length items are not allowed"
 	em, err := CTAP2EncOptions().EncMode()
 	if err != nil {
 		t.Errorf("EncMode() returned an error %v", err)
@@ -2642,7 +2644,6 @@ func TestCoreDetEncOptions(t *testing.T) { //nolint:dupl
 	wantShortestFloat := ShortestFloat16
 	wantNaNConvert := NaNConvert7e00
 	wantInfConvert := InfConvertFloat16
-	wantIndefiniteLengthErrorMsg := "cbor: indefinite-length items are not allowed"
 	em, err := CoreDetEncOptions().EncMode()
 	if err != nil {
 		t.Errorf("EncMode() returned an error %v", err)
