@@ -945,7 +945,7 @@ func TestOmitEmpty(t *testing.T) {
 		Po  *int                   `cbor:"po,omitempty"`
 	}
 
-	//{"sr": "", "omitempty": 0, "slr": null, "mr": {}, "Ms": {"a": true}, "fr": 0, "br": false, "ur": 0, "str": {}, "sto": {}, "pr": nil }
+	// {"sr": "", "omitempty": 0, "slr": null, "mr": {}, "Ms": {"a": true}, "fr": 0, "br": false, "ur": 0, "str": {}, "sto": {}, "pr": nil }
 	want := []byte{0xab,
 		0x62, 0x73, 0x72, 0x60,
 		0x69, 0x6f, 0x6d, 0x69, 0x74, 0x65, 0x6d, 0x70, 0x74, 0x79, 0x00,
@@ -1004,7 +1004,7 @@ func TestTaggedFieldDominates(t *testing.T) {
 		StructA{"StructA"},
 		StructD{"StructD"},
 	}
-	want := []byte{0xa1, 0x61, 0x53, 0x67, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74, 0x44} //{"S":"StructD"}
+	want := []byte{0xa1, 0x61, 0x53, 0x67, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74, 0x44} // {"S":"StructD"}
 	b, err := Marshal(v)
 	if err != nil {
 		t.Errorf("Marshal(%v) returned error %v", v, err)
@@ -1030,7 +1030,7 @@ func TestDuplicatedFieldDisappears(t *testing.T) {
 			StructD{"nested StructD"},
 		},
 	}
-	want := []byte{0xa0} //{}
+	want := []byte{0xa0} // {}
 	b, err := Marshal(v)
 	if err != nil {
 		t.Errorf("Marshal(%v) returned error %v", v, err)
@@ -1859,22 +1859,22 @@ func TestTypeAlias(t *testing.T) { //nolint:dupl,unconvert
 		},
 		{
 			name:         "[]byte alias",
-			obj:          myByteSlice([]byte{1, 2, 3, 4}),
+			obj:          myByteSlice([]byte{1, 2, 3, 4}), //nolint:unconvert
 			wantCborData: hexDecode("4401020304"),
 		},
 		{
 			name:         "[]int alias",
-			obj:          myIntSlice([]int{1, 2, 3, 4}),
+			obj:          myIntSlice([]int{1, 2, 3, 4}), //nolint:unconvert
 			wantCborData: hexDecode("8401020304"),
 		},
 		{
 			name:         "[4]int alias",
-			obj:          myIntArray([...]int{1, 2, 3, 4}),
+			obj:          myIntArray([...]int{1, 2, 3, 4}), //nolint:unconvert
 			wantCborData: hexDecode("8401020304"),
 		},
 		{
 			name:         "map[int]int alias",
-			obj:          myMapIntInt(map[int]int{1: 2, 3: 4}),
+			obj:          myMapIntInt(map[int]int{1: 2, 3: 4}), //nolint:unconvert
 			wantCborData: hexDecode("a201020304"),
 		},
 	}
@@ -2551,8 +2551,6 @@ func TestMarshalSenML(t *testing.T) {
 	}{
 		{"EncOptions ShortestFloatNone", EncOptions{}},
 		{"EncOptions ShortestFloat16", EncOptions{ShortestFloat: ShortestFloat16}},
-		//{"EncOptions ShortestFloat32", EncOptions{ShortestFloat: ShortestFloat32}},
-		//{"EncOptions ShortestFloat64", EncOptions{ShortestFloat: ShortestFloat64}},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
