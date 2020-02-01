@@ -208,6 +208,33 @@ func (icm InfConvertMode) valid() bool {
 	return icm < maxInfConvert
 }
 
+// TimeMode specifies how to encode time.Time values.
+type TimeMode int
+
+const (
+	// TimeUnix causes time.Time to be encoded as epoch time in integer with second precision.
+	TimeUnix TimeMode = iota
+
+	// TimeUnixMicro causes time.Time to be encoded as epoch time in float-point rounded to microsecond precision.
+	TimeUnixMicro
+
+	// TimeUnixDynamic causes time.Time to be encoded as integer if time.Time doesn't have fractional seconds,
+	// otherwise float-point rounded to microsecond precision.
+	TimeUnixDynamic
+
+	// TimeRFC3339 causes time.Time to be encoded as RFC3339 formatted string with second precision.
+	TimeRFC3339
+
+	// TimeRFC3339Nano causes time.Time to be encoded as RFC3339 formatted string with nanosecond precision.
+	TimeRFC3339Nano
+
+	maxTimeMode
+)
+
+func (tm TimeMode) valid() bool {
+	return tm < maxTimeMode
+}
+
 // EncOptions specifies encoding options.
 type EncOptions struct {
 	// Sort specifies sorting order.
@@ -223,10 +250,8 @@ type EncOptions struct {
 	// InfConvert specifies how to encode Inf and it overrides ShortestFloatMode.
 	InfConvert InfConvertMode
 
-	// TimeRFC3339 causes time.Time to be encoded as string in RFC3339 format;
-	// otherwise, time.Time is encoded as numerical representation of seconds
-	// since January 1, 1970 UTC.
-	TimeRFC3339 bool
+	// Time specifies how to encode time.Time.
+	Time TimeMode
 
 	disableIndefiniteLength bool
 }
@@ -338,12 +363,15 @@ func (opts EncOptions) EncMode() (EncMode, error) {
 	if !opts.InfConvert.valid() {
 		return nil, errors.New("cbor: invalid InfConvertMode " + strconv.Itoa(int(opts.InfConvert)))
 	}
+	if !opts.Time.valid() {
+		return nil, errors.New("cbor: invalid TimeMode " + strconv.Itoa(int(opts.Time)))
+	}
 	em := encMode{
 		sort:                    opts.Sort,
 		shortestFloat:           opts.ShortestFloat,
-		naNConvert:              opts.NaNConvert,
+		nanConvert:              opts.NaNConvert,
 		infConvert:              opts.InfConvert,
-		timeRFC3339:             opts.TimeRFC3339,
+		time:                    opts.Time,
 		disableIndefiniteLength: opts.disableIndefiniteLength,
 	}
 	return &em, nil
@@ -359,9 +387,9 @@ type EncMode interface {
 type encMode struct {
 	sort                    SortMode
 	shortestFloat           ShortestFloatMode
-	naNConvert              NaNConvertMode
+	nanConvert              NaNConvertMode
 	infConvert              InfConvertMode
-	timeRFC3339             bool
+	time                    TimeMode
 	disableIndefiniteLength bool
 }
 
@@ -372,9 +400,9 @@ func (em *encMode) EncOptions() EncOptions {
 	return EncOptions{
 		Sort:                    em.sort,
 		ShortestFloat:           em.shortestFloat,
-		NaNConvert:              em.naNConvert,
+		NaNConvert:              em.nanConvert,
 		InfConvert:              em.infConvert,
-		TimeRFC3339:             em.timeRFC3339,
+		Time:                    em.time,
 		disableIndefiniteLength: em.disableIndefiniteLength,
 	}
 }
@@ -434,7 +462,7 @@ var (
 	cborFalse            = []byte{0xf4}
 	cborTrue             = []byte{0xf5}
 	cborNil              = []byte{0xf6}
-	cborNan              = []byte{0xf9, 0x7e, 0x00}
+	cborNaN              = []byte{0xf9, 0x7e, 0x00}
 	cborPositiveInfinity = []byte{0xf9, 0x7c, 0x00}
 	cborNegativeInfinity = []byte{0xf9, 0xfc, 0x00}
 )
@@ -535,9 +563,9 @@ func encodeInf(e *encodeState, em *encMode, v reflect.Value) (int, error) {
 }
 
 func encodeNaN(e *encodeState, em *encMode, v reflect.Value) (int, error) {
-	switch em.naNConvert {
+	switch em.nanConvert {
 	case NaNConvert7e00:
-		return e.Write(cborNan)
+		return e.Write(cborNaN)
 
 	case NaNConvertNone:
 		if v.Kind() == reflect.Float64 {
@@ -550,7 +578,7 @@ func encodeNaN(e *encodeState, em *encMode, v reflect.Value) (int, error) {
 		if v.Kind() == reflect.Float64 {
 			f64 := v.Float()
 			f64bits := math.Float64bits(f64)
-			if em.naNConvert == NaNConvertQuiet && f64bits&(1<<51) == 0 {
+			if em.nanConvert == NaNConvertQuiet && f64bits&(1<<51) == 0 {
 				f64bits |= 1 << 51 // Set quiet bit = 1
 				f64 = math.Float64frombits(f64bits)
 			}
@@ -577,7 +605,7 @@ func encodeNaN(e *encodeState, em *encMode, v reflect.Value) (int, error) {
 
 		f32 := float32NaNFromReflectValue(v)
 		f32bits := math.Float32bits(f32)
-		if em.naNConvert == NaNConvertQuiet && f32bits&(1<<22) == 0 {
+		if em.nanConvert == NaNConvertQuiet && f32bits&(1<<22) == 0 {
 			f32bits |= 1 << 22 // Set quiet bit = 1
 			f32 = math.Float32frombits(f32bits)
 		}
@@ -926,10 +954,16 @@ func encodeTime(e *encodeState, em *encMode, v reflect.Value) (int, error) {
 	t := v.Interface().(time.Time)
 	if t.IsZero() {
 		return e.Write(cborNil)
-	} else if em.timeRFC3339 {
-		s := t.Format(time.RFC3339Nano)
-		return encodeString(e, em, reflect.ValueOf(s))
-	} else {
+	}
+	switch em.time {
+	case TimeUnix:
+		secs := t.Unix()
+		return encodeInt(e, em, reflect.ValueOf(secs))
+	case TimeUnixMicro:
+		t = t.UTC().Round(time.Microsecond)
+		f := float64(t.UnixNano()) / 1e9
+		return encodeFloat(e, em, reflect.ValueOf(f))
+	case TimeUnixDynamic:
 		t = t.UTC().Round(time.Microsecond)
 		secs, nsecs := t.Unix(), uint64(t.Nanosecond())
 		if nsecs == 0 {
@@ -937,6 +971,12 @@ func encodeTime(e *encodeState, em *encMode, v reflect.Value) (int, error) {
 		}
 		f := float64(secs) + float64(nsecs)/1e9
 		return encodeFloat(e, em, reflect.ValueOf(f))
+	case TimeRFC3339:
+		s := t.Format(time.RFC3339)
+		return encodeString(e, em, reflect.ValueOf(s))
+	default: // TimeRFC3339Nano:
+		s := t.Format(time.RFC3339Nano)
+		return encodeString(e, em, reflect.ValueOf(s))
 	}
 }
 

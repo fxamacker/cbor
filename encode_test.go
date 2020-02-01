@@ -1124,62 +1124,155 @@ func TestEncodeInterface(t *testing.T) {
 }
 
 func TestEncodeTime(t *testing.T) {
+	timeUnixOpt := EncOptions{Time: TimeUnix}
+	timeUnixMicroOpt := EncOptions{Time: TimeUnixMicro}
+	timeUnixDynamicOpt := EncOptions{Time: TimeUnixDynamic}
+	timeRFC3339Opt := EncOptions{Time: TimeRFC3339}
+	timeRFC3339NanoOpt := EncOptions{Time: TimeRFC3339Nano}
+
+	type timeConvert struct {
+		opt          EncOptions
+		wantCborData []byte
+	}
 	testCases := []struct {
-		name                string
-		tm                  time.Time
-		wantCborRFC3339Time []byte
-		wantCborUnixTime    []byte
+		name    string
+		tm      time.Time
+		convert []timeConvert
 	}{
 		{
-			name:                "zero time",
-			tm:                  time.Time{},
-			wantCborRFC3339Time: hexDecode("f6"), // encode as nil
-			wantCborUnixTime:    hexDecode("f6"), // encode as nil
+			name: "zero time",
+			tm:   time.Time{},
+			convert: []timeConvert{
+				{
+					opt:          timeUnixOpt,
+					wantCborData: hexDecode("f6"), // encode as CBOR null
+				},
+				{
+					opt:          timeUnixMicroOpt,
+					wantCborData: hexDecode("f6"), // encode as CBOR null
+				},
+				{
+					opt:          timeUnixDynamicOpt,
+					wantCborData: hexDecode("f6"), // encode as CBOR null
+				},
+				{
+					opt:          timeRFC3339Opt,
+					wantCborData: hexDecode("f6"), // encode as CBOR null
+				},
+				{
+					opt:          timeRFC3339NanoOpt,
+					wantCborData: hexDecode("f6"), // encode as CBOR null
+				},
+			},
 		},
 		{
-			name:                "time without fractional seconds",
-			tm:                  parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
-			wantCborRFC3339Time: hexDecode("74323031332d30332d32315432303a30343a30305a"),
-			wantCborUnixTime:    hexDecode("1a514b67b0"), // encode as positive integer
+			name: "time without fractional seconds",
+			tm:   parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			convert: []timeConvert{
+				{
+					opt:          timeUnixOpt,
+					wantCborData: hexDecode("1a514b67b0"), // 1363896240
+				},
+				{
+					opt:          timeUnixMicroOpt,
+					wantCborData: hexDecode("fb41d452d9ec000000"), // 1363896240.0
+				},
+				{
+					opt:          timeUnixDynamicOpt,
+					wantCborData: hexDecode("1a514b67b0"), // 1363896240
+				},
+				{
+					opt:          timeRFC3339Opt,
+					wantCborData: hexDecode("74323031332d30332d32315432303a30343a30305a"), // "2013-03-21T20:04:00Z"
+				},
+				{
+					opt:          timeRFC3339NanoOpt,
+					wantCborData: hexDecode("74323031332d30332d32315432303a30343a30305a"), // "2013-03-21T20:04:00Z"
+				},
+			},
 		},
 		{
-			name:                "time with fractional seconds",
-			tm:                  parseTime(time.RFC3339Nano, "2013-03-21T20:04:00.5Z"),
-			wantCborRFC3339Time: hexDecode("76323031332d30332d32315432303a30343a30302e355a"),
-			wantCborUnixTime:    hexDecode("fb41d452d9ec200000"), // encode as float
+			name: "time with fractional seconds",
+			tm:   parseTime(time.RFC3339Nano, "2013-03-21T20:04:00.5Z"),
+			convert: []timeConvert{
+				{
+					opt:          timeUnixOpt,
+					wantCborData: hexDecode("1a514b67b0"), // 1363896240
+				},
+				{
+					opt:          timeUnixMicroOpt,
+					wantCborData: hexDecode("fb41d452d9ec200000"), // 1363896240.5
+				},
+				{
+					opt:          timeUnixDynamicOpt,
+					wantCborData: hexDecode("fb41d452d9ec200000"), // 1363896240.5
+				},
+				{
+					opt:          timeRFC3339Opt,
+					wantCborData: hexDecode("74323031332d30332d32315432303a30343a30305a"), // "2013-03-21T20:04:00Z"
+				},
+				{
+					opt:          timeRFC3339NanoOpt,
+					wantCborData: hexDecode("76323031332d30332d32315432303a30343a30302e355a"), // "2013-03-21T20:04:00.5Z"
+				},
+			},
 		},
 		{
-			name:                "time before January 1, 1970 UTC without fractional seconds",
-			tm:                  parseTime(time.RFC3339Nano, "1969-03-21T20:04:00Z"),
-			wantCborRFC3339Time: hexDecode("74313936392d30332d32315432303a30343a30305a"),
-			wantCborUnixTime:    hexDecode("3a0177f2cf"), // encode as negative integer
+			name: "time before January 1, 1970 UTC without fractional seconds",
+			tm:   parseTime(time.RFC3339Nano, "1969-03-21T20:04:00Z"),
+			convert: []timeConvert{
+				{
+					opt:          timeUnixOpt,
+					wantCborData: hexDecode("3a0177f2cf"), // -24638160
+				},
+				{
+					opt:          timeUnixMicroOpt,
+					wantCborData: hexDecode("fbc1777f2d00000000"), // -24638160.0
+				},
+				{
+					opt:          timeUnixDynamicOpt,
+					wantCborData: hexDecode("3a0177f2cf"), // -24638160
+				},
+				{
+					opt:          timeRFC3339Opt,
+					wantCborData: hexDecode("74313936392d30332d32315432303a30343a30305a"), // "1969-03-21T20:04:00Z"
+				},
+				{
+					opt:          timeRFC3339NanoOpt,
+					wantCborData: hexDecode("74313936392d30332d32315432303a30343a30305a"), // "1969-03-21T20:04:00Z"
+				},
+			},
 		},
 	}
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Encode time as string in RFC3339 format.
-			em, err := EncOptions{TimeRFC3339: true}.EncMode()
-			if err != nil {
-				t.Errorf("EncMode() returned error %v", err)
+		for _, convert := range tc.convert {
+			var convertName string
+			switch convert.opt.Time {
+			case TimeUnix:
+				convertName = "TimeUnix"
+			case TimeUnixMicro:
+				convertName = "TimeUnixMicro"
+			case TimeUnixDynamic:
+				convertName = "TimeUnixDynamic"
+			case TimeRFC3339:
+				convertName = "TimeRFC3339"
+			case TimeRFC3339Nano:
+				convertName = "TimeRFC3339Nano"
 			}
-			b, err := em.Marshal(tc.tm)
-			if err != nil {
-				t.Errorf("Marshal(%+v) as string in RFC3339 format returned error %v", tc.tm, err)
-			} else if !bytes.Equal(b, tc.wantCborRFC3339Time) {
-				t.Errorf("Marshal(%+v) as string in RFC3339 format = 0x%x, want 0x%x", tc.tm, b, tc.wantCborRFC3339Time)
-			}
-			// Encode time as numerical representation of seconds since January 1, 1970 UTC.
-			em, err = EncOptions{TimeRFC3339: false}.EncMode()
-			if err != nil {
-				t.Errorf("EncMode() returned error %v", err)
-			}
-			b, err = em.Marshal(tc.tm)
-			if err != nil {
-				t.Errorf("Marshal(%+v) as unix time returned error %v", tc.tm, err)
-			} else if !bytes.Equal(b, tc.wantCborUnixTime) {
-				t.Errorf("Marshal(%+v) as unix time = 0x%x, want 0x%x", tc.tm, b, tc.wantCborUnixTime)
-			}
-		})
+			name := tc.name + " with " + convertName + " option"
+			t.Run(name, func(t *testing.T) {
+				em, err := convert.opt.EncMode()
+				if err != nil {
+					t.Errorf("EncMode() returned error %v", err)
+				}
+				b, err := em.Marshal(tc.tm)
+				if err != nil {
+					t.Errorf("Marshal(%+v) returned error %v", tc.tm, err)
+				} else if !bytes.Equal(b, convert.wantCborData) {
+					t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.tm, b, convert.wantCborData)
+				}
+			})
+		}
 	}
 }
 
@@ -1189,6 +1282,16 @@ func parseTime(layout string, value string) time.Time {
 		panic(err)
 	}
 	return tm
+}
+
+func TestInvalidTimeMode(t *testing.T) {
+	wantErrorMsg := "cbor: invalid TimeMode 100"
+	_, err := EncOptions{Time: TimeMode(100)}.EncMode()
+	if err == nil {
+		t.Errorf("EncMode() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("EncMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
 }
 
 func TestMarshalStructTag1(t *testing.T) {

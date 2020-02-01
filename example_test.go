@@ -31,10 +31,10 @@ func ExampleMarshal() {
 }
 
 func ExampleMarshal_time() {
-	tm, _ := time.Parse(time.RFC3339Nano, "2013-03-21T20:04:00Z")
+	tm, _ := time.Parse(time.RFC3339, "2013-03-21T20:04:00Z")
 
-	// Encode time as string in RFC3339 format.
-	em, err := cbor.EncOptions{TimeRFC3339: true}.EncMode()
+	// Encode time as string in RFC3339 format with second precision.
+	em, err := cbor.EncOptions{Time: cbor.TimeRFC3339}.EncMode()
 	if err != nil {
 		fmt.Println("error:", err)
 	}
@@ -45,7 +45,7 @@ func ExampleMarshal_time() {
 	fmt.Printf("%x\n", b)
 
 	// Encode time as numerical representation of seconds since January 1, 1970 UTC.
-	em, err = cbor.EncOptions{TimeRFC3339: false}.EncMode()
+	em, err = cbor.EncOptions{Time: cbor.TimeUnix}.EncMode()
 	if err != nil {
 		fmt.Println("error:", err)
 	}

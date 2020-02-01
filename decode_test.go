@@ -1588,6 +1588,24 @@ func TestDecodeTime(t *testing.T) {
 			wantTime:        time.Time{},
 		},
 		{
+			name:            "NaN",
+			cborRFC3339Time: hexDecode("f97e00"),
+			cborUnixTime:    hexDecode("f97e00"),
+			wantTime:        time.Time{},
+		},
+		{
+			name:            "positive infinity",
+			cborRFC3339Time: hexDecode("f97c00"),
+			cborUnixTime:    hexDecode("f97c00"),
+			wantTime:        time.Time{},
+		},
+		{
+			name:            "negative infinity",
+			cborRFC3339Time: hexDecode("f9fc00"),
+			cborUnixTime:    hexDecode("f9fc00"),
+			wantTime:        time.Time{},
+		},
+		{
 			name:            "time without fractional seconds", // positive integer
 			cborRFC3339Time: hexDecode("74323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    hexDecode("1a514b67b0"),
