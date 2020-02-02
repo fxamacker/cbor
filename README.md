@@ -5,6 +5,7 @@ This is a generic CBOR encoder and decoder.  It can encode integers and floats t
 
 [![](https://github.com/fxamacker/cbor/workflows/ci/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Aci)
 [![](https://github.com/fxamacker/cbor/workflows/cover%20%E2%89%A597%25/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3A%22cover+%E2%89%A597%25%22)
+[![](https://github.com/fxamacker/cbor/workflows/linters/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Alinters)
 [![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor)
 [![Release](https://img.shields.io/github/release/fxamacker/cbor.svg?style=flat-square)](https://github.com/fxamacker/cbor/releases)
 [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE)
@@ -63,7 +64,7 @@ Latest version is v2.0, which has:
 * __Stable API__ – won't make breaking API changes except:
   * CoreDetEncOptions() is subject to change because it uses draft standard not yet approved by IETF.
   * PreferredUnsortedEncOptions() is subject to change because it uses draft standard not yet approved by IETF.
-* __Stable requirements__ – will support Go v1.12 (unless there's compelling reason to require newer).
+* __Requirements__ – Go v1.12+ on amd64, arm64, ppc64le or s390x. Other archs may also work.
 * __Passed all tests__ – v2.0 passed all 375+ tests on amd64, arm64, ppc64le and s390x with linux.
 * __Passed fuzzing__ – v2.0 passed 501+ million execs and is still fuzzing.  v1.5 passed 4.75 billion execs in coverage-guided fuzzing.
 
@@ -102,19 +103,14 @@ Features not in Go's standard library are usually not added.  However, the __`to
 
 ## Features
 
-* API is like `encoding/json` plus extra struct tags:
-  * `cbor.Encoder` writes CBOR to `io.Writer`.  
-  * `cbor.Decoder` reads CBOR from `io.Reader`.
-  * `cbor.Marshal` writes CBOR to `[]byte`.  
-  * `cbor.Unmarshal` reads CBOR from `[]byte`.  
+* In v2, many function signatures are identical to encoding/json, including:  
+`Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, `decoder.Decode`.
+* Support customizable options to create encoding and decoding modes (interfaces) that are safe for concurrent use.  Once created, encoding and decoding modes cannot accidentally change their behavior at runtime.
 * Support "cbor" and "json" keys in Go's struct tags. If both are specified, then "cbor" is used.
 * `toarray` struct tag allows named struct fields for elements of CBOR arrays.
 * `keyasint` struct tag allows named struct fields for elements of CBOR maps with int keys.
-* Encoder has easy functions that create and return modifiable configurations:
-  * CanonicalEncOptions() 
-  * CTAP2EncOptions() 
-  * CoreDetEncOptions() 
-  * PreferredUnsortedEncOptions() 
+* Encoder has easy functions that create and return modifiable configurations:  
+  `CanonicalEncOptions`, `CTAP2EncOptions`, `CoreDetEncOptions, `PreferredUnsortedEncOptions`
 * For Go integers, encoder always uses "preferred serialization" which encodes their values to the smallest number of bytes.
 * Encoder floating-point option types: ShortestFloatMode, InfConvertMode, and NaNConvertMode.
   * ShortestFloatMode: ShortestFloatNone or ShortestFloat16 (IEEE 754 binary16, etc. if value fits).
@@ -148,7 +144,7 @@ Encoder has options that can be set individually to create custom configurations
 
 __EncOptions.Sort__:
 
-* SortNone: no sorting for map keys.
+* SortNone (default): no sorting for map keys.
 * SortLengthFirst: length-first map key ordering.
 * SortBytewiseLexical: bytewise lexicographic map key ordering.
 * SortCanonical: same as SortLengthFirst [(RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9)
@@ -157,7 +153,7 @@ __EncOptions.Sort__:
 
 __EncOptions.Time__:  
 
-* TimeUnix: (seconds) encode as integer.
+* TimeUnix (default): (seconds) encode as integer.
 * TimeUnixMicro: (microseconds) encode as floating-point.  ShortestFloat option determines size.
 * TimeUnixDynamic: (seconds or microseconds) encode as integer if time doesn't have fractional seconds, otherwise encode as floating-point rounded to microseconds.
 * TimeRFC3339: (seconds) encode as RFC 3339 formatted string.
@@ -169,20 +165,20 @@ Encoder has 3 types of options for floating-point data: ShortestFloatMode, InfCo
 
 __EncOptions.ShortestFloat__:
 
-* ShortestFloatNone: no conversion.
+* ShortestFloatNone (default): no conversion.
 * ShortestFloat16: uses float16 ([IEEE 754 binary16](https://en.wikipedia.org/wiki/Half-precision_floating-point_format)) as the shortest form that preserves value.
 
 With ShortestFloat16, each floating-point value (including subnormals) can encode float64 -> float32 -> float16 when values can round-trip.  Conversions for infinity and NaN use InfConvert and NaNConvert settings.
 
 __EncOptions.InfConvert__:
 
+* InfConvertFloat16 (default): convert +- infinity to float16 since they always preserve value (recommended)
 * InfConvertNone: don't convert +- infinity to other representations -- used by CTAP2 Canonical CBOR
-* InfConvertFloat16: convert +- infinity to float16 since they always preserve value (recommended)
 
 __EncOptions.NaNConvert__:
 
+* NaNConvert7e00 (default): encode to 0xf97e00 (CBOR float16 = 0x7e00) -- used by RFC 7049 Canonical CBOR.
 * NaNConvertNone: don't convert NaN to other representations -- used by CTAP2 Canonical CBOR.
-* NaNConvert7e00: encode to 0xf97e00 (CBOR float16 = 0x7e00) -- used by RFC 7049 Canonical CBOR.
 * NaNConvertQuiet: force quiet bit = 1 and use shortest form that preserves NaN payload.
 * NaNConvertPreserveSignal: convert to smallest form that preserves value (quit bit unmodified and NaN payload preserved).
 
@@ -250,25 +246,59 @@ import (
 This project uses [Semantic Versioning](https://semver.org), so the API is always backwards compatible unless the major version number changes.  Newly added API documented as "subject to change" are excluded from this rule.
 
 ## API 
-The API is the same as `encoding/json` when possible.
+In v2, many function signatures are identical to encoding/json, including:  
+`Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, `decoder.Decode`.
 
-In addition to the API, the `keyasint` and `toarray` struct tags are worth knowing.  They can reduce programming effort, improve system performance, and reduce the size of serialized data.  
+"Mode" in this API means definite way of encoding or decoding.
+
+EncMode and DecMode are interfaces created from EncOptions or DecOptions structs.
+
+EncMode and DecMode use immutable options so their behavior won't accidentally change at runtime.  Modes are intended to be reused and are safe for concurrent use.
+
+In addition to the function API, the `keyasint` and `toarray` struct tags are worth knowing.  They can reduce programming effort, improve system performance, and reduce the size of serialized data.  
 
 See [API docs](https://godoc.org/github.com/fxamacker/cbor) for more details.
 
 ## Usage
-👉 Use Go's `io.LimitReader` when decoding very large data to limit size.
+👉 Use Go's `io.LimitReader` to limit size when decoding very large data.
 
-The API is the same as `encoding/json` when possible:
+Functions with identical signatures to encoding/json include:  
+`Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, `decoder.Decode`.
 
-* cbor.Marshal writes CBOR to []byte
-* cbor.Unmarshal reads CBOR from []byte
-* cbor.Encoder writes CBOR to io.Writer
-* cbor.Decoder reads CBOR from io.Reader
+EncMode and DecMode are interfaces created from EncOptions or DecOptions structs.
+
+__EncOptions and EncMode__
+```
+// Create EncOptions, either as empty struct or with predefined settings like Canonical CBOR
+opts := cbor.CanonicalEncOptions()
+
+// Modify options if needed -- e.g. how time values should be encoded
+opts.Time = cbor.TimeUnix
+
+// Create reusable EncMode interface with immutable options, safe for concurrent use
+em, err := opts.EncMode()   
+
+// Use EncMode like encoding/json, with same function signatures.
+b, err := em.Marshal(v)
+// or
+encoder := em.NewEncoder(w)
+```
+
+__Package Level Functions__  
+
+These package level functions use default options without CBOR tags. Their API matches encoding/json.  EncMode and DecMode also provide these functions with same signatures.
+```
+b, err := cbor.Marshal(v)
+err := cbor.Unmarshal(b, &v)
+encoder := cbor.NewEncoder(w)
+decoder := cbor.NewDecoder(r)
+```
+
+__Struct Tags (keyasint, toarray, omitempty)__
 
 The `keyasint` and `toarray` struct tags make it easy to use compact CBOR message formats.  Internet standards often use CBOR arrays and CBOR maps with int keys to save space.
 
-Using named struct fields instead of array elements or maps with int keys makes code more readable and less error prone.
+[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v1.5.0/cbor_easy_api.png)]()
 
 __Decoding CWT (CBOR Web Token)__ using `keyasint` and `toarray` struct tags:
 ```
