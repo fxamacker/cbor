@@ -407,7 +407,7 @@ func (em *encMode) EncOptions() EncOptions {
 	}
 }
 
-// Marshal returns the CBOR encoding of v using em encMode.
+// Marshal returns the CBOR encoding of v using em EncMode.
 //
 // See the documentation for Marshal for details.
 func (em *encMode) Marshal(v interface{}) ([]byte, error) {
@@ -426,7 +426,7 @@ func (em *encMode) Marshal(v interface{}) ([]byte, error) {
 	return buf, nil
 }
 
-// NewEncoder returns a new encoder that writes to w using em encMode.
+// NewEncoder returns a new encoder that writes to w using em EncMode.
 func (em *encMode) NewEncoder(w io.Writer) *Encoder {
 	return &Encoder{w: w, em: em, e: getEncodeState()}
 }

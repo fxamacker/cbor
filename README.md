@@ -225,6 +225,19 @@ Over 1,100 files (corpus) are used for fuzzing because it includes fuzz-generate
 * Go 1.12 (or newer)
 * amd64, arm64, ppc64le and s390x. Other architectures may also work but they are not tested as frequently. 
 
+## Installation
+```
+$ GO111MODULE=on go get github.com/fxamacker/cbor/v2
+```
+
+```
+import (
+	"github.com/fxamacker/cbor/v2" // imports as package "cbor"
+)
+```
+
+[Released versions](https://github.com/fxamacker/cbor/releases) benefit from longer fuzz tests.
+
 ## Versions and API Changes
 This project uses [Semantic Versioning](https://semver.org), so the API is always backwards compatible unless the major version number changes.  Newly added API documented as "subject to change" are excluded from this rule.
 
@@ -233,53 +246,7 @@ The API is the same as `encoding/json` when possible.
 
 In addition to the API, the `keyasint` and `toarray` struct tags are worth knowing.  They can reduce programming effort, improve system performance, and reduce the size of serialized data.  
 
-```
-package cbor // import "github.com/fxamacker/cbor"
-
-func Marshal(v interface{}, encOpts EncOptions) ([]byte, error)
-func Unmarshal(data []byte, v interface{}) error
-func Valid(data []byte) (rest []byte, err error)
-type Decoder struct{ ... }
-    func NewDecoder(r io.Reader) *Decoder
-    func (dec *Decoder) Decode(v interface{}) (err error)
-    func (dec *Decoder) NumBytesRead() int
-type EncOptions struct{ ... }
-    func CTAP2EncOptions() EncOptions
-    func CanonicalEncOptions() EncOptions
-    func CoreDetEncOptions() EncOptions
-    func PreferredUnsortedEncOptions() EncOptions
-type Encoder struct{ ... }
-    func NewEncoder(w io.Writer, encOpts EncOptions) *Encoder
-    func (enc *Encoder) Encode(v interface{}) error
-    func (enc *Encoder) StartIndefiniteByteString() error
-    func (enc *Encoder) StartIndefiniteTextString() error
-    func (enc *Encoder) StartIndefiniteArray() error
-    func (enc *Encoder) StartIndefiniteMap() error
-    func (enc *Encoder) EndIndefinite() error
-type InfConvertMode int
-    const InfConvertFloat16 InfConvertMode = iota ...
-type InvalidUnmarshalError struct{ ... }
-type Marshaler interface{ ... }
-type NaNConvertMode int
-    const NaNConvert7e00 NaNConvertMode = iota ...
-type RawMessage []byte
-type SemanticError struct{ ... }
-type ShortestFloatMode int
-    const ShortestFloatNone ShortestFloatMode = iota ...
-type SortMode int
-    const SortNone SortMode = 0 ...
-type SyntaxError struct{ ... }
-type UnmarshalTypeError struct{ ... }
-type Unmarshaler interface{ ... }
-type UnsupportedTypeError struct{ ... }
-```
 See [API docs](https://godoc.org/github.com/fxamacker/cbor) for more details.
-
-## Installation
-```
-go get github.com/fxamacker/cbor
-```
-[Released versions](https://github.com/fxamacker/cbor/releases) benefit from longer fuzz tests.
 
 ## Usage
 👉 Use Go's `io.LimitReader` when decoding very large data to limit size.
@@ -327,7 +294,7 @@ __Encoding CWT (CBOR Web Token)__ using `keyasint` and `toarray` struct tags:
 
 var v signedCWT
 ...
-if data, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
+if data, err := cbor.Marshal(v); err != nil {
 	return err
 }
 ```
@@ -357,7 +324,7 @@ type SenMLRecord struct {
 
 // data is a []byte containing SenML
 
-var v []SenMLRecord
+var v []*SenMLRecord
 if err := cbor.Unmarshal(data, &v); err != nil {
 	return err
 }
@@ -367,9 +334,10 @@ __Encoding SenML__ using `keyasint` struct tag and `ShortestFloat16` encoding op
 ```
 // use SenMLRecord struct defined in "Decoding SenML" example
 
-var v []SenMLRecord
+var v []*SenMLRecord
 ...
-if data, err := cbor.Marshal(v, cbor.EncOptions{ShortestFloat: cbor.ShortestFloat16}); err != nil {
+em, err := cbor.EncOptions{ShortestFloat: cbor.ShortestFloat16}.EncMode()
+if data, err := em.Marshal(v); err != nil {
 	return err
 }
 ```
@@ -401,7 +369,8 @@ __Encoding__:
 
 ```
 // create an encoder with canonical CBOR encoding enabled
-enc := cbor.NewEncoder(writer, cbor.CanonicalEncOptions())
+em, err := cbor.CanonicalEncOptions().EncMode()
+enc := em.NewEncoder(writer)
 
 // encode struct
 err = enc.Encode(stru)
@@ -416,7 +385,7 @@ err = enc.Encode(f)
 __Encoding indefinite length array__:
 
 ```
-enc := cbor.NewEncoder(writer, cbor.EncOptions{})
+enc := cbor.NewEncoder(writer)
 
 // start indefinite length array encoding
 err = enc.StartIndefiniteArray()

@@ -146,7 +146,7 @@ func (e *UnmarshalTypeError) Error() string {
 type DecOptions struct {
 }
 
-// DecMode returns an DecMode interface from DecOptions.
+// DecMode returns a DecMode interface from DecOptions.
 func (opts DecOptions) DecMode() (DecMode, error) {
 	dm := decMode{}
 	return &dm, nil
@@ -170,7 +170,7 @@ func (dm *decMode) DecOptions() DecOptions {
 }
 
 // Unmarshal parses the CBOR-encoded data and stores the result in the value
-// pointed to by v using dm decMode.  If v is nil or not a pointer, Unmarshal
+// pointed to by v using dm DecMode.  If v is nil or not a pointer, Unmarshal
 // returns an error.
 //
 // See the documentation for Unmarshal for details.
@@ -179,7 +179,7 @@ func (dm *decMode) Unmarshal(data []byte, v interface{}) error {
 	return d.value(v)
 }
 
-// NewDecoder returns a new decoder that reads from r using dm decMode.
+// NewDecoder returns a new decoder that reads from r using dm DecMode.
 func (dm *decMode) NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{r: r, d: decodeState{dm: dm}}
 }
