@@ -1,4 +1,4 @@
-[![CBOR Library - Slideshow and Latest Docs.](https://github.com/fxamacker/images/raw/master/cbor/v1.5.0/cbor_slides.gif)](https://github.com/fxamacker/cbor/blob/master/README.md)
+[![CBOR Library - Slideshow and Latest Docs.](https://github.com/fxamacker/images/raw/master/cbor/v2.0.0/cbor_slides.gif)](https://github.com/fxamacker/cbor/blob/master/README.md)
 
 # CBOR library in Go
 This is a generic CBOR encoder and decoder.  It can encode integers and floats to their smallest forms (like float16) when values fit.  Each release passes 375+ tests and 250+ million execs fuzzing with 1100+ CBOR files.
@@ -32,7 +32,7 @@ Struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data such as
 
 <hr>
 
-[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v1.5.0/cbor_easy_api.png)](#usage)
+[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v2.0.0/cbor_easy_api.png)](#usage)
 
 <hr>
 
@@ -44,15 +44,15 @@ Comparisons are between this newer library and a well-known library that had 1,0
 
 __This library is safer__.  Small malicious CBOR messages are rejected quickly before they exhaust system resources.
 
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.5.0/cbor_safety_comparison.png "CBOR library safety comparison")
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.0.0/cbor_safety_comparison.png "CBOR library safety comparison")
 
 __This library is smaller__. Programs like senmlCat can be 4 MB smaller by switching to this library.  Programs using more complex CBOR data types can be 9.2 MB smaller.
 
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.5.0/cbor_size_comparison.png "CBOR library and program size comparison chart")
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.0.0/cbor_size_comparison.png "CBOR library and program size comparison chart")
 
 __This library is faster__ for encoding and decoding CBOR Web Token (CWT).  However, speed is only one factor and it can vary depending on data types and sizes.  Unlike the other library, this one doesn't use Go's ```unsafe``` package or code gen.
 
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v1.5.0/cbor_speed_comparison.png "CBOR library speed comparison chart")
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.0.0/cbor_speed_comparison.png "CBOR library speed comparison chart")
 
 The resource intensive `codec.CborHandle` initialization (in the other library) was placed outside the benchmark loop to make sure their library wasn't penalized.
 
@@ -133,8 +133,7 @@ Features not in Go's standard library are usually not added.  However, the __`to
 * Decoder uses case-insensitive field name match when decoding to structs. 
 * Both encoder and decoder correctly handles nil slice, map, pointer, and interface values.
 
-Coming soon: support for CBOR tags (major type 6).  
-After that, options for handling duplicate map keys.
+See [milestones](https://github.com/fxamacker/cbor/milestones) for upcoming features.
 
 ## Standards
 This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049) with minor [limitations](#limitations).
@@ -317,7 +316,7 @@ __Struct Tags (keyasint, toarray, omitempty)__
 
 The `keyasint` and `toarray` struct tags make it easy to use compact CBOR message formats.  Internet standards often use CBOR arrays and CBOR maps with int keys to save space.
 
-[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v1.5.0/cbor_easy_api.png)]()
+[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v2.0.0/cbor_easy_api.png)]()
 
 __Decoding CWT (CBOR Web Token)__ using `keyasint` and `toarray` struct tags:
 ```
