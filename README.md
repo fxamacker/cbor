@@ -58,26 +58,25 @@ The resource intensive `codec.CborHandle` initialization (in the other library) 
 Doing your own comparisons is highly recommended.  Use your most common message sizes and data types.
 
 ## Current Status
-Latest version is v1.5, which has:
+Latest version is v2.0, which has:
 
 * __Stable API__ – won't make breaking API changes except:
   * CoreDetEncOptions() is subject to change because it uses draft standard not yet approved by IETF.
   * PreferredUnsortedEncOptions() is subject to change because it uses draft standard not yet approved by IETF.
 * __Stable requirements__ – will support Go v1.12 (unless there's compelling reason to require newer).
-* __Passed all tests__ – v1.5 passed all 375+ tests on amd64, arm64, ppc64le and s390x with linux.
-* __Passed fuzzing__ – v1.5 passed 4.75 billion execs in coverage-guided fuzzing on linux_amd64.
+* __Passed all tests__ – v2.0 passed all 375+ tests on amd64, arm64, ppc64le and s390x with linux.
+* __Passed fuzzing__ – v2.0 passed 501+ million execs and is still fuzzing.  v1.5 passed 4.75 billion execs in coverage-guided fuzzing.
 
 Recent activity:
 
-* [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- Faster encoding and decoding.
-* [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- Add `toarray` struct tag to simplify using CBOR arrays.
-* [x] [Release v1.3](https://github.com/fxamacker/cbor/releases) -- Add `keyasint` struct tag to simplify using CBOR maps with int keys.
-* [x] [Release v1.3.4](https://github.com/fxamacker/cbor/releases) -- Bugfixes and refactoring.  Limit nested levels to 32 for arrays, maps, tags.
-* [x] [Release v1.4](https://github.com/fxamacker/cbor/releases) -- Deprecate bool encoding options and add int SortMode.  Use float16 to float32 conversion func that had all 65536 results verified to be correct. Fix decoding of float16 subnormal numbers.
 * [x] [Release v1.5](https://github.com/fxamacker/cbor/releases) -- Add option to shrink floating-point values to smaller sizes like float16 (if they preserve value).
 * [x] [Release v1.5](https://github.com/fxamacker/cbor/releases) -- Add options for encoding floating-point NaN values: NaNConvertNone, NaNConvert7e00, NaNConvertQuiet, or NaNConvertPreserveSignal.
+* [x] [Release v2.0](https://github.com/fxamacker/cbor/releases) -- Improved API, faster performance, less memory allocs, and better code quality.
 
-Coming soon: support for CBOR tags (major type 6). After that, options for handling duplicate map keys.
+In v2.0, more functions are identical to `encoding/json`.  Functions with identical params and return types as `encoding/json` include:  
+`Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, `decoder.Decode`.
+
+Coming soon: support for CBOR tags (major type 6) in v2.1 (est. Feb 9, 2020). After that, options for handling duplicate map keys.
 
 ## Design Goals 
 This library is designed to be a generic CBOR encoder and decoder.  It was initially created for a [WebAuthn (FIDO2) server library](https://github.com/fxamacker/webauthn), because existing CBOR libraries (in Go) didn't meet certain criteria in 2019.
@@ -112,10 +111,10 @@ Features not in Go's standard library are usually not added.  However, the __`to
 * `toarray` struct tag allows named struct fields for elements of CBOR arrays.
 * `keyasint` struct tag allows named struct fields for elements of CBOR maps with int keys.
 * Encoder has easy functions that create and return modifiable configurations:
-  * func CanonicalEncOptions() EncOptions
-  * func CTAP2EncOptions() EncOptions
-  * func CoreDetEncOptions() EncOptions
-  * func PreferredUnsortedEncOptions() EncOptions
+  * CanonicalEncOptions() 
+  * CTAP2EncOptions() 
+  * CoreDetEncOptions() 
+  * PreferredUnsortedEncOptions() 
 * For Go integers, encoder always uses "preferred serialization" which encodes their values to the smallest number of bytes.
 * Encoder floating-point option types: ShortestFloatMode, InfConvertMode, and NaNConvertMode.
   * ShortestFloatMode: ShortestFloatNone or ShortestFloat16 (IEEE 754 binary16, etc. if value fits).
@@ -128,7 +127,6 @@ Features not in Go's standard library are usually not added.  However, the __`to
 * Support `time.Time` as RFC 3339 formatted text string or Unix time.
 * Support indefinite length CBOR data (["streaming"](https://tools.ietf.org/html/rfc7049#section-2.2)).  For decoding, each indefinite length "container" must fit into memory to perform well-formedness checks that prevent exploits. Go's `io.LimitReader` can be used to limit sizes.
 * Encoder uses struct field visibility rules for anonymous struct fields (same rules as `encoding/json`.)
-* Encoder always uses smallest CBOR integer sizes for more compact data serialization.
 * Decoder always checks for invalid UTF-8 string errors.
 * Decoder always decodes in-place to slices, maps, and structs.
 * Decoder uses case-insensitive field name match when decoding to structs. 
@@ -156,6 +154,16 @@ __EncOptions.Sort__:
 * SortCanonical: same as SortLengthFirst [(RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9)
 * SortCTAP2Canonical: same as SortBytewiseLexical  [(CTAP2 Canonical CBOR)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).
 * SortCoreDeterministic: same as SortBytewiseLexical.
+
+__EncOptions.Time__:  
+
+* TimeUnix: (seconds) encode as integer.
+* TimeUnixMicro: (microseconds) encode as floating-point.  ShortestFloat option determines size.
+* TimeUnixDynamic: (seconds or microseconds) encode as integer if time doesn't have fractional seconds, otherwise encode as floating-point rounded to microseconds.
+* TimeRFC3339: (seconds) encode as RFC 3339 formatted string.
+* TimeRFC3339Nano: (nanoseconds) encode as RFC3339 formatted string.
+
+By default, time values are encoded without tags.  Option to override this will be added in v2.1.
 
 Encoder has 3 types of options for floating-point data: ShortestFloatMode, InfConvertMode, and NaNConvertMode.
 
@@ -192,7 +200,7 @@ After well-formedness is verified, basic validity errors are handled as follows:
 When decoding well-formed CBOR arrays and maps, decoder saves the first error it encounters and continues with the next item.  Options to handle this differently may be added in the future.
 
 ## Limitations
-CBOR tags (type 6) is being added in the next release ([milestone v2.0](https://github.com/fxamacker/cbor/milestone/3)) and is coming soon.
+CBOR tags (type 6) is being added in the next release ([milestone v2.1](https://github.com/fxamacker/cbor/milestone/11)) and is coming soon.
 
 Known limitations:
 
@@ -208,7 +216,7 @@ Like Go's `encoding/json`, data validation checks the entire message to prevent 
 
 __Over 375 tests__ must pass on 4 architectures before tagging a release.  They include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and over 87 tests with malformed data.
 
-__Code coverage__ must not fall below 95% when tagging a release.  Code coverage is 97.9% (`go test -cover`) for cbor v1.5 which is among the highest for libraries (in Go) of this type.
+__Code coverage__ must not fall below 95% when tagging a release.  Code coverage is 97.9% (`go test -cover`) for cbor v2.0 which is among the highest for libraries (in Go) of this type.
 
 __Coverage-guided fuzzing__ must pass 250+ million execs before tagging a release.  E.g. v1.4 passed 532+ million execs in coverage-guided fuzzing at the time of release and reached 4+ billion execs 18 days later. Fuzzing uses [fxamacker/cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  Default corpus has:
 
