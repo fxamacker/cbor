@@ -24,9 +24,12 @@ __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: 
 
 * __Easy__ and saves time.  It has the same API as [Go](https://golang.org)'s [`encoding/json`](https://golang.org/pkg/encoding/json/) when possible.  Existing structs don't require changes.  Go struct tags like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` work as expected.  
 
-__Predefined configs__ make it easier to comply with standards like Canonical CBOR, CTAP2 Canonical CBOR, etc.
+Function signatures identical to encoding/json, include:  
+`Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, and `decoder.Decode`.
 
-__Custom configs__ can be created by setting options.  For example, `EncOptions.Time` can be set to `TimeUnix`, `TimeUnixMicro`, `TimeUnixDynamic`, `TimeRFC3339`, or `TimeRFC3339Nano`.
+Predefined options make it easier to comply with standards like Canonical CBOR, CTAP2 Canonical CBOR, etc.
+
+Customized options are easy.  For example, `EncOptions.Time` can be set to `TimeUnix`, `TimeUnixMicro`, `TimeUnixDynamic`, `TimeRFC3339`, or `TimeRFC3339Nano`.
 
 Struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data such as COSE, CWT, and SenML easier to use.
 
@@ -73,9 +76,6 @@ Recent activity:
 * [x] [Release v1.5](https://github.com/fxamacker/cbor/releases) -- Add option to shrink floating-point values to smaller sizes like float16 (if they preserve value).
 * [x] [Release v1.5](https://github.com/fxamacker/cbor/releases) -- Add options for encoding floating-point NaN values: NaNConvertNone, NaNConvert7e00, NaNConvertQuiet, or NaNConvertPreserveSignal.
 * [x] [Release v2.0](https://github.com/fxamacker/cbor/releases) -- Improved API, faster performance, less memory allocs, five options for encoding time and cleaner code. Decode NaN or Infinity time values as if they were NULL (to Go's "zero time".)
-
-In v2.0, more functions are identical to encoding/json, including:  
-`Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, `decoder.Decode`.
 
 __Why v2.0?__:
 
