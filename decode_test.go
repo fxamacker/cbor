@@ -2083,6 +2083,44 @@ func TestUnmarshalArrayToStructNoToArrayOptionError(t *testing.T) {
 	}
 }
 
+func TestUnmarshalNonArrayDataToStructToArray(t *testing.T) {
+	type T struct {
+		_ struct{} `cbor:",toarray"`
+		A int
+		B int
+		C int
+	}
+	testCases := []struct {
+		name     string
+		cborData []byte
+	}{
+		{"CBOR positive int", hexDecode("00")},                        // 0
+		{"CBOR negative int", hexDecode("20")},                        // -1
+		{"CBOR byte string", hexDecode("4401020304")},                 // h`01020304`
+		{"CBOR text string", hexDecode("7f657374726561646d696e67ff")}, // streaming
+		{"CBOR map", hexDecode("a3614101614202614303")},               // {"A": 1, "B": 2, "C": 3}
+		{"CBOR bool", hexDecode("f5")},                                // true
+		{"CBOR float", hexDecode("fa7f7fffff")},                       // 3.4028234663852886e+38
+	}
+	wantT := T{}
+	wantErrorMsg := "cannot unmarshal"
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var v T
+			if err := Unmarshal(tc.cborData, &v); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
+			} else if _, ok := err.(*UnmarshalTypeError); !ok {
+				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.cborData, err)
+			} else if !strings.Contains(err.Error(), wantErrorMsg) {
+				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborData, err.Error(), wantErrorMsg)
+			}
+			if !reflect.DeepEqual(v, wantT) {
+				t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", tc.cborData, v, v, wantT, wantT)
+			}
+		})
+	}
+}
+
 func TestUnmarshalArrayToStructWrongSizeError(t *testing.T) {
 	type T struct {
 		_ struct{} `cbor:",toarray"`

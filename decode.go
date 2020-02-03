@@ -716,11 +716,20 @@ func (d *decodeState) parseArrayToStruct(v reflect.Value) error {
 }
 
 func (d *decodeState) parseMapToStruct(v reflect.Value) error {
+	structType := getDecodingStructType(v.Type())
+	if structType.toArray {
+		t := d.nextCBORType()
+		d.skip()
+		return &UnmarshalTypeError{
+			Value:  t.String(),
+			Type:   v.Type(),
+			errMsg: "cannot decode CBOR map to struct with toarray option",
+		}
+	}
+	foundFldIdx := make([]bool, len(structType.fields))
 	_, ai, val := d.getHead()
 	hasSize := (ai != 31)
 	count := int(val)
-	structType := getDecodingStructType(v.Type())
-	foundFldIdx := make([]bool, len(structType.fields))
 	var err, lastErr error
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
 		var keyBytes []byte
