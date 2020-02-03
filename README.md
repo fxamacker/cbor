@@ -431,7 +431,7 @@ This project has adopted the [Contributor Covenant Code of Conduct](CODE_OF_COND
 Please refer to [How to Contribute](CONTRIBUTING.md).
 
 ## Security Policy
-For v1, security fixes are provided only for the latest released version since the API won't break compatibility.
+Security fixes are provided for the latest released version.
 
 To report security vulnerabilities, please email [faye.github@gmail.com](mailto:faye.github@gmail.com) and allow time for the problem to be resolved before reporting it to the public.
 
