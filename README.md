@@ -204,13 +204,69 @@ In v2, many function signatures are identical to encoding/json, including:
 
 "Mode" in this API means definite way of encoding or decoding.
 
-EncMode and DecMode are interfaces created from EncOptions or DecOptions structs.
+EncMode and DecMode are interfaces created from EncOptions or DecOptions structs.  
+For example, `em := cbor.EncOptions{...}.EncMode()` or `em := cbor.CanonicalEncOptions().EncMode()`.
 
 EncMode and DecMode use immutable options so their behavior won't accidentally change at runtime.  Modes are intended to be reused and are safe for concurrent use.
 
-In addition to the function API, the `keyasint` and `toarray` struct tags are worth knowing.  They can reduce programming effort, improve system performance, and reduce the size of serialized data.  
+__API for Default Mode of Encoding & Decoding__
 
-See [API docs (godoc.org)](https://godoc.org/github.com/fxamacker/cbor) for more details.  See [Usage section](#usage) for usage and code examples.  Options for the encoder are listed here.
+If default options are acceptable, then you don't need to create EncMode or DecMode.
+```
+Marshal(v interface{}) ([]byte, error)
+NewEncoder(w io.Writer) *Encoder
+
+Unmarshal(data []byte, v interface{}) error
+NewDecoder(r io.Reader) *Decoder
+```
+
+__API for Creating & Using Encoding Modes__
+```
+// EncMode interface uses immutable options and is safe for concurrent use.
+type EncMode interface {
+	Marshal(v interface{}) ([]byte, error)
+	NewEncoder(w io.Writer) *Encoder
+	EncOptions() EncOptions  // returns copy of options
+}
+
+// EncOptions specifies encoding options.
+type EncOptions struct {
+...
+}
+
+// EncMode returns an EncMode interface created from EncOptions.
+func (opts EncOptions) EncMode() (EncMode, error) 
+```
+
+__API for Predefined Encoding Options__
+```
+func CanonicalEncOptions() EncOptions     // settings for RFC 7049 Canonical CBOR
+func CTAP2EncOptions() EncOptions         // settings for FIDO2 CTAP2 Canonical CBOR
+func CoreDetEncOptions() EncOptions       // modern settings from a draft RFC (subject to change)
+func PreferredUnsortedEncOptions() EncOptions  // modern settings from a draft RFC (subject to change)
+```
+
+__API for Creating & Using Decoding Modes__
+```
+// DecMode interface uses immutable options and is safe for concurrent use.
+type DecMode interface {
+	Unmarshal(data []byte, v interface{}) error
+	NewDecoder(r io.Reader) *Decoder
+	DecOptions() DecOptions  // returns copy of options
+}
+
+// DecOptions specifies decoding options.
+type DecOptions struct {
+...
+}
+
+// DecMode returns a DecMode interface created from DecOptions.
+func (opts DecOptions) DecMode() (DecMode, error)
+```
+
+The `keyasint` and `toarray` struct tags are worth knowing.  They can reduce programming effort, improve system performance, and reduce the size of serialized data.  
+
+See [API docs (godoc.org)](https://godoc.org/github.com/fxamacker/cbor) for more details and more functions.  See [Usage section](#usage) for usage and code examples.  Options for the encoder are listed here.
 
 __Encoder Options__:
 
@@ -267,12 +323,9 @@ __EncOptions.NaNConvert__:
 Functions with identical signatures to encoding/json include:  
 `Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, `decoder.Decode`.
 
-EncMode and DecMode are interfaces created from EncOptions or DecOptions structs.
+__Default Mode of Encoding__  
 
-__Package Level Functions__  
-
-If default options are acceptable, package level functions can be used for encoding and decoding. Their API matches encoding/json.
-
+If default options are acceptable, package level functions can be used for encoding and decoding.
 ```
 b, err := cbor.Marshal(v)
 err := cbor.Unmarshal(b, &v)
@@ -280,15 +333,15 @@ encoder := cbor.NewEncoder(w)
 decoder := cbor.NewDecoder(r)
 ```
 
-__EncOptions and EncMode__
+__Creating and Using Encoding Modes__
 
-EncMode and DecMode are interfaces and their functions are often identical to encoding/json.
+EncMode is an interface ([API](#api)) created from EncOptions struct.  EncMode uses immutable options after being created and is safe for concurrent use.  For best performance, EncMode should be reused.
 
 ```
-// Create EncOptions, using either struct literal or a function.
+// Create EncOptions using either struct literal or a function.
 opts := cbor.CanonicalEncOptions()
 
-// If needed, modify options -- e.g. how time values should be encoded.
+// If needed, modify encoding options
 opts.Time = cbor.TimeUnix
 
 // Create reusable EncMode interface with immutable options, safe for concurrent use.
