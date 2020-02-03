@@ -397,18 +397,18 @@ For more examples, see [examples_test.go](example_test.go).
 
 Go structs are faster than maps with string keys:
 
-* decoding into struct is >29% faster than decoding into map.
-* encoding struct is >35% faster than encoding map.
+* decoding into struct is >27% faster than decoding into map.
+* encoding struct is >36% faster than encoding map.
 
 Go structs with `keyasint` struct tag are faster than maps with integer keys:
 
-* decoding into struct is >25% faster than decoding into map.
-* encoding struct is >32% faster than encoding map.
+* decoding into struct is >23% faster than decoding into map.
+* encoding struct is >35% faster than encoding map.
 
 Go structs with `toarray` struct tag are faster than slice:
 
 * decoding into struct is >14% faster than decoding into slice.
-* encoding struct is >9% faster than encoding slice.
+* encoding struct is >12% faster than encoding slice.
 
 Doing your own benchmarks is highly recommended.  Use your most common message sizes and data types.
 
