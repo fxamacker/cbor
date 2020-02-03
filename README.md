@@ -26,7 +26,7 @@ __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: 
 
 __Predefined configs__ make it easier to comply with standards like Canonical CBOR, CTAP2 Canonical CBOR, etc.
 
-__Custom configs__ can be created by setting options.  For example, `EncOptions.Time` can be set to `TimeUnix`, `TimeUnixMicro`, `TimeUnixDynamic`, `TimeRFC3339`, `TimeRFC3339Nano`.
+__Custom configs__ can be created by setting options.  For example, `EncOptions.Time` can be set to `TimeUnix`, `TimeUnixMicro`, `TimeUnixDynamic`, `TimeRFC3339`, or `TimeRFC3339Nano`.
 
 Struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data such as COSE, CWT, and SenML easier to use.
 
