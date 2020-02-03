@@ -715,7 +715,8 @@ func (d *decodeState) parseArrayToStruct(v reflect.Value) error {
 	return err
 }
 
-func (d *decodeState) parseMapToStruct(v reflect.Value) error {
+// parseMapToStruct needs to be fast so gocyclo can be ignored for now.
+func (d *decodeState) parseMapToStruct(v reflect.Value) error { //nolint:gocyclo
 	structType := getDecodingStructType(v.Type())
 	if structType.toArray {
 		t := d.nextCBORType()
