@@ -26,7 +26,7 @@ __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: 
 
 __Predefined configs__ make it easier to comply with standards like Canonical CBOR, CTAP2 Canonical CBOR, etc.
 
-__Custom configs__ can be created by setting individual options.  E.g., EncOptions.NaNConvert can be set to NaNConvertNone, NaNConvert7e00, NaNConvertQuiet, or NaNConvertPreserveSignal.
+__Custom configs__ can be created by setting individual options.  E.g., EncOptions.Time can be set to `TimeUnix`, `TimeUnixMicro`, `TimeUnixDynamic`, `TimeRFC3339`, `TimeRFC3339Nano`.
 
 Struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data such as COSE, CWT, and SenML easier to use.
 
@@ -283,13 +283,13 @@ __EncOptions and EncMode__
 EncMode and DecMode are interfaces and their functions are often identical to encoding/json.
 
 ```
-// Create EncOptions, using either struct literal or a function returning standards-compliant settings
+// Create EncOptions, using either struct literal or a function.
 opts := cbor.CanonicalEncOptions()
 
-// If needed, modify options -- e.g. how time values should be encoded
+// If needed, modify options -- e.g. how time values should be encoded.
 opts.Time = cbor.TimeUnix
 
-// Create reusable EncMode interface with immutable options, safe for concurrent use
+// Create reusable EncMode interface with immutable options, safe for concurrent use.
 em, err := opts.EncMode()   
 
 // Use EncMode like encoding/json, with same function signatures.
@@ -303,7 +303,11 @@ __Struct Tags (keyasint, toarray, omitempty)__
 
 The `keyasint`, `toarray`, and `omitempty` struct tags make it easy to use compact CBOR message formats.  Internet standards often use CBOR arrays and CBOR maps with int keys to save space.
 
-[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v2.0.0/cbor_easy_api.png)]()
+<hr>
+
+[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v2.0.0/cbor_easy_api.png)](#usage)
+
+<hr>
 
 __Decoding CWT (CBOR Web Token)__ using `keyasint` and `toarray` struct tags:
 ```
@@ -385,7 +389,7 @@ if data, err := em.Marshal(v); err != nil {
 }
 ```
 
-More [examples](example_test.go).
+For more examples, see [examples_test.go](example_test.go).
 
 ## Benchmarks
 
