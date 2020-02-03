@@ -1,7 +1,7 @@
 [![CBOR Library - Slideshow and Latest Docs.](https://github.com/fxamacker/images/raw/master/cbor/v2.0.0/cbor_slides.gif)](https://github.com/fxamacker/cbor/blob/master/README.md)
 
 # CBOR library in Go
-__`fxamacker/cbor`__ is a CBOR encoder and decoder.  It can encode integers and floats to their smallest forms (like float16) when values fit.  Each release passes 375+ tests and 250+ million execs fuzzing with 1100+ CBOR files.
+[__`fxamacker/cbor`__](https://github.com/fxamacker/cbor) is a CBOR encoder and decoder.  It can encode integers and floats to their smallest forms (like float16) when values fit.  Each release passes 375+ tests and 250+ million execs fuzzing with 1100+ CBOR files.
 
 [![](https://github.com/fxamacker/cbor/workflows/ci/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Aci)
 [![](https://github.com/fxamacker/cbor/workflows/cover%20%E2%89%A597%25/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3A%22cover+%E2%89%A597%25%22)
