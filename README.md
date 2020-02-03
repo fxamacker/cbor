@@ -1,7 +1,7 @@
 [![CBOR Library - Slideshow and Latest Docs.](https://github.com/fxamacker/images/raw/master/cbor/v2.0.0/cbor_slides.gif)](https://github.com/fxamacker/cbor/blob/master/README.md)
 
 # CBOR library in Go
-This is a generic CBOR encoder and decoder.  It can encode integers and floats to their smallest forms (like float16) when values fit.  Each release passes 375+ tests and 250+ million execs fuzzing with 1100+ CBOR files.
+__`fxamacker/cbor`__ is a generic CBOR encoder and decoder.  It can encode integers and floats to their smallest forms (like float16) when values fit.  Each release passes 375+ tests and 250+ million execs fuzzing with 1100+ CBOR files.
 
 [![](https://github.com/fxamacker/cbor/workflows/ci/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Aci)
 [![](https://github.com/fxamacker/cbor/workflows/cover%20%E2%89%A597%25/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3A%22cover+%E2%89%A597%25%22)
@@ -26,7 +26,7 @@ __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: 
 
 __Predefined configs__ make it easier to comply with standards like Canonical CBOR, CTAP2 Canonical CBOR, etc.
 
-__Custom configs__ can be created by setting individual options.  E.g., EncOptions.Time can be set to `TimeUnix`, `TimeUnixMicro`, `TimeUnixDynamic`, `TimeRFC3339`, `TimeRFC3339Nano`.
+__Custom configs__ can be created by setting options.  For example, `EncOptions.Time` can be set to `TimeUnix`, `TimeUnixMicro`, `TimeUnixDynamic`, `TimeRFC3339`, `TimeRFC3339Nano`.
 
 Struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data such as COSE, CWT, and SenML easier to use.
 
