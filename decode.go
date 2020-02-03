@@ -7,6 +7,7 @@ import (
 	"encoding"
 	"encoding/binary"
 	"errors"
+	"io"
 	"math"
 	"reflect"
 	"strconv"
@@ -18,7 +19,8 @@ import (
 )
 
 // Unmarshal parses the CBOR-encoded data and stores the result in the value
-// pointed to by v.  If v is nil or not a pointer, Unmarshal returns an error.
+// pointed to by v using the default decoding options.  If v is nil or not a
+// pointer, Unmarshal returns an error.
 //
 // Unmarshal uses the inverse of the encodings that Marshal uses, allocating
 // maps, slices, and pointers as necessary, with the following additional rules:
@@ -92,8 +94,7 @@ import (
 //
 // Unmarshal ignores CBOR tag data and parses tagged data following CBOR tag.
 func Unmarshal(data []byte, v interface{}) error {
-	d := decodeState{data: data}
-	return d.value(v)
+	return defaultDecMode.Unmarshal(data, v)
 }
 
 // Unmarshaler is the interface implemented by types that can unmarshal a CBOR
@@ -101,7 +102,7 @@ func Unmarshal(data []byte, v interface{}) error {
 // of a CBOR value. UnmarshalCBOR must copy the CBOR data if it wishes to retain
 // the data after returning.
 type Unmarshaler interface {
-	UnmarshalCBOR([]byte) error
+	UnmarshalCBOR(DecMode, []byte) error
 }
 
 // InvalidUnmarshalError describes an invalid argument passed to Unmarshal.
@@ -141,9 +142,52 @@ func (e *UnmarshalTypeError) Error() string {
 	return s
 }
 
+// DecOptions specifies decoding options.
+type DecOptions struct {
+}
+
+// DecMode returns a DecMode interface from DecOptions.
+func (opts DecOptions) DecMode() (DecMode, error) {
+	dm := decMode{}
+	return &dm, nil
+}
+
+// DecMode is the main interface for CBOR decoding.
+type DecMode interface {
+	Unmarshal(data []byte, v interface{}) error
+	NewDecoder(r io.Reader) *Decoder
+	DecOptions() DecOptions
+}
+
+type decMode struct {
+}
+
+var defaultDecMode = &decMode{}
+
+// DecOptions returns user specified options used to create this DecMode.
+func (dm *decMode) DecOptions() DecOptions {
+	return DecOptions{}
+}
+
+// Unmarshal parses the CBOR-encoded data and stores the result in the value
+// pointed to by v using dm DecMode.  If v is nil or not a pointer, Unmarshal
+// returns an error.
+//
+// See the documentation for Unmarshal for details.
+func (dm *decMode) Unmarshal(data []byte, v interface{}) error {
+	d := decodeState{data: data, dm: dm}
+	return d.value(v)
+}
+
+// NewDecoder returns a new decoder that reads from r using dm DecMode.
+func (dm *decMode) NewDecoder(r io.Reader) *Decoder {
+	return &Decoder{r: r, d: decodeState{dm: dm}}
+}
+
 type decodeState struct {
 	data []byte
 	off  int // next read offset in data
+	dm   *decMode
 }
 
 func (d *decodeState) value(v interface{}) error {
@@ -152,7 +196,7 @@ func (d *decodeState) value(v interface{}) error {
 		return &InvalidUnmarshalError{reflect.TypeOf(v)}
 	}
 
-	if _, err := Valid(d.data[d.off:]); err != nil {
+	if _, err := valid(d.data[d.off:]); err != nil {
 		return err
 	}
 
@@ -207,7 +251,8 @@ func (t cborType) String() string {
 }
 
 // parseToValue assumes data is well-formed, and does not perform bounds checking.
-func (d *decodeState) parseToValue(v reflect.Value, isUnmarshaler bool) error {
+// This function is complicated because it's the main function that decodes CBOR data to reflect.Value.
+func (d *decodeState) parseToValue(v reflect.Value, isUnmarshaler bool) error { //nolint:gocyclo
 	if isUnmarshaler {
 		return d.parseToUnmarshaler(v)
 	}
@@ -261,7 +306,7 @@ func (d *decodeState) parseToValue(v reflect.Value, isUnmarshaler bool) error {
 	case cborTypePrimitives:
 		_, ai, val := d.getHead()
 		if ai < 20 || ai == 24 {
-			return fillPositiveInt(t, uint64(val), v)
+			return fillPositiveInt(t, val, v)
 		}
 		switch ai {
 		case 20, 21:
@@ -313,11 +358,9 @@ func (d *decodeState) parseToUnmarshaler(v reflect.Value) error {
 			}
 			v = v.Elem()
 		}
-	} else {
-		if v.Kind() == reflect.Ptr && v.IsNil() {
-			d.skip()
-			return nil
-		}
+	} else if v.Kind() == reflect.Ptr && v.IsNil() {
+		d.skip()
+		return nil
 	}
 
 	if v.Kind() != reflect.Ptr && v.CanAddr() {
@@ -326,7 +369,7 @@ func (d *decodeState) parseToUnmarshaler(v reflect.Value) error {
 	if u, ok := v.Interface().(Unmarshaler); ok {
 		start := d.off
 		d.skip()
-		return u.UnmarshalCBOR(d.data[start:d.off])
+		return u.UnmarshalCBOR(d.dm, d.data[start:d.off])
 	}
 	d.skip()
 	return errors.New("cbor: failed to assert " + v.Type().String() + " as cbor.Unmarshaler")
@@ -342,7 +385,11 @@ func (d *decodeState) parse() (interface{}, error) {
 	case cborTypeNegativeInt:
 		_, _, val := d.getHead()
 		if val > math.MaxInt64 {
-			return nil, &UnmarshalTypeError{Value: t.String(), Type: reflect.TypeOf([]interface{}(nil)).Elem(), errMsg: "-1-" + strconv.FormatUint(val, 10) + " overflows Go's int64"}
+			return nil, &UnmarshalTypeError{
+				Value:  t.String(),
+				Type:   reflect.TypeOf([]interface{}(nil)).Elem(),
+				errMsg: "-1-" + strconv.FormatUint(val, 10) + " overflows Go's int64",
+			}
 		}
 		nValue := int64(-1) ^ int64(val)
 		return nValue, nil
@@ -360,7 +407,7 @@ func (d *decodeState) parse() (interface{}, error) {
 	case cborTypePrimitives:
 		_, ai, val := d.getHead()
 		if ai < 20 || ai == 24 {
-			return uint64(val), nil
+			return val, nil
 		}
 		switch ai {
 		case 20, 21:
@@ -621,7 +668,11 @@ func (d *decodeState) parseArrayToStruct(v reflect.Value) error {
 	if !structType.toArray {
 		t := d.nextCBORType()
 		d.skip()
-		return &UnmarshalTypeError{Value: t.String(), Type: v.Type(), errMsg: "cannot decode CBOR array to struct without toarray option"}
+		return &UnmarshalTypeError{
+			Value:  t.String(),
+			Type:   v.Type(),
+			errMsg: "cannot decode CBOR array to struct without toarray option",
+		}
 	}
 	start := d.off
 	t, ai, val := d.getHead()
@@ -633,7 +684,11 @@ func (d *decodeState) parseArrayToStruct(v reflect.Value) error {
 	if count != len(structType.fields) {
 		d.off = start
 		d.skip()
-		return &UnmarshalTypeError{Value: t.String(), Type: v.Type(), errMsg: "cannot decode CBOR array to struct with different number of elements"}
+		return &UnmarshalTypeError{
+			Value:  t.String(),
+			Type:   v.Type(),
+			errMsg: "cannot decode CBOR array to struct with different number of elements",
+		}
 	}
 	var err error
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
@@ -696,7 +751,11 @@ func (d *decodeState) parseMapToStruct(v reflect.Value) error {
 			}
 		} else {
 			if err == nil {
-				err = &UnmarshalTypeError{Value: t.String(), Type: reflect.TypeOf(""), errMsg: "map key is of type " + t.String() + " and cannot be used to match struct " + v.Type().String() + " field name"}
+				err = &UnmarshalTypeError{
+					Value:  t.String(),
+					Type:   reflect.TypeOf(""),
+					errMsg: "map key is of type " + t.String() + " and cannot be used to match struct " + v.Type().String() + " field name",
+				}
 			}
 			d.skip() // skip key
 			d.skip() // skip value
@@ -756,30 +815,12 @@ func (d *decodeState) parseMapToStruct(v reflect.Value) error {
 // skip moves data offset to the next item.  skip assumes data is well-formed,
 // and does not perform bounds checking.
 func (d *decodeState) skip() {
-	t := cborType(d.data[d.off] & 0xe0)
-	ai := d.data[d.off] & 0x1f
-	val := uint64(ai)
-	d.off++
-
-	switch ai {
-	case 24:
-		val = uint64(d.data[d.off])
-		d.off++
-	case 25:
-		val = uint64(binary.BigEndian.Uint16(d.data[d.off : d.off+2]))
-		d.off += 2
-	case 26:
-		val = uint64(binary.BigEndian.Uint32(d.data[d.off : d.off+4]))
-		d.off += 4
-	case 27:
-		val = binary.BigEndian.Uint64(d.data[d.off : d.off+8])
-		d.off += 8
-	}
+	t, ai, val := d.getHead()
 
 	if ai == 31 {
 		switch t {
 		case cborTypeByteString, cborTypeTextString, cborTypeArray, cborTypeMap:
-			for true {
+			for {
 				if d.data[d.off] == 0xff {
 					d.off++
 					return
@@ -945,12 +986,20 @@ func fillFloat(t cborType, val float64, v reflect.Value) error {
 	switch v.Kind() {
 	case reflect.Float32, reflect.Float64:
 		if v.OverflowFloat(val) {
-			return &UnmarshalTypeError{Value: t.String(), Type: v.Type(), errMsg: strconv.FormatFloat(val, 'E', -1, 64) + " overflows " + v.Type().String()}
+			return &UnmarshalTypeError{
+				Value:  t.String(),
+				Type:   v.Type(),
+				errMsg: strconv.FormatFloat(val, 'E', -1, 64) + " overflows " + v.Type().String(),
+			}
 		}
 		v.SetFloat(val)
 		return nil
 	}
 	if v.Type() == typeTime {
+		if math.IsNaN(val) || math.IsInf(val, 0) {
+			v.Set(reflect.ValueOf(time.Time{}))
+			return nil
+		}
 		f1, f2 := math.Modf(val)
 		tm := time.Unix(int64(f1), int64(f2*1e9))
 		v.Set(reflect.ValueOf(tm))

@@ -23,20 +23,20 @@ type field struct {
 
 type fields []field
 
-func (x fields) Len() int {
-	return len(x)
+// indexFieldSorter sorts fields by field idx at each level, breaking ties with idx depth.
+type indexFieldSorter struct {
+	fields fields
 }
 
-func (x fields) Swap(i, j int) {
-	x[i], x[j] = x[j], x[i]
+func (x *indexFieldSorter) Len() int {
+	return len(x.fields)
 }
 
-// byIndex sorts fields by field idx at each level, breaking ties with idx depth.
-type byIndex struct {
-	fields
+func (x *indexFieldSorter) Swap(i, j int) {
+	x.fields[i], x.fields[j] = x.fields[j], x.fields[i]
 }
 
-func (x byIndex) Less(i, j int) bool {
+func (x *indexFieldSorter) Less(i, j int) bool {
 	iIdx := x.fields[i].idx
 	jIdx := x.fields[j].idx
 	for k, d := range iIdx {
@@ -53,12 +53,20 @@ func (x byIndex) Less(i, j int) bool {
 	return true
 }
 
-// byNameLevelAndTag sorts fields by field name, idx depth, and presence of tag.
-type byNameLevelAndTag struct {
-	fields
+// nameLevelAndTagFieldSorter sorts fields by field name, idx depth, and presence of tag.
+type nameLevelAndTagFieldSorter struct {
+	fields fields
 }
 
-func (x byNameLevelAndTag) Less(i, j int) bool {
+func (x *nameLevelAndTagFieldSorter) Len() int {
+	return len(x.fields)
+}
+
+func (x *nameLevelAndTagFieldSorter) Swap(i, j int) {
+	x.fields[i], x.fields[j] = x.fields[j], x.fields[i]
+}
+
+func (x *nameLevelAndTagFieldSorter) Less(i, j int) bool {
 	if x.fields[i].name != x.fields[j].name {
 		return x.fields[i].name < x.fields[j].name
 	}
@@ -156,7 +164,7 @@ func getFields(typ reflect.Type) (flds fields, structOptions string) {
 		}
 	}
 
-	sort.Sort(byNameLevelAndTag{flds})
+	sort.Sort(&nameLevelAndTagFieldSorter{flds})
 
 	// Keep visible fields.
 	visibleFields := flds[:0]
@@ -172,13 +180,13 @@ func getFields(typ reflect.Type) (flds fields, structOptions string) {
 		}
 	}
 
-	sort.Sort(byIndex{visibleFields})
+	sort.Sort(&indexFieldSorter{visibleFields})
 
 	return visibleFields, structOptions
 }
 
 func getFieldNameAndOptionsFromTag(tag string) (name string, omitEmpty bool, keyAsInt bool) {
-	if len(tag) == 0 {
+	if tag == "" {
 		return
 	}
 	idx := strings.Index(tag, ",")

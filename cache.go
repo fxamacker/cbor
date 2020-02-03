@@ -31,8 +31,8 @@ import (
 )
 
 var (
-	decodingStructTypeCache sync.Map // map[reflect.Type]decodingStructType
-	encodingStructTypeCache sync.Map // map[reflect.Type]encodingStructType
+	decodingStructTypeCache sync.Map // map[reflect.Type]*decodingStructType
+	encodingStructTypeCache sync.Map // map[reflect.Type]*encodingStructType
 	encodeFuncCache         sync.Map // map[reflect.Type]encodeFunc
 )
 
@@ -41,9 +41,9 @@ type decodingStructType struct {
 	toArray bool
 }
 
-func getDecodingStructType(t reflect.Type) decodingStructType {
+func getDecodingStructType(t reflect.Type) *decodingStructType {
 	if v, _ := decodingStructTypeCache.Load(t); v != nil {
-		return v.(decodingStructType)
+		return v.(*decodingStructType)
 	}
 
 	flds, structOptions := getFields(t)
@@ -54,53 +54,69 @@ func getDecodingStructType(t reflect.Type) decodingStructType {
 		flds[i].isUnmarshaler = implementsUnmarshaler(flds[i].typ)
 	}
 
-	structType := decodingStructType{fields: flds, toArray: toArray}
+	structType := &decodingStructType{fields: flds, toArray: toArray}
 	decodingStructTypeCache.Store(t, structType)
 	return structType
 }
 
 type encodingStructType struct {
-	fields                  fields
-	bytewiseCanonicalFields fields
-	lenFirstCanonicalFields fields
-	err                     error
-	toArray                 bool
-	omitEmpty               bool
-	hasAnonymousField       bool
+	fields            fields
+	bytewiseFields    fields
+	lengthFirstFields fields
+	err               error
+	toArray           bool
+	omitEmpty         bool
+	hasAnonymousField bool
 }
 
-func (st encodingStructType) getFields(opts EncOptions) fields {
-	switch opts.Sort {
-	case SortLengthFirst:
-		return st.lenFirstCanonicalFields
-	case SortBytewiseLexical:
-		return st.bytewiseCanonicalFields
+func (st *encodingStructType) getFields(em *encMode) fields {
+	if em.sort == SortNone {
+		return st.fields
 	}
-	return st.fields
+	if em.sort == SortLengthFirst {
+		return st.lengthFirstFields
+	}
+	return st.bytewiseFields
 }
 
-type byBytewiseFields struct {
-	fields
+type bytewiseFieldSorter struct {
+	fields fields
 }
 
-func (x byBytewiseFields) Less(i, j int) bool {
+func (x *bytewiseFieldSorter) Len() int {
+	return len(x.fields)
+}
+
+func (x *bytewiseFieldSorter) Swap(i, j int) {
+	x.fields[i], x.fields[j] = x.fields[j], x.fields[i]
+}
+
+func (x *bytewiseFieldSorter) Less(i, j int) bool {
 	return bytes.Compare(x.fields[i].cborName, x.fields[j].cborName) <= 0
 }
 
-type byLengthFirstFields struct {
-	fields
+type lengthFirstFieldSorter struct {
+	fields fields
 }
 
-func (x byLengthFirstFields) Less(i, j int) bool {
+func (x *lengthFirstFieldSorter) Len() int {
+	return len(x.fields)
+}
+
+func (x *lengthFirstFieldSorter) Swap(i, j int) {
+	x.fields[i], x.fields[j] = x.fields[j], x.fields[i]
+}
+
+func (x *lengthFirstFieldSorter) Less(i, j int) bool {
 	if len(x.fields[i].cborName) != len(x.fields[j].cborName) {
 		return len(x.fields[i].cborName) < len(x.fields[j].cborName)
 	}
 	return bytes.Compare(x.fields[i].cborName, x.fields[j].cborName) <= 0
 }
 
-func getEncodingStructType(t reflect.Type) encodingStructType {
+func getEncodingStructType(t reflect.Type) *encodingStructType {
 	if v, _ := encodingStructTypeCache.Load(t); v != nil {
-		return v.(encodingStructType)
+		return v.(*encodingStructType)
 	}
 
 	flds, structOptions := getFields(t)
@@ -164,41 +180,41 @@ func getEncodingStructType(t reflect.Type) encodingStructType {
 	putEncodeState(e)
 
 	if err != nil {
-		structType := encodingStructType{err: err}
+		structType := &encodingStructType{err: err}
 		encodingStructTypeCache.Store(t, structType)
 		return structType
 	}
 
 	// Sort fields by canonical order
-	bytewiseCanonicalFields := make(fields, len(flds))
-	copy(bytewiseCanonicalFields, flds)
-	sort.Sort(byBytewiseFields{bytewiseCanonicalFields})
+	bytewiseFields := make(fields, len(flds))
+	copy(bytewiseFields, flds)
+	sort.Sort(&bytewiseFieldSorter{bytewiseFields})
 
-	lenFirstCanonicalFields := bytewiseCanonicalFields
+	lengthFirstFields := bytewiseFields
 	if hasKeyAsInt && hasKeyAsStr {
-		lenFirstCanonicalFields = make(fields, len(flds))
-		copy(lenFirstCanonicalFields, flds)
-		sort.Sort(byLengthFirstFields{lenFirstCanonicalFields})
+		lengthFirstFields = make(fields, len(flds))
+		copy(lengthFirstFields, flds)
+		sort.Sort(&lengthFirstFieldSorter{lengthFirstFields})
 	}
 
-	structType := encodingStructType{
-		fields:                  flds,
-		bytewiseCanonicalFields: bytewiseCanonicalFields,
-		lenFirstCanonicalFields: lenFirstCanonicalFields,
-		omitEmpty:               omitEmpty,
-		hasAnonymousField:       hasAnonymousField,
+	structType := &encodingStructType{
+		fields:            flds,
+		bytewiseFields:    bytewiseFields,
+		lengthFirstFields: lengthFirstFields,
+		omitEmpty:         omitEmpty,
+		hasAnonymousField: hasAnonymousField,
 	}
 	encodingStructTypeCache.Store(t, structType)
 	return structType
 }
 
-func getEncodingStructToArrayType(t reflect.Type, flds fields) encodingStructType {
+func getEncodingStructToArrayType(t reflect.Type, flds fields) *encodingStructType {
 	var hasAnonymousField bool
 	for i := 0; i < len(flds); i++ {
 		// Get field's encodeFunc
 		flds[i].ef = getEncodeFunc(flds[i].typ)
 		if flds[i].ef == nil {
-			structType := encodingStructType{err: &UnsupportedTypeError{t}}
+			structType := &encodingStructType{err: &UnsupportedTypeError{t}}
 			encodingStructTypeCache.Store(t, structType)
 			return structType
 		}
@@ -209,7 +225,7 @@ func getEncodingStructToArrayType(t reflect.Type, flds fields) encodingStructTyp
 		}
 	}
 
-	structType := encodingStructType{
+	structType := &encodingStructType{
 		fields:            flds,
 		toArray:           true,
 		hasAnonymousField: hasAnonymousField,

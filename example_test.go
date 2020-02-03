@@ -10,7 +10,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/fxamacker/cbor"
+	"github.com/fxamacker/cbor/v2"
 )
 
 func ExampleMarshal() {
@@ -21,7 +21,7 @@ func ExampleMarshal() {
 		Male   bool
 	}
 	animal := Animal{Age: 4, Name: "Candy", Owners: []string{"Mary", "Joe"}}
-	b, err := cbor.Marshal(animal, cbor.EncOptions{})
+	b, err := cbor.Marshal(animal)
 	if err != nil {
 		fmt.Println("error:", err)
 	}
@@ -31,15 +31,25 @@ func ExampleMarshal() {
 }
 
 func ExampleMarshal_time() {
-	tm, _ := time.Parse(time.RFC3339Nano, "2013-03-21T20:04:00Z")
-	// Encode time as string in RFC3339 format.
-	b, err := cbor.Marshal(tm, cbor.EncOptions{TimeRFC3339: true})
+	tm, _ := time.Parse(time.RFC3339, "2013-03-21T20:04:00Z")
+
+	// Encode time as string in RFC3339 format with second precision.
+	em, err := cbor.EncOptions{Time: cbor.TimeRFC3339}.EncMode()
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	b, err := em.Marshal(tm)
 	if err != nil {
 		fmt.Println("error:", err)
 	}
 	fmt.Printf("%x\n", b)
+
 	// Encode time as numerical representation of seconds since January 1, 1970 UTC.
-	b, err = cbor.Marshal(tm, cbor.EncOptions{TimeRFC3339: false})
+	em, err = cbor.EncOptions{Time: cbor.TimeUnix}.EncMode()
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	b, err = em.Marshal(tm)
 	if err != nil {
 		fmt.Println("error:", err)
 	}
@@ -58,7 +68,11 @@ func ExampleMarshal_canonical() {
 		Male     bool
 	}
 	animal := Animal{Age: 4, Name: "Candy", Contacts: map[string]string{"Mary": "111-111-1111", "Joe": "222-222-2222"}}
-	b, err := cbor.Marshal(animal, cbor.CanonicalEncOptions())
+	em, err := cbor.CanonicalEncOptions().EncMode()
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	b, err := em.Marshal(animal)
 	if err != nil {
 		fmt.Println("error:", err)
 	}
@@ -76,7 +90,7 @@ func ExampleMarshal_toarray() {
 		Measurement int
 	}
 	rec := Record{Name: "current", Unit: "V", Measurement: 1}
-	b, err := cbor.Marshal(rec, cbor.EncOptions{})
+	b, err := cbor.Marshal(rec)
 	if err != nil {
 		fmt.Println("error:", err)
 	}
@@ -94,7 +108,7 @@ func ExampleMarshal_keyasint() {
 		Measurement int    `cbor:"3,keyasint"`
 	}
 	rec := Record{Name: "current", Unit: "V", Measurement: 1}
-	b, err := cbor.Marshal(rec, cbor.EncOptions{})
+	b, err := cbor.Marshal(rec)
 	if err != nil {
 		fmt.Println("error:", err)
 	}
@@ -152,7 +166,11 @@ func ExampleEncoder() {
 		{Age: 2, Name: "Duke", Owners: []string{"Norton"}, Male: true},
 	}
 	var buf bytes.Buffer
-	enc := cbor.NewEncoder(&buf, cbor.CanonicalEncOptions())
+	em, err := cbor.CanonicalEncOptions().EncMode()
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	enc := em.NewEncoder(&buf)
 	for _, animal := range animals {
 		err := enc.Encode(animal)
 		if err != nil {
@@ -168,7 +186,7 @@ func ExampleEncoder() {
 // length byte string ("chunks") as an indefinite length byte string.
 func ExampleEncoder_indefiniteLengthByteString() {
 	var buf bytes.Buffer
-	encoder := cbor.NewEncoder(&buf, cbor.EncOptions{})
+	encoder := cbor.NewEncoder(&buf)
 	// Start indefinite length byte string encoding.
 	if err := encoder.StartIndefiniteByteString(); err != nil {
 		fmt.Println("error:", err)
@@ -194,7 +212,7 @@ func ExampleEncoder_indefiniteLengthByteString() {
 // length text string ("chunks") as an indefinite length text string.
 func ExampleEncoder_indefiniteLengthTextString() {
 	var buf bytes.Buffer
-	encoder := cbor.NewEncoder(&buf, cbor.EncOptions{})
+	encoder := cbor.NewEncoder(&buf)
 	// Start indefinite length text string encoding.
 	if err := encoder.StartIndefiniteTextString(); err != nil {
 		fmt.Println("error:", err)
@@ -220,7 +238,7 @@ func ExampleEncoder_indefiniteLengthTextString() {
 // indefinite length array.  Encoder supports nested indefinite length values.
 func ExampleEncoder_indefiniteLengthArray() {
 	var buf bytes.Buffer
-	enc := cbor.NewEncoder(&buf, cbor.EncOptions{})
+	enc := cbor.NewEncoder(&buf)
 	// Start indefinite length array encoding.
 	if err := enc.StartIndefiniteArray(); err != nil {
 		fmt.Println("error:", err)
@@ -262,7 +280,11 @@ func ExampleEncoder_indefiniteLengthArray() {
 // indefinite length map.  Encoder supports nested indefinite length values.
 func ExampleEncoder_indefiniteLengthMap() {
 	var buf bytes.Buffer
-	enc := cbor.NewEncoder(&buf, cbor.EncOptions{Sort: cbor.SortCanonical})
+	em, err := cbor.EncOptions{Sort: cbor.SortCanonical}.EncMode()
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	enc := em.NewEncoder(&buf)
 	// Start indefinite length map encoding.
 	if err := enc.StartIndefiniteMap(); err != nil {
 		fmt.Println("error:", err)
@@ -346,7 +368,7 @@ func Example_cWT() {
 	if err := cbor.Unmarshal(cborData, &v); err != nil {
 		fmt.Println("error:", err)
 	}
-	if _, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
+	if _, err := cbor.Marshal(v); err != nil {
 		fmt.Println("error:", err)
 	}
 	fmt.Printf("%+v", v)
@@ -376,7 +398,7 @@ func Example_signedCWT() {
 	if err := cbor.Unmarshal(cborData, &v); err != nil {
 		fmt.Println("error:", err)
 	}
-	if _, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
+	if _, err := cbor.Marshal(v); err != nil {
 		fmt.Println("error:", err)
 	}
 	fmt.Printf("%+v", v)
@@ -405,7 +427,7 @@ func Example_cOSE() {
 	if err := cbor.Unmarshal(cborData, &v); err != nil {
 		fmt.Println("error:", err)
 	}
-	if _, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
+	if _, err := cbor.Marshal(v); err != nil {
 		fmt.Println("error:", err)
 	}
 	fmt.Printf("%+v", v)
@@ -434,16 +456,20 @@ func Example_senML() {
 	}
 	// Data from https://tools.ietf.org/html/rfc8428#section-6
 	cborData, _ := hex.DecodeString("87a721781b75726e3a6465763a6f773a3130653230373361303130383030363a22fb41d303a15b00106223614120050067766f6c7461676501615602fb405e066666666666a3006763757272656e74062402fb3ff3333333333333a3006763757272656e74062302fb3ff4cccccccccccda3006763757272656e74062202fb3ff6666666666666a3006763757272656e74062102f93e00a3006763757272656e74062002fb3ff999999999999aa3006763757272656e74060002fb3ffb333333333333")
-	var v []SenMLRecord
+	var v []*SenMLRecord
 	if err := cbor.Unmarshal(cborData, &v); err != nil {
 		fmt.Println("error:", err)
 	}
 	// Encoder uses ShortestFloat16 option to use float16 as the shortest form that preserves floating-point value.
-	if _, err := cbor.Marshal(v, cbor.EncOptions{ShortestFloat: cbor.ShortestFloat16}); err != nil {
+	em, err := cbor.EncOptions{ShortestFloat: cbor.ShortestFloat16}.EncMode()
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	if _, err := em.Marshal(v); err != nil {
 		fmt.Println("error:", err)
 	}
 	for _, rec := range v {
-		fmt.Printf("%+v\n", rec)
+		fmt.Printf("%+v\n", *rec)
 	}
 	// Output:
 	// {BaseName:urn:dev:ow:10e2073a0108006: BaseTime:1.276020076001e+09 BaseUnit:A BaseValue:0 BaseSum:0 BaseVersion:5 Name:voltage Unit:V Time:0 UpdateTime:0 Value:120.1 ValueS: ValueB:false ValueD: Sum:0}
@@ -467,7 +493,7 @@ func Example_webAuthn() {
 	if err := cbor.Unmarshal(cborData, &v); err != nil {
 		fmt.Println("error:", err)
 	}
-	if _, err := cbor.Marshal(v, cbor.EncOptions{}); err != nil {
+	if _, err := cbor.Marshal(v); err != nil {
 		fmt.Println("error:", err)
 	}
 	fmt.Printf("%+v", v)

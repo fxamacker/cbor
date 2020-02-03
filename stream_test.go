@@ -1,15 +1,13 @@
 // Copyright (c) Faye Amacker. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
-package cbor_test
+package cbor
 
 import (
 	"bytes"
 	"io"
 	"reflect"
 	"testing"
-
-	"github.com/fxamacker/cbor"
 )
 
 func TestDecoder(t *testing.T) {
@@ -19,7 +17,7 @@ func TestDecoder(t *testing.T) {
 			buf.Write(tc.cborData)
 		}
 	}
-	decoder := cbor.NewDecoder(&buf)
+	decoder := NewDecoder(&buf)
 	bytesRead := 0
 	for i := 0; i < 5; i++ {
 		for _, tc := range unmarshalTests {
@@ -56,7 +54,7 @@ func TestDecoderUnmarshalTypeError(t *testing.T) {
 			}
 		}
 	}
-	decoder := cbor.NewDecoder(&buf)
+	decoder := NewDecoder(&buf)
 	bytesRead := 0
 	for i := 0; i < 5; i++ {
 		for _, tc := range unmarshalTests {
@@ -64,7 +62,7 @@ func TestDecoderUnmarshalTypeError(t *testing.T) {
 				v := reflect.New(typ)
 				if err := decoder.Decode(v.Interface()); err == nil {
 					t.Errorf("Decode(0x%x) didn't return an error, want UnmarshalTypeError", tc.cborData)
-				} else if _, ok := err.(*cbor.UnmarshalTypeError); !ok {
+				} else if _, ok := err.(*UnmarshalTypeError); !ok {
 					t.Errorf("Decode(0x%x) returned wrong error type %T, want UnmarshalTypeError", tc.cborData, err)
 				}
 				bytesRead += len(tc.cborData)
@@ -111,7 +109,7 @@ func TestDecoderStructTag(t *testing.T) {
 	cborData := hexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
 
 	var v strc
-	dec := cbor.NewDecoder(bytes.NewReader(cborData))
+	dec := NewDecoder(bytes.NewReader(cborData))
 	if err := dec.Decode(&v); err != nil {
 		t.Errorf("Decode() returned error %v", err)
 	}
@@ -123,7 +121,11 @@ func TestDecoderStructTag(t *testing.T) {
 func TestEncoder(t *testing.T) {
 	var want bytes.Buffer
 	var w bytes.Buffer
-	encoder := cbor.NewEncoder(&w, cbor.EncOptions{Sort: cbor.SortCanonical})
+	em, err := CanonicalEncOptions().EncMode()
+	if err != nil {
+		t.Errorf("EncMode() returned an error %v", err)
+	}
+	encoder := em.NewEncoder(&w)
 	for _, tc := range marshalTests {
 		for _, value := range tc.values {
 			want.Write(tc.cborData)
@@ -144,19 +146,19 @@ func TestEncoderError(t *testing.T) {
 		value        interface{}
 		wantErrorMsg string
 	}{
-		{"channel can't be marshalled", make(chan bool), "cbor: unsupported type: chan bool"},
-		{"function can't be marshalled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
-		{"complex can't be marshalled", complex(100, 8), "cbor: unsupported type: complex128"},
+		{"channel can't be marshaled", make(chan bool), "cbor: unsupported type: chan bool"},
+		{"function can't be marshaled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
+		{"complex can't be marshaled", complex(100, 8), "cbor: unsupported type: complex128"},
 	}
 	var w bytes.Buffer
-	encoder := cbor.NewEncoder(&w, cbor.EncOptions{})
+	encoder := NewEncoder(&w)
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			err := encoder.Encode(&tc.value)
 			if err == nil {
 				t.Errorf("Encode(%v) didn't return an error, want error %q", tc.value, tc.wantErrorMsg)
-			} else if _, ok := err.(*cbor.UnsupportedTypeError); !ok {
-				t.Errorf("Encode(%v) error type %T, want *cbor.UnsupportedTypeError", tc.value, err)
+			} else if _, ok := err.(*UnsupportedTypeError); !ok {
+				t.Errorf("Encode(%v) error type %T, want *UnsupportedTypeError", tc.value, err)
 			} else if err.Error() != tc.wantErrorMsg {
 				t.Errorf("Encode(%v) error %q, want %q", tc.value, err.Error(), tc.wantErrorMsg)
 			}
@@ -170,7 +172,7 @@ func TestEncoderError(t *testing.T) {
 func TestIndefiniteByteString(t *testing.T) {
 	want := hexDecode("5f42010243030405ff")
 	var w bytes.Buffer
-	encoder := cbor.NewEncoder(&w, cbor.EncOptions{})
+	encoder := NewEncoder(&w)
 	if err := encoder.StartIndefiniteByteString(); err != nil {
 		t.Fatalf("StartIndefiniteByteString() returned error %v", err)
 	}
@@ -190,7 +192,7 @@ func TestIndefiniteByteString(t *testing.T) {
 
 func TestIndefiniteByteStringError(t *testing.T) {
 	var w bytes.Buffer
-	encoder := cbor.NewEncoder(&w, cbor.EncOptions{})
+	encoder := NewEncoder(&w)
 	if err := encoder.StartIndefiniteByteString(); err != nil {
 		t.Fatalf("StartIndefiniteByteString() returned error %v", err)
 	}
@@ -209,7 +211,7 @@ func TestIndefiniteByteStringError(t *testing.T) {
 func TestIndefiniteTextString(t *testing.T) {
 	want := hexDecode("7f657374726561646d696e67ff")
 	var w bytes.Buffer
-	encoder := cbor.NewEncoder(&w, cbor.EncOptions{})
+	encoder := NewEncoder(&w)
 	if err := encoder.StartIndefiniteTextString(); err != nil {
 		t.Fatalf("StartIndefiniteTextString() returned error %v", err)
 	}
@@ -229,7 +231,7 @@ func TestIndefiniteTextString(t *testing.T) {
 
 func TestIndefiniteTextStringError(t *testing.T) {
 	var w bytes.Buffer
-	encoder := cbor.NewEncoder(&w, cbor.EncOptions{})
+	encoder := NewEncoder(&w)
 	if err := encoder.StartIndefiniteTextString(); err != nil {
 		t.Fatalf("StartIndefiniteTextString() returned error %v", err)
 	}
@@ -243,7 +245,7 @@ func TestIndefiniteTextStringError(t *testing.T) {
 func TestIndefiniteArray(t *testing.T) {
 	want := hexDecode("9f018202039f0405ffff")
 	var w bytes.Buffer
-	encoder := cbor.NewEncoder(&w, cbor.EncOptions{})
+	encoder := NewEncoder(&w)
 	if err := encoder.StartIndefiniteArray(); err != nil {
 		t.Fatalf("StartIndefiniteArray() returned error %v", err)
 	}
@@ -276,7 +278,11 @@ func TestIndefiniteArray(t *testing.T) {
 func TestIndefiniteMap(t *testing.T) {
 	want := hexDecode("bf61610161629f0203ffff")
 	var w bytes.Buffer
-	encoder := cbor.NewEncoder(&w, cbor.EncOptions{Sort: cbor.SortCanonical})
+	em, err := EncOptions{Sort: SortCanonical}.EncMode()
+	if err != nil {
+		t.Errorf("EncMode() returned an error %v", err)
+	}
+	encoder := em.NewEncoder(&w)
 	if err := encoder.StartIndefiniteMap(); err != nil {
 		t.Fatalf("StartIndefiniteMap() returned error %v", err)
 	}
@@ -311,7 +317,7 @@ func TestIndefiniteMap(t *testing.T) {
 
 func TestIndefiniteLengthError(t *testing.T) {
 	var w bytes.Buffer
-	encoder := cbor.NewEncoder(&w, cbor.EncOptions{})
+	encoder := NewEncoder(&w)
 	if err := encoder.StartIndefiniteByteString(); err != nil {
 		t.Fatalf("StartIndefiniteByteString() returned error %v", err)
 	}
@@ -337,7 +343,7 @@ func TestEncoderStructTag(t *testing.T) {
 	want := hexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
 
 	var w bytes.Buffer
-	encoder := cbor.NewEncoder(&w, cbor.EncOptions{Sort: cbor.SortCanonical})
+	encoder := NewEncoder(&w)
 	if err := encoder.Encode(v); err != nil {
 		t.Errorf("Encode(%+v) returned error %v", v, err)
 	}
@@ -348,24 +354,24 @@ func TestEncoderStructTag(t *testing.T) {
 
 func TestRawMessage(t *testing.T) {
 	type strc struct {
-		A cbor.RawMessage  `cbor:"a"`
-		B *cbor.RawMessage `cbor:"b"`
-		C *cbor.RawMessage `cbor:"c"`
+		A RawMessage  `cbor:"a"`
+		B *RawMessage `cbor:"b"`
+		C *RawMessage `cbor:"c"`
 	}
 	cborData := hexDecode("a361610161628202036163f6") // {"a": 1, "b": [2, 3], "c": nil},
-	r := cbor.RawMessage(hexDecode("820203"))
+	r := RawMessage(hexDecode("820203"))
 	want := strc{
-		A: cbor.RawMessage([]byte{0x01}),
+		A: RawMessage([]byte{0x01}),
 		B: &r,
 	}
 	var v strc
-	if err := cbor.Unmarshal(cborData, &v); err != nil {
+	if err := Unmarshal(cborData, &v); err != nil {
 		t.Fatalf("Unmarshal(0x%x) returned error %v", cborData, err)
 	}
 	if !reflect.DeepEqual(v, want) {
 		t.Errorf("Unmarshal(0x%x) returned v %v, want %v", cborData, v, want)
 	}
-	b, err := cbor.Marshal(v, cbor.EncOptions{Sort: cbor.SortCanonical})
+	b, err := Marshal(v)
 	if err != nil {
 		t.Fatalf("Marshal(%+v) returned error %v", v, err)
 	}
@@ -375,9 +381,9 @@ func TestRawMessage(t *testing.T) {
 }
 
 func TestNullRawMessage(t *testing.T) {
-	r := cbor.RawMessage(nil)
+	r := RawMessage(nil)
 	wantCborData := []byte{0xf6}
-	b, err := cbor.Marshal(r, cbor.EncOptions{})
+	b, err := Marshal(r)
 	if err != nil {
 		t.Errorf("Marshal(%+v) returned error %v", r, err)
 	}
@@ -387,9 +393,9 @@ func TestNullRawMessage(t *testing.T) {
 }
 
 func TestEmptyRawMessage(t *testing.T) {
-	var r cbor.RawMessage
+	var r RawMessage
 	wantCborData := []byte{0xf6}
-	b, err := cbor.Marshal(r, cbor.EncOptions{})
+	b, err := Marshal(r)
 	if err != nil {
 		t.Errorf("Marshal(%+v) returned error %v", r, err)
 	}
