@@ -1,7 +1,7 @@
 [![CBOR Library - Slideshow and Latest Docs.](https://github.com/fxamacker/images/raw/master/cbor/v2.0.0/cbor_slides.gif)](https://github.com/fxamacker/cbor/blob/master/README.md)
 
 # CBOR library in Go
-[__`fxamacker/cbor`__](https://github.com/fxamacker/cbor) is a CBOR encoder and decoder.  It can encode integers and floats to their smallest forms (like float16) when values fit.  Each release passes 375+ tests and 250+ million execs fuzzing with 1100+ CBOR files.
+[__`fxamacker/cbor`__](https://github.com/fxamacker/cbor) is a CBOR encoder and decoder.  Each release passes 375+ tests and 250+ million execs fuzzing.
 
 [![](https://github.com/fxamacker/cbor/workflows/ci/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Aci)
 [![](https://github.com/fxamacker/cbor/workflows/cover%20%E2%89%A597%25/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3A%22cover+%E2%89%A597%25%22)
@@ -10,7 +10,7 @@
 [![Release](https://img.shields.io/github/release/fxamacker/cbor.svg?style=flat-square)](https://github.com/fxamacker/cbor/releases)
 [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE)
 
-__What is CBOR__?  [CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049)) is a binary data format inspired by JSON and MessagePack.  CBOR is used in [IETF](https://www.ietf.org) Internet Standards such as COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)) and CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)). Even WebAuthn uses CBOR.
+__What is CBOR__?  [CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049)) is a binary data format inspired by JSON and MessagePack.  CBOR is used in [IETF](https://www.ietf.org) Internet Standards such as COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)) and CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)). WebAuthn also uses CBOR.
 
 __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: small, fast, safe and easy. It also supports "preferred serialization" by encoding integers and floats to their smallest forms when values fit.
 
@@ -24,8 +24,9 @@ __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: 
 
 * __Easy__ and saves time.  It has the same API as [Go](https://golang.org)'s [`encoding/json`](https://golang.org/pkg/encoding/json/) when possible.  Existing structs don't require changes.  Go struct tags like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` work as expected.  
 
-Function signatures identical to encoding/json, include:  
-`Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, and `decoder.Decode`.
+* __Stable API__. Six codec functions have signatures identical to encoding/json and they will never change:  `Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, and `decoder.Decode`.
+
+Codec functions at package-level use default options. Same codec functions are exported by EncMode and DecMode.  EncMode and DecMode are interfaces created from EncOptions or DecOptions structs.
 
 Predefined options make it easier to comply with standards like Canonical CBOR, CTAP2 Canonical CBOR, etc.
 
@@ -39,7 +40,7 @@ Struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data such as
 
 <hr>
 
-👉  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+👉  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
 
 ## Comparisons
 
@@ -64,10 +65,9 @@ Doing your own comparisons is highly recommended.  Use your most common message 
 ## Current Status
 Latest version is v2.0, which has:
 
-* __Stable API__ – won't make breaking API changes except:
+* __Stable API__ –  Six codec function signatures will never change.  No breaking API changes for other funcs in same major version.    These two functions are subject to change until the draft RFC is approved by IETF (est. "later in 2020"):
   * CoreDetEncOptions() is subject to change because it uses draft standard not yet approved by IETF.
   * PreferredUnsortedEncOptions() is subject to change because it uses draft standard not yet approved by IETF.
-* __Requirements__ – Go v1.12+ on amd64, arm64, ppc64le or s390x. Other archs may also work.
 * __Passed all tests__ – v2.0 passed all 375+ tests on amd64, arm64, ppc64le and s390x with linux.
 * __Passed fuzzing__ – v2.0 passed 1+ billion execs in coverage-guided fuzzing on Feb. 2, 2020.
 
@@ -79,12 +79,38 @@ Recent activity:
 
 __Why v2.0?__:
 
-v2 API was needed in order to simplify adding new features planned for v2.1 and v2.2.
+v2 decoupled options from encoding/decoding functions so that:
+
+* new features like CBOR tags can be added without breaking API changes.
+* more encoding/decoding function signatures are identical to encoding/json.
+* more function signatures can remain stable forever even as CBOR options & tags evolve.
 
 __Roadmap__:
 
  * v2.1 (Feb. 9, 2020) support for CBOR tags (major type 6) and some decoder optimizations.
  * v2.2 (Feb. 2020) options for handling duplicate map keys.
+
+## Installation
+```
+$ GO111MODULE=on go get github.com/fxamacker/cbor/v2
+```
+
+```
+import (
+	"github.com/fxamacker/cbor/v2" // imports as package "cbor"
+)
+```
+
+[Released versions](https://github.com/fxamacker/cbor/releases) benefit from longer fuzz tests.
+
+## System Requirements
+
+* Go 1.12 (or newer)
+* amd64, arm64, ppc64le and s390x. Other architectures may also work but they are not tested as frequently. 
+
+<hr>
+
+👉  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
 
 ## Design Goals 
 This library is designed to be a generic CBOR encoder and decoder.  It was initially created for a [WebAuthn (FIDO2) server library](https://github.com/fxamacker/webauthn), because existing CBOR libraries (in Go) didn't meet certain criteria in 2019.
@@ -99,6 +125,12 @@ Competing factors are balanced:
 
 * __Speed__ vs __safety__ vs __size__ – to keep size small, avoid code generation. For safety, validate data and avoid Go's `unsafe` pkg.  For speed, use safe optimizations such as caching struct metadata. v1.4 is faster than a well-known library that uses `unsafe` and code gen.
 * __Standards compliance__ – CBOR ([RFC 7049](https://tools.ietf.org/html/rfc7049)) with minor [limitations](#limitations).  Encoder supports options for sorting, floating-point conversions, and more.  Predefined configurations are also available so you can use "CTAP2 Canonical CBOR", etc. without knowing individual options.  Decoder checks for well-formedness, validates data, and limits nested levels to defend against attacks.  See [Standards](#standards).
+
+v2 decoupled options from encoding/decoding functions so that:
+
+* new features like CBOR tags can be added without breaking API changes.
+* more encoding/decoding function signatures are identical to encoding/json.
+* more function signatures can remain stable forever even as CBOR options & tags evolve.
 
 Avoiding `unsafe` package has benefits.  The `unsafe` package [warns](https://golang.org/pkg/unsafe/):
 
@@ -135,6 +167,10 @@ Features not in Go's standard library are usually not added.  However, the __`to
 * Both encoder and decoder correctly handles nil slice, map, pointer, and interface values.
 
 See [milestones](https://github.com/fxamacker/cbor/milestones) for upcoming features.
+
+<hr>
+
+👉  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
 
 ## Standards
 This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049) with minor [limitations](#limitations).
@@ -176,27 +212,6 @@ Known limitations:
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  CBOR `Null` (0xf6) more closely matches Go's `nil`.
 
 Like Go's `encoding/json`, data validation checks the entire message to prevent partially filled (corrupted) data. This library also prevents crashes and resource exhaustion attacks from malicious CBOR data. Use Go's `io.LimitReader` when decoding very large data to limit size.
-
-## System Requirements
-
-* Go 1.12 (or newer)
-* amd64, arm64, ppc64le and s390x. Other architectures may also work but they are not tested as frequently. 
-
-## Installation
-```
-$ GO111MODULE=on go get github.com/fxamacker/cbor/v2
-```
-
-```
-import (
-	"github.com/fxamacker/cbor/v2" // imports as package "cbor"
-)
-```
-
-[Released versions](https://github.com/fxamacker/cbor/releases) benefit from longer fuzz tests.
-
-## Versions and API Changes
-This project uses [Semantic Versioning](https://semver.org), so the API is always backwards compatible unless the major version number changes.  Newly added API documented as "subject to change" are excluded from this rule.
 
 ## API 
 In v2, many function signatures are identical to encoding/json, including:  
@@ -317,8 +332,12 @@ __EncOptions.NaNConvert__:
 * NaNConvertQuiet: force quiet bit = 1 and use shortest form that preserves NaN payload.
 * NaNConvertPreserveSignal: convert to smallest form that preserves value (quit bit unmodified and NaN payload preserved).
 
+<hr>
+
+👉  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+
 ## Usage
-👉 Use Go's `io.LimitReader` to limit size when decoding very large data.
+🛡️ Use Go's `io.LimitReader` to limit size when decoding very large data.
 
 Functions with identical signatures to encoding/json include:  
 `Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, `decoder.Decode`.
@@ -446,6 +465,10 @@ if data, err := em.Marshal(v); err != nil {
 
 For more examples, see [examples_test.go](example_test.go).
 
+<hr>
+
+👉  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+
 ## Benchmarks
 
 Go structs are faster than maps with string keys:
@@ -483,6 +506,11 @@ __Coverage-guided fuzzing__ must pass 250+ million execs before tagging a releas
 
 Over 1,100 files (corpus) are used for fuzzing because it includes fuzz-generated corpus.
 
+## Versions and API Changes
+This project uses [Semantic Versioning](https://semver.org), so the API is always backwards compatible unless the major version number changes.  Newly added API documented as "subject to change" are excluded from this rule.
+
+Six codec functions have signatures identical to encoding/json and they will never change even after major new releases:  `Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, and `decoder.Decode`.
+
 ## Code of Conduct 
 This project has adopted the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).  Contact [faye.github@gmail.com](mailto:faye.github@gmail.com) with any questions or comments.
 
@@ -516,4 +544,4 @@ fxamacker/cbor is licensed under the MIT License.  See [LICENSE](LICENSE) for th
 
 <hr>
 
-👉  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+👉  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
