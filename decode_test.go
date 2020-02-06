@@ -1861,14 +1861,14 @@ func TestBinaryMarshalerError(t *testing.T) {
 
 type number2 uint64
 
-func (n number2) MarshalCBOR(em EncMode) (data []byte, err error) {
+func (n number2) MarshalCBOR() (data []byte, err error) {
 	m := map[string]uint64{"num": uint64(n)}
-	return em.Marshal(m)
+	return Marshal(m)
 }
 
-func (n *number2) UnmarshalCBOR(dm DecMode, data []byte) (err error) {
+func (n *number2) UnmarshalCBOR(data []byte) (err error) {
 	var v map[string]uint64
-	if err := dm.Unmarshal(data, &v); err != nil {
+	if err := Unmarshal(data, &v); err != nil {
 		return err
 	}
 	*n = number2(v["num"])
@@ -1879,14 +1879,14 @@ type stru2 struct {
 	a, b, c string
 }
 
-func (s *stru2) MarshalCBOR(em EncMode) ([]byte, error) {
+func (s *stru2) MarshalCBOR() ([]byte, error) {
 	v := []string{s.a, s.b, s.c}
-	return em.Marshal(v)
+	return Marshal(v)
 }
 
-func (s *stru2) UnmarshalCBOR(dm DecMode, data []byte) (err error) {
+func (s *stru2) UnmarshalCBOR(data []byte) (err error) {
 	var v []string
-	if err := dm.Unmarshal(data, &v); err != nil {
+	if err := Unmarshal(data, &v); err != nil {
 		return err
 	}
 	if len(v) > 0 {
@@ -1903,7 +1903,7 @@ func (s *stru2) UnmarshalCBOR(dm DecMode, data []byte) (err error) {
 
 type marshalCBORError string
 
-func (n marshalCBORError) MarshalCBOR(em EncMode) (data []byte, err error) {
+func (n marshalCBORError) MarshalCBOR() (data []byte, err error) {
 	return nil, errors.New(string(n))
 }
 

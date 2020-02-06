@@ -179,7 +179,7 @@ func (enc *Encoder) startIndefinite(typ cborType) error {
 type RawMessage []byte
 
 // MarshalCBOR returns m as the CBOR encoding of m.
-func (m RawMessage) MarshalCBOR(em EncMode) ([]byte, error) {
+func (m RawMessage) MarshalCBOR() ([]byte, error) {
 	if len(m) == 0 {
 		return cborNil, nil
 	}
@@ -187,7 +187,7 @@ func (m RawMessage) MarshalCBOR(em EncMode) ([]byte, error) {
 }
 
 // UnmarshalCBOR sets *m to a copy of data.
-func (m *RawMessage) UnmarshalCBOR(dm DecMode, data []byte) error {
+func (m *RawMessage) UnmarshalCBOR(data []byte) error {
 	if m == nil {
 		return errors.New("cbor.RawMessage: UnmarshalCBOR on nil pointer")
 	}

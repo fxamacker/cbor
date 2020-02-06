@@ -88,7 +88,7 @@ func Marshal(v interface{}) ([]byte, error) {
 // Marshaler is the interface implemented by types that can marshal themselves
 // into valid CBOR.
 type Marshaler interface {
-	MarshalCBOR(EncMode) ([]byte, error)
+	MarshalCBOR() ([]byte, error)
 }
 
 // UnsupportedTypeError is returned by Marshal when attempting to encode an
@@ -1003,7 +1003,7 @@ func encodeMarshalerType(e *encodeState, em *encMode, v reflect.Value) (int, err
 		pv.Elem().Set(v)
 		m = pv.Interface().(Marshaler)
 	}
-	data, err := m.MarshalCBOR(em)
+	data, err := m.MarshalCBOR()
 	if err != nil {
 		return 0, err
 	}
