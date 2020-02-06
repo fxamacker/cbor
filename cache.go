@@ -43,9 +43,16 @@ https://raw.githubusercontent.com/fxamacker/images/master/cbor/v2.0.0/cbor_easy_
 Using Default Encoding Mode
 
     b, err := cbor.Marshal(v)
-    err := cbor.Unmarshal(b, &v)
+    
     encoder := cbor.NewEncoder(w)
+    err = encoder.Encode(v)
+    
+Using Default Decoding Mode
+
+    err := cbor.Unmarshal(b, &v)
+    
     decoder := cbor.NewDecoder(r)
+    err = decoder.Decode(&v)
 
 Creating and Using Encoding Modes
 
