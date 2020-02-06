@@ -15,7 +15,7 @@ Function signatures that are identical to encoding/json include:
     Marshal, Unmarshal, NewEncoder, NewDecoder, encoder.Encode, decoder.Decode.  
 
 Codec functions are available at package-level (default options) or by
-creating modes by using options at runtime.
+creating modes from options at runtime.
 
 Default encoding options are listed at https://github.com/fxamacker/cbor#api
 
