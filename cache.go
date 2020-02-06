@@ -8,6 +8,27 @@ for float16, Canonical CBOR, CTAP2 Canonical CBOR, and custom settings.
 Encoding options allow "preferred serialization" by encoding integers and floats
 to their smallest forms (like float16) when values fit.
 
+API Overview
+
+Function signatures that are identical to encoding/json include:
+
+    Marshal, Unmarshal, NewEncoder, NewDecoder, encoder.Encode, decoder.Decode.  
+
+Codec functions are available at package-level (default options) or by
+creating modes by using options at runtime.  
+
+EncMode and DecMode are interfaces created from EncOptions or DecOptions structs.  For example,
+
+    em := cbor.EncOptions{...}.EncMode()
+    em := cbor.CanonicalEncOptions().EncMode()
+    em := cbor.CTAP2EncOptions().EncMode()
+
+EncMode and DecMode use immutable options so their behavior won't accidentally change at runtime.  
+
+Modes are intended to be reused and are safe for concurrent use.
+
+Struct Tags  
+
 Go struct tags like `cbor:"name,omitempty"` and `json:"name,omitempty"` work as expected.
 If both struct tags are specified then `cbor` is used.
 
@@ -17,7 +38,40 @@ very compact formats like COSE and CWT (CBOR Web Tokens) with structs.
 For example, the "toarray" struct tag encodes/decodes struct fields as array elements.
 And "keyasint" struct tag encodes/decodes struct fields to values of maps with specified int keys.
 
-fxamacker/cbor-fuzz provides coverage-guided fuzzing for this package.
+https://raw.githubusercontent.com/fxamacker/images/master/cbor/v2.0.0/cbor_easy_api.png
+
+Using Default Encoding Mode
+
+    b, err := cbor.Marshal(v)
+    err := cbor.Unmarshal(b, &v)
+    encoder := cbor.NewEncoder(w)
+    decoder := cbor.NewDecoder(r)
+
+Creating and Using Encoding Modes
+
+    // Create EncOptions using either struct literal or a function.
+    opts := cbor.CanonicalEncOptions()
+
+    // If needed, modify encoding options
+    opts.Time = cbor.TimeUnix
+
+    // Create reusable EncMode interface with immutable options, safe for concurrent use.
+    em, err := opts.EncMode()   
+
+    // Use EncMode like encoding/json, with same function signatures.
+    b, err := em.Marshal(v)
+    // or
+    encoder := em.NewEncoder(w)
+    err := encoder.Encode(v)
+
+Default Options
+
+Default encoding options are listed at https://github.com/fxamacker/cbor#api
+
+Tests and Fuzzing
+
+Over 375 tests are included in this package. Cover-guided fuzzing is handled by a separate package: 
+fxamacker/cbor-fuzz.
 */
 package cbor
 
