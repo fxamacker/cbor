@@ -8,16 +8,32 @@ for float16, Canonical CBOR, CTAP2 Canonical CBOR, and custom settings.
 Encoding options allow "preferred serialization" by encoding integers and floats
 to their smallest forms (like float16) when values fit.
 
-API Overview
+Struct tags like "keyasint", "toarray" and "omitempty" makes data size smaller.
 
-Function signatures that are identical to encoding/json include:
+For example, "toarray" makes struct fields encode to array elements.  And "keyasint"
+makes struct fields encode to elements of CBOR map with int keys.
+
+Basics
+
+Function signatures identical to encoding/json include:
 
     Marshal, Unmarshal, NewEncoder, NewDecoder, encoder.Encode, decoder.Decode.  
 
-Codec functions are available at package-level (default options) or by
-creating modes from options at runtime.
+Codec functions are available at package-level (using defaults) or by creating modes 
+from options at runtime.
 
-Default encoding options are listed at https://github.com/fxamacker/cbor#api
+"Mode" in this API means definite way of encoding or decoding. Specifically, EncMode or DecMode.
+
+EncMode and DecMode interfaces are created from EncOptions or DecOptions structs.  For example,
+
+    em := cbor.EncOptions{...}.EncMode()
+    em := cbor.CanonicalEncOptions().EncMode()
+    em := cbor.CTAP2EncOptions().EncMode()
+
+Modes use immutable options to avoid side-effects and simplify concurrency. Behavior of modes 
+won't accidentally change at runtime after they're created.  
+
+Modes are intended to be reused and are safe for concurrent use.
 
 EncMode and DecMode Interfaces
 
@@ -34,29 +50,6 @@ EncMode and DecMode Interfaces
 	NewDecoder(r io.Reader) *Decoder
 	DecOptions() DecOptions  // returns copy of options
     }
-
-EncMode and DecMode are created from EncOptions or DecOptions structs.  For example,
-
-    em := cbor.EncOptions{...}.EncMode()
-    em := cbor.CanonicalEncOptions().EncMode()
-    em := cbor.CTAP2EncOptions().EncMode()
-
-EncMode and DecMode use immutable options so their behavior won't accidentally change at runtime.  
-
-Modes are intended to be reused and are safe for concurrent use.
-
-Struct Tags  
-
-Go struct tags like `cbor:"name,omitempty"` and `json:"name,omitempty"` work as expected.
-If both struct tags are specified then `cbor` is used.
-
-Struct tags like "keyasint", "toarray", and "omitempty" make it easy to use
-very compact formats like COSE and CWT (CBOR Web Tokens) with structs.
-
-For example, the "toarray" struct tag encodes/decodes struct fields as array elements.
-And "keyasint" struct tag encodes/decodes struct fields to values of maps with specified int keys.
-
-https://raw.githubusercontent.com/fxamacker/images/master/cbor/v2.0.0/cbor_easy_api.png
 
 Using Default Encoding Mode
 
@@ -88,6 +81,23 @@ Creating and Using Encoding Modes
     // or
     encoder := em.NewEncoder(w)
     err := encoder.Encode(v)
+
+Default Options
+
+Default encoding options are listed at https://github.com/fxamacker/cbor#api
+
+Struct Tags  
+
+Struct tags like `cbor:"name,omitempty"` and `json:"name,omitempty"` work as expected.
+If both struct tags are specified then `cbor` is used.
+
+Struct tags like "keyasint", "toarray", and "omitempty" make it easy to use
+very compact formats like COSE and CWT (CBOR Web Tokens) with structs.
+
+For example, "toarray" makes struct fields encode to array elements.  And "keyasint"
+makes struct fields encode to elements of CBOR map with int keys.
+
+https://raw.githubusercontent.com/fxamacker/images/master/cbor/v2.0.0/cbor_easy_api.png
 
 Tests and Fuzzing
 
