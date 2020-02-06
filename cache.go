@@ -5,10 +5,10 @@
 Package cbor provides a fuzz-tested CBOR encoder and decoder with full support
 for float16, Canonical CBOR, CTAP2 Canonical CBOR, and custom settings.
 
-Encoding options allow "preferred serialization" by encoding integers and floats
+CBOR encoding options allow "preferred serialization" by encoding integers and floats
 to their smallest forms (like float16) when values fit.
 
-Struct tags like "keyasint", "toarray" and "omitempty" makes data size smaller.
+Struct tags like "keyasint", "toarray" and "omitempty" makes CBOR data smaller.
 
 For example, "toarray" makes struct fields encode to array elements.  And "keyasint"
 makes struct fields encode to elements of CBOR map with int keys.
