@@ -15,9 +15,27 @@ Function signatures that are identical to encoding/json include:
     Marshal, Unmarshal, NewEncoder, NewDecoder, encoder.Encode, decoder.Decode.  
 
 Codec functions are available at package-level (default options) or by
-creating modes by using options at runtime.  
+creating modes by using options at runtime.
 
-EncMode and DecMode are interfaces created from EncOptions or DecOptions structs.  For example,
+Default encoding options are listed at https://github.com/fxamacker/cbor#api
+
+EncMode and DecMode Interfaces
+
+    // EncMode interface uses immutable options and is safe for concurrent use.
+    type EncMode interface {
+	Marshal(v interface{}) ([]byte, error)
+	NewEncoder(w io.Writer) *Encoder
+	EncOptions() EncOptions  // returns copy of options
+    }
+
+    // DecMode interface uses immutable options and is safe for concurrent use.
+    type DecMode interface {
+	Unmarshal(data []byte, v interface{}) error
+	NewDecoder(r io.Reader) *Decoder
+	DecOptions() DecOptions  // returns copy of options
+    }
+
+EncMode and DecMode are created from EncOptions or DecOptions structs.  For example,
 
     em := cbor.EncOptions{...}.EncMode()
     em := cbor.CanonicalEncOptions().EncMode()
@@ -70,10 +88,6 @@ Creating and Using Encoding Modes
     // or
     encoder := em.NewEncoder(w)
     err := encoder.Encode(v)
-
-Default Options
-
-Default encoding options are listed at https://github.com/fxamacker/cbor#api
 
 Tests and Fuzzing
 
