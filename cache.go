@@ -17,9 +17,9 @@ Basics
 
 Function signatures identical to encoding/json include:
 
-    Marshal, Unmarshal, NewEncoder, NewDecoder, encoder.Encode, decoder.Decode.  
+    Marshal, Unmarshal, NewEncoder, NewDecoder, encoder.Encode, decoder.Decode.
 
-Codec functions are available at package-level (using defaults) or by creating modes 
+Codec functions are available at package-level (using defaults) or by creating modes
 from options at runtime.
 
 "Mode" in this API means definite way of encoding or decoding. Specifically, EncMode or DecMode.
@@ -30,8 +30,8 @@ EncMode and DecMode interfaces are created from EncOptions or DecOptions structs
     em := cbor.CanonicalEncOptions().EncMode()
     em := cbor.CTAP2EncOptions().EncMode()
 
-Modes use immutable options to avoid side-effects and simplify concurrency. Behavior of modes 
-won't accidentally change at runtime after they're created.  
+Modes use immutable options to avoid side-effects and simplify concurrency. Behavior of modes
+won't accidentally change at runtime after they're created.
 
 Modes are intended to be reused and are safe for concurrent use.
 
@@ -54,14 +54,14 @@ EncMode and DecMode Interfaces
 Using Default Encoding Mode
 
     b, err := cbor.Marshal(v)
-    
+
     encoder := cbor.NewEncoder(w)
     err = encoder.Encode(v)
-    
+
 Using Default Decoding Mode
 
     err := cbor.Unmarshal(b, &v)
-    
+
     decoder := cbor.NewDecoder(r)
     err = decoder.Decode(&v)
 
@@ -74,7 +74,7 @@ Creating and Using Encoding Modes
     opts.Time = cbor.TimeUnix
 
     // Create reusable EncMode interface with immutable options, safe for concurrent use.
-    em, err := opts.EncMode()   
+    em, err := opts.EncMode()
 
     // Use EncMode like encoding/json, with same function signatures.
     b, err := em.Marshal(v)
@@ -86,7 +86,7 @@ Default Options
 
 Default encoding options are listed at https://github.com/fxamacker/cbor#api
 
-Struct Tags  
+Struct Tags
 
 Struct tags like `cbor:"name,omitempty"` and `json:"name,omitempty"` work as expected.
 If both struct tags are specified then `cbor` is used.
@@ -101,7 +101,7 @@ https://raw.githubusercontent.com/fxamacker/images/master/cbor/v2.0.0/cbor_easy_
 
 Tests and Fuzzing
 
-Over 375 tests are included in this package. Cover-guided fuzzing is handled by a separate package: 
+Over 375 tests are included in this package. Cover-guided fuzzing is handled by a separate package:
 fxamacker/cbor-fuzz.
 */
 package cbor
