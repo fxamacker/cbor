@@ -102,7 +102,7 @@ func Unmarshal(data []byte, v interface{}) error {
 // of a CBOR value. UnmarshalCBOR must copy the CBOR data if it wishes to retain
 // the data after returning.
 type Unmarshaler interface {
-	UnmarshalCBOR(DecMode, []byte) error
+	UnmarshalCBOR([]byte) error
 }
 
 // InvalidUnmarshalError describes an invalid argument passed to Unmarshal.
@@ -369,7 +369,7 @@ func (d *decodeState) parseToUnmarshaler(v reflect.Value) error {
 	if u, ok := v.Interface().(Unmarshaler); ok {
 		start := d.off
 		d.skip()
-		return u.UnmarshalCBOR(d.dm, d.data[start:d.off])
+		return u.UnmarshalCBOR(d.data[start:d.off])
 	}
 	d.skip()
 	return errors.New("cbor: failed to assert " + v.Type().String() + " as cbor.Unmarshaler")
