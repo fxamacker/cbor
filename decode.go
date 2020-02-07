@@ -951,6 +951,10 @@ func fillFloat(t cborType, val float64, v reflect.Value) error {
 		return nil
 	}
 	if v.Type() == typeTime {
+		if math.IsNaN(val) || math.IsInf(val, 0) {
+			v.Set(reflect.ValueOf(time.Time{}))
+			return nil
+		}
 		f1, f2 := math.Modf(val)
 		tm := time.Unix(int64(f1), int64(f2*1e9))
 		v.Set(reflect.ValueOf(tm))
