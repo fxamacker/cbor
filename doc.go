@@ -5,6 +5,14 @@
 Package cbor provides a fuzz-tested CBOR encoder and decoder with full support
 for float16, Canonical CBOR, CTAP2 Canonical CBOR, and custom settings.
 
+THIS VERSION IS OUTDATED
+
+V2 IS AVAILABLE
+
+https://github.com/fxamacker/cbor/releases
+
+Basics
+
 Encoding options allow "preferred serialization" by encoding integers and floats
 to their smallest forms (like float16) when values fit.
 
@@ -18,5 +26,7 @@ For example, the "toarray" struct tag encodes/decodes struct fields as array ele
 And "keyasint" struct tag encodes/decodes struct fields to values of maps with specified int keys.
 
 fxamacker/cbor-fuzz provides coverage-guided fuzzing for this package.
+
+For latest API docs, see: https://github.com/fxamacker/cbor#api
 */
 package cbor
