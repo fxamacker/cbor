@@ -1,7 +1,7 @@
 [![CBOR Library - Slideshow and Latest Docs.](https://github.com/fxamacker/images/raw/master/cbor/v2.0.0/cbor_slides.gif)](https://github.com/fxamacker/cbor/blob/master/README.md)
 
 # CBOR library in Go
-[__`fxamacker/cbor`__](https://github.com/fxamacker/cbor) is a CBOR encoder and decoder.  Each release passes 375+ tests and 250+ million execs fuzzing.
+[__`fxamacker/cbor`__](https://github.com/fxamacker/cbor) is a CBOR encoder and decoder.  CBOR codec functions have identical signatures to `json/encoding`.  Each release passes 375+ tests and 250+ million execs fuzzing.
 
 [![](https://github.com/fxamacker/cbor/workflows/ci/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Aci)
 [![](https://github.com/fxamacker/cbor/workflows/cover%20%E2%89%A597%25/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3A%22cover+%E2%89%A597%25%22)
@@ -24,13 +24,15 @@ __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: 
 
 * __Easy__ and saves time.  It has the same API as [Go](https://golang.org)'s [`encoding/json`](https://golang.org/pkg/encoding/json/) when possible.  Existing structs don't require changes.  Go struct tags like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` work as expected.  
 
-* __Stable API__. Six codec functions have signatures identical to encoding/json and they will never change:  `Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, and `decoder.Decode`.
+* __Stable API__. Six codec functions have signatures identical to encoding/json and they will never change:  
+`Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, and `decoder.Decode`.
 
 Codec functions at package-level use default options. Same codec functions are exported by EncMode and DecMode.  EncMode and DecMode are interfaces created from EncOptions or DecOptions structs.
 
 Predefined options make it easier to comply with standards like Canonical CBOR, CTAP2 Canonical CBOR, etc.
 
-Customized options are easy.  For example, `EncOptions.Time` can be set to `TimeUnix`, `TimeUnixMicro`, `TimeUnixDynamic`, `TimeRFC3339`, or `TimeRFC3339Nano`.
+Customized options are easy.  For example, EncOptions.Time can be set to:  
+`TimeUnix`, `TimeUnixMicro`, `TimeUnixDynamic`, `TimeRFC3339`, or `TimeRFC3339Nano`.
 
 Struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data such as COSE, CWT, and SenML easier to use.
 
@@ -185,7 +187,15 @@ Encoding of other data types and map key sort order are determined by encoder op
 * EncOptions.InfConvert - default is `InfConvertFloat16` (2 settings)
 * EncOptions.NaNConvert - default is `NaNConvert7e00` (4 settings)
 
-See [API section](#api) for more details on the above options.
+|Option                       |Available Settings (defaults in bold, aliases in italics)                                |
+|-----------------------------|---------------------------------------------------------------------------------------|
+|EncOptions.Sort |__`SortNone`__, `SortLengthFirst`, `SortBytewiseLexical`, _`SortCanonical`_, _`SortCTAP2Canonical`_, _`SortCoreDeterministic`_ |
+|EncOptions.Time |__`TimeUnix`__, `TimeUnixMicro`, `TimeUnixDynamic`, `TimeRFC3339`, `TimeRFC3339Nano` |
+|EncOptions.ShortestFloat |__`ShortestFloatNone`__, `ShortestFloat16` |
+|EncOptions.InfConvert |__`InfConvertFloat16`__, `InfConvertNone` |
+|EncOptions.NaNConvert |__`NaNConvert7e00`__, `NaNConvertNone`, `NaNConvertQuiet`, `NaNConvertPreserveSignal` |
+
+See the end of [API section](#api) for more info about each encoding option.
 
 Float16 conversions use [x448/float16](https://github.com/x448/float16) maintained by the same team as this library.  All 4+ billion possible conversions are verified to be correct in that library on amd64, arm64, ppc64le and s390x.
 
@@ -283,54 +293,59 @@ The `keyasint` and `toarray` struct tags are worth knowing.  They can reduce pro
 
 See [API docs (godoc.org)](https://godoc.org/github.com/fxamacker/cbor) for more details and more functions.  See [Usage section](#usage) for usage and code examples.  Options for the encoder are listed here.
 
-__Encoder Options__:
+__Encoding Options__:
 
-Encoder has options that can be set individually to create custom configurations. Easy functions are also provided to create and return modifiable configurations (EncOptions):
+Encoder has options that can be set individually to create custom configurations. Easy functions are also provided to create and return EncOptions struct:
 
-* CanonicalEncOptions() -- [Canonical CBOR (RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9).
-* CTAP2EncOptions() -- [CTAP2 Canonical CBOR (FIDO2 CTAP2)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).
-* PreferredUnsortedEncOptions() -- Preferred Serialization (unsorted, shortest integer and floating-point forms that preserve values, NaN values encoded as 0xf97e00).
-* CoreDetEncOptions() -- Bytewise lexicographic sort order for map keys, plus options from PreferredUnsortedEncOptions()
+|Predefined EncOptions        |Description                                                                            |
+|-----------------------------|---------------------------------------------------------------------------------------|
+|CanonicalEncOptions() |[Canonical CBOR (RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9).|
+|CTAP2EncOptions() |[CTAP2 Canonical CBOR (FIDO2 CTAP2)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).|
+|PreferredUnsortedEncOptions() |Unsorted, encode float64->float32->float16 when values fit, NaN values encoded as float16 0x7e00.|
+|CoreDetEncOptions() |PreferredUnsortedEncOptions() + bytewise lexicographic sort order for map keys.|
 
-__EncOptions.Sort__:
 
-* SortNone (default): no sorting for map keys.
-* SortLengthFirst: length-first map key ordering.
-* SortBytewiseLexical: bytewise lexicographic map key ordering.
-* SortCanonical: same as SortLengthFirst [(RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9)
-* SortCTAP2Canonical: same as SortBytewiseLexical  [(CTAP2 Canonical CBOR)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).
-* SortCoreDeterministic: same as SortBytewiseLexical.
+|EncOptions.Sort              |Description                                                                            |
+|-----------------------------|---------------------------------------------------------------------------------------|
+|SortNone (default) |No sorting for map keys.|
+|SortLengthFirst |Length-first map key ordering.|
+|SortBytewiseLexical |Bytewise lexicographic map key ordering|
+|SortCanonical |(alias) Same as SortLengthFirst [(RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9)|
+|SortCTAP2Canonical |(alias) Same as SortBytewiseLexical [(CTAP2 Canonical CBOR)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).|
+|SortCoreDeterministic |(alias) Same as SortBytewiseLexical.|
 
-__EncOptions.Time__:  
 
-* TimeUnix (default): (seconds) encode as integer.
-* TimeUnixMicro: (microseconds) encode as floating-point.  ShortestFloat option determines size.
-* TimeUnixDynamic: (seconds or microseconds) encode as integer if time doesn't have fractional seconds, otherwise encode as floating-point rounded to microseconds.
-* TimeRFC3339: (seconds) encode as RFC 3339 formatted string.
-* TimeRFC3339Nano: (nanoseconds) encode as RFC3339 formatted string.
+|EncOptions.Time              |Description                                                                            |
+|-----------------------------|---------------------------------------------------------------------------------------|
+|TimeUnix (default) |(seconds) Encode as integer.|
+|TimeUnixMicro |(microseconds) Encode as floating-point.  ShortestFloat option determines size.|
+|TimeUnixDynamic |(seconds or microseconds) Encode as integer if time doesn't have fractional seconds, otherwise encode as floating-point rounded to microseconds.|
+|TimeRFC3339 |(seconds) Encode as RFC 3339 formatted string.|
+|TimeRFC3339Nano |(nanoseconds) Encode as RFC3339 formatted string.|
 
 By default, time values are encoded without tags.  Option to override this will be added in v2.1.
 
 Encoder has 3 types of options for floating-point data: ShortestFloatMode, InfConvertMode, and NaNConvertMode.
 
-__EncOptions.ShortestFloat__:
+|EncOptions.ShortestFloat     |Description                                                                            |
+|-----------------------------|---------------------------------------------------------------------------------------|
+|ShortestFloatNone (default) |No size conversion. Encode float32 and float64 to CBOR floating-point of same bit-size.|
+|ShortestFloat16 |Encode float64 -> float32 -> float16 ([IEEE 754 binary16](https://en.wikipedia.org/wiki/Half-precision_floating-point_format)) when values fit.|
 
-* ShortestFloatNone (default): no conversion.
-* ShortestFloat16: uses float16 ([IEEE 754 binary16](https://en.wikipedia.org/wiki/Half-precision_floating-point_format)) as the shortest form that preserves value.
+Conversions for infinity and NaN use InfConvert and NaNConvert settings.
 
-With ShortestFloat16, each floating-point value (including subnormals) can encode float64 -> float32 -> float16 when values can round-trip.  Conversions for infinity and NaN use InfConvert and NaNConvert settings.
+|EncOptions.InfConvert        |Description                                                                            |
+|-----------------------------|---------------------------------------------------------------------------------------|
+|InfConvertFloat16 (default) |Convert +- infinity to float16 since they always preserve value (recommended)|
+|InfConvertNone |Don't convert +- infinity to other representations -- used by CTAP2 Canonical CBOR|
 
-__EncOptions.InfConvert__:
 
-* InfConvertFloat16 (default): convert +- infinity to float16 since they always preserve value (recommended)
-* InfConvertNone: don't convert +- infinity to other representations -- used by CTAP2 Canonical CBOR
-
-__EncOptions.NaNConvert__:
-
-* NaNConvert7e00 (default): encode to 0xf97e00 (CBOR float16 = 0x7e00) -- used by RFC 7049 Canonical CBOR.
-* NaNConvertNone: don't convert NaN to other representations -- used by CTAP2 Canonical CBOR.
-* NaNConvertQuiet: force quiet bit = 1 and use shortest form that preserves NaN payload.
-* NaNConvertPreserveSignal: convert to smallest form that preserves value (quit bit unmodified and NaN payload preserved).
+|EncOptions.NaNConvert        |Description                                                                            |
+|-----------------------------|---------------------------------------------------------------------------------------|
+|NaNConvert7e00 (default) |Encode to 0xf97e00 (CBOR float16 = 0x7e00) -- used by RFC 7049 Canonical CBOR.|
+|NaNConvertNone |Don't convert NaN to other representations -- used by CTAP2 Canonical CBOR.|
+|NaNConvertQuiet |Force quiet bit = 1 and use shortest form that preserves NaN payload.|
+|NaNConvertPreserveSignal |Convert to smallest form that preserves value (quit bit unmodified and NaN payload preserved).|
 
 <hr>
 
