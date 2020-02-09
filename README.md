@@ -550,7 +550,7 @@ __Making this library better__
 * Stefan Tatschner for using this library in [sep](https://git.sr.ht/~rumpelsepp/sep), being the 1st to discover my CBOR library, requesting time.Time in issue #1, and submitting this library in a [PR to cbor.io](https://github.com/cbor/cbor.github.io/pull/56) on Aug 12, 2019.
 * Yawning Angel for using this library to [oasis-core](https://github.com/oasislabs/oasis-core), and requesting BinaryMarshaler in issue #5.
 * Jernej Kos for requesting RawMessage in issue #11 and offering feedback on v2.1 API for CBOR tags.
-* ZenGround0 for using this library to [go-filecoin](https://github.com/filecoin-project/go-filecoin), filing "toarray" bug in issue #129, and requesting CBOR BSTR <--> Go array in #133.
+* ZenGround0 for using this library in [go-filecoin](https://github.com/filecoin-project/go-filecoin), filing "toarray" bug in issue #129, and requesting CBOR BSTR <--> Go array in #133.
 * Keith Randall for [fixing Go bugs and providing workarounds](https://github.com/golang/go/issues/36400) so we don't have to wait for new versions of Go.
 
 __Help clarifying CBOR RFC 7049 or 7049bis__
