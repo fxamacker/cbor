@@ -81,15 +81,11 @@ Recent activity:
 
 __Why v2.0?__:
 
-v2 decoupled options from encoding/decoding functions so that:
-
-* new features like CBOR tags can be added without breaking API changes.
-* more encoding/decoding function signatures are identical to encoding/json.
-* more function signatures can remain stable forever even as CBOR options & tags evolve.
+v1 required breaking API changes to support upcoming new features like CBOR tags.  v2.0 has other benefits like reduced memory and including more functions with signatures identical to `encoding/json`. See [Design Goals](#design-goals) for more.
 
 __Roadmap__:
 
- * v2.1 (Feb. 9, 2020) support for CBOR tags (major type 6) and some decoder optimizations.
+ * v2.1 (est. Feb. 9-12, 2020) support for CBOR tags (major type 6) and some decoder optimizations.
  * v2.2 (Feb. 2020) options for handling duplicate map keys.
 
 ## Installation
@@ -128,11 +124,13 @@ Competing factors are balanced:
 * __Speed__ vs __safety__ vs __size__ – to keep size small, avoid code generation. For safety, validate data and avoid Go's `unsafe` pkg.  For speed, use safe optimizations such as caching struct metadata. v1.4 is faster than a well-known library that uses `unsafe` and code gen.
 * __Standards compliance__ – CBOR ([RFC 7049](https://tools.ietf.org/html/rfc7049)) with minor [limitations](#limitations).  Encoder supports options for sorting, floating-point conversions, and more.  Predefined configurations are also available so you can use "CTAP2 Canonical CBOR", etc. without knowing individual options.  Decoder checks for well-formedness, validates data, and limits nested levels to defend against attacks.  See [Standards](#standards).
 
-v2 decoupled options from encoding/decoding functions so that:
+v2.0 decoupled options from CBOR encoding & decoding functions:
 
-* new features like CBOR tags can be added without breaking API changes.
-* more encoding/decoding function signatures are identical to encoding/json.
-* more function signatures can remain stable forever even as CBOR options & tags evolve.
+* More encoding/decoding function signatures are identical to encoding/json.
+* More function signatures can remain stable forever.
+* More flexibility for evolving internal data types, optimizations, and concurrency.
+* Features like CBOR tags can be added without more breaking API changes.
+* Options to handle duplicate map keys can be added without more breaking API changes.
 
 Avoiding `unsafe` package has benefits.  The `unsafe` package [warns](https://golang.org/pkg/unsafe/):
 
@@ -140,7 +138,7 @@ Avoiding `unsafe` package has benefits.  The `unsafe` package [warns](https://go
 
 All releases prioritize reliability to avoid crashes on decoding malformed CBOR data. See [Fuzzing and Coverage](#fuzzing-and-code-coverage).
 
-Features not in Go's standard library are usually not added.  However, the __`toarray`__ struct tag in ugorji/go was too useful to ignore. It was added in v1.3 when a project mentioned they were using it with CBOR to save disk space.
+Features not in Go's standard library are usually not added.  However, the __`toarray`__ struct tag in __ugorji/go__ was too useful to ignore. It was added in v1.3 when a project mentioned they were using it with CBOR to save disk space.
 
 ## Features
 
@@ -177,15 +175,9 @@ See [milestones](https://github.com/fxamacker/cbor/milestones) for upcoming feat
 ## Standards
 This library implements CBOR as specified in [RFC 7049](https://tools.ietf.org/html/rfc7049) with minor [limitations](#limitations).
 
-Integers are always encoded to the smallest number of bytes.  
+Integers always encode to the shortest form that preserves value.  By default, time values are encoded without tags.
 
 Encoding of other data types and map key sort order are determined by encoder options.
-
-* EncOptions.Sort - default is `SortNone` (3 settings + 3 aliases)
-* EncOptions.Time - default is `TimeUnix` (5 settings)
-* EncOptions.ShortestFloat - default is `ShortestFloatNone` (2 settings)
-* EncOptions.InfConvert - default is `InfConvertFloat16` (2 settings)
-* EncOptions.NaNConvert - default is `NaNConvert7e00` (4 settings)
 
 |Option                       |Available Settings (defaults in bold, aliases in italics)                                |
 |-----------------------------|---------------------------------------------------------------------------------------|
@@ -293,17 +285,20 @@ The `keyasint` and `toarray` struct tags are worth knowing.  They can reduce pro
 
 See [API docs (godoc.org)](https://godoc.org/github.com/fxamacker/cbor) for more details and more functions.  See [Usage section](#usage) for usage and code examples.  Options for the encoder are listed here.
 
+__Integers always encode to the shortest form that preserves value__.  Encoding of other data types and map key sort order are determined by encoding options.
+
 __Encoding Options__:
 
-Encoder has options that can be set individually to create custom configurations. Easy functions are also provided to create and return EncOptions struct:
+Encoder has options that can be set individually. These functions are provided to create and return a modifiable EncOptions struct with predefined settings.
 
 |Predefined EncOptions        |Description                                                                            |
 |-----------------------------|---------------------------------------------------------------------------------------|
 |CanonicalEncOptions() |[Canonical CBOR (RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9).|
 |CTAP2EncOptions() |[CTAP2 Canonical CBOR (FIDO2 CTAP2)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).|
 |PreferredUnsortedEncOptions() |Unsorted, encode float64->float32->float16 when values fit, NaN values encoded as float16 0x7e00.|
-|CoreDetEncOptions() |PreferredUnsortedEncOptions() + bytewise lexicographic sort order for map keys.|
+|CoreDetEncOptions() |PreferredUnsortedEncOptions() + map keys are sorted bytewise lexicographic.|
 
+🌱 CoreDetEncOptions() and PreferredUnsortedEncOptions() are subject to change until the draft RFC they used is approved by IETF.
 
 |EncOptions.Sort              |Description                                                                            |
 |-----------------------------|---------------------------------------------------------------------------------------|
