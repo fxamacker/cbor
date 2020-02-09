@@ -528,14 +528,26 @@ Phrases like "no crashes" or "doesn't crash" mean there are no known crash bugs 
 Please read the license for additional disclaimers and terms.
 
 ## Special Thanks
-* Carsten Bormann for RFC 7049 (CBOR), his fast confirmation to my RFC 7049 errata, approving my pull request to 7049bis, and his patience when I misread a line in 7049bis.
-* Montgomery Edwards⁴⁴⁸ for contributing [float16 conversion code](https://github.com/x448/float16), updating the README.md, creating comparison charts & slideshow, and filing many helpful issues.
+
+__Making this library better__  
+
+* Montgomery Edwards⁴⁴⁸ for contributing [float16 conversion code](https://github.com/x448/float16), updating the docs, creating comparison charts & slideshow, filing issues, nudging me to ask for feedback from users, and helping with design of v2.0 and v2.1 API.
+* Stefan Tatschner for using this library in [sep](https://git.sr.ht/~rumpelsepp/sep), being the 1st to discover my CBOR library, requesting time.Time in issue #1, and submitting this library in a [PR to cbor.io](https://github.com/cbor/cbor.github.io/pull/56) on Aug 12, 2019.
+* Yawning Angel for using this library to [oasis-core](https://github.com/oasislabs/oasis-core), and requesting BinaryMarshaler in issue #5.
+* Jernej Kos for requesting RawMessage in issue #11 and offering feedback on v2.1 API for CBOR tags.
+* ZenGround0 for using this library to [go-filecoin](https://github.com/filecoin-project/go-filecoin), filing "toarray" bug in issue #129, and requesting CBOR BSTR <--> Go array in #133.
 * Keith Randall for [fixing Go bugs and providing workarounds](https://github.com/golang/go/issues/36400) so we don't have to wait for new versions of Go.
-* Stefan Tatschner for being the 1st to discover my CBOR library, filing issues #1 and #2, and using it in [sep](https://git.sr.ht/~rumpelsepp/sep).
-* Yawning Angel for replacing a library with this one in [oasis-core](https://github.com/oasislabs/oasis-core), and filing issue #5.
-* Jernej Kos for filing issue #11 (add feature similar to json.RawMessage) and his kind words about this library.
-* Jeffrey Yasskin and Laurence Lundblade for their help clarifying 7049bis on the IETF mailing list.
-* Jakob Borg for his words of encouragement about this library at Go Forum.
+
+__Help clarifying CBOR RFC 7049 or 7049bis__
+
+* Carsten Bormann for RFC 7049 (CBOR), his fast confirmation to my RFC 7049 errata, approving my pull request to 7049bis, and his patience when I misread a line in 7049bis.
+* Jeffrey Yasskin for his help on the IETF mailing list for 7049bis.
+* Laurence Lundblade for his help on the IETF mailing list for 7049bis.
+
+__Words of encouragement and support__
+
+* Jakob Borg for his words of encouragement about this library at Go Forum.  This is especially appreciated in the early stages when there's a lot of rough edges.
+
 
 ## License 
 Copyright © 2019-present [Faye Amacker](https://github.com/fxamacker).
