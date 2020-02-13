@@ -304,7 +304,8 @@ func (t cborType) String() string {
 }
 
 // parseToValue assumes data is well-formed, and does not perform bounds checking.
-func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error {
+// This function is complicated because it's the main function that decodes CBOR data to reflect.Value.
+func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
 	// Create new value for the pointer v to point to if CBOR value is not nil/undefined.
 	if !d.nextCBORNil() {
 		for v.Kind() == reflect.Ptr {

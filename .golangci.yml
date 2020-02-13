@@ -72,6 +72,11 @@ issues:
       linters:
         - gomnd
         - lll        
+    - path: doc\.go
+      linters:
+        - goimports
+        - gomnd
+        - lll
 
 # golangci.com configuration
 # https://github.com/golangci/golangci/wiki/Configuration

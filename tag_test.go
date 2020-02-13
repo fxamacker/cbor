@@ -531,22 +531,22 @@ func TestAddTagTypeAliasError(t *testing.T) {
 		},
 		{
 			name:         "[]byte",
-			typ:          reflect.TypeOf(myByteSlice([]byte{})),
+			typ:          reflect.TypeOf(myByteSlice([]byte{})), //nolint:unconvert
 			wantErrorMsg: "cbor: can only add named types to TagSet, got []uint8",
 		},
 		{
 			name:         "[]int",
-			typ:          reflect.TypeOf(myIntSlice([]int{})),
+			typ:          reflect.TypeOf(myIntSlice([]int{})), //nolint:unconvert
 			wantErrorMsg: "cbor: can only add named types to TagSet, got []int",
 		},
 		{
 			name:         "[4]int",
-			typ:          reflect.TypeOf(myIntArray([4]int{})),
+			typ:          reflect.TypeOf(myIntArray([4]int{})), //nolint:unconvert
 			wantErrorMsg: "cbor: can only add named types to TagSet, got [4]int",
 		},
 		{
 			name:         "map[int]int",
-			typ:          reflect.TypeOf(myMapIntInt(map[int]int{})),
+			typ:          reflect.TypeOf(myMapIntInt(map[int]int{})), //nolint:unconvert
 			wantErrorMsg: "cbor: can only add named types to TagSet, got map[int]int",
 		},
 	}
@@ -851,7 +851,7 @@ func TestEncodeSharedTag(t *testing.T) {
 	}
 
 	// Register myInt type with tag number 123
-	if err := sharedTagSet.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 123); err != nil {
+	if err = sharedTagSet.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 123); err != nil {
 		t.Fatalf("TagSet.Add(%s, %v) returned error %v", myIntType, 100, err)
 	}
 
@@ -881,7 +881,7 @@ func TestEncodeSharedTag(t *testing.T) {
 	}
 
 	// Register myInt type with tag number 234
-	if err := sharedTagSet.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 234); err != nil {
+	if err = sharedTagSet.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 234); err != nil {
 		t.Fatalf("TagSet.Add(%s, %v) returned error %v", myIntType, 100, err)
 	}
 
@@ -911,7 +911,7 @@ func TestDecodeSharedTag(t *testing.T) {
 	}
 
 	// Register myInt type with tag number 123
-	if err := sharedTagSet.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 123); err != nil {
+	if err = sharedTagSet.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 123); err != nil {
 		t.Fatalf("TagSet.Add(%s, %v) returned error %v", myIntType, 100, err)
 	}
 

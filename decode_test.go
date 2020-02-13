@@ -2905,8 +2905,8 @@ func testRoundTrip(t *testing.T, testCases []roundTripTest, em EncMode, dm DecMo
 }
 
 func TestDecModeInvalidTimeTag(t *testing.T) {
-	wantErrorMsg := "cbor: invalid TimeTag 100"
-	_, err := DecOptions{TimeTag: 100}.DecMode()
+	wantErrorMsg := "cbor: invalid TimeTag 101"
+	_, err := DecOptions{TimeTag: 101}.DecMode()
 	if err == nil {
 		t.Errorf("DecMode() didn't return an error")
 	} else if err.Error() != wantErrorMsg {
