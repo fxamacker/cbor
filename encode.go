@@ -1151,7 +1151,6 @@ func encodeHead(e *encodeState, t byte, n uint64) {
 	e.scratch[0] = t | byte(27)
 	binary.BigEndian.PutUint64(e.scratch[1:], n)
 	e.Write(e.scratch[:9])
-	return
 }
 
 var (
