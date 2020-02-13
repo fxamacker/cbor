@@ -85,8 +85,10 @@ v1 required breaking API changes to support upcoming new features like CBOR tags
 
 __Roadmap__:
 
- * v2.1 (est. Feb. 9-12, 2020) support for CBOR tags (major type 6) and some decoder optimizations.
- * v2.2 (Feb. 2020) options for handling duplicate map keys.
+ * v2.1 (est. Feb. 16-17, 2020) 
+   - [x] CBOR tags (major type 6) for encoding and decoding
+   - [x] Decoding optimizations
+   - [ ] Options for duplicate map keys
 
 ## Installation
 ```
@@ -203,12 +205,14 @@ After well-formedness is verified, basic validity errors are handled as follows:
 When decoding well-formed CBOR arrays and maps, decoder saves the first error it encounters and continues with the next item.  Options to handle this differently may be added in the future.
 
 ## Limitations
-CBOR tags (type 6) is being added in the next release ([milestone v2.1](https://github.com/fxamacker/cbor/milestone/11)) and is coming soon.
+:tada: CBOR tags (type 6) is implemented and will be in the next release ([milestone v2.1](https://github.com/fxamacker/cbor/milestone/11)).  
+:tada: Options for duplicate map keys will be in the next release ([milestone v2.1](https://github.com/fxamacker/cbor/milestone/11)).
+
 
 Known limitations:
 
-* Currently, CBOR tag numbers are ignored.  Decoder simply decodes tag content. Work is in progress to add support.
-* Currently, duplicate map keys are not checked during decoding.  Option to handle duplicate map keys in different ways will be added.
+* Currently, CBOR tag numbers are ignored.  Decoder simply decodes tag content. (Coming soon in v2.1)
+* Currently, duplicate map keys are not checked during decoding. (Coming soon in v2.1)
 * Nested levels for CBOR arrays, maps, and tags are limited to 32 to quickly reject potentially malicious data.  This limit will be reconsidered upon request.
 * CBOR negative int (type 1) that cannot fit into Go's int64 are not supported, such as RFC 7049 example -18446744073709551616.  Decoding these values returns `cbor.UnmarshalTypeError` like Go's `encoding/json`.
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  CBOR `Null` (0xf6) more closely matches Go's `nil`.
