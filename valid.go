@@ -45,16 +45,20 @@ func validInternal(data []byte, off int, depth int) (int, int, error) {
 	if depth > maxNestingLevel {
 		return 0, 0, errors.New("cbor: reached max depth " + strconv.Itoa(maxNestingLevel))
 	}
+
 	off, t, ai, val, err := validHead(data, off)
 	if err != nil {
 		return 0, 0, err
 	}
+
 	if ai == 31 {
 		if t == cborTypeByteString || t == cborTypeTextString {
 			return validIndefiniteString(data, off, t, depth)
 		}
 		return validIndefiniteArrOrMap(data, off, t, depth)
 	}
+
+	dataLen := len(data)
 
 	switch t {
 	case cborTypeByteString, cborTypeTextString:
@@ -63,7 +67,7 @@ func validInternal(data []byte, off int, depth int) (int, int, error) {
 			// Detect integer overflow
 			return 0, 0, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
 		}
-		if len(data)-off < valInt { // valInt+off may overflow integer
+		if dataLen-off < valInt { // valInt+off may overflow integer
 			return 0, 0, io.ErrUnexpectedEOF
 		}
 		off += valInt
@@ -93,7 +97,7 @@ func validInternal(data []byte, off int, depth int) (int, int, error) {
 	case cborTypeTag:
 		// Scan nested tag numbers to avoid recursion.
 		for {
-			if len(data)-off < 1 { // Tag number must be followed by tag content.
+			if dataLen == off { // Tag number must be followed by tag content.
 				return 0, 0, io.ErrUnexpectedEOF
 			}
 			if cborType(data[off]&0xe0) != cborTypeTag {
@@ -105,9 +109,7 @@ func validInternal(data []byte, off int, depth int) (int, int, error) {
 			depth++
 		}
 		// Check tag content.
-		if off, depth, err = validInternal(data, off, depth); err != nil {
-			return 0, 0, err
-		}
+		return validInternal(data, off, depth)
 	}
 	return off, depth, nil
 }
@@ -115,8 +117,9 @@ func validInternal(data []byte, off int, depth int) (int, int, error) {
 // validIndefiniteString checks indefinite length byte/text string's well-formedness and returns data's next offset, max depth, and error.
 func validIndefiniteString(data []byte, off int, t cborType, depth int) (int, int, error) {
 	var err error
+	dataLen := len(data)
 	for {
-		if len(data)-off < 1 {
+		if dataLen == off {
 			return 0, 0, io.ErrUnexpectedEOF
 		}
 		if data[off] == 0xff {
@@ -142,9 +145,10 @@ func validIndefiniteString(data []byte, off int, t cborType, depth int) (int, in
 func validIndefiniteArrOrMap(data []byte, off int, t cborType, depth int) (int, int, error) {
 	var err error
 	maxDepth := depth
+	dataLen := len(data)
 	i := 0
 	for {
-		if len(data)-off < 1 {
+		if dataLen == off {
 			return 0, 0, io.ErrUnexpectedEOF
 		}
 		if data[off] == 0xff {
@@ -168,7 +172,7 @@ func validIndefiniteArrOrMap(data []byte, off int, t cborType, depth int) (int, 
 
 func validHead(data []byte, off int) (_ int, t cborType, ai byte, val uint64, err error) {
 	dataLen := len(data) - off
-	if dataLen < 1 {
+	if dataLen == 0 {
 		return 0, 0, 0, 0, io.ErrUnexpectedEOF
 	}
 
@@ -177,8 +181,10 @@ func validHead(data []byte, off int) (_ int, t cborType, ai byte, val uint64, er
 	val = uint64(ai)
 	off++
 
-	switch ai {
-	case 24:
+	if ai < 24 {
+		return off, t, ai, val, nil
+	}
+	if ai == 24 {
 		if dataLen < 2 {
 			return 0, 0, 0, 0, io.ErrUnexpectedEOF
 		}
@@ -187,33 +193,41 @@ func validHead(data []byte, off int) (_ int, t cborType, ai byte, val uint64, er
 		if t == cborTypePrimitives && val < 32 {
 			return 0, 0, 0, 0, &SyntaxError{"cbor: invalid simple value " + strconv.Itoa(int(val)) + " for type " + t.String()}
 		}
-	case 25:
+		return off, t, ai, val, nil
+	}
+	if ai == 25 {
 		if dataLen < 3 {
 			return 0, 0, 0, 0, io.ErrUnexpectedEOF
 		}
 		val = uint64(binary.BigEndian.Uint16(data[off : off+2]))
 		off += 2
-	case 26:
+		return off, t, ai, val, nil
+	}
+	if ai == 26 {
 		if dataLen < 5 {
 			return 0, 0, 0, 0, io.ErrUnexpectedEOF
 		}
 		val = uint64(binary.BigEndian.Uint32(data[off : off+4]))
 		off += 4
-	case 27:
+		return off, t, ai, val, nil
+	}
+	if ai == 27 {
 		if dataLen < 9 {
 			return 0, 0, 0, 0, io.ErrUnexpectedEOF
 		}
 		val = binary.BigEndian.Uint64(data[off : off+8])
 		off += 8
-	case 28, 29, 30:
-		return 0, 0, 0, 0, &SyntaxError{"cbor: invalid additional information " + strconv.Itoa(int(ai)) + " for type " + t.String()}
-	case 31:
+		return off, t, ai, val, nil
+	}
+	if ai == 31 {
 		switch t {
 		case cborTypePositiveInt, cborTypeNegativeInt, cborTypeTag:
 			return 0, 0, 0, 0, &SyntaxError{"cbor: invalid additional information " + strconv.Itoa(int(ai)) + " for type " + t.String()}
 		case cborTypePrimitives: // 0xff (break code) should not be outside validIndefinite().
 			return 0, 0, 0, 0, &SyntaxError{"cbor: unexpected \"break\" code"}
 		}
+		return off, t, ai, val, nil
 	}
-	return off, t, ai, val, nil
+	// ai == 28, 29, 30
+	return 0, 0, 0, 0, &SyntaxError{"cbor: invalid additional information " + strconv.Itoa(int(ai)) + " for type " + t.String()}
 }
