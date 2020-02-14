@@ -254,7 +254,7 @@ type EncOptions struct {
 	Time TimeMode
 
 	// TimeTag allows time.Time to be encoded with a tag number.
-	// RFC3339 format gets tag number 0, and epoch time tag number 1.
+	// RFC3339 format gets tag number 0, and numeric epoch time tag number 1.
 	TimeTag EncTagMode
 
 	disableIndefiniteLength bool
@@ -353,15 +353,15 @@ func PreferredUnsortedEncOptions() EncOptions {
 	}
 }
 
-// EncMode returns EncMode from EncOptions.
+// EncMode returns EncMode with immutable options and no tags (safe for concurrency).
 func (opts EncOptions) EncMode() (EncMode, error) {
 	return opts.encMode()
 }
 
-// EncModeWithTags returns EncMode from EncOptions having immutable copy of TagSet.
+// EncModeWithTags returns EncMode with options and tags that are both immutable (safe for concurrency).
 func (opts EncOptions) EncModeWithTags(tags TagSet) (EncMode, error) {
 	if tags == nil {
-		return nil, errors.New("cbor: can't create EncMode with nil value as TagSet")
+		return nil, errors.New("cbor: cannot create EncMode with nil value as TagSet")
 	}
 	em, err := opts.encMode()
 	if err != nil {
@@ -383,10 +383,10 @@ func (opts EncOptions) EncModeWithTags(tags TagSet) (EncMode, error) {
 	return em, nil
 }
 
-// EncModeWithSharedTags returns EncMode from EncOptions having a shared TagSet.
+// EncModeWithSharedTags returns EncMode with immutable options and mutable shared tags (safe for concurrency).
 func (opts EncOptions) EncModeWithSharedTags(tags TagSet) (EncMode, error) {
 	if tags == nil {
-		return nil, errors.New("cbor: can't create EncMode with nil value as TagSet")
+		return nil, errors.New("cbor: cannot create EncMode with nil value as TagSet")
 	}
 	em, err := opts.encMode()
 	if err != nil {

@@ -281,21 +281,21 @@ func TestAddTagError(t *testing.T) {
 			typ:          nil,
 			num:          100,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
-			wantErrorMsg: "cbor: can't add content type nil to TagSet",
+			wantErrorMsg: "cbor: cannot add nil content type to TagSet",
 		},
 		{
 			name:         "DecTag is DecTagIgnored && EncTag is EncTagIgnored",
 			typ:          reflect.TypeOf(myInt(0)),
 			num:          100,
 			opts:         TagOptions{DecTag: DecTagIgnored, EncTag: EncTagIgnored},
-			wantErrorMsg: "cbor: can't add tag with DecTagIgnored and EncTagIgnored options to TagSet",
+			wantErrorMsg: "cbor: cannot add tag with DecTagIgnored and EncTagIgnored options to TagSet",
 		},
 		{
 			name:         "time.Time",
 			typ:          reflect.TypeOf(time.Time{}),
 			num:          101,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
-			wantErrorMsg: "cbor: can't add time.Time to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead",
+			wantErrorMsg: "cbor: cannot add time.Time to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead",
 		},
 		{
 			name:         "builtin type string",
@@ -323,42 +323,42 @@ func TestAddTagError(t *testing.T) {
 			typ:          reflect.TypeOf(Tag{}),
 			num:          105,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
-			wantErrorMsg: "cbor: can't add cbor.Tag to TagSet",
+			wantErrorMsg: "cbor: cannot add cbor.Tag to TagSet",
 		},
 		{
 			name:         "cbor.RawTag",
 			typ:          reflect.TypeOf(RawTag{}),
 			num:          106,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
-			wantErrorMsg: "cbor: can't add cbor.RawTag to TagSet",
+			wantErrorMsg: "cbor: cannot add cbor.RawTag to TagSet",
 		},
 		{
 			name:         "cbor.Unmarshaler",
 			typ:          reflect.TypeOf(number2(0)),
 			num:          107,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagIgnored},
-			wantErrorMsg: "cbor: can't add cbor.Unmarshaler with specified DecTag to TagSet",
+			wantErrorMsg: "cbor: cannot add cbor.Unmarshaler to TagSet with DecTag != DecTagIgnored",
 		},
 		{
 			name:         "cbor.Marshaler",
 			typ:          reflect.TypeOf(number2(0)),
 			num:          108,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
-			wantErrorMsg: "cbor: can't add cbor.Marshaler with specified EncTag to TagSet",
+			wantErrorMsg: "cbor: cannot add cbor.Marshaler to TagSet with EncTag != EncTagIgnored",
 		},
 		{
 			name:         "tag number 0",
 			typ:          reflect.TypeOf(myInt(0)),
 			num:          0,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
-			wantErrorMsg: "cbor: can't add tag number 0 or 1 to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead",
+			wantErrorMsg: "cbor: cannot add tag number 0 or 1 to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead",
 		},
 		{
 			name:         "tag number 1",
 			typ:          reflect.TypeOf(myInt(0)),
 			num:          1,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
-			wantErrorMsg: "cbor: can't add tag number 0 or 1 to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead",
+			wantErrorMsg: "cbor: cannot add tag number 0 or 1 to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead",
 		},
 	}
 	tags := NewTagSet()
@@ -382,7 +382,7 @@ func TestAddTagError(t *testing.T) {
 func TestAddDuplicateTagError(t *testing.T) {
 	type myInt int
 	myIntType := reflect.TypeOf(myInt(0))
-	wantErrorMsg := "cbor: content type cbor.myInt is already added to TagSet"
+	wantErrorMsg := "cbor: content type cbor.myInt already exists in TagSet"
 
 	tags := NewTagSet()
 	// Add myIntType and 100 to tags
@@ -781,25 +781,25 @@ func TestDecodeWrongTag(t *testing.T) {
 			name:         "BinaryMarshaler non-struct",
 			obj:          number(1234567890),
 			cborData:     hexDecode("d87d4800000000499602d2"),
-			wantErrorMsg: "cbor: wrong tag number for cbor.number, got [125], expect [123]",
+			wantErrorMsg: "cbor: wrong tag number for cbor.number, got [125], expected [123]",
 		},
 		{
 			name:         "BinaryMarshaler struct",
 			obj:          stru{a: "a", b: "b", c: "c"},
 			cborData:     hexDecode("d87d45612C622C63"),
-			wantErrorMsg: "cbor: wrong tag number for cbor.stru, got [125], expect [124]",
+			wantErrorMsg: "cbor: wrong tag number for cbor.stru, got [125], expected [124]",
 		},
 		{
 			name:         "non-struct",
 			obj:          myInt(1),
 			cborData:     hexDecode("d87d01"),
-			wantErrorMsg: "cbor: wrong tag number for cbor.myInt, got [125], expect [100]",
+			wantErrorMsg: "cbor: wrong tag number for cbor.myInt, got [125], expected [100]",
 		},
 		{
 			name:         "struct",
 			obj:          s{A: "A", B: "B", C: "C"},
 			cborData:     hexDecode("d87ea3616161416162614261636143"), // {"a":"A", "b":"B", "c":"C"}
-			wantErrorMsg: "cbor: wrong tag number for cbor.s, got [126], expect [101 102]",
+			wantErrorMsg: "cbor: wrong tag number for cbor.s, got [126], expected [101 102]",
 		},
 	}
 
@@ -957,7 +957,7 @@ func TestDecodeSharedTag(t *testing.T) {
 
 func TestDecModeWithTagsError(t *testing.T) {
 	// Create DecMode with nil as TagSet
-	wantErrorMsg := "cbor: can't create DecMode with nil value as TagSet"
+	wantErrorMsg := "cbor: cannot create DecMode with nil value as TagSet"
 	dm, err := DecOptions{}.DecModeWithTags(nil)
 	if dm != nil {
 		t.Errorf("DecModeWithTags(nil) returned %v", dm)
@@ -993,7 +993,7 @@ func TestDecModeWithTagsError(t *testing.T) {
 
 func TestEncModeWithTagsError(t *testing.T) {
 	// Create EncMode with nil as TagSet
-	wantErrorMsg := "cbor: can't create EncMode with nil value as TagSet"
+	wantErrorMsg := "cbor: cannot create EncMode with nil value as TagSet"
 	em, err := EncOptions{}.EncModeWithTags(nil)
 	if em != nil {
 		t.Errorf("EncModeWithTags(nil) returned %v", em)

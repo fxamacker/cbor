@@ -144,19 +144,20 @@ func (e *UnmarshalTypeError) Error() string {
 
 // DecOptions specifies decoding options.
 type DecOptions struct {
-	// TimeTag verifies time.Time is encoded with tag number as specified.
+	// TimeTag specifies whether to check validity of time.Time (e.g. valid tag number and tag content type).
+	// For now, valid tag number means 0 or 1 as specified in RFC 7049 if the Go type is time.Time.
 	TimeTag DecTagMode
 }
 
-// DecMode returns DecMode from DecOptions.
+// DecMode returns DecMode with immutable options and no tags (safe for concurrency).
 func (opts DecOptions) DecMode() (DecMode, error) {
 	return opts.decMode()
 }
 
-// DecModeWithTags returns DecMode from DecOptions having immutable copy of TagSet.
+// DecModeWithTags returns DecMode with options and tags that are both immutable (safe for concurrency).
 func (opts DecOptions) DecModeWithTags(tags TagSet) (DecMode, error) {
 	if tags == nil {
-		return nil, errors.New("cbor: can't create DecMode with nil value as TagSet")
+		return nil, errors.New("cbor: cannot create DecMode with nil value as TagSet")
 	}
 
 	dm, err := opts.decMode()
@@ -182,10 +183,10 @@ func (opts DecOptions) DecModeWithTags(tags TagSet) (DecMode, error) {
 	return dm, nil
 }
 
-// DecModeWithSharedTags returns DecMode from DecOptions having a shared TagSet.
+// DecModeWithSharedTags returns DecMode with immutable options and mutable shared tags (safe for concurrency).
 func (opts DecOptions) DecModeWithSharedTags(tags TagSet) (DecMode, error) {
 	if tags == nil {
-		return nil, errors.New("cbor: can't create DecMode with nil value as TagSet")
+		return nil, errors.New("cbor: cannot create DecMode with nil value as TagSet")
 	}
 	dm, err := opts.decMode()
 	if err != nil {

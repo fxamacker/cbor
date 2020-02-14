@@ -32,7 +32,7 @@ type RawTag struct {
 	Content RawMessage
 }
 
-// UnmarshalCBOR implements Unmarshaler interface.
+// UnmarshalCBOR sets *t with tag number and raw tag content copied from data.
 func (t *RawTag) UnmarshalCBOR(data []byte) error {
 	if t == nil {
 		return errors.New("cbor.RawTag: UnmarshalCBOR on nil pointer")
@@ -54,7 +54,7 @@ func (t *RawTag) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-// MarshalCBOR implements Marshaler interface.
+// MarshalCBOR returns CBOR encoding of t.
 func (t RawTag) MarshalCBOR() ([]byte, error) {
 	e := getEncodeState()
 	encodeHead(e, byte(cborTypeTag), t.Number)
@@ -71,13 +71,13 @@ func (t RawTag) MarshalCBOR() ([]byte, error) {
 type DecTagMode int
 
 const (
-	// DecTagIgnored specifies that decoder ignores tag number (skips if present).
+	// DecTagIgnored makes decoder ignore tag number (skips if present).
 	DecTagIgnored DecTagMode = iota
 
-	// DecTagOptional specifies that decoder verifies tag number if it's present.
+	// DecTagOptional makes decoder verify tag number if it's present.
 	DecTagOptional
 
-	// DecTagRequired specifies that decoder verifies tag number and tag number must be present.
+	// DecTagRequired makes decoder verify tag number and tag number must be present.
 	DecTagRequired
 
 	maxDecTagMode
@@ -91,10 +91,10 @@ func (dtm DecTagMode) valid() bool {
 type EncTagMode int
 
 const (
-	// EncTagIgnored specifies that encoder doesn't encode tag number.
+	// EncTagIgnored makes encoder not encode tag number.
 	EncTagIgnored EncTagMode = iota
 
-	// EncTagRequired specifies that encoder encodes tag number.
+	// EncTagRequired makes encoder encode tag number.
 	EncTagRequired
 
 	maxEncTagMode
@@ -113,7 +113,7 @@ type TagOptions struct {
 // TagSet is an interface to add and remove tag info.  It is used by EncMode and DecMode
 // to provide CBOR tag support.
 type TagSet interface {
-	// Add adds given tag num(s), content type, and encoding/decoding options to TagSet.
+	// Add adds given tag number(s), content type, and tag options to TagSet.
 	Add(opts TagOptions, contentType reflect.Type, num uint64, nestedNum ...uint64) error
 
 	// Remove removes given tag content type from TagSet.
@@ -146,15 +146,15 @@ func (t tagSet) get(typ reflect.Type) *tagItem {
 	return t[typ]
 }
 
-// NewTagSet returns TagSet safe for concurrent use.
+// NewTagSet returns TagSet (safe for concurrency).
 func NewTagSet() TagSet {
 	return &syncTagSet{t: make(map[reflect.Type]*tagItem)}
 }
 
-// Add adds given tag num(s), content type, and encoding/decoding options to TagSet.
+// Add adds given tag number(s), content type, and tag options to TagSet.
 func (t *syncTagSet) Add(opts TagOptions, contentType reflect.Type, num uint64, nestedNum ...uint64) error {
 	if contentType == nil {
-		return errors.New("cbor: can't add content type nil to TagSet")
+		return errors.New("cbor: cannot add nil content type to TagSet")
 	}
 	for contentType.Kind() == reflect.Ptr {
 		contentType = contentType.Elem()
@@ -166,7 +166,7 @@ func (t *syncTagSet) Add(opts TagOptions, contentType reflect.Type, num uint64, 
 	t.Lock()
 	defer t.Unlock()
 	if _, ok := t.t[contentType]; ok {
-		return errors.New("cbor: content type " + contentType.String() + " is already added to TagSet")
+		return errors.New("cbor: content type " + contentType.String() + " already exists in TagSet")
 	}
 	t.t[contentType] = tag
 	return nil
@@ -191,28 +191,28 @@ func (t *syncTagSet) get(typ reflect.Type) *tagItem {
 
 func newTagItem(opts TagOptions, contentType reflect.Type, num uint64, nestedNum ...uint64) (*tagItem, error) {
 	if opts.DecTag == DecTagIgnored && opts.EncTag == EncTagIgnored {
-		return nil, errors.New("cbor: can't add tag with DecTagIgnored and EncTagIgnored options to TagSet")
+		return nil, errors.New("cbor: cannot add tag with DecTagIgnored and EncTagIgnored options to TagSet")
 	}
 	if contentType.PkgPath() == "" || contentType.Kind() == reflect.Interface {
 		return nil, errors.New("cbor: can only add named types to TagSet, got " + contentType.String())
 	}
 	if contentType == typeTime {
-		return nil, errors.New("cbor: can't add time.Time to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead")
+		return nil, errors.New("cbor: cannot add time.Time to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead")
 	}
 	if contentType == typeTag {
-		return nil, errors.New("cbor: can't add cbor.Tag to TagSet")
+		return nil, errors.New("cbor: cannot add cbor.Tag to TagSet")
 	}
 	if contentType == typeRawTag {
-		return nil, errors.New("cbor: can't add cbor.RawTag to TagSet")
+		return nil, errors.New("cbor: cannot add cbor.RawTag to TagSet")
 	}
 	if num == 0 || num == 1 {
-		return nil, errors.New("cbor: can't add tag number 0 or 1 to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead")
+		return nil, errors.New("cbor: cannot add tag number 0 or 1 to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead")
 	}
 	if reflect.PtrTo(contentType).Implements(typeMarshaler) && opts.EncTag != EncTagIgnored {
-		return nil, errors.New("cbor: can't add cbor.Marshaler with specified EncTag to TagSet")
+		return nil, errors.New("cbor: cannot add cbor.Marshaler to TagSet with EncTag != EncTagIgnored")
 	}
 	if reflect.PtrTo(contentType).Implements(typeUnmarshaler) && opts.DecTag != DecTagIgnored {
-		return nil, errors.New("cbor: can't add cbor.Unmarshaler with specified DecTag to TagSet")
+		return nil, errors.New("cbor: cannot add cbor.Unmarshaler to TagSet with DecTag != DecTagIgnored")
 	}
 
 	te := tagItem{num: []uint64{num}, opts: opts, contentType: contentType}
@@ -235,7 +235,7 @@ var (
 	typeRawTag = reflect.TypeOf(RawTag{})
 )
 
-// WrongTagError describes CBOR tag and registered tag mismatch.
+// WrongTagError describes mismatch between CBOR tag and registered tag.
 type WrongTagError struct {
 	RegisteredType   reflect.Type
 	RegisteredTagNum []uint64
@@ -243,5 +243,5 @@ type WrongTagError struct {
 }
 
 func (e *WrongTagError) Error() string {
-	return fmt.Sprintf("cbor: wrong tag number for %s, got %v, expect %v", e.RegisteredType.String(), e.TagNum, e.RegisteredTagNum)
+	return fmt.Sprintf("cbor: wrong tag number for %s, got %v, expected %v", e.RegisteredType.String(), e.TagNum, e.RegisteredTagNum)
 }

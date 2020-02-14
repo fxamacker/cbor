@@ -297,14 +297,14 @@ func TestInvalidTypeMarshal(t *testing.T) {
 		Chan chan bool
 	}
 	var marshalErrorTests = []marshalErrorTest{
-		{"channel can't be marshaled", make(chan bool), "cbor: unsupported type: chan bool"},
-		{"slice of channel can't be marshaled", make([]chan bool, 10), "cbor: unsupported type: []chan bool"},
-		{"slice of pointer to channel can't be marshaled", make([]*chan bool, 10), "cbor: unsupported type: []*chan bool"},
-		{"map of channel can't be marshaled", make(map[string]chan bool), "cbor: unsupported type: map[string]chan bool"},
-		{"struct of channel can't be marshaled", s1{}, "cbor: unsupported type: cbor.s1"},
-		{"struct of channel can't be marshaled", s2{}, "cbor: unsupported type: cbor.s2"},
-		{"function can't be marshaled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
-		{"complex can't be marshaled", complex(100, 8), "cbor: unsupported type: complex128"},
+		{"channel cannot be marshaled", make(chan bool), "cbor: unsupported type: chan bool"},
+		{"slice of channel cannot be marshaled", make([]chan bool, 10), "cbor: unsupported type: []chan bool"},
+		{"slice of pointer to channel cannot be marshaled", make([]*chan bool, 10), "cbor: unsupported type: []*chan bool"},
+		{"map of channel cannot be marshaled", make(map[string]chan bool), "cbor: unsupported type: map[string]chan bool"},
+		{"struct of channel cannot be marshaled", s1{}, "cbor: unsupported type: cbor.s1"},
+		{"struct of channel cannot be marshaled", s2{}, "cbor: unsupported type: cbor.s2"},
+		{"function cannot be marshaled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
+		{"complex cannot be marshaled", complex(100, 8), "cbor: unsupported type: complex128"},
 	}
 	em, err := EncOptions{Sort: SortCanonical}.EncMode()
 	if err != nil {
