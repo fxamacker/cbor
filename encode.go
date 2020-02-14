@@ -523,6 +523,7 @@ var (
 	cborFalse            = []byte{0xf4}
 	cborTrue             = []byte{0xf5}
 	cborNil              = []byte{0xf6}
+	cborUndefined        = []byte{0xf7}
 	cborNaN              = []byte{0xf9, 0x7e, 0x00}
 	cborPositiveInfinity = []byte{0xf9, 0x7c, 0x00}
 	cborNegativeInfinity = []byte{0xf9, 0xfc, 0x00}
@@ -1041,7 +1042,11 @@ func encodeIntf(e *encodeState, em *encMode, v reflect.Value) error {
 func encodeTime(e *encodeState, em *encMode, v reflect.Value) error {
 	t := v.Interface().(time.Time)
 	if t.IsZero() {
-		e.Write(cborNil)
+		if em.timeTag == EncTagIgnored {
+			e.Write(cborNil)
+			return nil
+		}
+		e.Write(cborUndefined)
 		return nil
 	}
 	if em.timeTag == EncTagRequired {
@@ -1070,7 +1075,7 @@ func encodeTime(e *encodeState, em *encMode, v reflect.Value) error {
 	case TimeRFC3339:
 		s := t.Format(time.RFC3339)
 		return encodeString(e, em, reflect.ValueOf(s))
-	default: // TimeRFC3339Nano:
+	default: // TimeRFC3339Nano
 		s := t.Format(time.RFC3339Nano)
 		return encodeString(e, em, reflect.ValueOf(s))
 	}

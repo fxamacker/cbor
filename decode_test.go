@@ -1697,9 +1697,15 @@ func TestDecodeTime(t *testing.T) {
 		wantTime        time.Time
 	}{
 		{
-			name:            "zero time",
+			name:            "zero time", // decode CBOR null to zero time
 			cborRFC3339Time: hexDecode("f6"),
 			cborUnixTime:    hexDecode("f6"),
+			wantTime:        time.Time{},
+		},
+		{
+			name:            "zero time", // decode CBOR undefined to zero time
+			cborRFC3339Time: hexDecode("f7"),
+			cborUnixTime:    hexDecode("f7"),
 			wantTime:        time.Time{},
 		},
 		{
