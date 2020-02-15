@@ -8,6 +8,7 @@ import (
 	"io"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestDecoder(t *testing.T) {
@@ -25,7 +26,11 @@ func TestDecoder(t *testing.T) {
 			if err := decoder.Decode(&v); err != nil {
 				t.Fatalf("Decode() returned error %v", err)
 			}
-			if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
+			if tm, ok := tc.emptyInterfaceValue.(time.Time); ok {
+				if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
+					t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+				}
+			} else if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
 				t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
 			}
 			bytesRead += len(tc.cborData)
@@ -74,7 +79,11 @@ func TestDecoderUnmarshalTypeError(t *testing.T) {
 				if err := decoder.Decode(&vi); err != nil {
 					t.Errorf("Decode() returned error %v", err)
 				}
-				if !reflect.DeepEqual(vi, tc.emptyInterfaceValue) {
+				if tm, ok := tc.emptyInterfaceValue.(time.Time); ok {
+					if vt, ok := vi.(time.Time); !ok || !tm.Equal(vt) {
+						t.Errorf("Decode() = %v (%T), want %v (%T)", vi, vi, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+					}
+				} else if !reflect.DeepEqual(vi, tc.emptyInterfaceValue) {
 					t.Errorf("Decode() = %v (%T), want %v (%T)", vi, vi, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
 				}
 				bytesRead += len(tc.cborData)
@@ -146,9 +155,9 @@ func TestEncoderError(t *testing.T) {
 		value        interface{}
 		wantErrorMsg string
 	}{
-		{"channel can't be marshaled", make(chan bool), "cbor: unsupported type: chan bool"},
-		{"function can't be marshaled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
-		{"complex can't be marshaled", complex(100, 8), "cbor: unsupported type: complex128"},
+		{"channel cannot be marshaled", make(chan bool), "cbor: unsupported type: chan bool"},
+		{"function cannot be marshaled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
+		{"complex cannot be marshaled", complex(100, 8), "cbor: unsupported type: complex128"},
 	}
 	var w bytes.Buffer
 	encoder := NewEncoder(&w)
@@ -401,5 +410,16 @@ func TestEmptyRawMessage(t *testing.T) {
 	}
 	if !bytes.Equal(b, wantCborData) {
 		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", r, b, wantCborData)
+	}
+}
+
+func TestNilRawMessageUnmarshalCBORError(t *testing.T) {
+	wantErrorMsg := "cbor.RawMessage: UnmarshalCBOR on nil pointer"
+	var r *RawMessage
+	cborData := hexDecode("01")
+	if err := r.UnmarshalCBOR(cborData); err == nil {
+		t.Errorf("UnmarshalCBOR() didn't return error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("UnmarshalCBOR() returned error %q, want %q", err.Error(), wantErrorMsg)
 	}
 }

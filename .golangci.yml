@@ -70,8 +70,15 @@ issues:
   exclude-rules:
     - path: _test\.go
       linters:
+        - goconst
+        - dupl
         - gomnd
         - lll        
+    - path: doc\.go
+      linters:
+        - goimports
+        - gomnd
+        - lll
 
 # golangci.com configuration
 # https://github.com/golangci/golangci/wiki/Configuration

@@ -36,7 +36,6 @@ var (
 	typeMapStringInt    = reflect.TypeOf(map[string]int{})
 	typeMapStringString = reflect.TypeOf(map[string]string{})
 	typeMapStringIntf   = reflect.TypeOf(map[string]interface{}{})
-	// typeIntf            = reflect.TypeOf([]interface{}(nil)).Elem()
 )
 
 type unmarshalTest struct {
@@ -53,92 +52,92 @@ var unmarshalTests = []unmarshalTest{
 		hexDecode("00"),
 		uint64(0),
 		[]interface{}{uint8(0), uint16(0), uint32(0), uint64(0), uint(0), int8(0), int16(0), int32(0), int64(0), int(0), float32(0), float64(0)},
-		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("01"),
 		uint64(1),
 		[]interface{}{uint8(1), uint16(1), uint32(1), uint64(1), uint(1), int8(1), int16(1), int32(1), int64(1), int(1), float32(1), float64(1)},
-		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("0a"),
 		uint64(10),
 		[]interface{}{uint8(10), uint16(10), uint32(10), uint64(10), uint(10), int8(10), int16(10), int32(10), int64(10), int(10), float32(10), float64(10)},
-		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("17"),
 		uint64(23),
 		[]interface{}{uint8(23), uint16(23), uint32(23), uint64(23), uint(23), int8(23), int16(23), int32(23), int64(23), int(23), float32(23), float64(23)},
-		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("1818"),
 		uint64(24),
 		[]interface{}{uint8(24), uint16(24), uint32(24), uint64(24), uint(24), int8(24), int16(24), int32(24), int64(24), int(24), float32(24), float64(24)},
-		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("1819"),
 		uint64(25),
 		[]interface{}{uint8(25), uint16(25), uint32(25), uint64(25), uint(25), int8(25), int16(25), int32(25), int64(25), int(25), float32(25), float64(25)},
-		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("1864"),
 		uint64(100),
 		[]interface{}{uint8(100), uint16(100), uint32(100), uint64(100), uint(100), int8(100), int16(100), int32(100), int64(100), int(100), float32(100), float64(100)},
-		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("1903e8"),
 		uint64(1000),
 		[]interface{}{uint16(1000), uint32(1000), uint64(1000), uint(1000), int16(1000), int32(1000), int64(1000), int(1000), float32(1000), float64(1000)},
-		[]reflect.Type{typeUint8, typeInt8, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeInt8, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("1a000f4240"),
 		uint64(1000000),
 		[]interface{}{uint32(1000000), uint64(1000000), uint(1000000), int32(1000000), int64(1000000), int(1000000), float32(1000000), float64(1000000)},
-		[]reflect.Type{typeUint8, typeUint16, typeInt8, typeInt16, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeInt8, typeInt16, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("1b000000e8d4a51000"),
 		uint64(1000000000000),
 		[]interface{}{uint64(1000000000000), uint(1000000000000), int64(1000000000000), int(1000000000000), float32(1000000000000), float64(1000000000000)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeInt8, typeInt16, typeInt32, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeInt8, typeInt16, typeInt32, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("1bffffffffffffffff"),
 		uint64(18446744073709551615),
 		[]interface{}{uint64(18446744073709551615), uint(18446744073709551615), float32(18446744073709551615), float64(18446744073709551615)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeInt8, typeInt16, typeInt32, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeInt8, typeInt16, typeInt32, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	// negative integer
 	{
 		hexDecode("20"),
 		int64(-1),
 		[]interface{}{int8(-1), int16(-1), int32(-1), int64(-1), int(-1), float32(-1), float64(-1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("29"),
 		int64(-10),
 		[]interface{}{int8(-10), int16(-10), int32(-10), int64(-10), int(-10), float32(-10), float64(-10)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("3863"),
 		int64(-100),
 		[]interface{}{int8(-100), int16(-100), int32(-100), int64(-100), int(-100), float32(-100), float64(-100)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("3903e7"),
 		int64(-1000),
 		[]interface{}{int16(-1000), int32(-1000), int64(-1000), int(-1000), float32(-1000), float64(-1000)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	// {"3bffffffffffffffff", int64(-18446744073709551616)}, // CBOR value -18446744073709551616 overflows Go's int64, see TestNegIntOverflow
 	// byte string
@@ -146,99 +145,99 @@ var unmarshalTests = []unmarshalTest{
 		hexDecode("40"),
 		[]byte{},
 		[]interface{}{[]byte{}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("4401020304"),
 		[]byte{1, 2, 3, 4},
 		[]interface{}{[]byte{1, 2, 3, 4}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("5f42010243030405ff"),
 		[]byte{1, 2, 3, 4, 5},
 		[]interface{}{[]byte{1, 2, 3, 4, 5}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	// text string
 	{
 		hexDecode("60"),
 		"",
 		[]interface{}{""},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("6161"),
 		"a",
 		[]interface{}{"a"},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("6449455446"),
 		"IETF",
 		[]interface{}{"IETF"},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("62225c"),
 		"\"\\",
 		[]interface{}{"\"\\"},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("62c3bc"),
 		"ü",
 		[]interface{}{"ü"},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("63e6b0b4"),
 		"水",
 		[]interface{}{"水"},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("64f0908591"),
 		"𐅑",
 		[]interface{}{"𐅑"},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("7f657374726561646d696e67ff"),
 		"streaming",
 		[]interface{}{"streaming"},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	// array
 	{
 		hexDecode("80"),
 		[]interface{}{},
 		[]interface{}{[]interface{}{}, []byte{}, []string{}, []int{}, [...]int{}, []float32{}, []float64{}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("83010203"),
 		[]interface{}{uint64(1), uint64(2), uint64(3)},
 		[]interface{}{[]interface{}{uint64(1), uint64(2), uint64(3)}, []byte{1, 2, 3}, []int{1, 2, 3}, []uint{1, 2, 3}, [...]int{1, 2, 3}, []float32{1, 2, 3}, []float64{1, 2, 3}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{})},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag},
 	},
 	{
 		hexDecode("8301820203820405"),
 		[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
 		[]interface{}{[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}, [...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{})},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag},
 	},
 	{
 		hexDecode("83018202039f0405ff"),
 		[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
 		[]interface{}{[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}, [...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{})},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag},
 	},
 	{
 		hexDecode("83019f0203ff820405"),
 		[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
 		[]interface{}{[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}, [...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{})},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag},
 	},
 	{
 		hexDecode("98190102030405060708090a0b0c0d0e0f101112131415161718181819"),
@@ -251,25 +250,25 @@ var unmarshalTests = []unmarshalTest{
 			[...]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]float32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{})},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag},
 	},
 	{
 		hexDecode("9fff"),
 		[]interface{}{},
 		[]interface{}{[]interface{}{}, []byte{}, []string{}, []int{}, [...]int{}, []float32{}, []float64{}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("9f018202039f0405ffff"),
 		[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
 		[]interface{}{[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}, [...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{})},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag},
 	},
 	{
 		hexDecode("9f01820203820405ff"),
 		[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
 		[]interface{}{[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}, [...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{})},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag},
 	},
 	{
 		hexDecode("9f0102030405060708090a0b0c0d0e0f101112131415161718181819ff"),
@@ -282,39 +281,39 @@ var unmarshalTests = []unmarshalTest{
 			[...]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]float32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{})},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag},
 	},
 	{
 		hexDecode("826161a161626163"),
 		[]interface{}{"a", map[interface{}]interface{}{"b": "c"}},
 		[]interface{}{[]interface{}{"a", map[interface{}]interface{}{"b": "c"}}, [...]interface{}{"a", map[interface{}]interface{}{"b": "c"}}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{})},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag},
 	},
 	{
 		hexDecode("826161bf61626163ff"),
 		[]interface{}{"a", map[interface{}]interface{}{"b": "c"}},
 		[]interface{}{[]interface{}{"a", map[interface{}]interface{}{"b": "c"}}, [...]interface{}{"a", map[interface{}]interface{}{"b": "c"}}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{})},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag},
 	},
 	// map
 	{
 		hexDecode("a0"),
 		map[interface{}]interface{}{},
 		[]interface{}{map[interface{}]interface{}{}, map[string]bool{}, map[string]int{}, map[int]string{}, map[int]bool{}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeString, typeBool, typeIntSlice},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeString, typeBool, typeIntSlice, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("a201020304"),
 		map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)},
 		[]interface{}{map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)}, map[uint]int{1: 2, 3: 4}, map[int]uint{1: 2, 3: 4}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("a26161016162820203"),
 		map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
 		[]interface{}{map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
 			map[string]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("a56161614161626142616361436164614461656145"),
@@ -322,69 +321,69 @@ var unmarshalTests = []unmarshalTest{
 		[]interface{}{map[interface{}]interface{}{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
 			map[string]interface{}{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
 			map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("bf61610161629f0203ffff"),
 		map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
 		[]interface{}{map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
 			map[string]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("bf6346756ef563416d7421ff"),
 		map[interface{}]interface{}{"Fun": true, "Amt": int64(-2)},
 		[]interface{}{map[interface{}]interface{}{"Fun": true, "Amt": int64(-2)},
 			map[string]interface{}{"Fun": true, "Amt": int64(-2)}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	// tag
 	{
 		hexDecode("c074323031332d30332d32315432303a30343a30305a"),
-		"2013-03-21T20:04:00Z",
-		[]interface{}{"2013-03-21T20:04:00Z"},
+		time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), // 2013-03-21 20:04:00 +0000 UTC
+		[]interface{}{"2013-03-21T20:04:00Z", time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), Tag{0, "2013-03-21T20:04:00Z"}, RawTag{0, hexDecode("74323031332d30332d32315432303a30343a30305a")}},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
 	}, // 0: standard date/time
 	{
 		hexDecode("c11a514b67b0"),
-		uint64(1363896240),
-		[]interface{}{uint32(1363896240), uint64(1363896240), int32(1363896240), int64(1363896240), float32(1363896240), float64(1363896240)},
+		time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), // 2013-03-21 20:04:00 +0000 UTC
+		[]interface{}{uint32(1363896240), uint64(1363896240), int32(1363896240), int64(1363896240), float32(1363896240), float64(1363896240), time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), Tag{1, uint64(1363896240)}, RawTag{1, hexDecode("1a514b67b0")}},
 		[]reflect.Type{typeUint8, typeUint16, typeInt8, typeInt16, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	}, // 1: epoch-based date/time
 	{
 		hexDecode("c249010000000000000000"),
-		[]byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		[]interface{}{[]byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+		Tag{2, []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+		[]interface{}{[]byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, Tag{2, []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}}, RawTag{2, hexDecode("49010000000000000000")}},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
 	}, // 2: positive bignum: 18446744073709551616
 	{
 		hexDecode("c349010000000000000000"),
-		[]byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		[]interface{}{[]byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+		Tag{3, []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+		[]interface{}{[]byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, Tag{3, []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}}, RawTag{3, hexDecode("49010000000000000000")}},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
 	}, // 3: negative bignum: -18446744073709551617
 	{
 		hexDecode("c1fb41d452d9ec200000"),
-		float64(1363896240.5),
-		[]interface{}{float32(1363896240.5), float64(1363896240.5)},
+		time.Date(2013, 3, 21, 20, 4, 0, 500000000, time.UTC), // 2013-03-21 20:04:00.5 +0000 UTC
+		[]interface{}{float32(1363896240.5), float64(1363896240.5), time.Date(2013, 3, 21, 20, 4, 0, 500000000, time.UTC), Tag{1, float64(1363896240.5)}, RawTag{1, hexDecode("fb41d452d9ec200000")}},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	}, // 1: epoch-based date/time
 	{
 		hexDecode("d74401020304"),
-		[]byte{0x01, 0x02, 0x03, 0x04},
-		[]interface{}{[]byte{0x01, 0x02, 0x03, 0x04}},
+		Tag{23, []byte{0x01, 0x02, 0x03, 0x04}},
+		[]interface{}{[]byte{0x01, 0x02, 0x03, 0x04}, Tag{23, []byte{0x01, 0x02, 0x03, 0x04}}, RawTag{23, hexDecode("4401020304")}},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
 	}, // 23: expected conversion to base16 encoding
 	{
 		hexDecode("d818456449455446"),
-		[]byte{0x64, 0x49, 0x45, 0x54, 0x46},
-		[]interface{}{[]byte{0x64, 0x49, 0x45, 0x54, 0x46}},
+		Tag{24, []byte{0x64, 0x49, 0x45, 0x54, 0x46}},
+		[]interface{}{[]byte{0x64, 0x49, 0x45, 0x54, 0x46}, Tag{24, []byte{0x64, 0x49, 0x45, 0x54, 0x46}}, RawTag{24, hexDecode("456449455446")}},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
 	}, // 24: encoded cborBytes data item
 	{
 		hexDecode("d82076687474703a2f2f7777772e6578616d706c652e636f6d"),
-		"http://www.example.com",
-		[]interface{}{"http://www.example.com"},
+		Tag{32, "http://www.example.com"},
+		[]interface{}{"http://www.example.com", Tag{32, "http://www.example.com"}, RawTag{32, hexDecode("76687474703a2f2f7777772e6578616d706c652e636f6d")}},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
 	}, // 32: URI
 	// primitives
@@ -392,31 +391,31 @@ var unmarshalTests = []unmarshalTest{
 		hexDecode("f4"),
 		false,
 		[]interface{}{false},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeString, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeString, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("f5"),
 		true,
 		[]interface{}{true},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeString, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeString, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("f6"),
 		nil,
 		[]interface{}{[]byte(nil), []int(nil), []string(nil), map[string]int(nil)},
-		[]reflect.Type{},
+		[]reflect.Type{typeTag, typeRawTag},
 	},
 	{
 		hexDecode("f7"),
 		nil,
 		[]interface{}{[]byte(nil), []int(nil), []string(nil), map[string]int(nil)},
-		[]reflect.Type{},
+		[]reflect.Type{typeTag, typeRawTag},
 	},
 	{
 		hexDecode("f0"),
 		uint64(16),
 		[]interface{}{uint8(16), uint16(16), uint32(16), uint64(16), uint(16), int8(16), int16(16), int32(16), int64(16), int(16), float32(16), float64(16)},
-		[]reflect.Type{typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	// This example is not well-formed because Simple value (with 5-bit value 24) must be >= 32.
 	// See RFC 7049 section 2.3 for details, instead of the incorrect example in RFC 7049 Appendex A.
@@ -433,32 +432,45 @@ var unmarshalTests = []unmarshalTest{
 		hexDecode("f820"),
 		uint64(32),
 		[]interface{}{uint8(32), uint16(32), uint32(32), uint64(32), uint(32), int8(32), int16(32), int32(32), int64(32), int(32), float32(32), float64(32)},
-		[]reflect.Type{typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("f8ff"),
 		uint64(255),
 		[]interface{}{uint8(255), uint16(255), uint32(255), uint64(255), uint(255), int16(255), int32(255), int64(255), int(255), float32(255), float64(255)},
-		[]reflect.Type{typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	// More testcases not covered by https://tools.ietf.org/html/rfc7049#appendix-A.
 	{
 		hexDecode("5fff"), // empty indefinite length byte string
 		[]byte{},
 		[]interface{}{[]byte{}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("7fff"), // empty indefinite length text string
 		"",
 		[]interface{}{""},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("bfff"), // empty indefinite length map
 		map[interface{}]interface{}{},
 		[]interface{}{map[interface{}]interface{}{}, map[string]bool{}, map[string]int{}, map[int]string{}, map[int]bool{}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeString, typeBool, typeIntSlice},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeString, typeBool, typeIntSlice, typeTag, typeRawTag},
+	},
+	// More test data with tags
+	{
+		hexDecode("c13a0177f2cf"), // 1969-03-21T20:04:00Z, tag 1 with negative integer as epoch time
+		time.Date(1969, 3, 21, 20, 4, 0, 0, time.UTC),
+		[]interface{}{int32(-24638160), int64(-24638160), int32(-24638160), int64(-24638160), float32(-24638160), float64(-24638160), time.Date(1969, 3, 21, 20, 4, 0, 0, time.UTC), Tag{1, int64(-24638160)}, RawTag{1, hexDecode("3a0177f2cf")}},
+		[]reflect.Type{typeUint8, typeUint16, typeInt8, typeInt16, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+	},
+	{
+		hexDecode("d83dd183010203"), // 61(17([1, 2, 3])), nested tags 61 and 17
+		Tag{61, Tag{17, []interface{}{uint64(1), uint64(2), uint64(3)}}},
+		[]interface{}{[]interface{}{uint64(1), uint64(2), uint64(3)}, []byte{1, 2, 3}, []int{1, 2, 3}, []uint{1, 2, 3}, [...]int{1, 2, 3}, []float32{1, 2, 3}, []float64{1, 2, 3}, Tag{61, Tag{17, []interface{}{uint64(1), uint64(2), uint64(3)}}}, RawTag{61, hexDecode("d183010203")}},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{})},
 	},
 }
 
@@ -480,77 +492,77 @@ var unmarshalFloatTests = []unmarshalFloatTest{
 		hexDecode("f90000"),
 		float64(0.0),
 		[]interface{}{float32(0.0), float64(0.0)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("f98000"),
 		float64(-0.0),
 		[]interface{}{float32(-0.0), float64(-0.0)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("f93c00"),
 		float64(1.0),
 		[]interface{}{float32(1.0), float64(1.0)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("f93e00"),
 		float64(1.5),
 		[]interface{}{float32(1.5), float64(1.5)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("f97bff"),
 		float64(65504.0),
 		[]interface{}{float32(65504.0), float64(65504.0)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("f90001"), // float16 subnormal value
 		float64(5.960464477539063e-08),
 		[]interface{}{float32(5.960464477539063e-08), float64(5.960464477539063e-08)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		1e-16,
 	},
 	{
 		hexDecode("f90400"),
 		float64(6.103515625e-05),
 		[]interface{}{float32(6.103515625e-05), float64(6.103515625e-05)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		1e-16,
 	},
 	{
 		hexDecode("f9c400"),
 		float64(-4.0),
 		[]interface{}{float32(-4.0), float64(-4.0)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("f97c00"),
 		math.Inf(1),
 		[]interface{}{math.Float32frombits(0x7f800000), math.Inf(1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("f97e00"),
 		math.NaN(),
 		[]interface{}{math.Float32frombits(0x7fc00000), math.NaN()},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("f9fc00"),
 		math.Inf(-1),
 		[]interface{}{math.Float32frombits(0xff800000), math.Inf(-1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	// float32
@@ -558,35 +570,35 @@ var unmarshalFloatTests = []unmarshalFloatTest{
 		hexDecode("fa47c35000"),
 		float64(100000.0),
 		[]interface{}{float32(100000.0), float64(100000.0)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("fa7f7fffff"),
 		float64(3.4028234663852886e+38),
 		[]interface{}{float32(3.4028234663852886e+38), float64(3.4028234663852886e+38)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		1e-9,
 	},
 	{
 		hexDecode("fa7f800000"),
 		math.Inf(1),
 		[]interface{}{math.Float32frombits(0x7f800000), math.Inf(1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("fa7fc00000"),
 		math.NaN(),
 		[]interface{}{math.Float32frombits(0x7fc00000), math.NaN()},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("faff800000"),
 		math.Inf(-1),
 		[]interface{}{math.Float32frombits(0xff800000), math.Inf(-1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	// float64
@@ -594,42 +606,42 @@ var unmarshalFloatTests = []unmarshalFloatTest{
 		hexDecode("fb3ff199999999999a"),
 		float64(1.1),
 		[]interface{}{float32(1.1), float64(1.1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		1e-9,
 	},
 	{
 		hexDecode("fb7e37e43c8800759c"),
 		float64(1.0e+300),
 		[]interface{}{float64(1.0e+300)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		1e-9,
 	},
 	{
 		hexDecode("fbc010666666666666"),
 		float64(-4.1),
 		[]interface{}{float32(-4.1), float64(-4.1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		1e-9,
 	},
 	{
 		hexDecode("fb7ff0000000000000"),
 		math.Inf(1),
 		[]interface{}{math.Float32frombits(0x7f800000), math.Inf(1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("fb7ff8000000000000"),
 		math.NaN(),
 		[]interface{}{math.Float32frombits(0x7fc00000), math.NaN()},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("fbfff0000000000000"),
 		math.Inf(-1),
 		[]interface{}{math.Float32frombits(0xff800000), math.Inf(-1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 
@@ -638,28 +650,28 @@ var unmarshalFloatTests = []unmarshalFloatTest{
 		hexDecode("f903ff"),
 		float64(0.000060976),
 		[]interface{}{float32(0.000060976), float64(0.000060976)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		1e-9,
 	},
 	{
 		hexDecode("f93bff"),
 		float64(0.999511719),
 		[]interface{}{float32(0.999511719), float64(0.999511719)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		1e-9,
 	},
 	{
 		hexDecode("f93c01"),
 		float64(1.000976563),
 		[]interface{}{float32(1.000976563), float64(1.000976563)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		1e-9,
 	},
 	{
 		hexDecode("f93555"),
 		float64(0.333251953125),
 		[]interface{}{float32(0.333251953125), float64(0.333251953125)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		1e-9,
 	},
 	// CBOR test data "canonNums" are from https://github.com/cbor-wg/cbor-test-vectors
@@ -667,70 +679,70 @@ var unmarshalFloatTests = []unmarshalFloatTest{
 		hexDecode("f9bd00"),
 		float64(-1.25),
 		[]interface{}{float32(-1.25), float64(-1.25)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("f93e00"),
 		float64(1.5),
 		[]interface{}{float32(1.5), float64(1.5)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("fb4024333333333333"),
 		float64(10.1),
 		[]interface{}{float32(10.1), float64(10.1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("f90001"),
 		float64(5.960464477539063e-8),
 		[]interface{}{float32(5.960464477539063e-8), float64(5.960464477539063e-8)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("fa7f7fffff"),
 		float64(3.4028234663852886e+38),
 		[]interface{}{float32(3.4028234663852886e+38), float64(3.4028234663852886e+38)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("f90400"),
 		float64(0.00006103515625),
 		[]interface{}{float32(0.00006103515625), float64(0.00006103515625)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("f933ff"),
 		float64(0.2498779296875),
 		[]interface{}{float32(0.2498779296875), float64(0.2498779296875)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("fa33000000"),
 		float64(2.9802322387695312e-8),
 		[]interface{}{float32(2.9802322387695312e-8), float64(2.9802322387695312e-8)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("fa33333866"),
 		float64(4.1727979294137185e-8),
 		[]interface{}{float32(4.1727979294137185e-8), float64(4.1727979294137185e-8)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 	{
 		hexDecode("fa37002000"),
 		float64(0.000007636845111846924),
 		[]interface{}{float32(0.000007636845111846924), float64(0.000007636845111846924)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		0.0,
 	},
 }
@@ -751,8 +763,14 @@ func TestUnmarshal(t *testing.T) {
 		var v interface{}
 		if err := Unmarshal(tc.cborData, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
-		} else if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
-			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+		} else {
+			if tm, ok := tc.emptyInterfaceValue.(time.Time); ok {
+				if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
+					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+				}
+			} else if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+			}
 		}
 		// Test unmarshalling CBOR into RawMessage.
 		var r RawMessage
@@ -767,8 +785,14 @@ func TestUnmarshal(t *testing.T) {
 			vPtr := v.Interface()
 			if err := Unmarshal(tc.cborData, vPtr); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
-			} else if !reflect.DeepEqual(v.Elem().Interface(), value) {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), value, value)
+			} else {
+				if tm, ok := value.(time.Time); ok {
+					if vt, ok := v.Elem().Interface().(time.Time); !ok || !tm.Equal(vt) {
+						t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), value, value)
+					}
+				} else if !reflect.DeepEqual(v.Elem().Interface(), value) {
+					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), value, value)
+				}
 			}
 		}
 		// Test unmarshalling CBOR into incompatible data types.
@@ -776,7 +800,7 @@ func TestUnmarshal(t *testing.T) {
 			v := reflect.New(typ)
 			vPtr := v.Interface()
 			if err := Unmarshal(tc.cborData, vPtr); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
+				t.Errorf("Unmarshal(0x%x, %s) didn't return an error", tc.cborData, typ.String())
 			} else if _, ok := err.(*UnmarshalTypeError); !ok {
 				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.cborData, err)
 			} else if !strings.Contains(err.Error(), "cannot unmarshal") {
@@ -885,9 +909,10 @@ func TestNegIntOverflow(t *testing.T) {
 	}
 }
 
-func TestUnmarshalIntoPointer(t *testing.T) {
-	cborDataInt := []byte{0x18, 0x18}                                                                      // 24
-	cborDataString := []byte{0x7f, 0x65, 0x73, 0x74, 0x72, 0x65, 0x61, 0x64, 0x6d, 0x69, 0x6e, 0x67, 0xff} // "streaming"
+func TestUnmarshalIntoPtrPrimitives(t *testing.T) {
+	cborDataInt := hexDecode("1818")                          // 24
+	cborDataString := hexDecode("7f657374726561646d696e67ff") // "streaming"
+
 	const wantInt = 24
 	const wantString = "streaming"
 
@@ -924,13 +949,13 @@ func TestUnmarshalIntoPointer(t *testing.T) {
 	if err := Unmarshal(cborDataString, &pps); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", cborDataString, err)
 	} else if s != wantString {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %q", cborDataString, s, s, wantString)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborDataString, s, s, wantString)
 	}
 	// Unmarshal CBOR string into a nil pointer.
 	if err := Unmarshal(cborDataString, &p2); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", cborDataString, err)
 	} else if *p2 != wantString {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %q", cborDataString, *p2, p2, wantString)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborDataString, *p2, p2, wantString)
 	}
 
 	// Unmarshal CBOR string into a non-nil RawMessage.
@@ -944,6 +969,94 @@ func TestUnmarshalIntoPointer(t *testing.T) {
 		t.Errorf("Unmarshal(0x%x) returned error %v", cborDataString, err)
 	} else if !bytes.Equal(*p3, cborDataString) {
 		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborDataString, *p3, p3, cborDataString)
+	}
+}
+
+func TestUnmarshalIntoPtrArrayPtrElem(t *testing.T) {
+	cborData := hexDecode("83010203") // []int{1, 2, 3}
+
+	n1, n2, n3 := 1, 2, 3
+
+	wantArray := []*int{&n1, &n2, &n3}
+
+	var p *[]*int
+
+	var slc []*int
+	pslc := &slc
+	ppslc := &pslc
+
+	// Unmarshal CBOR array into a non-nil pointer.
+	if err := Unmarshal(cborData, &ppslc); err != nil {
+		t.Errorf("Unmarshal(0x%x, %s) returned error %v", cborData, reflect.TypeOf(ppslc), err)
+	} else if !reflect.DeepEqual(slc, wantArray) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborData, slc, slc, wantArray)
+	}
+	// Unmarshal CBOR array into a nil pointer.
+	if err := Unmarshal(cborData, &p); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	} else if !reflect.DeepEqual(*p, wantArray) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborData, *p, p, wantArray)
+	}
+}
+
+func TestUnmarshalIntoPtrMapPtrElem(t *testing.T) {
+	cborData := hexDecode("a201020304") // {1: 2, 3: 4}
+
+	n1, n2, n3, n4 := 1, 2, 3, 4
+
+	wantMap := map[int]*int{n1: &n2, n3: &n4}
+
+	var p *map[int]*int
+
+	var m map[int]*int
+	pm := &m
+	ppm := &pm
+
+	// Unmarshal CBOR map into a non-nil pointer.
+	if err := Unmarshal(cborData, &ppm); err != nil {
+		t.Errorf("Unmarshal(0x%x, %s) returned error %v", cborData, reflect.TypeOf(ppm), err)
+	} else if !reflect.DeepEqual(m, wantMap) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborData, m, m, wantMap)
+	}
+	// Unmarshal CBOR map into a nil pointer.
+	if err := Unmarshal(cborData, &p); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	} else if !reflect.DeepEqual(*p, wantMap) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborData, *p, p, wantMap)
+	}
+}
+
+func TestUnmarshalIntoPtrStructPtrElem(t *testing.T) {
+	type s1 struct {
+		A *string `cbor:"a"`
+		B *string `cbor:"b"`
+		C *string `cbor:"c"`
+		D *string `cbor:"d"`
+		E *string `cbor:"e"`
+	}
+
+	cborData := hexDecode("a56161614161626142616361436164614461656145") // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"}
+
+	a, b, c, d, e := "A", "B", "C", "D", "E"
+	wantObj := s1{A: &a, B: &b, C: &c, D: &d, E: &e}
+
+	var p *s1
+
+	var s s1
+	ps := &s
+	pps := &ps
+
+	// Unmarshal CBOR map into a non-nil pointer.
+	if err := Unmarshal(cborData, &pps); err != nil {
+		t.Errorf("Unmarshal(0x%x, %s) returned error %v", cborData, reflect.TypeOf(pps), err)
+	} else if !reflect.DeepEqual(s, wantObj) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborData, s, s, wantObj)
+	}
+	// Unmarshal CBOR map into a nil pointer.
+	if err := Unmarshal(cborData, &p); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	} else if !reflect.DeepEqual(*p, wantObj) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborData, *p, p, wantObj)
 	}
 }
 
@@ -1584,9 +1697,15 @@ func TestDecodeTime(t *testing.T) {
 		wantTime        time.Time
 	}{
 		{
-			name:            "zero time",
+			name:            "zero time", // decode CBOR null to zero time
 			cborRFC3339Time: hexDecode("f6"),
 			cborUnixTime:    hexDecode("f6"),
+			wantTime:        time.Time{},
+		},
+		{
+			name:            "zero time", // decode CBOR undefined to zero time
+			cborRFC3339Time: hexDecode("f7"),
+			cborUnixTime:    hexDecode("f7"),
 			wantTime:        time.Time{},
 		},
 		{
@@ -1612,6 +1731,12 @@ func TestDecodeTime(t *testing.T) {
 			cborRFC3339Time: hexDecode("74323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    hexDecode("1a514b67b0"),
 			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+		},
+		{
+			name:            "time with fractional seconds", // float
+			cborRFC3339Time: hexDecode("7819313937302d30312d30315432313a34363a34302d30363a3030"),
+			cborUnixTime:    hexDecode("fa47c35000"),
+			wantTime:        parseTime(time.RFC3339Nano, "1970-01-01T21:46:40-06:00"),
 		},
 		{
 			name:            "time with fractional seconds", // float
@@ -1644,6 +1769,63 @@ func TestDecodeTime(t *testing.T) {
 	}
 }
 
+func TestDecodeTimeWithTag(t *testing.T) {
+	testCases := []struct {
+		name            string
+		cborRFC3339Time []byte
+		cborUnixTime    []byte
+		wantTime        time.Time
+	}{
+		{
+			name:            "time without fractional seconds", // positive integer
+			cborRFC3339Time: hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    hexDecode("c11a514b67b0"),
+			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+		},
+		{
+			name:            "time with fractional seconds", // float
+			cborRFC3339Time: hexDecode("c076323031332d30332d32315432303a30343a30302e355a"),
+			cborUnixTime:    hexDecode("c1fb41d452d9ec200000"),
+			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00.5Z"),
+		},
+		{
+			name:            "time before January 1, 1970 UTC without fractional seconds", // negative integer
+			cborRFC3339Time: hexDecode("c074313936392d30332d32315432303a30343a30305a"),
+			cborUnixTime:    hexDecode("c13a0177f2cf"),
+			wantTime:        parseTime(time.RFC3339Nano, "1969-03-21T20:04:00Z"),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tm := time.Now()
+			if err := Unmarshal(tc.cborRFC3339Time, &tm); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborRFC3339Time, err)
+			} else if !tc.wantTime.Equal(tm) {
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborRFC3339Time, tm, tm, tc.wantTime, tc.wantTime)
+			}
+			tm = time.Now()
+			if err := Unmarshal(tc.cborUnixTime, &tm); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborUnixTime, err)
+			} else if !tc.wantTime.Equal(tm) {
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborUnixTime, tm, tm, tc.wantTime, tc.wantTime)
+			}
+
+			var v interface{}
+			if err := Unmarshal(tc.cborRFC3339Time, &v); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborRFC3339Time, err)
+			} else if tm, ok := v.(time.Time); !ok || !tc.wantTime.Equal(tm) {
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborRFC3339Time, v, v, tc.wantTime, tc.wantTime)
+			}
+			v = nil
+			if err := Unmarshal(tc.cborUnixTime, &v); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborUnixTime, err)
+			} else if tm, ok := v.(time.Time); !ok || !tc.wantTime.Equal(tm) {
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborUnixTime, v, v, tc.wantTime, tc.wantTime)
+			}
+		})
+	}
+}
+
 func TestDecodeTimeError(t *testing.T) {
 	testCases := []struct {
 		name         string
@@ -1660,14 +1842,288 @@ func TestDecodeTimeError(t *testing.T) {
 			cborData:     hexDecode("4f013030303030303030e03031ed3030"),
 			wantErrorMsg: "cbor: cannot unmarshal byte string into Go value of type time.Time",
 		},
+		{
+			name:         "bool cannot be decoded into time.Time",
+			cborData:     hexDecode("f4"),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type time.Time",
+		},
+		{
+			name:         "invalid UTF-8 string",
+			cborData:     hexDecode("7f62e6b061b4ff"),
+			wantErrorMsg: "cbor: invalid UTF-8 string",
+		},
+		{
+			name:         "negative integer overflow",
+			cborData:     hexDecode("3bffffffffffffffff"),
+			wantErrorMsg: "cbor: cannot unmarshal negative integer into Go value of type time.Time",
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			tm := time.Now()
 			if err := Unmarshal(tc.cborData, &tm); err == nil {
 				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.cborData, tc.wantErrorMsg)
-			} else if err.Error() != tc.wantErrorMsg {
+			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
 				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestDecodeTimeWithTagError(t *testing.T) {
+	testCases := []struct {
+		name         string
+		cborData     []byte
+		wantErrorMsg string
+	}{
+		{
+			name:         "Tag 0 with invalid RFC3339 time string",
+			cborData:     hexDecode("c07f657374726561646d696e67ff"),
+			wantErrorMsg: "cbor: cannot set streaming for time.Time",
+		},
+		{
+			name:         "Tag 0 with invalid UTF-8 string",
+			cborData:     hexDecode("c07f62e6b061b4ff"),
+			wantErrorMsg: "cbor: invalid UTF-8 string",
+		},
+		{
+			name:         "Tag 0 with integer content",
+			cborData:     hexDecode("c01a514b67b0"),
+			wantErrorMsg: "cbor: tag number 0 must be followed by text string, got positive integer",
+		},
+		{
+			name:         "Tag 0 with byte string content",
+			cborData:     hexDecode("c04f013030303030303030e03031ed3030"),
+			wantErrorMsg: "cbor: tag number 0 must be followed by text string, got byte string",
+		},
+		{
+			name:         "Tag 1 with negative integer overflow",
+			cborData:     hexDecode("c13bffffffffffffffff"),
+			wantErrorMsg: "cbor: cannot unmarshal negative integer into Go value",
+		},
+		{
+			name:         "Tag 1 with string content",
+			cborData:     hexDecode("c174323031332d30332d32315432303a30343a30305a"),
+			wantErrorMsg: "cbor: tag number 1 must be followed by integer or floating-point number, got UTF-8 text string",
+		},
+		{
+			name:         "Tag 1 with simple value",
+			cborData:     hexDecode("d801f6"), // 1(null)
+			wantErrorMsg: "cbor: tag number 1 must be followed by integer or floating-point number, got primitive",
+		},
+	}
+	dm, _ := DecOptions{TimeTag: DecTagOptional}.DecMode()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tm := time.Now()
+			if err := dm.Unmarshal(tc.cborData, &tm); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", tc.cborData, tc.wantErrorMsg)
+			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err, tc.wantErrorMsg)
+			}
+
+			var v interface{}
+			if err := dm.Unmarshal(tc.cborData, &v); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", tc.cborData, tc.wantErrorMsg)
+			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err, tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestDecodeTimeStreaming(t *testing.T) {
+	// Decoder decodes from mixed invalid and valid time.
+	testCases := []struct {
+		cborData     []byte
+		wantErrorMsg string
+		wantObj      time.Time
+	}{
+		{
+			cborData:     hexDecode("c07f62e6b061b4ff"),
+			wantErrorMsg: "cbor: invalid UTF-8 string",
+		},
+		{
+			cborData: hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			wantObj:  time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
+		},
+		{
+			cborData:     hexDecode("c01a514b67b0"),
+			wantErrorMsg: "cbor: tag number 0 must be followed by text string, got positive integer",
+		},
+		{
+			cborData: hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			wantObj:  time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
+		},
+		{
+			cborData:     hexDecode("c13bffffffffffffffff"),
+			wantErrorMsg: "-1-18446744073709551615 overflows Go's int64",
+		},
+		{
+			cborData: hexDecode("c11a514b67b0"),
+			wantObj:  time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
+		},
+		{
+			cborData:     hexDecode("c174323031332d30332d32315432303a30343a30305a"),
+			wantErrorMsg: "tag number 1 must be followed by integer or floating-point number, got UTF-8 text string",
+		},
+		{
+			cborData: hexDecode("c11a514b67b0"),
+			wantObj:  time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
+		},
+	}
+	// Data is a mixed stream of valid and invalid time data
+	var cborData []byte
+	for _, tc := range testCases {
+		cborData = append(cborData, tc.cborData...)
+	}
+	dm, _ := DecOptions{TimeTag: DecTagOptional}.DecMode()
+	dec := dm.NewDecoder(bytes.NewReader(cborData))
+	for _, tc := range testCases {
+		var v interface{}
+		err := dec.Decode(&v)
+		if tc.wantErrorMsg != "" {
+			if err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", tc.cborData, tc.wantErrorMsg)
+			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+				t.Errorf("Unmarshal(0x%x) returned error msg %q, want %q", tc.cborData, err, tc.wantErrorMsg)
+			}
+		} else {
+			tm, ok := v.(time.Time)
+			if !ok {
+				t.Errorf("Unmarshal(0x%x) returned %s (%T), want time.Time", tc.cborData, v, v)
+			}
+			if !tc.wantObj.Equal(tm) {
+				t.Errorf("Unmarshal(0x%x) returned %s, want %s", tc.cborData, tm, tc.wantObj)
+			}
+		}
+	}
+	dec = dm.NewDecoder(bytes.NewReader(cborData))
+	for _, tc := range testCases {
+		var tm time.Time
+		err := dec.Decode(&tm)
+		if tc.wantErrorMsg != "" {
+			if err == nil {
+				t.Errorf("Unmarshal(0x%x) did't return error, want error msg %q", tc.cborData, tc.wantErrorMsg)
+			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+				t.Errorf("Unmarshal(0x%x) returned error msg %q, want %q", tc.cborData, err, tc.wantErrorMsg)
+			}
+		} else {
+			if !tc.wantObj.Equal(tm) {
+				t.Errorf("Unmarshal(0x%x) returned %s, want %s", tc.cborData, tm, tc.wantObj)
+			}
+		}
+	}
+}
+
+func TestDecTimeTagOption(t *testing.T) {
+	timeTagIgnoredDecMode, _ := DecOptions{TimeTag: DecTagIgnored}.DecMode()
+	timeTagOptionalDecMode, _ := DecOptions{TimeTag: DecTagOptional}.DecMode()
+	timeTagRequiredDecMode, _ := DecOptions{TimeTag: DecTagRequired}.DecMode()
+
+	testCases := []struct {
+		name            string
+		cborRFC3339Time []byte
+		cborUnixTime    []byte
+		decMode         DecMode
+		wantTime        time.Time
+		wantErrorMsg    string
+	}{
+		// not-tagged time CBOR data
+		{
+			name:            "not-tagged data with DecTagIgnored option",
+			cborRFC3339Time: hexDecode("74323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    hexDecode("1a514b67b0"),
+			decMode:         timeTagIgnoredDecMode,
+			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+		},
+		{
+			name:            "not-tagged data with timeTagOptionalDecMode option",
+			cborRFC3339Time: hexDecode("74323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    hexDecode("1a514b67b0"),
+			decMode:         timeTagOptionalDecMode,
+			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+		},
+		{
+			name:            "not-tagged data with timeTagRequiredDecMode option",
+			cborRFC3339Time: hexDecode("74323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    hexDecode("1a514b67b0"),
+			decMode:         timeTagRequiredDecMode,
+			wantErrorMsg:    "expect CBOR tag value",
+		},
+		// tagged time CBOR data
+		{
+			name:            "tagged data with timeTagIgnoredDecMode option",
+			cborRFC3339Time: hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    hexDecode("c11a514b67b0"),
+			decMode:         timeTagIgnoredDecMode,
+			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+		},
+		{
+			name:            "tagged data with timeTagOptionalDecMode option",
+			cborRFC3339Time: hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    hexDecode("c11a514b67b0"),
+			decMode:         timeTagOptionalDecMode,
+			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+		},
+		{
+			name:            "tagged data with timeTagRequiredDecMode option",
+			cborRFC3339Time: hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    hexDecode("c11a514b67b0"),
+			decMode:         timeTagRequiredDecMode,
+			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+		},
+		// mis-tagged time CBOR data
+		{
+			name:            "mis-tagged data with timeTagIgnoredDecMode option",
+			cborRFC3339Time: hexDecode("c8c974323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    hexDecode("c8c91a514b67b0"),
+			decMode:         timeTagIgnoredDecMode,
+			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+		},
+		{
+			name:            "mis-tagged data with timeTagOptionalDecMode option",
+			cborRFC3339Time: hexDecode("c8c974323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    hexDecode("c8c91a514b67b0"),
+			decMode:         timeTagOptionalDecMode,
+			wantErrorMsg:    "cbor: wrong tag number for time.Time, got 8, expect 0 or 1",
+		},
+		{
+			name:            "mis-tagged data with timeTagRequiredDecMode option",
+			cborRFC3339Time: hexDecode("c8c974323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    hexDecode("c8c91a514b67b0"),
+			decMode:         timeTagRequiredDecMode,
+			wantErrorMsg:    "cbor: wrong tag number for time.Time, got 8, expect 0 or 1",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tm := time.Now()
+			err := tc.decMode.Unmarshal(tc.cborRFC3339Time, &tm)
+			if tc.wantErrorMsg != "" {
+				if err == nil {
+					t.Errorf("Unmarshal(0x%x) didn't return error", tc.cborRFC3339Time)
+				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+					t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborRFC3339Time, err.Error(), tc.wantErrorMsg)
+				}
+			} else {
+				if !tc.wantTime.Equal(tm) {
+					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborRFC3339Time, tm, tm, tc.wantTime, tc.wantTime)
+				}
+			}
+
+			tm = time.Now()
+			err = tc.decMode.Unmarshal(tc.cborUnixTime, &tm)
+			if tc.wantErrorMsg != "" {
+				if err == nil {
+					t.Errorf("Unmarshal(0x%x) didn't return error", tc.cborRFC3339Time)
+				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+					t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborRFC3339Time, err.Error(), tc.wantErrorMsg)
+				}
+			} else {
+				if !tc.wantTime.Equal(tm) {
+					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborRFC3339Time, tm, tm, tc.wantTime, tc.wantTime)
+				}
 			}
 		})
 	}
@@ -2415,7 +2871,7 @@ func TestDuplicateMapKeys(t *testing.T) {
 }
 
 func TestDecOptions(t *testing.T) {
-	opts1 := DecOptions{}
+	opts1 := DecOptions{TimeTag: DecTagRequired}
 	dm, err := opts1.DecMode()
 	if err != nil {
 		t.Errorf("DecMode() returned an error %v", err)
@@ -2449,6 +2905,55 @@ func testRoundTrip(t *testing.T, testCases []roundTripTest, em EncMode, dm DecMo
 			}
 			if !reflect.DeepEqual(tc.obj, v.Elem().Interface()) {
 				t.Errorf("Marshal-Unmarshal returned different values: %v, %v", tc.obj, v.Elem().Interface())
+			}
+		})
+	}
+}
+
+func TestDecModeInvalidTimeTag(t *testing.T) {
+	wantErrorMsg := "cbor: invalid TimeTag 101"
+	_, err := DecOptions{TimeTag: 101}.DecMode()
+	if err == nil {
+		t.Errorf("DecMode() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("DecMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+}
+
+func TestUnmarshalStructKeyAsIntNumError(t *testing.T) {
+	type T1 struct {
+		F1 int `cbor:"a,keyasint"`
+	}
+	type T2 struct {
+		F1 int `cbor:"-18446744073709551616,keyasint"`
+	}
+	testCases := []struct {
+		name         string
+		cborData     []byte
+		obj          interface{}
+		wantErrorMsg string
+	}{
+		{
+			name:         "string as key",
+			cborData:     hexDecode("a1616101"),
+			obj:          T1{},
+			wantErrorMsg: "cbor: failed to parse field name \"a\" to int",
+		},
+		{
+			name:         "out of range int as key",
+			cborData:     hexDecode("a13bffffffffffffffff01"),
+			obj:          T2{},
+			wantErrorMsg: "cbor: failed to parse field name \"-18446744073709551616\" to int",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			v := reflect.New(reflect.TypeOf(tc.obj))
+			err := Unmarshal(tc.cborData, v.Interface())
+			if err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return an error, want error %q", tc.cborData, tc.wantErrorMsg)
+			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+				t.Errorf("Unmarshal(0x%x) error %v, want %v", tc.cborData, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}

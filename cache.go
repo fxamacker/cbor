@@ -1,113 +1,11 @@
 // Copyright (c) Faye Amacker. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
-/*
-Package cbor provides a fuzz-tested CBOR encoder and decoder with full support
-for float16, Canonical CBOR, CTAP2 Canonical CBOR, and custom settings.
-
-CBOR encoding options allow "preferred serialization" by encoding integers and floats
-to their smallest forms (like float16) when values fit.
-
-Struct tags like "keyasint", "toarray" and "omitempty" makes CBOR data smaller.
-
-For example, "toarray" makes struct fields encode to array elements.  And "keyasint"
-makes struct fields encode to elements of CBOR map with int keys.
-
-Basics
-
-Function signatures identical to encoding/json include:
-
-    Marshal, Unmarshal, NewEncoder, NewDecoder, encoder.Encode, decoder.Decode.
-
-Codec functions are available at package-level (using defaults) or by creating modes
-from options at runtime.
-
-"Mode" in this API means definite way of encoding or decoding. Specifically, EncMode or DecMode.
-
-EncMode and DecMode interfaces are created from EncOptions or DecOptions structs.  For example,
-
-    em := cbor.EncOptions{...}.EncMode()
-    em := cbor.CanonicalEncOptions().EncMode()
-    em := cbor.CTAP2EncOptions().EncMode()
-
-Modes use immutable options to avoid side-effects and simplify concurrency. Behavior of modes
-won't accidentally change at runtime after they're created.
-
-Modes are intended to be reused and are safe for concurrent use.
-
-EncMode and DecMode Interfaces
-
-    // EncMode interface uses immutable options and is safe for concurrent use.
-    type EncMode interface {
-	Marshal(v interface{}) ([]byte, error)
-	NewEncoder(w io.Writer) *Encoder
-	EncOptions() EncOptions  // returns copy of options
-    }
-
-    // DecMode interface uses immutable options and is safe for concurrent use.
-    type DecMode interface {
-	Unmarshal(data []byte, v interface{}) error
-	NewDecoder(r io.Reader) *Decoder
-	DecOptions() DecOptions  // returns copy of options
-    }
-
-Using Default Encoding Mode
-
-    b, err := cbor.Marshal(v)
-
-    encoder := cbor.NewEncoder(w)
-    err = encoder.Encode(v)
-
-Using Default Decoding Mode
-
-    err := cbor.Unmarshal(b, &v)
-
-    decoder := cbor.NewDecoder(r)
-    err = decoder.Decode(&v)
-
-Creating and Using Encoding Modes
-
-    // Create EncOptions using either struct literal or a function.
-    opts := cbor.CanonicalEncOptions()
-
-    // If needed, modify encoding options
-    opts.Time = cbor.TimeUnix
-
-    // Create reusable EncMode interface with immutable options, safe for concurrent use.
-    em, err := opts.EncMode()
-
-    // Use EncMode like encoding/json, with same function signatures.
-    b, err := em.Marshal(v)
-    // or
-    encoder := em.NewEncoder(w)
-    err := encoder.Encode(v)
-
-Default Options
-
-Default encoding options are listed at https://github.com/fxamacker/cbor#api
-
-Struct Tags
-
-Struct tags like `cbor:"name,omitempty"` and `json:"name,omitempty"` work as expected.
-If both struct tags are specified then `cbor` is used.
-
-Struct tags like "keyasint", "toarray", and "omitempty" make it easy to use
-very compact formats like COSE and CWT (CBOR Web Tokens) with structs.
-
-For example, "toarray" makes struct fields encode to array elements.  And "keyasint"
-makes struct fields encode to elements of CBOR map with int keys.
-
-https://raw.githubusercontent.com/fxamacker/images/master/cbor/v2.0.0/cbor_easy_api.png
-
-Tests and Fuzzing
-
-Over 375 tests are included in this package. Cover-guided fuzzing is handled by a separate package:
-fxamacker/cbor-fuzz.
-*/
 package cbor
 
 import (
 	"bytes"
+	"errors"
 	"reflect"
 	"sort"
 	"strconv"
@@ -119,10 +17,65 @@ var (
 	decodingStructTypeCache sync.Map // map[reflect.Type]*decodingStructType
 	encodingStructTypeCache sync.Map // map[reflect.Type]*encodingStructType
 	encodeFuncCache         sync.Map // map[reflect.Type]encodeFunc
+	typeInfoCache           sync.Map // map[reflect.Type]*typeInfo
 )
+
+type specialType int
+
+const (
+	specialTypeNone specialType = iota
+	specialTypeUnmarshalerIface
+	specialTypeEmptyIface
+	specialTypeTag
+	specialTypeTime
+)
+
+type typeInfo struct {
+	elemTypeInfo *typeInfo
+	keyTypeInfo  *typeInfo
+	typ          reflect.Type
+	kind         reflect.Kind
+	nonPtrType   reflect.Type
+	nonPtrKind   reflect.Kind
+	spclType     specialType
+}
+
+func newTypeInfo(t reflect.Type) *typeInfo {
+	tInfo := typeInfo{typ: t, kind: t.Kind()}
+
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	k := t.Kind()
+
+	tInfo.nonPtrType = t
+	tInfo.nonPtrKind = k
+
+	if k == reflect.Interface && t.NumMethod() == 0 {
+		tInfo.spclType = specialTypeEmptyIface
+	} else if t == typeTag {
+		tInfo.spclType = specialTypeTag
+	} else if t == typeTime {
+		tInfo.spclType = specialTypeTime
+	} else if reflect.PtrTo(t).Implements(typeUnmarshaler) {
+		tInfo.spclType = specialTypeUnmarshalerIface
+	}
+
+	switch k {
+	case reflect.Array, reflect.Slice:
+		tInfo.elemTypeInfo = getTypeInfo(t.Elem())
+	case reflect.Map:
+		tInfo.keyTypeInfo = getTypeInfo(t.Key())
+		tInfo.elemTypeInfo = getTypeInfo(t.Elem())
+	}
+
+	return &tInfo
+}
 
 type decodingStructType struct {
 	fields  fields
+	err     error
 	toArray bool
 }
 
@@ -135,11 +88,21 @@ func getDecodingStructType(t reflect.Type) *decodingStructType {
 
 	toArray := hasToArrayOption(structOptions)
 
+	var err error
 	for i := 0; i < len(flds); i++ {
-		flds[i].isUnmarshaler = implementsUnmarshaler(flds[i].typ)
+		if flds[i].keyAsInt {
+			nameAsInt, numErr := strconv.Atoi(flds[i].name)
+			if numErr != nil {
+				err = errors.New("cbor: failed to parse field name \"" + flds[i].name + "\" to int (" + numErr.Error() + ")")
+				break
+			}
+			flds[i].nameAsInt = int64(nameAsInt)
+		}
+
+		flds[i].typInfo = getTypeInfo(flds[i].typ)
 	}
 
-	structType := &decodingStructType{fields: flds, toArray: toArray}
+	structType := &decodingStructType{fields: flds, err: err, toArray: toArray}
 	decodingStructTypeCache.Store(t, structType)
 	return structType
 }
@@ -228,9 +191,10 @@ func getEncodingStructType(t reflect.Type) *encodingStructType {
 		if flds[i].keyAsInt {
 			nameAsInt, numErr := strconv.Atoi(flds[i].name)
 			if numErr != nil {
-				err = numErr
+				err = errors.New("cbor: failed to parse field name \"" + flds[i].name + "\" to int (" + numErr.Error() + ")")
 				break
 			}
+			flds[i].nameAsInt = int64(nameAsInt)
 			if nameAsInt >= 0 {
 				encodeHead(e, byte(cborTypePositiveInt), uint64(nameAsInt))
 			} else {
@@ -326,6 +290,15 @@ func getEncodeFunc(t reflect.Type) encodeFunc {
 	f := getEncodeFuncInternal(t)
 	encodeFuncCache.Store(t, f)
 	return f
+}
+
+func getTypeInfo(t reflect.Type) *typeInfo {
+	if v, _ := typeInfoCache.Load(t); v != nil {
+		return v.(*typeInfo)
+	}
+	tInfo := newTypeInfo(t)
+	typeInfoCache.Store(t, tInfo)
+	return tInfo
 }
 
 func hasToArrayOption(tag string) bool {

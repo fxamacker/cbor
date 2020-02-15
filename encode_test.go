@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"math"
 	"reflect"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -219,6 +218,39 @@ var marshalTests = []marshalTest{
 			map[interface{}]interface{}{"b": "B", "a": "A", "c": "C", "e": "E", "d": "D"},
 		},
 	},
+	// tag
+	{
+		hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+		[]interface{}{Tag{0, "2013-03-21T20:04:00Z"}, RawTag{0, hexDecode("74323031332d30332d32315432303a30343a30305a")}},
+	}, // 0: standard date/time
+	{
+		hexDecode("c11a514b67b0"),
+		[]interface{}{Tag{1, uint64(1363896240)}, RawTag{1, hexDecode("1a514b67b0")}},
+	}, // 1: epoch-based date/time
+	{
+		hexDecode("c249010000000000000000"),
+		[]interface{}{Tag{2, []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}}, RawTag{2, hexDecode("49010000000000000000")}},
+	}, // 2: positive bignum: 18446744073709551616
+	{
+		hexDecode("c349010000000000000000"),
+		[]interface{}{Tag{3, []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}}, RawTag{3, hexDecode("49010000000000000000")}},
+	}, // 3: negative bignum: -18446744073709551617
+	{
+		hexDecode("c1fb41d452d9ec200000"),
+		[]interface{}{Tag{1, float64(1363896240.5)}, RawTag{1, hexDecode("fb41d452d9ec200000")}},
+	}, // 1: epoch-based date/time
+	{
+		hexDecode("d74401020304"),
+		[]interface{}{Tag{23, []byte{0x01, 0x02, 0x03, 0x04}}, RawTag{23, hexDecode("4401020304")}},
+	}, // 23: expected conversion to base16 encoding
+	{
+		hexDecode("d818456449455446"),
+		[]interface{}{Tag{24, []byte{0x64, 0x49, 0x45, 0x54, 0x46}}, RawTag{24, hexDecode("456449455446")}},
+	}, // 24: encoded cborBytes data item
+	{
+		hexDecode("d82076687474703a2f2f7777772e6578616d706c652e636f6d"),
+		[]interface{}{Tag{32, "http://www.example.com"}, RawTag{32, hexDecode("76687474703a2f2f7777772e6578616d706c652e636f6d")}},
+	}, // 32: URI
 	// primitives
 	{hexDecode("f4"), []interface{}{false}},
 	{hexDecode("f5"), []interface{}{true}},
@@ -234,6 +266,11 @@ var marshalTests = []marshalTest{
 	{hexDecode("fb3ff199999999999a"), []interface{}{float64(1.1)}},
 	{hexDecode("fb7e37e43c8800759c"), []interface{}{float64(1.0e+300)}},
 	{hexDecode("fbc010666666666666"), []interface{}{float64(-4.1)}},
+	// More testcases not covered by https://tools.ietf.org/html/rfc7049#appendix-A.
+	{
+		hexDecode("d83dd183010203"), // 61(17([1, 2, 3])), nested tags 61 and 17
+		[]interface{}{Tag{61, Tag{17, []interface{}{uint64(1), uint64(2), uint64(3)}}}, RawTag{61, hexDecode("d183010203")}},
+	},
 }
 
 var exMarshalTests = []marshalTest{
@@ -260,14 +297,14 @@ func TestInvalidTypeMarshal(t *testing.T) {
 		Chan chan bool
 	}
 	var marshalErrorTests = []marshalErrorTest{
-		{"channel can't be marshaled", make(chan bool), "cbor: unsupported type: chan bool"},
-		{"slice of channel can't be marshaled", make([]chan bool, 10), "cbor: unsupported type: []chan bool"},
-		{"slice of pointer to channel can't be marshaled", make([]*chan bool, 10), "cbor: unsupported type: []*chan bool"},
-		{"map of channel can't be marshaled", make(map[string]chan bool), "cbor: unsupported type: map[string]chan bool"},
-		{"struct of channel can't be marshaled", s1{}, "cbor: unsupported type: cbor.s1"},
-		{"struct of channel can't be marshaled", s2{}, "cbor: unsupported type: cbor.s2"},
-		{"function can't be marshaled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
-		{"complex can't be marshaled", complex(100, 8), "cbor: unsupported type: complex128"},
+		{"channel cannot be marshaled", make(chan bool), "cbor: unsupported type: chan bool"},
+		{"slice of channel cannot be marshaled", make([]chan bool, 10), "cbor: unsupported type: []chan bool"},
+		{"slice of pointer to channel cannot be marshaled", make([]*chan bool, 10), "cbor: unsupported type: []*chan bool"},
+		{"map of channel cannot be marshaled", make(map[string]chan bool), "cbor: unsupported type: map[string]chan bool"},
+		{"struct of channel cannot be marshaled", s1{}, "cbor: unsupported type: cbor.s1"},
+		{"struct of channel cannot be marshaled", s2{}, "cbor: unsupported type: cbor.s2"},
+		{"function cannot be marshaled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
+		{"complex cannot be marshaled", complex(100, 8), "cbor: unsupported type: complex128"},
 	}
 	em, err := EncOptions{Sort: SortCanonical}.EncMode()
 	if err != nil {
@@ -1280,6 +1317,159 @@ func TestEncodeTime(t *testing.T) {
 	}
 }
 
+func TestEncodeTimeWithTag(t *testing.T) {
+	timeUnixOpt := EncOptions{Time: TimeUnix, TimeTag: EncTagRequired}
+	timeUnixMicroOpt := EncOptions{Time: TimeUnixMicro, TimeTag: EncTagRequired}
+	timeUnixDynamicOpt := EncOptions{Time: TimeUnixDynamic, TimeTag: EncTagRequired}
+	timeRFC3339Opt := EncOptions{Time: TimeRFC3339, TimeTag: EncTagRequired}
+	timeRFC3339NanoOpt := EncOptions{Time: TimeRFC3339Nano, TimeTag: EncTagRequired}
+
+	type timeConvert struct {
+		opt          EncOptions
+		wantCborData []byte
+	}
+	testCases := []struct {
+		name    string
+		tm      time.Time
+		convert []timeConvert
+	}{
+		{
+			name: "zero time",
+			tm:   time.Time{},
+			convert: []timeConvert{
+				{
+					opt:          timeUnixOpt,
+					wantCborData: hexDecode("f7"), // encode as CBOR undefined
+				},
+				{
+					opt:          timeUnixMicroOpt,
+					wantCborData: hexDecode("f7"), // encode as CBOR undefined
+				},
+				{
+					opt:          timeUnixDynamicOpt,
+					wantCborData: hexDecode("f7"), // encode as CBOR undefined
+				},
+				{
+					opt:          timeRFC3339Opt,
+					wantCborData: hexDecode("f7"), // encode as CBOR undefined
+				},
+				{
+					opt:          timeRFC3339NanoOpt,
+					wantCborData: hexDecode("f7"), // encode as CBOR undefined
+				},
+			},
+		},
+		{
+			name: "time without fractional seconds",
+			tm:   parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			convert: []timeConvert{
+				{
+					opt:          timeUnixOpt,
+					wantCborData: hexDecode("c11a514b67b0"), // 1363896240
+				},
+				{
+					opt:          timeUnixMicroOpt,
+					wantCborData: hexDecode("c1fb41d452d9ec000000"), // 1363896240.0
+				},
+				{
+					opt:          timeUnixDynamicOpt,
+					wantCborData: hexDecode("c11a514b67b0"), // 1363896240
+				},
+				{
+					opt:          timeRFC3339Opt,
+					wantCborData: hexDecode("c074323031332d30332d32315432303a30343a30305a"), // "2013-03-21T20:04:00Z"
+				},
+				{
+					opt:          timeRFC3339NanoOpt,
+					wantCborData: hexDecode("c074323031332d30332d32315432303a30343a30305a"), // "2013-03-21T20:04:00Z"
+				},
+			},
+		},
+		{
+			name: "time with fractional seconds",
+			tm:   parseTime(time.RFC3339Nano, "2013-03-21T20:04:00.5Z"),
+			convert: []timeConvert{
+				{
+					opt:          timeUnixOpt,
+					wantCborData: hexDecode("c11a514b67b0"), // 1363896240
+				},
+				{
+					opt:          timeUnixMicroOpt,
+					wantCborData: hexDecode("c1fb41d452d9ec200000"), // 1363896240.5
+				},
+				{
+					opt:          timeUnixDynamicOpt,
+					wantCborData: hexDecode("c1fb41d452d9ec200000"), // 1363896240.5
+				},
+				{
+					opt:          timeRFC3339Opt,
+					wantCborData: hexDecode("c074323031332d30332d32315432303a30343a30305a"), // "2013-03-21T20:04:00Z"
+				},
+				{
+					opt:          timeRFC3339NanoOpt,
+					wantCborData: hexDecode("c076323031332d30332d32315432303a30343a30302e355a"), // "2013-03-21T20:04:00.5Z"
+				},
+			},
+		},
+		{
+			name: "time before January 1, 1970 UTC without fractional seconds",
+			tm:   parseTime(time.RFC3339Nano, "1969-03-21T20:04:00Z"),
+			convert: []timeConvert{
+				{
+					opt:          timeUnixOpt,
+					wantCborData: hexDecode("c13a0177f2cf"), // -24638160
+				},
+				{
+					opt:          timeUnixMicroOpt,
+					wantCborData: hexDecode("c1fbc1777f2d00000000"), // -24638160.0
+				},
+				{
+					opt:          timeUnixDynamicOpt,
+					wantCborData: hexDecode("c13a0177f2cf"), // -24638160
+				},
+				{
+					opt:          timeRFC3339Opt,
+					wantCborData: hexDecode("c074313936392d30332d32315432303a30343a30305a"), // "1969-03-21T20:04:00Z"
+				},
+				{
+					opt:          timeRFC3339NanoOpt,
+					wantCborData: hexDecode("c074313936392d30332d32315432303a30343a30305a"), // "1969-03-21T20:04:00Z"
+				},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		for _, convert := range tc.convert {
+			var convertName string
+			switch convert.opt.Time {
+			case TimeUnix:
+				convertName = "TimeUnix"
+			case TimeUnixMicro:
+				convertName = "TimeUnixMicro"
+			case TimeUnixDynamic:
+				convertName = "TimeUnixDynamic"
+			case TimeRFC3339:
+				convertName = "TimeRFC3339"
+			case TimeRFC3339Nano:
+				convertName = "TimeRFC3339Nano"
+			}
+			name := tc.name + " with " + convertName + " option"
+			t.Run(name, func(t *testing.T) {
+				em, err := convert.opt.EncMode()
+				if err != nil {
+					t.Errorf("EncMode() returned error %v", err)
+				}
+				b, err := em.Marshal(tc.tm)
+				if err != nil {
+					t.Errorf("Marshal(%+v) returned error %v", tc.tm, err)
+				} else if !bytes.Equal(b, convert.wantCborData) {
+					t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.tm, b, convert.wantCborData)
+				}
+			})
+		}
+	}
+}
+
 func parseTime(layout string, value string) time.Time {
 	tm, err := time.Parse(layout, value)
 	if err != nil {
@@ -1570,12 +1760,12 @@ func TestMarshalStructKeyAsIntNumError(t *testing.T) {
 		{
 			name:         "float as key",
 			obj:          T1{},
-			wantErrorMsg: "parsing \"2.0\": invalid syntax",
+			wantErrorMsg: "cbor: failed to parse field name \"2.0\" to int",
 		},
 		{
 			name:         "out of range int as key",
 			obj:          T2{},
-			wantErrorMsg: "parsing \"-18446744073709551616\": value out of range",
+			wantErrorMsg: "cbor: failed to parse field name \"-18446744073709551616\" to int",
 		},
 	}
 	for _, tc := range testCases {
@@ -1583,8 +1773,6 @@ func TestMarshalStructKeyAsIntNumError(t *testing.T) {
 			b, err := Marshal(tc.obj)
 			if err == nil {
 				t.Errorf("Marshal(%+v) didn't return an error, want error %q", tc.obj, tc.wantErrorMsg)
-			} else if _, ok := err.(*strconv.NumError); !ok {
-				t.Errorf("Marshal(%v) error type %T, want *strconv.NumError", tc.obj, err)
 			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
 				t.Errorf("Marshal(%v) error %v, want %v", tc.obj, err.Error(), tc.wantErrorMsg)
 			} else if b != nil {
@@ -2696,7 +2884,14 @@ func TestPreferredUnsortedEncOptions(t *testing.T) {
 }
 
 func TestEncOptions(t *testing.T) {
-	opts1 := EncOptions{}
+	opts1 := EncOptions{
+		Sort:          SortBytewiseLexical,
+		ShortestFloat: ShortestFloat16,
+		NaNConvert:    NaNConvertPreserveSignal,
+		InfConvert:    InfConvertNone,
+		Time:          TimeRFC3339Nano,
+		TimeTag:       EncTagRequired,
+	}
 	em, err := opts1.EncMode()
 	if err != nil {
 		t.Errorf("EncMode() returned an error %v", err)
@@ -2705,5 +2900,15 @@ func TestEncOptions(t *testing.T) {
 		if !reflect.DeepEqual(opts1, opts2) {
 			t.Errorf("EncOptions->EncMode->EncOptions returned different values: %v, %v", opts1, opts2)
 		}
+	}
+}
+
+func TestEncModeInvalidTimeTag(t *testing.T) {
+	wantErrorMsg := "cbor: invalid TimeTag 100"
+	_, err := EncOptions{TimeTag: 100}.EncMode()
+	if err == nil {
+		t.Errorf("EncMode() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("EncMode() returned error %q, want %q", err.Error(), wantErrorMsg)
 	}
 }

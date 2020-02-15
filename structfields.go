@@ -10,18 +10,19 @@ import (
 )
 
 type field struct {
-	name          string
-	cborName      []byte
-	idx           []int
-	typ           reflect.Type
-	ef            encodeFunc
-	isUnmarshaler bool
-	tagged        bool // used to choose dominant field (at the same level tagged fields dominate untagged fields)
-	omitEmpty     bool // used to skip empty field
-	keyAsInt      bool // used to encode/decode field name as int
+	name      string
+	nameAsInt int64 // used to decoder to match field name with CBOR int
+	cborName  []byte
+	idx       []int
+	typ       reflect.Type
+	ef        encodeFunc
+	typInfo   *typeInfo // used to decoder to reuse type info
+	tagged    bool      // used to choose dominant field (at the same level tagged fields dominate untagged fields)
+	omitEmpty bool      // used to skip empty field
+	keyAsInt  bool      // used to encode/decode field name as int
 }
 
-type fields []field
+type fields []*field
 
 // indexFieldSorter sorts fields by field idx at each level, breaking ties with idx depth.
 type indexFieldSorter struct {
@@ -154,7 +155,7 @@ func getFields(typ reflect.Type) (flds fields, structOptions string) {
 				}
 
 				if !f.Anonymous || ft.Kind() != reflect.Struct || len(tagFieldName) > 0 {
-					flds = append(flds, field{name: fieldName, idx: idx, typ: f.Type, tagged: tagged, omitEmpty: omitempty, keyAsInt: keyasint})
+					flds = append(flds, &field{name: fieldName, idx: idx, typ: f.Type, tagged: tagged, omitEmpty: omitempty, keyAsInt: keyasint})
 					continue
 				}
 

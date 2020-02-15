@@ -107,7 +107,7 @@ func (enc *Encoder) Encode(v interface{}) error {
 		}
 	}
 
-	_, err := encode(enc.e, enc.em, reflect.ValueOf(v))
+	err := encode(enc.e, enc.em, reflect.ValueOf(v))
 	if err == nil {
 		_, err = enc.e.WriteTo(enc.w)
 	}
