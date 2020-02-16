@@ -896,7 +896,7 @@ func (d *decodeState) parseMap() (map[interface{}]interface{}, error) {
 	return m, err
 }
 
-func (d *decodeState) parseMapToMap(v reflect.Value, tInfo *typeInfo) error {
+func (d *decodeState) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
 	_, ai, val := d.getHead()
 	hasSize := (ai != 31)
 	count := int(val)

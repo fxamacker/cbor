@@ -523,7 +523,6 @@ var (
 	cborFalse            = []byte{0xf4}
 	cborTrue             = []byte{0xf5}
 	cborNil              = []byte{0xf6}
-	cborUndefined        = []byte{0xf7}
 	cborNaN              = []byte{0xf9, 0x7e, 0x00}
 	cborPositiveInfinity = []byte{0xf9, 0x7c, 0x00}
 	cborNegativeInfinity = []byte{0xf9, 0xfc, 0x00}
