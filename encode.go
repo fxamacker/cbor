@@ -372,7 +372,7 @@ func (opts EncOptions) EncModeWithTags(tags TagSet) (EncMode, error) {
 	syncTags := tags.(*syncTagSet)
 	syncTags.RLock()
 	for contentType, tag := range syncTags.t {
-		if tag.opts.EncTag != EncTagIgnored {
+		if tag.opts.EncTag != EncTagNone {
 			ts[contentType] = tag
 		}
 	}
@@ -1042,11 +1042,7 @@ func encodeIntf(e *encodeState, em *encMode, v reflect.Value) error {
 func encodeTime(e *encodeState, em *encMode, v reflect.Value) error {
 	t := v.Interface().(time.Time)
 	if t.IsZero() {
-		if em.timeTag == EncTagIgnored {
-			e.Write(cborNil)
-			return nil
-		}
-		e.Write(cborUndefined)
+		e.Write(cborNil) // Even if tag is required, encode as CBOR null.
 		return nil
 	}
 	if em.timeTag == EncTagRequired {

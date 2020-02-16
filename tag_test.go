@@ -284,11 +284,11 @@ func TestAddTagError(t *testing.T) {
 			wantErrorMsg: "cbor: cannot add nil content type to TagSet",
 		},
 		{
-			name:         "DecTag is DecTagIgnored && EncTag is EncTagIgnored",
+			name:         "DecTag is DecTagIgnored && EncTag is EncTagNone",
 			typ:          reflect.TypeOf(myInt(0)),
 			num:          100,
-			opts:         TagOptions{DecTag: DecTagIgnored, EncTag: EncTagIgnored},
-			wantErrorMsg: "cbor: cannot add tag with DecTagIgnored and EncTagIgnored options to TagSet",
+			opts:         TagOptions{DecTag: DecTagIgnored, EncTag: EncTagNone},
+			wantErrorMsg: "cbor: cannot add tag with DecTagIgnored and EncTagNone options to TagSet",
 		},
 		{
 			name:         "time.Time",
@@ -336,7 +336,7 @@ func TestAddTagError(t *testing.T) {
 			name:         "cbor.Unmarshaler",
 			typ:          reflect.TypeOf(number2(0)),
 			num:          107,
-			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagIgnored},
+			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagNone},
 			wantErrorMsg: "cbor: cannot add cbor.Unmarshaler to TagSet with DecTag != DecTagIgnored",
 		},
 		{
@@ -344,7 +344,7 @@ func TestAddTagError(t *testing.T) {
 			typ:          reflect.TypeOf(number2(0)),
 			num:          108,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
-			wantErrorMsg: "cbor: cannot add cbor.Marshaler to TagSet with EncTag != EncTagIgnored",
+			wantErrorMsg: "cbor: cannot add cbor.Marshaler to TagSet with EncTag != EncTagNone",
 		},
 		{
 			name:         "tag number 0",
@@ -563,7 +563,7 @@ func TestAddTagTypeAliasError(t *testing.T) {
 	}
 }
 
-// TestDecodeTag decodes tag data with DecTagRequired/EncTagOptional/EncTagIgnored options.
+// TestDecodeTag decodes tag data with DecTagRequired/EncTagOptional/EncTagNone options.
 func TestDecodeTagData(t *testing.T) {
 	type myInt int
 	type s struct {
@@ -639,7 +639,7 @@ func TestDecodeTagData(t *testing.T) {
 	}
 }
 
-// TestDecodeNoTag decodes no-tag data with DecTagRequired/EncTagOptional/EncTagIgnored options
+// TestDecodeNoTag decodes no-tag data with DecTagRequired/EncTagOptional/EncTagNone options
 func TestDecodeNoTagData(t *testing.T) {
 	type myInt int
 	type s struct {
@@ -662,10 +662,10 @@ func TestDecodeNoTagData(t *testing.T) {
 	tagsDecRequired := NewTagSet()
 	tagsDecOptional := NewTagSet()
 	for _, tag := range tagInfos {
-		if err := tagsDecRequired.Add(TagOptions{EncTag: EncTagIgnored, DecTag: DecTagRequired}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
+		if err := tagsDecRequired.Add(TagOptions{EncTag: EncTagNone, DecTag: DecTagRequired}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
 			t.Fatalf("TagSet.Add(%s, %v) returned error %v", tag.t, tag.n, err)
 		}
-		if err := tagsDecOptional.Add(TagOptions{EncTag: EncTagIgnored, DecTag: DecTagOptional}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
+		if err := tagsDecOptional.Add(TagOptions{EncTag: EncTagNone, DecTag: DecTagOptional}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
 			t.Fatalf("TagSet.Add(%s, %v) returned error %v", tag.t, tag.n, err)
 		}
 	}
@@ -728,7 +728,7 @@ func TestDecodeNoTagData(t *testing.T) {
 	}
 }
 
-// TestDecodeWrongTag decodes wrong tag data with DecTagRequired/EncTagOptional/EncTagIgnored options
+// TestDecodeWrongTag decodes wrong tag data with DecTagRequired/EncTagOptional/EncTagNone options
 func TestDecodeWrongTag(t *testing.T) {
 	type myInt int
 	type s struct {

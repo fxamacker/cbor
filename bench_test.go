@@ -22,6 +22,20 @@ type claims struct {
 	Cti []byte `cbor:"7,keyasint"`
 }
 
+type coseHeader struct {
+	Alg int    `cbor:"1,keyasint,omitempty"`
+	Kid []byte `cbor:"4,keyasint,omitempty"`
+	IV  []byte `cbor:"5,keyasint,omitempty"`
+}
+
+type macedCOSE struct {
+	_           struct{} `cbor:",toarray"`
+	Protected   []byte
+	Unprotected coseHeader
+	Payload     []byte
+	Tag         []byte
+}
+
 type coseKey struct {
 	Kty       int        `cbor:"1,keyasint,omitempty"`
 	Kid       []byte     `cbor:"2,keyasint,omitempty"`
@@ -494,6 +508,18 @@ func BenchmarkUnmarshalCWTClaims(b *testing.B) {
 	}
 }
 
+func BenchmarkUnmarshalCWTClaimsWithDupMapKeyOpt(b *testing.B) {
+	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.1
+	cborData := hexDecode("a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b71")
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	for i := 0; i < b.N; i++ {
+		var v claims
+		if err := dm.Unmarshal(cborData, &v); err != nil {
+			b.Fatal("Unmarshal:", err)
+		}
+	}
+}
+
 func BenchmarkMarshalCWTClaims(b *testing.B) {
 	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.1
 	cborData := hexDecode("a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b71")
@@ -569,6 +595,80 @@ func BenchmarkMarshalWebAuthn(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		if _, err := Marshal(v); err != nil {
 			b.Fatal("Marshal:", err)
+		}
+	}
+}
+
+func BenchmarkUnmarshalCOSEMAC(b *testing.B) {
+	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.4
+	cborData := hexDecode("d83dd18443a10104a1044c53796d6d65747269633235365850a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b7148093101ef6d789200")
+
+	for i := 0; i < b.N; i++ {
+		var v macedCOSE
+		if err := Unmarshal(cborData, &v); err != nil {
+			b.Fatal("Unmarshal:", err)
+		}
+	}
+}
+
+func BenchmarkUnmarshalCOSEMACWithTag(b *testing.B) {
+	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.4
+	cborData := hexDecode("d83dd18443a10104a1044c53796d6d65747269633235365850a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b7148093101ef6d789200")
+
+	// Register tag CBOR Web Token (CWT) 61 and COSE_Mac0 17 with macedCOSE type
+	tags := NewTagSet()
+	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeOf(macedCOSE{}), 61, 17); err != nil {
+		b.Fatal("TagSet.Add:", err)
+	}
+
+	// Create DecMode with tags
+	dm, _ := DecOptions{}.DecModeWithTags(tags)
+
+	for i := 0; i < b.N; i++ {
+		var v macedCOSE
+		if err := dm.Unmarshal(cborData, &v); err != nil {
+			b.Fatal("Unmarshal:", err)
+		}
+	}
+}
+func BenchmarkMarshalCOSEMAC(b *testing.B) {
+	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.4
+	cborData := hexDecode("d83dd18443a10104a1044c53796d6d65747269633235365850a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b7148093101ef6d789200")
+
+	var v macedCOSE
+	if err := Unmarshal(cborData, &v); err != nil {
+		b.Fatal("Unmarshal():", err)
+	}
+
+	for i := 0; i < b.N; i++ {
+		if _, err := Marshal(v); err != nil {
+			b.Fatal("Marshal():", v, err)
+		}
+	}
+}
+
+func BenchmarkMarshalCOSEMACWithTag(b *testing.B) {
+	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.4
+	cborData := hexDecode("d83dd18443a10104a1044c53796d6d65747269633235365850a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b7148093101ef6d789200")
+
+	// Register tag CBOR Web Token (CWT) 61 and COSE_Mac0 17 with macedCOSE type
+	tags := NewTagSet()
+	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeOf(macedCOSE{}), 61, 17); err != nil {
+		b.Fatal("TagSet.Add:", err)
+	}
+
+	// Create EncMode with tags.
+	dm, _ := DecOptions{}.DecModeWithTags(tags)
+	em, _ := EncOptions{}.EncModeWithTags(tags)
+
+	var v macedCOSE
+	if err := dm.Unmarshal(cborData, &v); err != nil {
+		b.Fatal("Unmarshal():", err)
+	}
+
+	for i := 0; i < b.N; i++ {
+		if _, err := em.Marshal(v); err != nil {
+			b.Fatal("Marshal():", v, err)
 		}
 	}
 }

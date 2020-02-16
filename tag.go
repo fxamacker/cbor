@@ -91,8 +91,8 @@ func (dtm DecTagMode) valid() bool {
 type EncTagMode int
 
 const (
-	// EncTagIgnored makes encoder not encode tag number.
-	EncTagIgnored EncTagMode = iota
+	// EncTagNone makes encoder not encode tag number.
+	EncTagNone EncTagMode = iota
 
 	// EncTagRequired makes encoder encode tag number.
 	EncTagRequired
@@ -190,8 +190,8 @@ func (t *syncTagSet) get(typ reflect.Type) *tagItem {
 }
 
 func newTagItem(opts TagOptions, contentType reflect.Type, num uint64, nestedNum ...uint64) (*tagItem, error) {
-	if opts.DecTag == DecTagIgnored && opts.EncTag == EncTagIgnored {
-		return nil, errors.New("cbor: cannot add tag with DecTagIgnored and EncTagIgnored options to TagSet")
+	if opts.DecTag == DecTagIgnored && opts.EncTag == EncTagNone {
+		return nil, errors.New("cbor: cannot add tag with DecTagIgnored and EncTagNone options to TagSet")
 	}
 	if contentType.PkgPath() == "" || contentType.Kind() == reflect.Interface {
 		return nil, errors.New("cbor: can only add named types to TagSet, got " + contentType.String())
@@ -208,8 +208,8 @@ func newTagItem(opts TagOptions, contentType reflect.Type, num uint64, nestedNum
 	if num == 0 || num == 1 {
 		return nil, errors.New("cbor: cannot add tag number 0 or 1 to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead")
 	}
-	if reflect.PtrTo(contentType).Implements(typeMarshaler) && opts.EncTag != EncTagIgnored {
-		return nil, errors.New("cbor: cannot add cbor.Marshaler to TagSet with EncTag != EncTagIgnored")
+	if reflect.PtrTo(contentType).Implements(typeMarshaler) && opts.EncTag != EncTagNone {
+		return nil, errors.New("cbor: cannot add cbor.Marshaler to TagSet with EncTag != EncTagNone")
 	}
 	if reflect.PtrTo(contentType).Implements(typeUnmarshaler) && opts.DecTag != DecTagIgnored {
 		return nil, errors.New("cbor: cannot add cbor.Unmarshaler to TagSet with DecTag != DecTagIgnored")
