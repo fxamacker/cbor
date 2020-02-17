@@ -2,9 +2,9 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
 /*
-Package cbor is a fast & safe CBOR encoder & decoder (RFC 7049) with a 
-standard API + toarray & keyasint struct tags, CBOR tags, float64->32->16, 
-CTAP2 & Canonical CBOR, duplicate map key options, and is customizable via 
+Package cbor is a fast & safe CBOR encoder & decoder (RFC 7049) with a
+standard API + toarray & keyasint struct tags, CBOR tags, float64->32->16,
+CTAP2 & Canonical CBOR, duplicate map key options, and is customizable via
 simple API.
 
 CBOR encoding options allow "preferred serialization" by encoding integers and floats

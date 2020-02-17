@@ -454,7 +454,10 @@ func Example_signedCWTWithTag() {
 
 	// Register tag COSE_Sign1 18 with signedCWT type.
 	tags := cbor.NewTagSet()
-	if err := tags.Add(cbor.TagOptions{EncTag: cbor.EncTagRequired, DecTag: cbor.DecTagRequired}, reflect.TypeOf(signedCWT{}), 18); err != nil {
+	if err := tags.Add(
+		cbor.TagOptions{EncTag: cbor.EncTagRequired, DecTag: cbor.DecTagRequired},
+		reflect.TypeOf(signedCWT{}),
+		18); err != nil {
 		fmt.Println("error:", err)
 	}
 
