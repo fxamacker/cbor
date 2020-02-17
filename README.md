@@ -93,13 +93,16 @@ from `"github.com/fxamacker/cbor/v2"` to `"github.com/fxamacker/cbor"`
 Functions with identical signatures to encoding/json include:  
 `Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, `decoder.Decode`.
 
-__Default Mode of Encoding__  
+__Default Mode__  
 
 If default options are acceptable, package level functions can be used for encoding and decoding.
 ```
 b, err := cbor.Marshal(v)
+
 err := cbor.Unmarshal(b, &v)
+
 encoder := cbor.NewEncoder(w)
+
 decoder := cbor.NewDecoder(r)
 ```
 
@@ -110,7 +113,7 @@ If you need to use options or CBOR tags, then you'll want to create a mode.
 "Mode" means defined way of encoding or decoding -- it links the standard API to your CBOR options and CBOR tags.  This way, you don't pass around options and the API remains identical to `encoding/json`.
 
 EncMode and DecMode are interfaces created from EncOptions or DecOptions structs.  
-For example, `em := cbor.EncOptions{...}.EncMode()` or `em := cbor.CanonicalEncOptions().EncMode()`.
+For example, `em, err := cbor.EncOptions{...}.EncMode()` or `em, err := cbor.CanonicalEncOptions().EncMode()`.
 
 EncMode and DecMode use immutable options so their behavior won't accidentally change at runtime.  Modes are intended to be reused and are safe for concurrent use.
 
@@ -135,39 +138,6 @@ encoder := em.NewEncoder(w)
 err := encoder.Encode(v)
 ```
 
-__Struct Tags (keyasint, toarray, omitempty)__
-
-The `keyasint`, `toarray`, and `omitempty` struct tags make it easy to use compact CBOR message formats.  Internet standards often use CBOR arrays and CBOR maps with int keys to save space.
-
-__API for Default Mode of Encoding & Decoding__
-
-If default options are acceptable, then you don't need to create EncMode or DecMode.
-```
-Marshal(v interface{}) ([]byte, error)
-NewEncoder(w io.Writer) *Encoder
-
-Unmarshal(data []byte, v interface{}) error
-NewDecoder(r io.Reader) *Decoder
-```
-
-__API for Creating & Using Encoding Modes__
-```
-// EncMode interface uses immutable options and is safe for concurrent use.
-type EncMode interface {
-	Marshal(v interface{}) ([]byte, error)
-	NewEncoder(w io.Writer) *Encoder
-	EncOptions() EncOptions  // returns copy of options
-}
-
-// EncOptions specifies encoding options.
-type EncOptions struct {
-...
-}
-
-// EncMode returns an EncMode interface created from EncOptions.
-func (opts EncOptions) EncMode() (EncMode, error) 
-```
-
 __API for Predefined Encoding Options__
 ```
 func CanonicalEncOptions() EncOptions     // settings for RFC 7049 Canonical CBOR
@@ -175,6 +145,10 @@ func CTAP2EncOptions() EncOptions         // settings for FIDO2 CTAP2 Canonical 
 func CoreDetEncOptions() EncOptions       // modern settings from a draft RFC (subject to change)
 func PreferredUnsortedEncOptions() EncOptions  // modern settings from a draft RFC (subject to change)
 ```
+
+__Struct Tags (keyasint, toarray, omitempty)__
+
+The `keyasint`, `toarray`, and `omitempty` struct tags make it easy to use compact CBOR message formats.  Internet standards often use CBOR arrays and CBOR maps with int keys to save space.
 
 See [API](#api), [Options](#options), and [Usage](#usage) sections for more details.
 
@@ -184,12 +158,12 @@ Latest version is v2.x, which has:
 * __Stable API__ –  Six codec function signatures will never change.  No breaking API changes for other funcs in same major version.  And these two functions are subject to change until the draft RFC is approved by IETF (est. in 2020):
   * CoreDetEncOptions() is subject to change because it uses draft standard.
   * PreferredUnsortedEncOptions() is subject to change because it uses draft standard.
-* __Passed all tests__ – v2.0 passed all 375+ tests on amd64, arm64, ppc64le and s390x with linux.
-* __Passed fuzzing__ – v2.0 passed 1+ billion execs in coverage-guided fuzzing on Feb. 2, 2020.
+* __Passed all tests__ – v2.x passed all 375+ tests on amd64, arm64, ppc64le and s390x with linux.
+* __Passed fuzzing__ – v2.1 passed 275+ million execs in coverage-guided fuzzing on Feb 17, 2020 and is still fuzzing.
 
 __Why v2.x?__:
 
-v1 required breaking API changes to support upcoming new features like CBOR tags, detection of duplicate map keys, and having more functions with identical signatures to `encoding/json`.
+v1 required breaking API changes to support new features like CBOR tags, detection of duplicate map keys, and having more functions with identical signatures to `encoding/json`.
 
 v2.1 is roughly 26% faster and uses 57% fewer allocs than v1 when decoding COSE and CWT using default options.
 
@@ -197,9 +171,9 @@ __Roadmap__:
 
 * v2.1 (Feb. 17, 2020) 
    - [x] CBOR tags (major type 6) for encoding and decoding (pushed to master branch)
+   - [x] Decoding options for duplicate map key detection: `DupMapKeyQuiet` (default) and `DupMapKeyEnforcedAPF`
    - [x] Decoding optimizations (pushed to master branch). Structs using keyasint tag (like COSE and CWT) is  
    24-28% faster and 53-61% fewer allocs than v1.5 and v2.0.1.
-   - [x] Options for duplicate map key detection: `DupMapKeyQuiet` (on) and `DupMapKeyEnforcedAPF` (off)
 
 * v2.2
    - [ ] CBOR BSTR <--> Go byte array. In the meantime, use CBOR BSTR with Go byte slice.
