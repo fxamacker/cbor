@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"reflect"
 	"time"
 
 	"github.com/fxamacker/cbor/v2"
@@ -376,6 +377,31 @@ func Example_cWT() {
 	// {Iss:coap://as.example.com Sub:erikw Aud:coap://light.example.com Exp:1444064944 Nbf:1443944944 Iat:1443944944 Cti:[11 113]}
 }
 
+func Example_cWTWithDupMapKeyOption() {
+	type claims struct {
+		Iss string `cbor:"1,keyasint"`
+		Sub string `cbor:"2,keyasint"`
+		Aud string `cbor:"3,keyasint"`
+		Exp int    `cbor:"4,keyasint"`
+		Nbf int    `cbor:"5,keyasint"`
+		Iat int    `cbor:"6,keyasint"`
+		Cti []byte `cbor:"7,keyasint"`
+	}
+
+	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.1
+	cborData, _ := hex.DecodeString("a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b71")
+
+	dm, _ := cbor.DecOptions{DupMapKey: cbor.DupMapKeyEnforcedAPF}.DecMode()
+
+	var v claims
+	if err := dm.Unmarshal(cborData, &v); err != nil {
+		fmt.Println("error:", err)
+	}
+	fmt.Printf("%+v", v)
+	// Output:
+	// {Iss:coap://as.example.com Sub:erikw Aud:coap://light.example.com Exp:1444064944 Nbf:1443944944 Iat:1443944944 Cti:[11 113]}
+}
+
 func Example_signedCWT() {
 	// Use "keyasint" struct tag to encode/decode struct to/from CBOR map.
 	// Partial COSE header definition
@@ -399,6 +425,48 @@ func Example_signedCWT() {
 		fmt.Println("error:", err)
 	}
 	if _, err := cbor.Marshal(v); err != nil {
+		fmt.Println("error:", err)
+	}
+	fmt.Printf("%+v", v)
+	// Output:
+	// {_:{} Protected:[161 1 38] Unprotected:{Alg:0 Kid:[65 115 121 109 109 101 116 114 105 99 69 67 68 83 65 50 53 54] IV:[]} Payload:[167 1 117 99 111 97 112 58 47 47 97 115 46 101 120 97 109 112 108 101 46 99 111 109 2 101 101 114 105 107 119 3 120 24 99 111 97 112 58 47 47 108 105 103 104 116 46 101 120 97 109 112 108 101 46 99 111 109 4 26 86 18 174 176 5 26 86 16 217 240 6 26 86 16 217 240 7 66 11 113] Signature:[84 39 193 255 40 210 63 186 209 242 156 76 124 106 85 94 96 29 111 162 159 145 121 188 61 116 56 186 202 202 90 205 8 200 212 212 249 97 49 104 12 66 154 1 248 89 81 236 238 116 58 82 185 182 54 50 197 114 9 18 14 28 158 48]}
+}
+
+func Example_signedCWTWithTag() {
+	// Use "keyasint" struct tag to encode/decode struct to/from CBOR map.
+	// Partial COSE header definition
+	type coseHeader struct {
+		Alg int    `cbor:"1,keyasint,omitempty"`
+		Kid []byte `cbor:"4,keyasint,omitempty"`
+		IV  []byte `cbor:"5,keyasint,omitempty"`
+	}
+	// Use "toarray" struct tag to encode/decode struct to/from CBOR array.
+	type signedCWT struct {
+		_           struct{} `cbor:",toarray"`
+		Protected   []byte
+		Unprotected coseHeader
+		Payload     []byte
+		Signature   []byte
+	}
+
+	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.3
+	cborData, _ := hex.DecodeString("d28443a10126a104524173796d6d657472696345434453413235365850a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b7158405427c1ff28d23fbad1f29c4c7c6a555e601d6fa29f9179bc3d7438bacaca5acd08c8d4d4f96131680c429a01f85951ecee743a52b9b63632c57209120e1c9e30")
+
+	// Register tag COSE_Sign1 18 with signedCWT type.
+	tags := cbor.NewTagSet()
+	if err := tags.Add(cbor.TagOptions{EncTag: cbor.EncTagRequired, DecTag: cbor.DecTagRequired}, reflect.TypeOf(signedCWT{}), 18); err != nil {
+		fmt.Println("error:", err)
+	}
+
+	dm, _ := cbor.DecOptions{}.DecModeWithTags(tags)
+	em, _ := cbor.EncOptions{}.EncModeWithTags(tags)
+
+	var v signedCWT
+	if err := dm.Unmarshal(cborData, &v); err != nil {
+		fmt.Println("error:", err)
+	}
+
+	if _, err := em.Marshal(v); err != nil {
 		fmt.Println("error:", err)
 	}
 	fmt.Printf("%+v", v)
