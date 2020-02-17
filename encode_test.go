@@ -1339,23 +1339,23 @@ func TestEncodeTimeWithTag(t *testing.T) {
 			convert: []timeConvert{
 				{
 					opt:          timeUnixOpt,
-					wantCborData: hexDecode("f7"), // encode as CBOR undefined
+					wantCborData: hexDecode("f6"), // encode as CBOR null
 				},
 				{
 					opt:          timeUnixMicroOpt,
-					wantCborData: hexDecode("f7"), // encode as CBOR undefined
+					wantCborData: hexDecode("f6"), // encode as CBOR null
 				},
 				{
 					opt:          timeUnixDynamicOpt,
-					wantCborData: hexDecode("f7"), // encode as CBOR undefined
+					wantCborData: hexDecode("f6"), // encode as CBOR null
 				},
 				{
 					opt:          timeRFC3339Opt,
-					wantCborData: hexDecode("f7"), // encode as CBOR undefined
+					wantCborData: hexDecode("f6"), // encode as CBOR null
 				},
 				{
 					opt:          timeRFC3339NanoOpt,
-					wantCborData: hexDecode("f7"), // encode as CBOR undefined
+					wantCborData: hexDecode("f6"), // encode as CBOR null
 				},
 			},
 		},

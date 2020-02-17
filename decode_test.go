@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"reflect"
 	"strings"
@@ -2852,26 +2853,8 @@ func TestUnmarshalToNotNilInterface(t *testing.T) {
 	}
 }
 
-func TestDuplicateMapKeys(t *testing.T) {
-	cborData := hexDecode("a6616161416162614261636143616461446165614561636146") // map with duplicate key "c": {"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "c": "F"}
-	wantV := map[interface{}]interface{}{"a": "A", "b": "B", "c": "F", "d": "D", "e": "E"}
-	wantM := map[string]string{"a": "A", "b": "B", "c": "F", "d": "D", "e": "E"}
-	var v interface{}
-	if err := Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
-	} else if !reflect.DeepEqual(v, wantV) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantV, wantV)
-	}
-	var m map[string]string
-	if err := Unmarshal(cborData, &m); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
-	} else if !reflect.DeepEqual(m, wantM) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, m, m, wantM, wantM)
-	}
-}
-
 func TestDecOptions(t *testing.T) {
-	opts1 := DecOptions{TimeTag: DecTagRequired}
+	opts1 := DecOptions{TimeTag: DecTagRequired, DupMapKey: DupMapKeyEnforcedAPF}
 	dm, err := opts1.DecMode()
 	if err != nil {
 		t.Errorf("DecMode() returned an error %v", err)
@@ -2920,6 +2903,16 @@ func TestDecModeInvalidTimeTag(t *testing.T) {
 	}
 }
 
+func TestDecModeInvalidDuplicateMapKey(t *testing.T) {
+	wantErrorMsg := "cbor: invalid DupMapKey 101"
+	_, err := DecOptions{DupMapKey: 101}.DecMode()
+	if err == nil {
+		t.Errorf("DecMode() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("DecMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+}
+
 func TestUnmarshalStructKeyAsIntNumError(t *testing.T) {
 	type T1 struct {
 		F1 int `cbor:"a,keyasint"`
@@ -2956,5 +2949,927 @@ func TestUnmarshalStructKeyAsIntNumError(t *testing.T) {
 				t.Errorf("Unmarshal(0x%x) error %v, want %v", tc.cborData, err.Error(), tc.wantErrorMsg)
 			}
 		})
+	}
+}
+
+func TestUnmarshalEmptyMapWithDupMapKeyOpt(t *testing.T) {
+	testCases := []struct {
+		name     string
+		cborData []byte
+		wantV    interface{}
+	}{
+		{
+			name:     "empty map",
+			cborData: hexDecode("a0"),
+			wantV:    map[interface{}]interface{}{},
+		},
+		{
+			name:     "indefinite empty map",
+			cborData: hexDecode("bfff"),
+			wantV:    map[interface{}]interface{}{},
+		},
+	}
+
+	dm, err := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	if err != nil {
+		t.Errorf("DecMode() returned error %v", err)
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var v interface{}
+			if err := dm.Unmarshal(tc.cborData, &v); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
+			}
+			if !reflect.DeepEqual(v, tc.wantV) {
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantV, tc.wantV)
+			}
+		})
+	}
+}
+
+func TestUnmarshalDupMapKeyToEmptyInterface(t *testing.T) {
+	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+
+	// Duplicate key overwrites previous value (default).
+	wantV := map[interface{}]interface{}{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
+	var v interface{}
+	if err := Unmarshal(cborData, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	}
+	if !reflect.DeepEqual(v, wantV) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantV, wantV)
+	}
+
+	// Duplicate key triggers error.
+	wantV = map[interface{}]interface{}{"a": nil, "b": "B", "c": "C"}
+	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	var v2 interface{}
+	if err := dm.Unmarshal(cborData, &v2); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	} else if _, ok := err.(*DupMapKeyError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", cborData, err)
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+	}
+	if !reflect.DeepEqual(v2, wantV) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v2, v2, wantV, wantV)
+	}
+}
+
+func TestStreamDupMapKeyToEmptyInterface(t *testing.T) {
+	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // map with duplicate key "c": {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+
+	var b []byte
+	for i := 0; i < 3; i++ {
+		b = append(b, cborData...)
+	}
+
+	// Duplicate key overwrites previous value (default).
+	wantV := map[interface{}]interface{}{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
+	dec := NewDecoder(bytes.NewReader(b))
+	for i := 0; i < 3; i++ {
+		var v1 interface{}
+		if err := dec.Decode(&v1); err != nil {
+			t.Errorf("Decode() returned error %v", err)
+		}
+		if !reflect.DeepEqual(v1, wantV) {
+			t.Errorf("Decode() = %v (%T), want %v (%T)", v1, v1, wantV, wantV)
+		}
+	}
+	var v interface{}
+	if err := dec.Decode(&v); err != io.EOF {
+		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
+	}
+
+	// Duplicate key triggers error.
+	wantV = map[interface{}]interface{}{"a": nil, "b": "B", "c": "C"}
+	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	dec = dm.NewDecoder(bytes.NewReader(b))
+	for i := 0; i < 3; i++ {
+		var v2 interface{}
+		if err := dec.Decode(&v2); err == nil {
+			t.Errorf("Decode() didn't return an error")
+		} else if _, ok := err.(*DupMapKeyError); !ok {
+			t.Errorf("Decode() returned wrong error type %T, want (*DupMapKeyError)", err)
+		} else if err.Error() != wantErrorMsg {
+			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
+		}
+		if !reflect.DeepEqual(v2, wantV) {
+			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v2, v2, wantV, wantV)
+		}
+	}
+	if err := dec.Decode(&v); err != io.EOF {
+		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
+	}
+}
+
+func TestUnmarshalDupMapKeyToEmptyMap(t *testing.T) {
+	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+
+	// Duplicate key overwrites previous value (default).
+	wantM := map[string]string{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
+	var m map[string]string
+	if err := Unmarshal(cborData, &m); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	}
+	if !reflect.DeepEqual(m, wantM) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, m, m, wantM, wantM)
+	}
+
+	// Duplicate key triggers error.
+	wantM = map[string]string{"a": "", "b": "B", "c": "C"}
+	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	var m2 map[string]string
+	if err := dm.Unmarshal(cborData, &m2); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	} else if _, ok := err.(*DupMapKeyError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", cborData, err)
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+	}
+	if !reflect.DeepEqual(m2, wantM) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, m2, m2, wantM, wantM)
+	}
+}
+
+func TestStreamDupMapKeyToEmptyMap(t *testing.T) {
+	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+
+	var b []byte
+	for i := 0; i < 3; i++ {
+		b = append(b, cborData...)
+	}
+
+	// Duplicate key overwrites previous value (default).
+	wantM := map[string]string{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
+	dec := NewDecoder(bytes.NewReader(b))
+	for i := 0; i < 3; i++ {
+		var m1 map[string]string
+		if err := dec.Decode(&m1); err != nil {
+			t.Errorf("Decode() returned error %v", err)
+		}
+		if !reflect.DeepEqual(m1, wantM) {
+			t.Errorf("Decode() = %v (%T), want %v (%T)", m1, m1, wantM, wantM)
+		}
+	}
+	var v interface{}
+	if err := dec.Decode(&v); err != io.EOF {
+		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
+	}
+
+	// Duplicate key triggers error.
+	wantM = map[string]string{"a": "", "b": "B", "c": "C"}
+	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	dec = dm.NewDecoder(bytes.NewReader(b))
+	for i := 0; i < 3; i++ {
+		var m2 map[string]string
+		if err := dec.Decode(&m2); err == nil {
+			t.Errorf("Decode() didn't return an error")
+		} else if _, ok := err.(*DupMapKeyError); !ok {
+			t.Errorf("Decode() returned wrong error type %T, want (*DupMapKeyError)", err)
+		} else if err.Error() != wantErrorMsg {
+			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
+		}
+		if !reflect.DeepEqual(m2, wantM) {
+			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, m2, m2, wantM, wantM)
+		}
+	}
+	if err := dec.Decode(&v); err != io.EOF {
+		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
+	}
+}
+
+func TestUnmarshalDupMapKeyToNotEmptyMap(t *testing.T) {
+	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+
+	// Duplicate key overwrites previous value (default).
+	m := map[string]string{"a": "Z", "b": "Z", "c": "Z", "d": "Z", "e": "Z", "f": "Z"}
+	wantM := map[string]string{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E", "f": "Z"}
+	if err := Unmarshal(cborData, &m); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	}
+	if !reflect.DeepEqual(m, wantM) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, m, m, wantM, wantM)
+	}
+
+	// Duplicate key triggers error.
+	m2 := map[string]string{"a": "Z", "b": "Z", "c": "Z", "d": "Z", "e": "Z", "f": "Z"}
+	wantM = map[string]string{"a": "", "b": "B", "c": "C", "d": "Z", "e": "Z", "f": "Z"}
+	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	if err := dm.Unmarshal(cborData, &m2); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	} else if _, ok := err.(*DupMapKeyError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", cborData, err)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+	}
+	if !reflect.DeepEqual(m2, wantM) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, m2, m2, wantM, wantM)
+	}
+}
+
+func TestStreamDupMapKeyToNotEmptyMap(t *testing.T) {
+	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+
+	var b []byte
+	for i := 0; i < 3; i++ {
+		b = append(b, cborData...)
+	}
+
+	// Duplicate key overwrites previous value (default).
+	wantM := map[string]string{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E", "f": "Z"}
+	dec := NewDecoder(bytes.NewReader(b))
+	for i := 0; i < 3; i++ {
+		m1 := map[string]string{"a": "Z", "b": "Z", "c": "Z", "d": "Z", "e": "Z", "f": "Z"}
+		if err := dec.Decode(&m1); err != nil {
+			t.Errorf("Decode() returned error %v", err)
+		}
+		if !reflect.DeepEqual(m1, wantM) {
+			t.Errorf("Decode() = %v (%T), want %v (%T)", m1, m1, wantM, wantM)
+		}
+	}
+	var v interface{}
+	if err := dec.Decode(&v); err != io.EOF {
+		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
+	}
+
+	// Duplicate key triggers error.
+	wantM = map[string]string{"a": "", "b": "B", "c": "C", "d": "Z", "e": "Z", "f": "Z"}
+	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	dec = dm.NewDecoder(bytes.NewReader(b))
+	for i := 0; i < 3; i++ {
+		m2 := map[string]string{"a": "Z", "b": "Z", "c": "Z", "d": "Z", "e": "Z", "f": "Z"}
+		if err := dec.Decode(&m2); err == nil {
+			t.Errorf("Decode() didn't return an error")
+		} else if _, ok := err.(*DupMapKeyError); !ok {
+			t.Errorf("Decode() returned wrong error type %T, want (*DupMapKeyError)", err)
+		} else if err.Error() != wantErrorMsg {
+			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
+		}
+		if !reflect.DeepEqual(m2, wantM) {
+			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, m2, m2, wantM, wantM)
+		}
+	}
+	if err := dec.Decode(&v); err != io.EOF {
+		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
+	}
+}
+
+func TestUnmarshalDupMapKeyToStruct(t *testing.T) {
+	type s struct {
+		A string `cbor:"a"`
+		B string `cbor:"b"`
+		C string `cbor:"c"`
+		D string `cbor:"d"`
+		E string `cbor:"e"`
+	}
+	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+
+	// Duplicate key doesn't overwrite previous value (default).
+	wantS := s{A: "A", B: "B", C: "C", D: "D", E: "E"}
+	var s1 s
+	if err := Unmarshal(cborData, &s1); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	}
+	if !reflect.DeepEqual(s1, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+	}
+
+	// Duplicate key triggers error.
+	wantS = s{A: "A", B: "B", C: "C"}
+	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	var s2 s
+	if err := dm.Unmarshal(cborData, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	} else if _, ok := err.(*DupMapKeyError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", cborData, err)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+	}
+	if !reflect.DeepEqual(s2, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+	}
+}
+
+func TestStreamDupMapKeyToStruct(t *testing.T) {
+	type s struct {
+		A string `cbor:"a"`
+		B string `cbor:"b"`
+		C string `cbor:"c"`
+		D string `cbor:"d"`
+		E string `cbor:"e"`
+	}
+	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+
+	var b []byte
+	for i := 0; i < 3; i++ {
+		b = append(b, cborData...)
+	}
+
+	// Duplicate key overwrites previous value (default).
+	wantS := s{A: "A", B: "B", C: "C", D: "D", E: "E"}
+	dec := NewDecoder(bytes.NewReader(b))
+	for i := 0; i < 3; i++ {
+		var s1 s
+		if err := dec.Decode(&s1); err != nil {
+			t.Errorf("Decode() returned error %v", err)
+		}
+		if !reflect.DeepEqual(s1, wantS) {
+			t.Errorf("Decode() = %v (%T), want %v (%T)", s1, s1, wantS, wantS)
+		}
+	}
+	var v interface{}
+	if err := dec.Decode(&v); err != io.EOF {
+		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
+	}
+
+	// Duplicate key triggers error.
+	wantS = s{A: "A", B: "B", C: "C"}
+	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	dec = dm.NewDecoder(bytes.NewReader(b))
+	for i := 0; i < 3; i++ {
+		var s2 s
+		if err := dec.Decode(&s2); err == nil {
+			t.Errorf("Decode() didn't return an error")
+		} else if _, ok := err.(*DupMapKeyError); !ok {
+			t.Errorf("Decode() returned wrong error type %T, want (*DupMapKeyError)", err)
+		} else if err.Error() != wantErrorMsg {
+			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
+		}
+		if !reflect.DeepEqual(s2, wantS) {
+			t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+		}
+	}
+	if err := dec.Decode(&v); err != io.EOF {
+		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
+	}
+}
+
+// dupl map key is a struct field
+func TestUnmarshalDupMapKeyToStructKeyAsInt(t *testing.T) {
+	type s struct {
+		A int `cbor:"1,keyasint"`
+		B int `cbor:"3,keyasint"`
+		C int `cbor:"5,keyasint"`
+	}
+	cborData := hexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
+
+	// Duplicate key doesn't overwrite previous value (default).
+	wantS := s{A: 2, B: 4, C: 6}
+	var s1 s
+	if err := Unmarshal(cborData, &s1); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	}
+	if !reflect.DeepEqual(s1, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+	}
+
+	// Duplicate key triggers error.
+	wantS = s{A: 2, B: 4}
+	wantErrorMsg := "cbor: found duplicate map key \"1\" at map element index 2"
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	var s2 s
+	if err := dm.Unmarshal(cborData, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	} else if _, ok := err.(*DupMapKeyError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", cborData, err)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+	}
+	if !reflect.DeepEqual(s2, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+	}
+}
+
+func TestStreamDupMapKeyToStructKeyAsInt(t *testing.T) {
+	type s struct {
+		A int `cbor:"1,keyasint"`
+		B int `cbor:"3,keyasint"`
+		C int `cbor:"5,keyasint"`
+	}
+	cborData := hexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
+
+	var b []byte
+	for i := 0; i < 3; i++ {
+		b = append(b, cborData...)
+	}
+
+	// Duplicate key overwrites previous value (default).
+	wantS := s{A: 2, B: 4, C: 6}
+	dec := NewDecoder(bytes.NewReader(b))
+	for i := 0; i < 3; i++ {
+		var s1 s
+		if err := dec.Decode(&s1); err != nil {
+			t.Errorf("Decode() returned error %v", err)
+		}
+		if !reflect.DeepEqual(s1, wantS) {
+			t.Errorf("Decode() = %v (%T), want %v (%T)", s1, s1, wantS, wantS)
+		}
+	}
+	var v interface{}
+	if err := dec.Decode(&v); err != io.EOF {
+		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
+	}
+
+	// Duplicate key triggers error.
+	wantS = s{A: 2, B: 4}
+	wantErrorMsg := "cbor: found duplicate map key \"1\" at map element index 2"
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	dec = dm.NewDecoder(bytes.NewReader(b))
+	for i := 0; i < 3; i++ {
+		var s2 s
+		if err := dec.Decode(&s2); err == nil {
+			t.Errorf("Decode() didn't return an error")
+		} else if _, ok := err.(*DupMapKeyError); !ok {
+			t.Errorf("Decode() returned wrong error type %T, want (*DupMapKeyError)", err)
+		} else if err.Error() != wantErrorMsg {
+			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
+		}
+		if !reflect.DeepEqual(s2, wantS) {
+			t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+		}
+	}
+	if err := dec.Decode(&v); err != io.EOF {
+		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
+	}
+}
+
+func TestUnmarshalDupMapKeyToStructNoMatchingField(t *testing.T) {
+	type s struct {
+		B string `cbor:"b"`
+		C string `cbor:"c"`
+		D string `cbor:"d"`
+		E string `cbor:"e"`
+	}
+	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+
+	wantS := s{B: "B", C: "C", D: "D", E: "E"}
+	var s1 s
+	if err := Unmarshal(cborData, &s1); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	}
+	if !reflect.DeepEqual(s1, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+	}
+
+	// Duplicate key triggers error even though map key "a" doesn't have a corresponding struct field.
+	wantS = s{B: "B", C: "C"}
+	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	var s2 s
+	if err := dm.Unmarshal(cborData, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	} else if _, ok := err.(*DupMapKeyError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", cborData, err)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+	}
+	if !reflect.DeepEqual(s2, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+	}
+}
+
+func TestStreamDupMapKeyToStructNoMatchingField(t *testing.T) {
+	type s struct {
+		B string `cbor:"b"`
+		C string `cbor:"c"`
+		D string `cbor:"d"`
+		E string `cbor:"e"`
+	}
+	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+
+	var b []byte
+	for i := 0; i < 3; i++ {
+		b = append(b, cborData...)
+	}
+
+	// Duplicate key overwrites previous value (default).
+	wantS := s{B: "B", C: "C", D: "D", E: "E"}
+	dec := NewDecoder(bytes.NewReader(b))
+	for i := 0; i < 3; i++ {
+		var s1 s
+		if err := dec.Decode(&s1); err != nil {
+			t.Errorf("Decode() returned error %v", err)
+		}
+		if !reflect.DeepEqual(s1, wantS) {
+			t.Errorf("Decode() = %v (%T), want %v (%T)", s1, s1, wantS, wantS)
+		}
+	}
+	var v interface{}
+	if err := dec.Decode(&v); err != io.EOF {
+		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
+	}
+
+	// Duplicate key triggers error.
+	wantS = s{B: "B", C: "C"}
+	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	dec = dm.NewDecoder(bytes.NewReader(b))
+	for i := 0; i < 3; i++ {
+		var s2 s
+		if err := dec.Decode(&s2); err == nil {
+			t.Errorf("Decode() didn't return an error")
+		} else if _, ok := err.(*DupMapKeyError); !ok {
+			t.Errorf("Decode() returned wrong error type %T, want (*DupMapKeyError)", err)
+		} else if err.Error() != wantErrorMsg {
+			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
+		}
+		if !reflect.DeepEqual(s2, wantS) {
+			t.Errorf("Decode() = %v (%T), want %v (%T)", s2, s2, wantS, wantS)
+		}
+	}
+	if err := dec.Decode(&v); err != io.EOF {
+		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
+	}
+}
+
+func TestUnmarshalDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
+	type s struct {
+		B int `cbor:"3,keyasint"`
+		C int `cbor:"5,keyasint"`
+	}
+	cborData := hexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
+
+	wantS := s{B: 4, C: 6}
+	var s1 s
+	if err := Unmarshal(cborData, &s1); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	}
+	if !reflect.DeepEqual(s1, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+	}
+
+	// Duplicate key triggers error even though map key "a" doesn't have a corresponding struct field.
+	wantS = s{B: 4}
+	wantErrorMsg := "cbor: found duplicate map key \"1\" at map element index 2"
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	var s2 s
+	if err := dm.Unmarshal(cborData, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	} else if _, ok := err.(*DupMapKeyError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", cborData, err)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+	}
+	if !reflect.DeepEqual(s2, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+	}
+}
+
+func TestStreamDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
+	type s struct {
+		B int `cbor:"3,keyasint"`
+		C int `cbor:"5,keyasint"`
+	}
+	cborData := hexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
+
+	var b []byte
+	for i := 0; i < 3; i++ {
+		b = append(b, cborData...)
+	}
+
+	// Duplicate key overwrites previous value (default).
+	wantS := s{B: 4, C: 6}
+	dec := NewDecoder(bytes.NewReader(b))
+	for i := 0; i < 3; i++ {
+		var s1 s
+		if err := dec.Decode(&s1); err != nil {
+			t.Errorf("Decode() returned error %v", err)
+		}
+		if !reflect.DeepEqual(s1, wantS) {
+			t.Errorf("Decode() = %v (%T), want %v (%T)", s1, s1, wantS, wantS)
+		}
+	}
+	var v interface{}
+	if err := dec.Decode(&v); err != io.EOF {
+		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
+	}
+
+	// Duplicate key triggers error.
+	wantS = s{B: 4}
+	wantErrorMsg := "cbor: found duplicate map key \"1\" at map element index 2"
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	dec = dm.NewDecoder(bytes.NewReader(b))
+	for i := 0; i < 3; i++ {
+		var s2 s
+		if err := dec.Decode(&s2); err == nil {
+			t.Errorf("Decode() didn't return an error")
+		} else if _, ok := err.(*DupMapKeyError); !ok {
+			t.Errorf("Decode() returned wrong error type %T, want (*DupMapKeyError)", err)
+		} else if err.Error() != wantErrorMsg {
+			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
+		}
+		if !reflect.DeepEqual(s2, wantS) {
+			t.Errorf("Decode() = %v (%T), want %v (%T)", s2, s2, wantS, wantS)
+		}
+	}
+	if err := dec.Decode(&v); err != io.EOF {
+		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
+	}
+}
+
+func TestUnmarshalDupMapKeyToStructWrongType(t *testing.T) {
+	type s struct {
+		A string `cbor:"a"`
+		B string `cbor:"b"`
+		C string `cbor:"c"`
+		D string `cbor:"d"`
+		E string `cbor:"e"`
+	}
+	cborData := hexDecode("a861616141fa47c35000026162614261636143fa47c3500003616161466164614461656145") // {"a": "A", 100000.0:2, "b": "B", "c": "C", 100000.0:3, "a": "F", "d": "D", "e": "E"}
+
+	var s1 s
+	wantS := s{A: "A", B: "B", C: "C", D: "D", E: "E"}
+	wantErrorMsg := "cbor: cannot unmarshal"
+	if err := Unmarshal(cborData, &s1); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	} else if _, ok := err.(*UnmarshalTypeError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+	}
+	if !reflect.DeepEqual(s1, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+	}
+
+	wantS = s{A: "A", B: "B", C: "C"}
+	wantErrorMsg = "cbor: found duplicate map key \"100000\" at map element index 4"
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	var s2 s
+	if err := dm.Unmarshal(cborData, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	} else if _, ok := err.(*DupMapKeyError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", cborData, err)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+	}
+	if !reflect.DeepEqual(s2, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+	}
+}
+
+func TestStreamDupMapKeyToStructWrongType(t *testing.T) {
+	type s struct {
+		A string `cbor:"a"`
+		B string `cbor:"b"`
+		C string `cbor:"c"`
+		D string `cbor:"d"`
+		E string `cbor:"e"`
+	}
+	cborData := hexDecode("a861616141fa47c35000026162614261636143fa47c3500003616161466164614461656145") // {"a": "A", 100000.0:2, "b": "B", "c": "C", 100000.0:3, "a": "F", "d": "D", "e": "E"}
+
+	var b []byte
+	for i := 0; i < 3; i++ {
+		b = append(b, cborData...)
+	}
+
+	wantS := s{A: "A", B: "B", C: "C", D: "D", E: "E"}
+	wantErrorMsg := "cbor: cannot unmarshal"
+	dec := NewDecoder(bytes.NewReader(b))
+	for i := 0; i < 3; i++ {
+		var s1 s
+		if err := dec.Decode(&s1); err == nil {
+			t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+		} else if _, ok := err.(*UnmarshalTypeError); !ok {
+			t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+		} else if !strings.Contains(err.Error(), wantErrorMsg) {
+			t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		}
+		if !reflect.DeepEqual(s1, wantS) {
+			t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+		}
+	}
+	var v interface{}
+	if err := dec.Decode(&v); err != io.EOF {
+		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
+	}
+
+	// Duplicate key triggers error.
+	wantS = s{A: "A", B: "B", C: "C"}
+	wantErrorMsg = "cbor: found duplicate map key \"100000\" at map element index 4"
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	dec = dm.NewDecoder(bytes.NewReader(b))
+	for i := 0; i < 3; i++ {
+		var s2 s
+		if err := dec.Decode(&s2); err == nil {
+			t.Errorf("Decode() didn't return an error")
+		} else if _, ok := err.(*DupMapKeyError); !ok {
+			t.Errorf("Decode() returned wrong error type %T, want (*DupMapKeyError)", err)
+		} else if err.Error() != wantErrorMsg {
+			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
+		}
+		if !reflect.DeepEqual(s2, wantS) {
+			t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+		}
+	}
+	if err := dec.Decode(&v); err != io.EOF {
+		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
+	}
+}
+
+func TestUnmarshalDupMapKeyToStructStringParseError(t *testing.T) {
+	type s struct {
+		A string `cbor:"a"`
+		B string `cbor:"b"`
+		C string `cbor:"c"`
+		D string `cbor:"d"`
+		E string `cbor:"e"`
+	}
+	cborData := hexDecode("a661fe6141616261426163614361fe61466164614461656145") // {"\xFE": "A", "b": "B", "c": "C", "\xFE": "F", "d": "D", "e": "E"}
+	wantS := s{A: "", B: "B", C: "C", D: "D", E: "E"}
+	wantErrorMsg := "cbor: invalid UTF-8 string"
+
+	// Duplicate key doesn't overwrite previous value (default).
+	var s1 s
+	if err := Unmarshal(cborData, &s1); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	} else if _, ok := err.(*SemanticError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*SemanticError)", cborData, err)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+	}
+	if !reflect.DeepEqual(s1, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+	}
+
+	// Duplicate key triggers error.
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	var s2 s
+	if err := dm.Unmarshal(cborData, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	} else if _, ok := err.(*SemanticError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*SemanticError)", cborData, err)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+	}
+	if !reflect.DeepEqual(s2, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+	}
+}
+
+func TestUnmarshalDupMapKeyToStructIntParseError(t *testing.T) {
+	type s struct {
+		A int `cbor:"1,keyasint"`
+		B int `cbor:"3,keyasint"`
+		C int `cbor:"5,keyasint"`
+	}
+	cborData := hexDecode("a43bffffffffffffffff0203043bffffffffffffffff030506") // {-18446744073709551616:2, 3:4, -18446744073709551616:3, 5:6}
+
+	// Duplicate key doesn't overwrite previous value (default).
+	wantS := s{B: 4, C: 6}
+	wantErrorMsg := "cbor: cannot unmarshal"
+	var s1 s
+	if err := Unmarshal(cborData, &s1); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	} else if _, ok := err.(*UnmarshalTypeError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+	}
+	if !reflect.DeepEqual(s1, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+	}
+
+	// Duplicate key triggers error.
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	var s2 s
+	if err := dm.Unmarshal(cborData, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	} else if _, ok := err.(*UnmarshalTypeError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+	}
+	if !reflect.DeepEqual(s2, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+	}
+}
+
+func TestUnmarshalDupMapKeyToStructWrongTypeParseError(t *testing.T) {
+	type s struct {
+		A string `cbor:"a"`
+		B string `cbor:"b"`
+		C string `cbor:"c"`
+		D string `cbor:"d"`
+		E string `cbor:"e"`
+	}
+	cborData := hexDecode("a68161fe614161626142616361438161fe61466164614461656145") // {["\xFE"]: "A", "b": "B", "c": "C", ["\xFE"]: "F", "d": "D", "e": "E"}
+
+	// Duplicate key doesn't overwrite previous value (default).
+	wantS := s{A: "", B: "B", C: "C", D: "D", E: "E"}
+	wantErrorMsg := "cbor: cannot unmarshal"
+	var s1 s
+	if err := Unmarshal(cborData, &s1); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	} else if _, ok := err.(*UnmarshalTypeError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+	}
+	if !reflect.DeepEqual(s1, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+	}
+
+	// Duplicate key triggers error.
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	var s2 s
+	if err := dm.Unmarshal(cborData, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	} else if _, ok := err.(*UnmarshalTypeError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+	}
+	if !reflect.DeepEqual(s2, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+	}
+}
+
+func TestUnmarshalDupMapKeyToStructWrongTypeUnhashableError(t *testing.T) {
+	type s struct {
+		A string `cbor:"a"`
+		B string `cbor:"b"`
+		C string `cbor:"c"`
+		D string `cbor:"d"`
+		E string `cbor:"e"`
+	}
+	cborData := hexDecode("a6810061416162614261636143810061466164614461656145") // {[0]: "A", "b": "B", "c": "C", [0]: "F", "d": "D", "e": "E"}
+	wantS := s{A: "", B: "B", C: "C", D: "D", E: "E"}
+
+	// Duplicate key doesn't overwrite previous value (default).
+	wantErrorMsg := "cbor: cannot unmarshal"
+	var s1 s
+	if err := Unmarshal(cborData, &s1); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	} else if _, ok := err.(*UnmarshalTypeError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+	}
+	if !reflect.DeepEqual(s1, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+	}
+
+	// Duplicate key triggers error.
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	var s2 s
+	if err := dm.Unmarshal(cborData, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	} else if _, ok := err.(*UnmarshalTypeError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+	}
+	if !reflect.DeepEqual(s2, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+	}
+}
+
+func TestUnmarshalDupMapKeyToStructTagTypeError(t *testing.T) {
+	type s struct {
+		A string `cbor:"a"`
+		B string `cbor:"b"`
+		C string `cbor:"c"`
+		D string `cbor:"d"`
+		E string `cbor:"e"`
+	}
+	cborData := hexDecode("a6c24901000000000000000061416162614261636143c24901000000000000000061466164614461656145") // {bignum(18446744073709551616): "A", "b": "B", "c": "C", bignum(18446744073709551616): "F", "d": "D", "e": "E"}
+	wantS := s{A: "", B: "B", C: "C", D: "D", E: "E"}
+
+	// Duplicate key doesn't overwrite previous value (default).
+	wantErrorMsg := "cbor: cannot unmarshal"
+	var s1 s
+	if err := Unmarshal(cborData, &s1); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	} else if _, ok := err.(*UnmarshalTypeError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+	}
+	if !reflect.DeepEqual(s1, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+	}
+
+	// Duplicate key triggers error.
+	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+	var s2 s
+	if err := dm.Unmarshal(cborData, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	} else if _, ok := err.(*UnmarshalTypeError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+	}
+	if !reflect.DeepEqual(s2, wantS) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
 	}
 }

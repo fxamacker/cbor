@@ -7,6 +7,7 @@ import (
 	"encoding"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"reflect"
@@ -142,8 +143,44 @@ func (e *UnmarshalTypeError) Error() string {
 	return s
 }
 
+// DupMapKeyError describes detected duplicate map key in CBOR map.
+type DupMapKeyError struct {
+	Key   interface{}
+	Index int
+}
+
+func (e *DupMapKeyError) Error() string {
+	return fmt.Sprintf("cbor: found duplicate map key \"%v\" at map element index %d", e.Key, e.Index)
+}
+
+// DupMapKeyMode specifies how to enforce duplicate map key.
+type DupMapKeyMode int
+
+const (
+	// DupMapKeyQuiet doesn't enforce duplicate map key. Decoder quietly (no error)
+	// uses faster of "keep first" or "keep last" depending on Go data type and other factors.
+	DupMapKeyQuiet DupMapKeyMode = iota
+
+	// DupMapKeyEnforcedAPF enforces detection and rejection of duplicate map keys.
+	// APF means "Allow Partial Fill" and the destination map or struct can be partially filled.
+	// If a duplicate map key is detected, DupMapKeyError is returned without further decoding
+	// of the map. It's the caller's responsibility to respond to DupMapKeyError by
+	// discarding the partially filled result if their protocol requires it.
+	// WARNING: using DupMapKeyEnforcedAPF will decrease performance and increase memory use.
+	DupMapKeyEnforcedAPF
+
+	maxDupMapKeyMode
+)
+
+func (dmkm DupMapKeyMode) valid() bool {
+	return dmkm < maxDupMapKeyMode
+}
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
+	// DupMapKey specifies whether to enforce duplicate map key.
+	DupMapKey DupMapKeyMode
+
 	// TimeTag specifies whether to check validity of time.Time (e.g. valid tag number and tag content type).
 	// For now, valid tag number means 0 or 1 as specified in RFC 7049 if the Go type is time.Time.
 	TimeTag DecTagMode
@@ -197,10 +234,13 @@ func (opts DecOptions) DecModeWithSharedTags(tags TagSet) (DecMode, error) {
 }
 
 func (opts DecOptions) decMode() (*decMode, error) {
+	if !opts.DupMapKey.valid() {
+		return nil, errors.New("cbor: invalid DupMapKey " + strconv.Itoa(int(opts.DupMapKey)))
+	}
 	if !opts.TimeTag.valid() {
 		return nil, errors.New("cbor: invalid TimeTag " + strconv.Itoa(int(opts.TimeTag)))
 	}
-	dm := decMode{timeTag: opts.TimeTag}
+	dm := decMode{dupMapKey: opts.DupMapKey, timeTag: opts.TimeTag}
 	return &dm, nil
 }
 
@@ -212,15 +252,16 @@ type DecMode interface {
 }
 
 type decMode struct {
-	tags    tagProvider
-	timeTag DecTagMode
+	tags      tagProvider
+	dupMapKey DupMapKeyMode
+	timeTag   DecTagMode
 }
 
 var defaultDecMode = &decMode{}
 
 // DecOptions returns user specified options used to create this DecMode.
 func (dm *decMode) DecOptions() DecOptions {
-	return DecOptions{TimeTag: dm.timeTag}
+	return DecOptions{DupMapKey: dm.dupMapKey, TimeTag: dm.timeTag}
 }
 
 // Unmarshal parses the CBOR-encoded data and stores the result in the value
@@ -800,7 +841,9 @@ func (d *decodeState) parseMap() (map[interface{}]interface{}, error) {
 	m := make(map[interface{}]interface{})
 	var k, e interface{}
 	var err, lastErr error
+	keyCount := 0
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
+		// Parse CBOR map key.
 		if k, lastErr = d.parse(); lastErr != nil {
 			if err == nil {
 				err = lastErr
@@ -808,6 +851,8 @@ func (d *decodeState) parseMap() (map[interface{}]interface{}, error) {
 			d.skip()
 			continue
 		}
+
+		// Detect if CBOR map key can be used as Go map key.
 		kkind := reflect.ValueOf(k).Kind()
 		if tag, ok := k.(Tag); ok {
 			kkind = tag.contentKind()
@@ -819,18 +864,39 @@ func (d *decodeState) parseMap() (map[interface{}]interface{}, error) {
 			d.skip()
 			continue
 		}
+
+		// Parse CBOR map value.
 		if e, lastErr = d.parse(); lastErr != nil {
 			if err == nil {
 				err = lastErr
 			}
 			continue
 		}
+
+		// Add key-value pair to Go map.
 		m[k] = e
+
+		// Detect duplicate map key.
+		if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
+			newKeyCount := len(m)
+			if newKeyCount == keyCount {
+				m[k] = nil
+				err = &DupMapKeyError{k, i}
+				i++
+				// skip the rest of the map
+				for ; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
+					d.skip() // Skip map key
+					d.skip() // Skip map value
+				}
+				return m, err
+			}
+			keyCount = newKeyCount
+		}
 	}
 	return m, err
 }
 
-func (d *decodeState) parseMapToMap(v reflect.Value, tInfo *typeInfo) error {
+func (d *decodeState) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
 	_, ai, val := d.getHead()
 	hasSize := (ai != 31)
 	count := int(val)
@@ -846,7 +912,19 @@ func (d *decodeState) parseMapToMap(v reflect.Value, tInfo *typeInfo) error {
 	var keyValue, eleValue, zeroKeyValue, zeroEleValue reflect.Value
 	keyIsInterfaceType := keyType == typeIntf // If key type is interface{}, need to check if key value is hashable.
 	var err, lastErr error
+	keyCount := v.Len()
+	var existingKeys map[interface{}]bool // Store existing map keys, used for detecting duplicate map key.
+	if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
+		existingKeys = make(map[interface{}]bool, keyCount)
+		if keyCount > 0 {
+			vKeys := v.MapKeys()
+			for i := 0; i < len(vKeys); i++ {
+				existingKeys[vKeys[i].Interface()] = true
+			}
+		}
+	}
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
+		// Parse CBOR map key.
 		if !keyValue.IsValid() {
 			keyValue = reflect.New(keyType).Elem()
 		} else if !reuseKey {
@@ -862,6 +940,8 @@ func (d *decodeState) parseMapToMap(v reflect.Value, tInfo *typeInfo) error {
 			d.skip()
 			continue
 		}
+
+		// Detect if CBOR map key can be used as Go map key.
 		if keyIsInterfaceType {
 			kkind := keyValue.Elem().Kind()
 			if keyValue.Elem().IsValid() {
@@ -878,6 +958,7 @@ func (d *decodeState) parseMapToMap(v reflect.Value, tInfo *typeInfo) error {
 			}
 		}
 
+		// Parse CBOR map value.
 		if !eleValue.IsValid() {
 			eleValue = reflect.New(eleType).Elem()
 		} else if !reuseEle {
@@ -893,7 +974,29 @@ func (d *decodeState) parseMapToMap(v reflect.Value, tInfo *typeInfo) error {
 			continue
 		}
 
+		// Add key-value pair to Go map.
 		v.SetMapIndex(keyValue, eleValue)
+
+		// Detect duplicate map key.
+		if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
+			newKeyCount := v.Len()
+			if newKeyCount == keyCount {
+				kvi := keyValue.Interface()
+				if !existingKeys[kvi] {
+					v.SetMapIndex(keyValue, reflect.New(eleType).Elem())
+					err = &DupMapKeyError{kvi, i}
+					i++
+					// skip the rest of the map
+					for ; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
+						d.skip() // skip map key
+						d.skip() // skip map value
+					}
+					return err
+				}
+				delete(existingKeys, kvi)
+			}
+			keyCount = newKeyCount
+		}
 	}
 	return err
 }
@@ -978,8 +1081,14 @@ func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error {
 	hasSize := (ai != 31)
 	count := int(val)
 	var err, lastErr error
-	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
+	keyCount := 0
+	var mapKeys map[interface{}]struct{} // Store map keys, used for detecting duplicate map key.
+	if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
+		mapKeys = make(map[interface{}]struct{}, len(structType.fields))
+	}
+	for j := 0; (hasSize && j < count) || (!hasSize && !d.foundBreak()); j++ {
 		var f *field
+		var k interface{} // Used by duplicate map key detection
 
 		t := d.nextCBORType()
 		if t == cborTypeTextString {
@@ -994,8 +1103,8 @@ func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error {
 			}
 
 			keyLen := len(keyBytes)
+			// Find field with exact match
 			for i := 0; i < len(structType.fields); i++ {
-				// Find field with exact match
 				fld := structType.fields[i]
 				if !foundFldIdx[i] && len(fld.name) == keyLen && fld.name == string(keyBytes) {
 					f = fld
@@ -1003,10 +1112,10 @@ func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error {
 					break
 				}
 			}
+			// Find field with case-insensitive match
 			if f == nil {
 				keyString := string(keyBytes)
 				for i := 0; i < len(structType.fields); i++ {
-					// Find field with case-insensitive match
 					fld := structType.fields[i]
 					if !foundFldIdx[i] && len(fld.name) == keyLen && strings.EqualFold(fld.name, keyString) {
 						f = fld
@@ -1014,6 +1123,10 @@ func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error {
 						break
 					}
 				}
+			}
+
+			if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
+				k = string(keyBytes)
 			}
 		} else if t <= cborTypeNegativeInt { // uint/int
 			var nameAsInt int64
@@ -1037,6 +1150,7 @@ func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error {
 				nameAsInt = int64(-1) ^ int64(val)
 			}
 
+			// Find field
 			for i := 0; i < len(structType.fields); i++ {
 				fld := structType.fields[i]
 				if !foundFldIdx[i] && fld.keyAsInt && fld.nameAsInt == nameAsInt {
@@ -1044,6 +1158,10 @@ func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error {
 					foundFldIdx[i] = true
 					break
 				}
+			}
+
+			if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
+				k = nameAsInt
 			}
 		} else {
 			if err == nil {
@@ -1053,13 +1171,46 @@ func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error {
 					errMsg: "map key is of type " + t.String() + " and cannot be used to match struct field name",
 				}
 			}
-			d.skip() // skip key
-			d.skip() // skip value
-			continue
+			if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
+				// parse key
+				k, lastErr = d.parse()
+				if lastErr != nil {
+					d.skip() // skip value
+					continue
+				}
+				// Detect if CBOR map key can be used as Go map key.
+				kkind := reflect.ValueOf(k).Kind()
+				if tag, ok := k.(Tag); ok {
+					kkind = tag.contentKind()
+				}
+				if !isHashableKind(kkind) {
+					d.skip() // skip value
+					continue
+				}
+			} else {
+				d.skip() // skip key
+			}
+		}
+
+		if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
+			mapKeys[k] = struct{}{}
+			newKeyCount := len(mapKeys)
+			if newKeyCount == keyCount {
+				err = &DupMapKeyError{k, j}
+				d.skip() // skip value
+				j++
+				// skip the rest of the map
+				for ; (hasSize && j < count) || (!hasSize && !d.foundBreak()); j++ {
+					d.skip()
+					d.skip()
+				}
+				return err
+			}
+			keyCount = newKeyCount
 		}
 
 		if f == nil {
-			d.skip()
+			d.skip() // Skip value
 			continue
 		}
 		// reflect.Value.FieldByIndex() panics at nil pointer to unexported
@@ -1091,7 +1242,7 @@ func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error {
 // validRegisteredTagNums assumes next CBOR data type is tag.  It scans all tag numbers, and stops at tag content.
 func (d *decodeState) validRegisteredTagNums(t reflect.Type, registeredTagNums []uint64) error {
 	// Scan until next cbor data is tag content.
-	tagNums := make([]uint64, 0, 1)
+	tagNums := make([]uint64, 0, 2)
 	for d.nextCBORType() == cborTypeTag {
 		_, _, val := d.getHead()
 		tagNums = append(tagNums, val)
