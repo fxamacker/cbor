@@ -653,7 +653,10 @@ Comparisons are between this newer library and a well-known library that had 1,0
 
 __This library is safer__.  Small malicious CBOR messages are rejected quickly before they exhaust system resources.
 
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.1.0/cbor_safety_comparison.png "CBOR library safety comparison")
+|                   | fxamacker/cbor 2.1.0             |ugorji/go 1.1.7                   |
+|-------------------|----------------------------------|----------------------------------|
+|Malformed data #1  | 57.4 ns/op, 32 B/op, 1 allocs/op |⚠️ fatal error: out of memory
+|Malformed data #2  | 67.7 ns/op, 32 B/op, 1 allocs/op |⚠️ runtime: out of memory: cannot allocate
 
 __This library is smaller__. Programs like senmlCat can be 4 MB smaller by switching to this library.  Programs using more complex CBOR data types can be 9.2 MB smaller.
 
