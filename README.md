@@ -21,7 +21,7 @@ This library is safe and fast. Here's how it compares to another library using t
 
 &nbsp;
 
-Speed is only one factor. There's more important criteria (like not crashing and producing correct results).
+Speed is only one factor. There are more important factors.
 
 |                   | fxamacker/cbor 2.1               |ugorji/go 1.1.7                   |
 |-------------------|----------------------------------|----------------------------------|
