@@ -260,11 +260,6 @@ There are three broad categories of CBOR tags:
 
 * __User-defined CBOR tags__ are easy by using TagSet to associate tag numbers to user-defined Go types.
 
-### Predefined Encoding Options
-
-Easy-to-use functions (no params) return preset EncOptions struct:  
-`CanonicalEncOptions`, `CTAP2EncOptions`, `CoreDetEncOptions`, `PreferredUnsortedEncOptions`
-
 ### Preferred Serialization
 
 Preferred serialization encodes integers and floating-point values using the fewest bytes possible.
@@ -275,6 +270,11 @@ Preferred serialization encodes integers and floating-point values using the few
 ### Compact Data Size
 
 The combination of preferred serialization and struct tags (toarray, keyasint, omitempty) allows very compact data size.
+
+### Predefined Encoding Options
+
+Easy-to-use functions (no params) return preset EncOptions struct:  
+`CanonicalEncOptions`, `CTAP2EncOptions`, `CoreDetEncOptions`, `PreferredUnsortedEncOptions`
 
 ### Encoding Options
 
@@ -326,7 +326,6 @@ This library is a small, fast, safe, and full-featured generic CBOR [(RFC 7049)]
 * Encoder options for floating-point shortest form, NaN, and Infinity
 * Decoder option to detect and reject duplicate map keys
 * Decoder checks for well-formedness and validates data
-* Decoder sanitizes time values of NaN and Infinity as if they were undefined values
 * Decoder doesn't crash and avoids resource exhaustion from malformed/malicious CBOR data
 
 Known limitations are noted in the [Limitations section](#limitations). 
@@ -341,7 +340,7 @@ Decoder checks for all required well-formedness errors, including all "subkinds"
 After well-formedness is verified, basic validity errors are handled as follows:
 
 * Invalid UTF-8 string: Decoder always checks and returns invalid UTF-8 string error.
-* Duplicate keys in a map: By default, decoder decodes to a map with duplicate keys by overwriting previous value with the same key.  Options to handle duplicate map keys in different ways may be added as a feature.
+* Duplicate keys in a map: Decoder has options to ignore or enforce rejection of duplicate map keys.
 
 When decoding well-formed CBOR arrays and maps, decoder saves the first error it encounters and continues with the next item.  Options to handle this differently may be added in the future.
 
@@ -358,19 +357,14 @@ This library provides options for fast detection and rejection of duplicate map 
 APF suffix means "Allow Partial Fill" so the destination map or struct can contain some decoded values at the time of error. It is the caller's responsibility to respond to the `DupMapKeyError` by discarding the partially filled result if that's required by their protocol. 
 
 ## Limitations
-🎉 CBOR tags feature was pushed to master branch and will officially be released in v2.1.  
-🎉 Duplicate map key option was pushed to master branch and will officially be released in v2.1.
 
 Known limitations:
 
 * Nested levels for CBOR arrays, maps, and tags are intentionally limited to 32 to quickly reject potentially malicious data.  This limit may be turned into a user-configurable setting in a future release.
-* CBOR negative int (type 1) that cannot fit into Go's int64 are not supported, such as RFC 7049 example -18446744073709551616.  Decoding these values returns `cbor.UnmarshalTypeError` like Go's `encoding/json`.
-However, this may be resolved in a future release by adding support for `big.Int`. Until then,
-users can either use custom decoding allowed by the API or use user-defined CBOR tags to handle these values.
+* CBOR negative int (type 1) that cannot fit into Go's int64 are not supported, such as RFC 7049 example -18446744073709551616.  Decoding these values returns `cbor.UnmarshalTypeError` like Go's `encoding/json`. However, this may be resolved in a future release by adding support for `big.Int`. Until then, users can either use custom decoding allowed by the API.
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  CBOR `Null` (0xf6) more closely matches Go's `nil`.
-* Decoding CBOR map into Go struct has more limitations on key's type than decoding into Go map.  This is because map keys need to identify Go struct fields (UTF-8 string and also integer when using "keyasint" struct tag).
-* CBOR map keys with data types not supported by Go for map keys are ignored and the key/value pair is discarded and an error is returned after continuing to decode remaining items.  
-* When using io.Reader interface to read very large or indefinite length CBOR data, Go's `io.LimitReader` should be used to limit size. This library doesn't set a limit because `io.LimitReader` to makes it easy for the caller.
+* CBOR map keys with data types not supported by Go for map keys are ignored and an error is returned after continuing to decode remaining items.  
+* When using io.Reader interface to read very large or indefinite length CBOR data, Go's `io.LimitReader` should be used to limit size.
 
 ## API
 Many function signatures are identical to Go's encoding/json, such as:  
