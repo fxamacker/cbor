@@ -19,12 +19,16 @@ This library is safe and fast. Here's how it compares to another library using t
 |Encode CWT claims  | 457 ns/op, 176 B/op, 2 allocs/op | 995 ns/op, 1424 B/op, 4 allocs/op
 |Decode CWT claims  | 796 ns/op, 176 B/op,	6 allocs/op | 1105 ns/op, 568 B/op, 6 allocs/op
 
-Speed is just one factor. There's more important criteria (like not crashing and producing correct results).
+&nbsp;
+
+Speed is only one factor. There's more important criteria (like not crashing and producing correct results).
 
 |                   | fxamacker/cbor 2.1               |ugorji/go 1.1.7                   |
 |-------------------|----------------------------------|----------------------------------|
 |Malformed data #1  | 57.4 ns/op, 32 B/op, 1 allocs/op |⚠️ fatal error: out of memory
 |Malformed data #2  | 67.7 ns/op, 32 B/op, 1 allocs/op |⚠️ runtime: out of memory: cannot allocate
+
+&nbsp;
 
 __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: small, fast, safe and easy. It also has a standard API, CBOR tags (built-in and user-defined), 16/32/64-bit floats, and duplicate map key options.
 
@@ -657,6 +661,8 @@ __This library is safer__.  Small malicious CBOR messages are rejected quickly b
 |-------------------|----------------------------------|----------------------------------|
 |Malformed data #1  | 57.4 ns/op, 32 B/op, 1 allocs/op |⚠️ fatal error: out of memory
 |Malformed data #2  | 67.7 ns/op, 32 B/op, 1 allocs/op |⚠️ runtime: out of memory: cannot allocate
+
+&nbsp;
 
 __This library is smaller__. Programs like senmlCat can be 4 MB smaller by switching to this library.  Programs using more complex CBOR data types can be 9.2 MB smaller.
 
