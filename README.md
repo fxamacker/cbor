@@ -39,7 +39,7 @@ Struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data such as
 
 <hr>
 
-[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v2.1.0/cbor_easy_api.png)](#usage)
+[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v2.1.0/cbor_api_struct_tags.png)](#usage)
 
 <hr>
 
@@ -227,7 +227,7 @@ There are currently two options:
 
 * `DupMapKeyEnforcedAPF` enforces detection and rejection of duplidate map keys. Decoding stops immediately and returns `DupMapKeyError` when the first duplicate key is detected. The error includes the duplicate map key and the index number. 
 
-APF suffix means "Allow Partial Fill" so the destination map or struct can contain some decoded values at the time of error.  Users can respond to the `DuplicateMapKeyErr` by discarding the partially filled result if that's required by their protocol.
+APF suffix means "Allow Partial Fill" so the destination map or struct can contain some decoded values at the time of error.  Users can respond to the `DupMapKeyError` by discarding the partially filled result if that's required by their protocol.
 
 ### Preferred Serialization
 
@@ -330,7 +330,7 @@ This library provides options for fast detection and rejection of duplicate map 
 
 `DupMapKeyEnforcedAPF` enforces detection and rejection of duplidate map keys. Decoding stops immediately and returns `DupMapKeyError` when the first duplicate key is detected. The error includes the duplicate map key and the index number. 
 
-APF suffix means "Allow Partial Fill" so the destination map or struct can contain some decoded values at the time of error. It is the caller's responsibility to respond to the `DuplicateMapKeyErr` by discarding the partially filled result if that's required by their protocol. 
+APF suffix means "Allow Partial Fill" so the destination map or struct can contain some decoded values at the time of error. It is the caller's responsibility to respond to the `DupMapKeyError` by discarding the partially filled result if that's required by their protocol. 
 
 ## Limitations
 🎉 CBOR tags feature was pushed to master branch and will officially be released in v2.1.  
@@ -551,7 +551,7 @@ The `keyasint`, `toarray`, and `omitempty` struct tags make it easy to use compa
 
 <hr>
 
-[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v2.1.0/cbor_easy_api.png)](#usage)
+[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v2.1.0/cbor_api_struct_tags.png)](#usage)
 
 <hr>
 
