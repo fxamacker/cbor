@@ -3405,7 +3405,6 @@ func TestStreamDupMapKeyToStructKeyAsInt(t *testing.T) {
 
 func TestUnmarshalDupMapKeyToStructNoMatchingField(t *testing.T) {
 	type s struct {
-		//A string `cbor:"a"`
 		B string `cbor:"b"`
 		C string `cbor:"c"`
 		D string `cbor:"d"`
@@ -3441,7 +3440,6 @@ func TestUnmarshalDupMapKeyToStructNoMatchingField(t *testing.T) {
 
 func TestStreamDupMapKeyToStructNoMatchingField(t *testing.T) {
 	type s struct {
-		//A string `cbor:"a"`
 		B string `cbor:"b"`
 		C string `cbor:"c"`
 		D string `cbor:"d"`
@@ -3496,7 +3494,6 @@ func TestStreamDupMapKeyToStructNoMatchingField(t *testing.T) {
 
 func TestUnmarshalDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
 	type s struct {
-		//A int `cbor:"1,keyasint"`
 		B int `cbor:"3,keyasint"`
 		C int `cbor:"5,keyasint"`
 	}
@@ -3530,7 +3527,6 @@ func TestUnmarshalDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
 
 func TestStreamDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
 	type s struct {
-		//A int `cbor:"1,keyasint"`
 		B int `cbor:"3,keyasint"`
 		C int `cbor:"5,keyasint"`
 	}
