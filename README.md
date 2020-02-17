@@ -57,7 +57,7 @@ Struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data such as
 
 <hr>
 
-👉  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
 
 ## Installation
 
@@ -115,7 +115,7 @@ If you need to use options or CBOR tags, then you'll want to create a mode.
 EncMode and DecMode are interfaces created from EncOptions or DecOptions structs.  
 For example, `em, err := cbor.EncOptions{...}.EncMode()` or `em, err := cbor.CanonicalEncOptions().EncMode()`.
 
-EncMode and DecMode use immutable options so their behavior won't accidentally change at runtime.  Modes are intended to be reused and are safe for concurrent use.
+EncMode and DecMode use immutable options so their behavior won't accidentally change at runtime.  Modes are reusable, safe for concurrent use, and allow fast parallelism.
 
 __Creating and Using Encoding Modes__
 
@@ -139,6 +139,7 @@ err := encoder.Encode(v)
 ```
 
 __API for Predefined Encoding Options__
+
 ```
 func CanonicalEncOptions() EncOptions     // settings for RFC 7049 Canonical CBOR
 func CTAP2EncOptions() EncOptions         // settings for FIDO2 CTAP2 Canonical CBOR
@@ -149,6 +150,15 @@ func PreferredUnsortedEncOptions() EncOptions  // modern settings from a draft R
 __Struct Tags (keyasint, toarray, omitempty)__
 
 The `keyasint`, `toarray`, and `omitempty` struct tags make it easy to use compact CBOR message formats.  Internet standards often use CBOR arrays and CBOR maps with int keys to save space.
+
+__CBOR Tags__
+
+When using CBOR tags, a TagSet can be specified during mode creation:
+
+* `em, err := opts.EncModeWithTags(ts)`
+* `em, err := opts.EncModeWithSharedTags(ts)`
+
+And similar API is available for DecMode.
 
 See [API](#api), [Options](#options), and [Usage](#usage) sections for more details.
 
@@ -181,7 +191,7 @@ __Roadmap__:
 
 <hr>
 
-👉  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
 
 ## Design Goals 
 This library is designed to be a generic CBOR encoder and decoder.  It was initially created for a [WebAuthn (FIDO2) server library](https://github.com/fxamacker/webauthn), because existing CBOR libraries (in Go) didn't meet certain criteria in 2019.
@@ -195,7 +205,10 @@ This library is designed to be:
 Competing factors are balanced:
 
 * __Speed__ vs __safety__ vs __size__ – to keep size small, avoid code generation. For safety, validate data and avoid Go's `unsafe` pkg.  For speed, use safe optimizations such as caching struct metadata. v1.4 is faster than a well-known library that uses `unsafe` and code gen.
-* __Standards compliance__ – CBOR ([RFC 7049](https://tools.ietf.org/html/rfc7049)) with minor [limitations](#limitations).  Encoder supports options for sorting, floating-point conversions, and more.  Predefined configurations are also available so you can use "CTAP2 Canonical CBOR", etc. without knowing individual options.  Decoder checks for well-formedness, validates data, and limits nested levels to defend against attacks.  See [Standards](#standards).
+* __Standards compliance__ – CBOR ([RFC 7049](https://tools.ietf.org/html/rfc7049)) with minor [limitations](#limitations).
+  * Encoder supports options for sorting, floating-point conversions, and more.  Predefined options are also available so you can use "CTAP2 Canonical CBOR", etc. without knowing individual settings.  
+  * Decoder checks for well-formedness, validates data, and limits nested levels to defend against attacks. Decoder has options to handle duplicate map keys.  
+  * Both encoder and decoder supports CBOR tags (built-in and user-defined), and more. See [Standards](#standards).
 
 v2.0 decoupled options from CBOR encoding & decoding functions:
 
@@ -223,7 +236,7 @@ Many function signatures are identical to encoding/json, including:
 `RawMessage` can be used to delay CBOR decoding or precompute CBOR encoding, like `encoding/json`.
 
 Standard interfaces allow user-defined types to have custom CBOR encoding and decoding.  They include:  
-`BinaryMarshaler`, `BinaryUnmarshaler`, `Marshaler`, and `Unmarshaler`
+`BinaryMarshaler`, `BinaryUnmarshaler`, `Marshaler`, and `Unmarshaler`.
 
 `Marshaler` and `Unmarshaler` interfaces are satisfied by `MarshalCBOR` and `UnmarshalCBOR` functions using same params and return types as Go's MarshalJSON and UnmarshalJSON.
 
@@ -237,6 +250,21 @@ Support "cbor" and "json" keys in Go's struct tags. If both are specified, then 
 
 See [Usage](#usage).
 
+### CBOR Tags (New in v2.1)
+
+There are three broad categories of CBOR tags:
+
+* __Default built-in CBOR tags__ currently include tag numbers 0 and 1 (Time).  Additional default built-in tags in future releases may include tag numbers 2 and 3 (Bignum).  
+
+* __Optional built-in CBOR tags__ may be provided in the future via build flags or optional package(s) to help reduce bloat.
+
+* __User-defined CBOR tags__ are easy by using TagSet to associate tag numbers to user-defined Go types.
+
+### Predefined Encoding Options
+
+Easy-to-use functions (no params) return preset EncOptions struct:  
+`CanonicalEncOptions`, `CTAP2EncOptions`, `CoreDetEncOptions`, `PreferredUnsortedEncOptions`
+
 ### Preferred Serialization
 
 Preferred serialization encodes integers and floating-point values using the fewest bytes possible.
@@ -248,25 +276,6 @@ Preferred serialization encodes integers and floating-point values using the few
 
 The combination of preferred serialization and struct tags (toarray, keyasint, omitempty) allows very compact data size.
 
-### CBOR Tags (New in v2.1)
-
-There are three broad categories of CBOR tags:
-
-* __Default built-in CBOR tags__ currently include tag numbers 0 and 1 (Time).  Additional default built-in tags in future releases may include tag numbers 2 and 3 (Bignum).  
-
-* __Optional built-in CBOR tags__ may be provided in the future via build flags or optional package(s) to help reduce bloat.
-
-* __User-defined CBOR tags__ are easy by using TagSet to associate tag numbers to user-defined Go types.
-
-`TagSet` can be used to associate a user-defined Go type(s) to tag number(s).  It's also used to create EncMode or DecMode. For example, `em := EncOptions{...}.EncModeWithTags(ts)` or `em := EncOptions{...}.EncModeWithSharedTags(ts)`. This allows every standard API exported by em (like `Marshal` and `NewEncoder`) to use the specified tags automatically.
-
-`Tag` and `RawTag` can be used to encode/decode a tag number with a Go value, but `TagSet` is generally recommended.
-
-### Predefined Encoding Options
-
-Easy-to-use functions (no params) return preset EncOptions struct:  
-`CanonicalEncOptions`, `CTAP2EncOptions`, `CoreDetEncOptions`, `PreferredUnsortedEncOptions`
-
 ### Encoding Options
 
 Integers always encode to the shortest form that preserves value.  By default, time values are encoded without tags.
@@ -275,7 +284,7 @@ Encoding of other data types and map key sort order are determined by encoder op
 
 |Encoding Option              |Available Settings (defaults in bold, aliases in italics)                              |
 |-----------------------------|---------------------------------------------------------------------------------------|
-|EncOptions.Sort |__`SortNone`__, `SortLengthFirst`, `SortBytewiseLexical`, _`SortCanonical`_, _`SortCTAP2Canonical`_, _`SortCoreDeterministic`_ |
+|EncOptions.Sort |__`SortNone`__, `SortLengthFirst`, `SortBytewiseLexical`, _`SortCanonical`_, _`SortCTAP2`_, _`SortCoreDeterministic`_ |
 |EncOptions.Time |__`TimeUnix`__, `TimeUnixMicro`, `TimeUnixDynamic`, `TimeRFC3339`, `TimeRFC3339Nano` |
 |EncOptions.TimeTag |__`EncTagNone`__, `EncTagRequired` |
 |EncOptions.ShortestFloat |__`ShortestFloatNone`__, `ShortestFloat16` |
@@ -288,7 +297,7 @@ See [Options](#options) section for details about each setting.
 
 |Decoding Option              |Available Settings (defaults in bold, aliases in italics)                              |
 |-----------------------------|---------------------------------------------------------------------------------------|
-|DecOptions.TimeTag |__`DecTagIgnored`__, `DecTagOptional1, `DecTagRequired` |
+|DecOptions.TimeTag |__`DecTagIgnored`__, `DecTagOptional`, `DecTagRequired` |
 |DecOptions.DupMapKey |__`DupMapKeyQuiet`__, `DupMapKeyEnforcedAPF` |
 
 See [Options](#options) section for details about each setting.
@@ -305,7 +314,7 @@ See [milestones](https://github.com/fxamacker/cbor/milestones) for upcoming feat
 
 <hr>
 
-👉  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
 
 ## Standards
 This library is a small, fast, safe, and full-featured generic CBOR [(RFC 7049)](https://tools.ietf.org/html/rfc7049) encoder and decoder.  Notable features include:
@@ -313,33 +322,17 @@ This library is a small, fast, safe, and full-featured generic CBOR [(RFC 7049)]
 * CBOR tags (API supports built-in and user-defined) for both encoder and decoder
 * Definite and indefinite length data for both encoder and decoder
 * Encoder option for preferred serialization, including IEEE 754 binary16
-* Encoder option for sorting map keys: unsorted, length-first (Canonical CBOR), and bytewise-lexical (CTAP2 & 7049bis)
-* Encoder option to encode or exclude specific tag numbers
-* Separate encoder options for floating-point shortest form, NaN, and Infinity
+* Encoder option for sorting map keys: length-first (Canonical CBOR) and bytewise-lexical (CTAP2 & 7049bis)
+* Encoder options for floating-point shortest form, NaN, and Infinity
 * Decoder option to detect and reject duplicate map keys
-* Decoder option to handle tag validation: ignored, optional, or required
 * Decoder checks for well-formedness and validates data
-* Decoder sanitizes time values of NaN and Infinity as if they were nil values
+* Decoder sanitizes time values of NaN and Infinity as if they were undefined values
 * Decoder doesn't crash and avoids resource exhaustion from malformed/malicious CBOR data
 
 Known limitations are noted in the [Limitations section](#limitations). 
 
-Integers always encode to the shortest form that preserves value.  By default, time values are encoded without tags.
-
-Encoding of other data types and map key sort order are determined by encoder options.
-
-|Option                       |Available Settings (defaults in bold, aliases in italics)                              |
-|-----------------------------|---------------------------------------------------------------------------------------|
-|EncOptions.Sort |__`SortNone`__, `SortLengthFirst`, `SortBytewiseLexical`, _`SortCanonical`_, _`SortCTAP2Canonical`_, _`SortCoreDeterministic`_ |
-|EncOptions.Time |__`TimeUnix`__, `TimeUnixMicro`, `TimeUnixDynamic`, `TimeRFC3339`, `TimeRFC3339Nano` |
-|EncOptions.ShortestFloat |__`ShortestFloatNone`__, `ShortestFloat16` |
-|EncOptions.InfConvert |__`InfConvertFloat16`__, `InfConvertNone` |
-|EncOptions.NaNConvert |__`NaNConvert7e00`__, `NaNConvertNone`, `NaNConvertQuiet`, `NaNConvertPreserveSignal` |
-|EncOptions.TimeTag |__`EncTagNone`__, `EncTagRequired` |
-
-See [Options](#options) section for more details.
-
-Float16 conversions use [x448/float16](https://github.com/x448/float16) maintained by the same team as this library.  All 4+ billion possible conversions are verified to be correct in that library on amd64, arm64, ppc64le and s390x.
+Integers always encode to the shortest form that preserves value. Floats can optionally encode to shortest form:  
+float64 -> float32 -> float16 when values can be preserved.
 
 Go nil values for slices, maps, pointers, etc. are encoded as CBOR null.  Empty slices, maps, etc. are encoded as empty CBOR arrays and maps.
 
@@ -351,6 +344,8 @@ After well-formedness is verified, basic validity errors are handled as follows:
 * Duplicate keys in a map: By default, decoder decodes to a map with duplicate keys by overwriting previous value with the same key.  Options to handle duplicate map keys in different ways may be added as a feature.
 
 When decoding well-formed CBOR arrays and maps, decoder saves the first error it encounters and continues with the next item.  Options to handle this differently may be added in the future.
+
+See [Options](#options) section for detailed settings or [Features](#features) section for a summary of options.
 
 __Duplicate Map Key Options__
 
@@ -378,15 +373,15 @@ users can either use custom decoding allowed by the API or use user-defined CBOR
 * When using io.Reader interface to read very large or indefinite length CBOR data, Go's `io.LimitReader` should be used to limit size. This library doesn't set a limit because `io.LimitReader` to makes it easy for the caller.
 
 ## API
-In v2.0+, many function signatures are identical to Go's encoding/json, such as:  
+Many function signatures are identical to Go's encoding/json, such as:  
 `Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, and `decoder.Decode`.
 
-Also, interfaces identical or comparable to Go's encoding, encoding/json, or encoding/gob include:  
+Interfaces identical or comparable to Go's encoding, encoding/json, or encoding/gob include:  
 `Marshaler`, `UnMarshaler`, `BinaryMarshaler`, and `BinaryUnmarshaler`.
 
 Like `encoding/json`, `RawMessage` can be used to delay CBOR decoding or precompute CBOR encoding.
 
-"Mode" in this API means definite way of encoding or decoding -- it links the standard API to CBOR options and CBOR tags.
+"Mode" in this API means defined way of encoding or decoding -- it links the standard API to CBOR options and CBOR tags.
 
 EncMode and DecMode are interfaces created from EncOptions or DecOptions structs.  
 For example, `em := cbor.EncOptions{...}.EncMode()` or `em := cbor.CanonicalEncOptions().EncMode()`.
@@ -498,7 +493,7 @@ Encoder has options that can be set individually. These functions are provided t
 |SortLengthFirst |Length-first map key ordering.|
 |SortBytewiseLexical |Bytewise lexicographic map key ordering|
 |SortCanonical |(alias) Same as SortLengthFirst [(RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9)|
-|SortCTAP2Canonical |(alias) Same as SortBytewiseLexical [(CTAP2 Canonical CBOR)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).|
+|SortCTAP2 |(alias) Same as SortBytewiseLexical [(CTAP2 Canonical CBOR)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).|
 |SortCoreDeterministic |(alias) Same as SortBytewiseLexical.|
 
 |EncOptions.Time              |Description                                                                            |
@@ -546,7 +541,7 @@ Conversions for infinity and NaN use InfConvert and NaNConvert settings.
 
 <hr>
 
-👉  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
 
 ## Usage
 🛡️ Use Go's `io.LimitReader` to limit size when decoding very large or indefinite size data.
@@ -554,15 +549,29 @@ Conversions for infinity and NaN use InfConvert and NaNConvert settings.
 Functions with identical signatures to encoding/json include:  
 `Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, `decoder.Decode`.
 
-__Default Mode of Encoding__  
+__Default Mode__  
 
 If default options are acceptable, package level functions can be used for encoding and decoding.
 ```
 b, err := cbor.Marshal(v)
+
 err := cbor.Unmarshal(b, &v)
+
 encoder := cbor.NewEncoder(w)
+
 decoder := cbor.NewDecoder(r)
 ```
+
+__Modes__
+
+If you need to use options or CBOR tags, then you'll want to create a mode.
+
+"Mode" means defined way of encoding or decoding -- it links the standard API to your CBOR options and CBOR tags.  This way, you don't pass around options and the API remains identical to `encoding/json`.
+
+EncMode and DecMode are interfaces created from EncOptions or DecOptions structs.  
+For example, `em, err := cbor.EncOptions{...}.EncMode()` or `em, err := cbor.CanonicalEncOptions().EncMode()`.
+
+EncMode and DecMode use immutable options so their behavior won't accidentally change at runtime.  Modes are reusable, safe for concurrent use, and allow fast parallelism.
 
 __Creating and Using Encoding Modes__
 
@@ -632,54 +641,17 @@ if data, err := cbor.Marshal(v); err != nil {
 }
 ```
 
-__Decoding SenML__ using `keyasint` struct tag:
-```
-// RFC 8428 says, "The data is structured as a single array that 
-// contains a series of SenML Records that can each contain fields"
+__CBOR Tags__
 
-type SenMLRecord struct {
-	BaseName    string  `cbor:"-2,keyasint,omitempty"`
-	BaseTime    float64 `cbor:"-3,keyasint,omitempty"`
-	BaseUnit    string  `cbor:"-4,keyasint,omitempty"`
-	BaseValue   float64 `cbor:"-5,keyasint,omitempty"`
-	BaseSum     float64 `cbor:"-6,keyasint,omitempty"`
-	BaseVersion int     `cbor:"-1,keyasint,omitempty"`
-	Name        string  `cbor:"0,keyasint,omitempty"`
-	Unit        string  `cbor:"1,keyasint,omitempty"`
-	Value       float64 `cbor:"2,keyasint,omitempty"`
-	ValueS      string  `cbor:"3,keyasint,omitempty"`
-	ValueB      bool    `cbor:"4,keyasint,omitempty"`
-	ValueD      string  `cbor:"8,keyasint,omitempty"`
-	Sum         float64 `cbor:"5,keyasint,omitempty"`
-	Time        float64 `cbor:"6,keyasint,omitempty"`
-	UpdateTime  float64 `cbor:"7,keyasint,omitempty"`
-}
+`TagSet` can be used to associate a user-defined Go type(s) to tag number(s).  It's also used to create EncMode or DecMode. For example, `em := EncOptions{...}.EncModeWithTags(ts)` or `em := EncOptions{...}.EncModeWithSharedTags(ts)`. This allows every standard API exported by em (like `Marshal` and `NewEncoder`) to use the specified tags automatically.
 
-// data is a []byte containing SenML
-
-var v []*SenMLRecord
-if err := cbor.Unmarshal(data, &v); err != nil {
-	return err
-}
-```
-
-__Encoding SenML__ using `keyasint` struct tag and `ShortestFloat16` encoding option:
-```
-// use SenMLRecord struct defined in "Decoding SenML" example
-
-var v []*SenMLRecord
-...
-em, err := cbor.EncOptions{ShortestFloat: cbor.ShortestFloat16}.EncMode()
-if data, err := em.Marshal(v); err != nil {
-	return err
-}
-```
+`Tag` and `RawTag` can be used to encode/decode a tag number with a Go value, but `TagSet` is generally recommended.
 
 For more examples, see [examples_test.go](example_test.go).
 
 <hr>
 
-👉  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
 
 ## Comparisons
 
@@ -799,4 +771,4 @@ fxamacker/cbor is licensed under the MIT License.  See [LICENSE](LICENSE) for th
 
 <hr>
 
-👉  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
