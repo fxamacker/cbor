@@ -913,11 +913,14 @@ func (d *decodeState) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //
 	keyIsInterfaceType := keyType == typeIntf // If key type is interface{}, need to check if key value is hashable.
 	var err, lastErr error
 	keyCount := v.Len()
-	existingKeys := make(map[interface{}]bool, keyCount) // Store existing map keys, used for detecting duplicate map key.
-	if d.dm.dupMapKey == DupMapKeyEnforcedAPF && keyCount > 0 {
-		vKeys := v.MapKeys()
-		for i := 0; i < len(vKeys); i++ {
-			existingKeys[vKeys[i].Interface()] = true
+	var existingKeys map[interface{}]bool // Store existing map keys, used for detecting duplicate map key.
+	if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
+		existingKeys = make(map[interface{}]bool, keyCount)
+		if keyCount > 0 {
+			vKeys := v.MapKeys()
+			for i := 0; i < len(vKeys); i++ {
+				existingKeys[vKeys[i].Interface()] = true
+			}
 		}
 	}
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
@@ -1078,8 +1081,11 @@ func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error {
 	hasSize := (ai != 31)
 	count := int(val)
 	var err, lastErr error
-	mapKeys := make(map[interface{}]struct{}, len(structType.fields))
 	keyCount := 0
+	var mapKeys map[interface{}]struct{} // Store map keys, used for detecting duplicate map key.
+	if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
+		mapKeys = make(map[interface{}]struct{}, len(structType.fields))
+	}
 	for j := 0; (hasSize && j < count) || (!hasSize && !d.foundBreak()); j++ {
 		var f *field
 		var k interface{} // Used by duplicate map key detection
