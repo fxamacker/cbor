@@ -2,8 +2,10 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
 /*
-Package cbor provides a fuzz-tested CBOR encoder and decoder with full support
-for float16, Canonical CBOR, CTAP2 Canonical CBOR, and custom settings.
+Package cbor is a fast & safe CBOR encoder & decoder (RFC 7049) with a
+standard API + toarray & keyasint struct tags, CBOR tags, float64->32->16,
+CTAP2 & Canonical CBOR, duplicate map key options, and is customizable via
+simple API.
 
 CBOR encoding options allow "preferred serialization" by encoding integers and floats
 to their smallest forms (like float16) when values fit.
