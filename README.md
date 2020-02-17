@@ -12,14 +12,12 @@
 
 __What is CBOR__?  [CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049)) is a binary data format inspired by JSON and MessagePack.  CBOR is used in [IETF](https://www.ietf.org) Internet Standards such as COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)) and CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)). WebAuthn also uses CBOR.
 
-This library is safe and fast. Here's how it compares to another library using test data from RFC 8392 A.1.  Benchmarks used Go 1.12, linux_amd64, and default options for each CBOR library.
+This library is safe and fast. Here's how it compares to another library using test data from RFC 8392 A.1.
 
 |                   | fxamacker/cbor 2.1          |ugorji/go 1.1.7                   |
 |-------------------|-----------------------------|----------------------------------|
 |Encode CWT claims  | 457 ns/op, 176 B/op, 2 allocs/op | 995 ns/op, 1424 B/op, 4 allocs/op
 |Decode CWT claims  | 796 ns/op, 176 B/op,	6 allocs/op | 1105 ns/op, 568 B/op, 6 allocs/op
-
-&nbsp;
 
 Speed is only one factor. There are more important factors.
 
@@ -28,7 +26,8 @@ Speed is only one factor. There are more important factors.
 |Malformed data #1  | 57.4 ns/op, 32 B/op, 1 allocs/op |⚠️ fatal error: out of memory
 |Malformed data #2  | 67.7 ns/op, 32 B/op, 1 allocs/op |⚠️ runtime: out of memory: cannot allocate
 
-&nbsp;
+Benchmarks used Go 1.12, linux_amd64, and default options for each CBOR library.
+
 
 __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: small, fast, safe and easy. It also has a standard API, CBOR tags (built-in and user-defined), 16/32/64-bit floats, and duplicate map key options.
 
@@ -47,9 +46,6 @@ __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: 
 * __Safe__ and reliable. It prevents crashes on malicious CBOR data by using extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's [`unsafe`](https://golang.org/pkg/unsafe/) pkg. Nested levels for CBOR arrays, maps, and tags are limited to 32.
 
 * __Easy__ and saves time. Simple (no param) functions return preset `EncOptions` so you don't have to know the differences between Canonical CBOR and CTAP2 Canonical CBOR to use those standards.
-
-Modifying EncOptions is also easy.  For example, EncOptions.Time can be set to:  
-`TimeUnix`, `TimeUnixMicro`, `TimeUnixDynamic`, `TimeRFC3339`, or `TimeRFC3339Nano`.
 
 Go struct tags for CBOR and JSON like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` are supported so you can leverage your existing code.  If both `cbor:` and `json:` tags exist then it will use `cbor:`.
 
