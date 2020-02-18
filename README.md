@@ -47,9 +47,11 @@ __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: 
 
 * __Easy__ and saves time. Simple (no param) functions return preset `EncOptions` so you don't have to know the differences between Canonical CBOR and CTAP2 Canonical CBOR to use those standards.
 
-Go struct tags for CBOR and JSON like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` are supported so you can leverage your existing code.  If both `cbor:` and `json:` tags exist then it will use `cbor:`.
+💡 Struct tags are a Go language feature.  CBOR tags relate to a CBOR data type (major type 6).
 
-Struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data such as COSE, CWT, and SenML easier to use. 
+Struct tags for CBOR and JSON like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` are supported so you can leverage your existing code.  If both `cbor:` and `json:` tags exist then it will use `cbor:`.
+
+New struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data such as COSE, CWT, and SenML easier to use. 
 
 <hr>
 
@@ -57,7 +59,7 @@ Struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data such as
 
 <hr>
 
-⚓  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
 
 ## Installation
 
@@ -84,8 +86,7 @@ Using Go modules is recommended but not required.
 * Go 1.12 (or newer).
 * amd64, arm64, ppc64le and s390x. Other architectures may also work but they are not tested as frequently. 
 
-If Go modules aren't used, delete or modify example_test.go  
-from `"github.com/fxamacker/cbor/v2"` to `"github.com/fxamacker/cbor"`
+If Go modules feature isn't used, please see [Installation](#installation) about deleting or modifying example_test.go.
 
 ## Quick Start
 🛡️ Use Go's `io.LimitReader` to limit size when decoding very large or indefinite size data.
@@ -119,7 +120,9 @@ EncMode and DecMode use immutable options so their behavior won't accidentally c
 
 __Creating and Using Encoding Modes__
 
-EncMode is an interface ([API](#api)) created from EncOptions struct.  EncMode uses immutable options after being created and is safe for concurrent use.  For best performance, EncMode should be reused.
+💡 Avoid using init().  For best performance, reuse EncMode and DecMode after creating them.
+
+Most apps will probably create one EncMode and DecMode before init().  However, there's no limit and each can use different options.
 
 ```
 // Create EncOptions using either struct literal or a function.
@@ -138,7 +141,19 @@ encoder := em.NewEncoder(w)
 err := encoder.Encode(v)
 ```
 
-__API for Predefined Encoding Options__
+__Creating Modes With CBOR Tags__
+
+A TagSet is used to specify CBOR tags.
+ 
+```
+em, err := opts.EncMode()                  // no tags
+em, err := opts.EncModeWithTags(ts)        // immutable tags
+em, err := opts.EncModeWithSharedTags(ts)  // mutable shared tags
+```
+
+TagSet and all modes using it are safe for concurrent use.  Equivalent API is available for DecMode.
+
+__Predefined Encoding Options__
 
 ```
 func CanonicalEncOptions() EncOptions     // settings for RFC 7049 Canonical CBOR
@@ -151,16 +166,13 @@ __Struct Tags (keyasint, toarray, omitempty)__
 
 The `keyasint`, `toarray`, and `omitempty` struct tags make it easy to use compact CBOR message formats.  Internet standards often use CBOR arrays and CBOR maps with int keys to save space.
 
-__CBOR Tags__
+__More Info About API, Options, and Usage__
 
-When using CBOR tags, a TagSet can be specified during mode creation:
+Options are listed in the Features section: [Encoding Options](#encoding-options) and [Decoding Options](#decoding-options)
 
-* `em, err := opts.EncModeWithTags(ts)`
-* `em, err := opts.EncModeWithSharedTags(ts)`
+For more details about each setting, see [Options](#options) section.
 
-And similar API is available for DecMode.
-
-See [API](#api), [Options](#options), and [Usage](#usage) sections for more details.
+For additional API and usage examples, see [API](#api) and [Usage](#usage) sections.
 
 ## Current Status
 Latest version is v2.x, which has:
@@ -193,7 +205,7 @@ __Roadmap__:
 
 <hr>
 
-⚓  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
 
 ## Design Goals 
 This library is designed to be a generic CBOR encoder and decoder.  It was initially created for a [WebAuthn (FIDO2) server library](https://github.com/fxamacker/webauthn), because existing CBOR libraries (in Go) didn't meet certain criteria in 2019.
@@ -316,7 +328,7 @@ See [milestones](https://github.com/fxamacker/cbor/milestones) for upcoming feat
 
 <hr>
 
-⚓  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
 
 ## Standards
 This library is a small, fast, safe, and full-featured generic CBOR [(RFC 7049)](https://tools.ietf.org/html/rfc7049) encoder and decoder.  Notable features include:
@@ -572,7 +584,7 @@ Conversions for infinity and NaN use InfConvert and NaNConvert settings.
 
 <hr>
 
-⚓  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
 
 ## Usage
 🛡️ Use Go's `io.LimitReader` to limit size when decoding very large or indefinite size data.
@@ -706,7 +718,7 @@ For more examples, see [examples_test.go](example_test.go).
 
 <hr>
 
-⚓  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
 
 ## Comparisons
 
@@ -834,4 +846,4 @@ fxamacker/cbor is licensed under the MIT License.  See [LICENSE](LICENSE) for th
 
 <hr>
 
-⚓  [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [Install](#installation) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
