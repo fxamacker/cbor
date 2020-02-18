@@ -28,6 +28,9 @@ Speed is only one factor. There are more important factors.
 
 Benchmarks used Go 1.12, linux_amd64, and default options for each CBOR library.
 
+<hr>
+
+⚓  [Installation](#installation) • [System Requirements](#system-requirements) • [Quick Start Guide](#quick-start)
 
 __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: small, fast, safe and easy. It also has a standard API, CBOR tags (built-in and user-defined), 16/32/64-bit floats, and duplicate map key options.
 
@@ -59,7 +62,7 @@ New struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data suc
 
 <hr>
 
-⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Quick Start](#quick-start) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
 
 ## Installation
 
@@ -174,6 +177,10 @@ For more details about each setting, see [Options](#options) section.
 
 For additional API and usage examples, see [API](#api) and [Usage](#usage) sections.
 
+<hr>
+
+⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+
 ## Current Status
 Latest version is v2.x, which has:
 
@@ -239,6 +246,10 @@ Avoiding `unsafe` package has benefits.  The `unsafe` package [warns](https://go
 All releases prioritize reliability to avoid crashes on decoding malformed CBOR data. See [Fuzzing and Coverage](#fuzzing-and-code-coverage).
 
 Features not in Go's standard library are usually not added.  However, the __`toarray`__ struct tag in __ugorji/go__ was too useful to ignore. It was added in v1.3 when a project mentioned they were using it with CBOR to save disk space.
+
+<hr>
+
+⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
 
 ## Features
 
@@ -324,8 +335,6 @@ See [Options](#options) section for details about each setting.
 * Both encoder and decoder support indefinite length CBOR data (["streaming"](https://tools.ietf.org/html/rfc7049#section-2.2)).
 * Both encoder and decoder correctly handles nil slice, map, pointer, and interface values.
 
-See [milestones](https://github.com/fxamacker/cbor/milestones) for upcoming features.
-
 <hr>
 
 ⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
@@ -377,6 +386,10 @@ APF suffix means "Allow Partial Fill" so the destination map or struct can conta
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  CBOR `Null` (0xf6) more closely matches Go's `nil`.
 * CBOR map keys with data types not supported by Go for map keys are ignored and an error is returned after continuing to decode remaining items.  
 * When using io.Reader interface to read very large or indefinite length CBOR data, Go's `io.LimitReader` should be used to limit size.
+
+<hr>
+
+⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
 
 ## API
 Many function signatures are identical to Go's encoding/json, such as:  
@@ -491,6 +504,10 @@ type RawTag struct {
 ```
 
 See [API docs (godoc.org)](https://godoc.org/github.com/fxamacker/cbor) for more details and more functions.  See [Usage section](#usage) for usage and code examples.
+
+<hr>
+
+⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
 
 ## Options
 
@@ -752,6 +769,10 @@ __This library uses less memory__ for encoding and decoding CBOR Web Token (CWT)
 
 Doing your own comparisons is highly recommended.  Use your most common message sizes and data types.
 
+<hr>
+
+⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+
 ## Benchmarks
 
 Go structs are faster than maps with string keys:
@@ -775,7 +796,7 @@ See [Benchmarks for fxamacker/cbor](CBOR_BENCHMARKS.md).
 
 ## Fuzzing and Code Coverage
 
-__Over 375 tests__ must pass on 4 architectures before tagging a release.  They include all RFC 7049 examples, bugs found by fuzzing, 2 maliciously crafted CBOR data, and over 87 tests with malformed data.
+__Over 375 tests__ must pass on 4 architectures before tagging a release.  They include all RFC 7049 examples, bugs found by fuzzing, maliciously crafted CBOR data, and over 87 tests with malformed data.
 
 __Code coverage__ must not fall below 95% when tagging a release.  Code coverage is 98.5% (`go test -cover`) for cbor v2.1 which is among the highest for libraries (in Go) of this type.
 
@@ -783,13 +804,17 @@ __Coverage-guided fuzzing__ must pass 250+ million execs before tagging a releas
 
 * 2 files related to WebAuthn (FIDO U2F key).
 * 3 files with custom struct.
-* 9 files with [CWT examples (RFC 8392 Appendix A)](https://tools.ietf.org/html/rfc8392#appendix-A)
+* 9 files with [CWT examples (RFC 8392 Appendix A)](https://tools.ietf.org/html/rfc8392#appendix-A).
 * 17 files with [COSE examples (RFC 8152 Appendix B & C)](https://github.com/cose-wg/Examples/tree/master/RFC8152).
 * 81 files with [CBOR examples (RFC 7049 Appendix A) ](https://tools.ietf.org/html/rfc7049#appendix-A). It excludes 1 errata first reported in [issue #46](https://github.com/fxamacker/cbor/issues/46).
 
 Over 1,100 files (corpus) are used for fuzzing because it includes fuzz-generated corpus.
 
 To prevent excessive delays, fuzzing is not restarted for a release if changes are limited to docs and comments.
+
+<hr>
+
+⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
 
 ## Versions and API Changes
 This project uses [Semantic Versioning](https://semver.org), so the API is always backwards compatible unless the major version number changes.  
