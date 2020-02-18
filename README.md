@@ -180,9 +180,9 @@ v2.1 is roughly 26% faster and uses 57% fewer allocs than v1.x when decoding COS
 __Recent Activity__:
 
 * Release v2.1 (Feb. 17, 2020) 
-   - [x] CBOR tags (major type 6) for encoding and decoding (pushed to master branch)
+   - [x] CBOR tags (major type 6) for encoding and decoding.
    - [x] Decoding options for duplicate map key detection: `DupMapKeyQuiet` (default) and `DupMapKeyEnforcedAPF`
-   - [x] Decoding optimizations (pushed to master branch). Structs using keyasint tag (like COSE and CWT) is  
+   - [x] Decoding optimizations. Structs using keyasint tag (like COSE and CWT) is  
    24-28% faster and 53-61% fewer allocs than both v1.5 and v2.0.1.
 
 __Roadmap__:
