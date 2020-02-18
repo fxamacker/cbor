@@ -14,7 +14,7 @@
 # 1. Change workflow name from "cover 100%" to "cover ≥92.5%". Script will automatically use 92.5%.  
 # 2. Update README.md to use the new path to badge.svg because the path includes the workflow name.
 
-name: cover ≥97%
+name: cover ≥98%
 on: [push]
 jobs:
 
