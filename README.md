@@ -14,17 +14,17 @@ __What is CBOR__?  [CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/htm
 
 This CBOR library is safe and fast. Here's how it compares to another library using test data from RFC 8392 A.1.
 
-|                   | fxamacker/cbor 2.1          |ugorji/go 1.1.7                   |
-|-------------------|-----------------------------|----------------------------------|
-|Encode CWT claims  | 457 ns/op, 176 B/op, 2 allocs/op | 995 ns/op, 1424 B/op, 4 allocs/op
-|Decode CWT claims  | 796 ns/op, 176 B/op,	6 allocs/op | 1105 ns/op, 568 B/op, 6 allocs/op
+|     | fxamacker/cbor 2.1 | ugorji/go 1.1.7 |
+| --- | ------------------ | --------------- |
+| Encode CWT claims | 457 ns/op, 176 B/op, 2 allocs/op | 995 ns/op, 1424 B/op, 4 allocs/op | 
+| Decode CWT claims | 796 ns/op, 176 B/op, 6 allocs/op | 1105 ns/op, 568 B/op, 6 allocs/op |
 
 Speed is only one factor. There are more important factors.
 
-|                   | fxamacker/cbor 2.1               |ugorji/go 1.1.7                   |
-|-------------------|----------------------------------|----------------------------------|
-|Malformed data #1  | 57.4 ns/op, 32 B/op, 1 allocs/op |⚠️ fatal error: out of memory
-|Malformed data #2  | 67.7 ns/op, 32 B/op, 1 allocs/op |⚠️ runtime: out of memory: cannot allocate
+|     | fxamacker/cbor 2.1 | ugorji/go 1.1.7 |
+| --- | ------------------ | --------------- |
+| Malformed data #1 | 57.4 ns/op, 32 B/op, 1 allocs/op | ⚠️ fatal error: out of memory |
+| Malformed data #2 | 67.7 ns/op, 32 B/op, 1 allocs/op | ⚠️ runtime: out of memory: cannot allocate |
 
 Benchmarks used Go 1.12, linux_amd64, and default options for each CBOR library.
 
@@ -307,23 +307,23 @@ Integers always encode to the shortest form that preserves value.  By default, t
 
 Encoding of other data types and map key sort order are determined by encoder options.
 
-|Encoding Option              |Available Settings (defaults in bold, aliases in italics)                              |
-|-----------------------------|---------------------------------------------------------------------------------------|
-|EncOptions.Sort |__`SortNone`__, `SortLengthFirst`, `SortBytewiseLexical`, _`SortCanonical`_, _`SortCTAP2`_, _`SortCoreDeterministic`_ |
-|EncOptions.Time |__`TimeUnix`__, `TimeUnixMicro`, `TimeUnixDynamic`, `TimeRFC3339`, `TimeRFC3339Nano` |
-|EncOptions.TimeTag |__`EncTagNone`__, `EncTagRequired` |
-|EncOptions.ShortestFloat |__`ShortestFloatNone`__, `ShortestFloat16` |
-|EncOptions.InfConvert |__`InfConvertFloat16`__, `InfConvertNone` |
-|EncOptions.NaNConvert |__`NaNConvert7e00`__, `NaNConvertNone`, `NaNConvertQuiet`, `NaNConvertPreserveSignal` |
+| Encoding Option | Available Settings (defaults in bold, aliases in italics) |
+| --------------- | --------------------------------------------------------- |
+| EncOptions.Sort | __`SortNone`__, `SortLengthFirst`, `SortBytewiseLexical`, _`SortCanonical`_, _`SortCTAP2`_, _`SortCoreDeterministic`_ |
+| EncOptions.Time | __`TimeUnix`__, `TimeUnixMicro`, `TimeUnixDynamic`, `TimeRFC3339`, `TimeRFC3339Nano` |
+| EncOptions.TimeTag | __`EncTagNone`__, `EncTagRequired` |
+| EncOptions.ShortestFloat | __`ShortestFloatNone`__, `ShortestFloat16` |
+| EncOptions.InfConvert | __`InfConvertFloat16`__, `InfConvertNone` |
+| EncOptions.NaNConvert | __`NaNConvert7e00`__, `NaNConvertNone`, `NaNConvertQuiet`, `NaNConvertPreserveSignal` |
 
 See [Options](#options) section for details about each setting.
 
 ### Decoding Options
 
-|Decoding Option              |Available Settings (defaults in bold, aliases in italics)                              |
-|-----------------------------|---------------------------------------------------------------------------------------|
-|DecOptions.TimeTag |__`DecTagIgnored`__, `DecTagOptional`, `DecTagRequired` |
-|DecOptions.DupMapKey |__`DupMapKeyQuiet`__, `DupMapKeyEnforcedAPF` |
+| Decoding Option | Available Settings (defaults in bold, aliases in italics) |
+| --------------- | --------------------------------------------------------- |
+| DecOptions.TimeTag | __`DecTagIgnored`__, `DecTagOptional`, `DecTagRequired` |
+| DecOptions.DupMapKey | __`DupMapKeyQuiet`__, `DupMapKeyEnforcedAPF` |
 
 See [Options](#options) section for details about each setting.
 
@@ -515,20 +515,20 @@ Options for the decoding and encoding are listed here.
 
 ### Decoding Options
 
-|DecOptions.TimeTag           |Description                                                                            |
-|-----------------------------|---------------------------------------------------------------------------------------|
-|DecTagIgnored (default)      |Tag numbers are ignored (if present) for time values.|
-|DecTagOptional               |Tag numbers are only checked for validity if present for time values.|
-|DecTagRequired               |Tag numbers must be provided for time values except for CBOR Null and CBOR Undefined.|
+| DecOptions.TimeTag | Description |
+| ------------------ | ----------- |
+| DecTagIgnored (default) | Tag numbers are ignored (if present) for time values. |
+| DecTagOptional | Tag numbers are only checked for validity if present for time values. |
+| DecTagRequired | Tag numbers must be provided for time values except for CBOR Null and CBOR Undefined. |
 
 CBOR Null and CBOR Undefined are silently treated as Go's zero time instant.  Go's `time` package provides `IsZero` function, which reports whether t represents the zero time instant, January 1, year 1, 00:00:00 UTC. 
 
 __Duplicate Map Key Options__
 
-|DecOptions.DupMapKey         |Description                                                                            |
-|-----------------------------|---------------------------------------------------------------------------------------|
-|DupMapKeyQuiet (default)     |turns off detection of duplicate map keys. It uses a "keep fastest" method by choosing either "keep first" or "keep last" depending on the Go data type.|
-|DupMapKeyEnforcedAPF         |enforces detection and rejection of duplidate map keys. Decoding stops immediately and returns `DupMapKeyError` when the first duplicate key is detected. The error includes the duplicate map key and the index number.|
+| DecOptions.DupMapKey | Description |
+| -------------------- | ----------- |
+| DupMapKeyQuiet (default) | turns off detection of duplicate map keys. It uses a "keep fastest" method by choosing either "keep first" or "keep last" depending on the Go data type. |
+| DupMapKeyEnforcedAPF | enforces detection and rejection of duplidate map keys. Decoding stops immediately and returns `DupMapKeyError` when the first duplicate key is detected. The error includes the duplicate map key and the index number. |
 
 `DupMapKeyEnforcedAPF` uses "Allow Partial Fill" so the destination map or struct can contain some decoded values at the time of error.  Users can respond to the `DupMapKeyError` by discarding the partially filled result if that's required by their protocol.
 
@@ -538,36 +538,36 @@ __Integers always encode to the shortest form that preserves value__.  Encoding 
 
 These functions are provided to create and return a modifiable EncOptions struct with predefined settings.
 
-|Predefined EncOptions        |Description                                                                            |
-|-----------------------------|---------------------------------------------------------------------------------------|
-|CanonicalEncOptions() |[Canonical CBOR (RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9).|
-|CTAP2EncOptions() |[CTAP2 Canonical CBOR (FIDO2 CTAP2)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).|
-|PreferredUnsortedEncOptions() |Unsorted, encode float64->float32->float16 when values fit, NaN values encoded as float16 0x7e00.|
-|CoreDetEncOptions() |PreferredUnsortedEncOptions() + map keys are sorted bytewise lexicographic.|
+| Predefined EncOptions | Description |
+| --------------------- | ----------- |
+| CanonicalEncOptions() |[Canonical CBOR (RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9). |
+| CTAP2EncOptions() |[CTAP2 Canonical CBOR (FIDO2 CTAP2)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form). |
+| PreferredUnsortedEncOptions() |Unsorted, encode float64->float32->float16 when values fit, NaN values encoded as float16 0x7e00. |
+| CoreDetEncOptions() |PreferredUnsortedEncOptions() + map keys are sorted bytewise lexicographic. |
 
 🌱 CoreDetEncOptions() and PreferredUnsortedEncOptions() are subject to change until the draft RFC they used is approved by IETF.
 
-|EncOptions.Sort              |Description                                                                            |
-|-----------------------------|---------------------------------------------------------------------------------------|
-|SortNone (default) |No sorting for map keys.|
-|SortLengthFirst |Length-first map key ordering.|
-|SortBytewiseLexical |Bytewise lexicographic map key ordering|
-|SortCanonical |(alias) Same as SortLengthFirst [(RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9)|
-|SortCTAP2 |(alias) Same as SortBytewiseLexical [(CTAP2 Canonical CBOR)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form).|
-|SortCoreDeterministic |(alias) Same as SortBytewiseLexical.|
+| EncOptions.Sort | Description |
+| --------------- | ----------- |
+| SortNone (default) |No sorting for map keys. |
+| SortLengthFirst |Length-first map key ordering. |
+| SortBytewiseLexical |Bytewise lexicographic map key ordering |
+| SortCanonical |(alias) Same as SortLengthFirst [(RFC 7049 Section 3.9)](https://tools.ietf.org/html/rfc7049#section-3.9) |
+| SortCTAP2 |(alias) Same as SortBytewiseLexical [(CTAP2 Canonical CBOR)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form). |
+| SortCoreDeterministic |(alias) Same as SortBytewiseLexical. |
 
-|EncOptions.Time              |Description                                                                            |
-|-----------------------------|---------------------------------------------------------------------------------------|
-|TimeUnix (default) |(seconds) Encode as integer.|
-|TimeUnixMicro |(microseconds) Encode as floating-point.  ShortestFloat option determines size.|
-|TimeUnixDynamic |(seconds or microseconds) Encode as integer if time doesn't have fractional seconds, otherwise encode as floating-point rounded to microseconds.|
-|TimeRFC3339 |(seconds) Encode as RFC 3339 formatted string.|
-|TimeRFC3339Nano |(nanoseconds) Encode as RFC3339 formatted string.|
+| EncOptions.Time | Description |
+| --------------- | ----------- |
+| TimeUnix (default) | (seconds) Encode as integer. |
+| TimeUnixMicro | (microseconds) Encode as floating-point.  ShortestFloat option determines size. |
+| TimeUnixDynamic | (seconds or microseconds) Encode as integer if time doesn't have fractional seconds, otherwise encode as floating-point rounded to microseconds. |
+| TimeRFC3339 | (seconds) Encode as RFC 3339 formatted string. |
+| TimeRFC3339Nano | (nanoseconds) Encode as RFC3339 formatted string. |
 
-|EncOptions.TimeTag           |Description                                                                            |
-|-----------------------------|---------------------------------------------------------------------------------------|
-|EncTagNone (default)         |Tag number will not be encoded for time values.|
-|EncTagRequired               |Tag number (0 or 1) will be encoded unless time value is undefined/zero-instant.|
+| EncOptions.TimeTag | Description |
+| ------------------ | ----------- |
+| EncTagNone (default) | Tag number will not be encoded for time values. |
+| EncTagRequired | Tag number (0 or 1) will be encoded unless time value is undefined/zero-instant. |
 
 __Undefined Time Values__
 
@@ -579,25 +579,25 @@ __Floating-Point Options__
 
 Encoder has 3 types of options for floating-point data: ShortestFloatMode, InfConvertMode, and NaNConvertMode.
 
-|EncOptions.ShortestFloat     |Description                                                                            |
-|-----------------------------|---------------------------------------------------------------------------------------|
-|ShortestFloatNone (default) |No size conversion. Encode float32 and float64 to CBOR floating-point of same bit-size.|
-|ShortestFloat16 |Encode float64 -> float32 -> float16 ([IEEE 754 binary16](https://en.wikipedia.org/wiki/Half-precision_floating-point_format)) when values fit.|
+| EncOptions.ShortestFloat | Description |
+| ------------------------ | ----------- |
+| ShortestFloatNone (default) | No size conversion. Encode float32 and float64 to CBOR floating-point of same bit-size. |
+| ShortestFloat16 | Encode float64 -> float32 -> float16 ([IEEE 754 binary16](https://en.wikipedia.org/wiki/Half-precision_floating-point_format)) when values fit. |
 
 Conversions for infinity and NaN use InfConvert and NaNConvert settings.
 
-|EncOptions.InfConvert        |Description                                                                            |
-|-----------------------------|---------------------------------------------------------------------------------------|
-|InfConvertFloat16 (default) |Convert +- infinity to float16 since they always preserve value (recommended)|
-|InfConvertNone |Don't convert +- infinity to other representations -- used by CTAP2 Canonical CBOR|
+| EncOptions.InfConvert | Description |
+| --------------------- | ----------- |
+| InfConvertFloat16 (default) | Convert +- infinity to float16 since they always preserve value (recommended) |
+| InfConvertNone |Don't convert +- infinity to other representations -- used by CTAP2 Canonical CBOR |
 
 
-|EncOptions.NaNConvert        |Description                                                                            |
-|-----------------------------|---------------------------------------------------------------------------------------|
-|NaNConvert7e00 (default) |Encode to 0xf97e00 (CBOR float16 = 0x7e00) -- used by RFC 7049 Canonical CBOR.|
-|NaNConvertNone |Don't convert NaN to other representations -- used by CTAP2 Canonical CBOR.|
-|NaNConvertQuiet |Force quiet bit = 1 and use shortest form that preserves NaN payload.|
-|NaNConvertPreserveSignal |Convert to smallest form that preserves value (quit bit unmodified and NaN payload preserved).|
+| EncOptions.NaNConvert | Description |
+| --------------------- | ----------- |
+| NaNConvert7e00 (default) | Encode to 0xf97e00 (CBOR float16 = 0x7e00) -- used by RFC 7049 Canonical CBOR. |
+| NaNConvertNone | Don't convert NaN to other representations -- used by CTAP2 Canonical CBOR. |
+| NaNConvertQuiet | Force quiet bit = 1 and use shortest form that preserves NaN payload. |
+| NaNConvertPreserveSignal | Convert to smallest form that preserves value (quit bit unmodified and NaN payload preserved). |
 
 <hr>
 
@@ -743,10 +743,10 @@ Comparisons are between this newer library and a well-known library that had 1,0
 
 __This library is safer__.  Small malicious CBOR messages are rejected quickly before they exhaust system resources.
 
-|                   | fxamacker/cbor 2.1.0             |ugorji/go 1.1.7                   |
-|-------------------|----------------------------------|----------------------------------|
-|Malformed data #1  | 57.4 ns/op, 32 B/op, 1 allocs/op |⚠️ fatal error: out of memory
-|Malformed data #2  | 67.7 ns/op, 32 B/op, 1 allocs/op |⚠️ runtime: out of memory: cannot allocate
+|     | fxamacker/cbor 2.1.0 | ugorji/go 1.1.7 |
+| --- | -------------------- | --------------- |
+| Malformed data #1  | 57.4 ns/op, 32 B/op, 1 allocs/op | ⚠️ fatal error: out of memory |
+| Malformed data #2  | 67.7 ns/op, 32 B/op, 1 allocs/op | ⚠️ runtime: out of memory: cannot allocate |
 
 &nbsp;
 
@@ -762,10 +762,10 @@ The resource intensive `codec.CborHandle` initialization (in the other library) 
 
 __This library uses less memory__ for encoding and decoding CBOR Web Token (CWT) using test data from RFC 8392 A.1.
 
-|                    | fxamacker/cbor 2.1.0          |ugorji/go 1.1.7                   |
-|--------------------|-------------------------------|----------------------------------|
-|__Encode CWT claims__| 176 B/op, 2 allocs/op | 1424 B/op, 4 allocs/op
-|__Decode CWT claims__| 176 B/op, 6 allocs/op | 568 B/op, 6 allocs/op
+|     | fxamacker/cbor 2.1.0 | ugorji/go 1.1.7 |
+| --- | -------------------- | --------------- |
+| Encode CWT claims | 176 B/op, 2 allocs/op | 1424 B/op, 4 allocs/op |
+| Decode CWT claims | 176 B/op, 6 allocs/op | 568 B/op, 6 allocs/op |
 
 Doing your own comparisons is highly recommended.  Use your most common message sizes and data types.
 
