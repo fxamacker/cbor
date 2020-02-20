@@ -1462,6 +1462,21 @@ func fillByteString(t cborType, val []byte, v reflect.Value) error {
 		v.SetBytes(val)
 		return nil
 	}
+	if v.Kind() == reflect.Array && v.Type().Elem().Kind() == reflect.Uint8 {
+		vLen := v.Len()
+		i := 0
+		for ; i < vLen && i < len(val); i++ {
+			v.Index(i).SetUint(uint64(val[i]))
+		}
+		// Set remaining Go array elements to zero values.
+		if i < vLen {
+			zeroV := reflect.Zero(reflect.TypeOf(byte(0)))
+			for ; i < vLen; i++ {
+				v.Index(i).Set(zeroV)
+			}
+		}
+		return nil
+	}
 	return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
 }
 
