@@ -188,7 +188,7 @@ Latest version is v2.x, which has:
   * CoreDetEncOptions() is subject to change because it uses draft standard.
   * PreferredUnsortedEncOptions() is subject to change because it uses draft standard.
 * __Passed all tests__ – v2.x passed all 375+ tests on amd64, arm64, ppc64le and s390x with linux.
-* __Passed fuzzing__ – v2.1 passed 361+ million execs in coverage-guided fuzzing on Feb 17, 2020.
+* __Passed fuzzing__ – v2.1 passed 361+ million execs in coverage-guided fuzzing on Feb 17, 2020 (release date) and passed 2+ billion execs several days later.
 
 __Why v2.x?__:
 
@@ -208,7 +208,7 @@ __Roadmap__:
 
 * Milestone v2.2
    - [ ] CBOR BSTR <--> Go byte array. In the meantime, use CBOR BSTR with Go byte slice.   
-   - [ ] If time allows, add more CBOR tags as default or optional built-in tags.
+   - [ ] Replace some hardcoded limits with options (within allowed ranges) for encoding and decoding (e.g. max nested levels).
 
 <hr>
 
@@ -223,13 +223,36 @@ This library is designed to be:
 * __Small__ – Programs in cisco/senml are 4 MB smaller by switching to this library. In extreme cases programs can be smaller by 9+ MB. No code gen and the only imported pkg is x448/float16 which is maintained by the same team.
 * __Safe and reliable__ – No `unsafe` pkg, coverage >95%, coverage-guided fuzzing, and data validation to avoid crashes on malformed or malicious data.
 
+Avoiding `unsafe` package has benefits.  The `unsafe` package [warns](https://golang.org/pkg/unsafe/):
+
+> Packages that import unsafe may be non-portable and are not protected by the Go 1 compatibility guidelines.
+
+All releases prioritize reliability to avoid crashes on decoding malformed CBOR data. See [Fuzzing and Coverage](#fuzzing-and-code-coverage).
+
 Competing factors are balanced:
 
-* __Speed__ vs __safety__ vs __size__ – to keep size small, avoid code generation. For safety, validate data and avoid Go's `unsafe` pkg.  For speed, use safe optimizations such as caching struct metadata. v1.4 is faster than a well-known library that uses `unsafe` and code gen.
-* __Standards compliance__ – CBOR ([RFC 7049](https://tools.ietf.org/html/rfc7049)) with minor [limitations](#limitations).
-  * Encoder supports options for sorting, floating-point conversions, and more.  Predefined options are also available so you can use "CTAP2 Canonical CBOR", etc. without knowing individual settings.  
-  * Decoder checks for well-formedness, validates data, and limits nested levels to defend against attacks. Decoder has options to handle duplicate map keys.  
-  * Both encoder and decoder supports CBOR tags (built-in and user-defined), and more. See [Standards](#standards).
+* __Speed__ vs __safety__ vs __size__ – to keep size small, avoid code generation. For safety, validate data and avoid Go's `unsafe` pkg.  For speed, use safe optimizations such as caching struct metadata. This library is faster than a well-known library that uses `unsafe` and code gen.
+* __Standards compliance__ vs __size__ – Supports CBOR RFC 7049 with minor [limitations](#limitations). To limit bloat, CBOR tags are supported but not all tags are built-in. The API allows users to add tags that aren't built-in.  The API also allows custom encoding and decoding of user-defined Go types.
+
+__Click to expand topic:__
+
+<details>
+ <summary>Supported CBOR Features (Highlights)</summary><p>
+
+|     | CBOR&nbsp;Feature&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Description |
+| --- | :--- | :--- |
+| ✔️ | CBOR tags | API supports built-in and user-defined tags. |
+| ✔️ | Preferred serialization | Ints encode to fewest bytes. Optional float64→float32→float16 if value fits. |
+| ✔️ | Duplicate map keys | Always forbid for encoding, option to allow/forbid for for decoding. |
+| ✔️ | Indefinite length data | Option to allow/forbid for encoding and decoding. |
+| ✔️ | Well-formedness checks | Always checked and enforced. |
+| ✔️ | Basic validity checks | UTF-8 validity, etc. checked after well-formedness. |
+| ✔️ | Security checks | Prevents integer overflow and resource exhaustion described in RFC7049&nbsp;Section&nbsp;8&nbsp;Security&nbsp;Considerations. |
+
+</details>
+
+<details>
+ <summary>v2.0 API Design</summary><p>
 
 v2.0 decoupled options from CBOR encoding & decoding functions:
 
@@ -239,11 +262,7 @@ v2.0 decoupled options from CBOR encoding & decoding functions:
 * Features like CBOR tags can be added without more breaking API changes.
 * Options to handle duplicate map keys can be added without more breaking API changes.
 
-Avoiding `unsafe` package has benefits.  The `unsafe` package [warns](https://golang.org/pkg/unsafe/):
-
-> Packages that import unsafe may be non-portable and are not protected by the Go 1 compatibility guidelines.
-
-All releases prioritize reliability to avoid crashes on decoding malformed CBOR data. See [Fuzzing and Coverage](#fuzzing-and-code-coverage).
+</details>
 
 Features not in Go's standard library are usually not added.  However, the __`toarray`__ struct tag in __ugorji/go__ was too useful to ignore. It was added in v1.3 when a project mentioned they were using it with CBOR to save disk space.
 
@@ -340,21 +359,19 @@ See [Options](#options) section for details about each setting.
 ⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
 
 ## Standards
-This library is a small, fast, safe, and full-featured generic CBOR [(RFC 7049)](https://tools.ietf.org/html/rfc7049) encoder and decoder.  Notable features include:
+This library is a full-featured generic CBOR [(RFC 7049)](https://tools.ietf.org/html/rfc7049) encoder and decoder.  Notable CBOR features include:
 
-* CBOR tags (API supports built-in and user-defined) for both encoder and decoder
-* Definite and indefinite length data for both encoder and decoder
-* Encoder option for preferred serialization, including IEEE 754 binary16
-* Encoder option for sorting map keys: length-first (Canonical CBOR) and bytewise-lexical (CTAP2 & 7049bis)
-* Encoder options for floating-point shortest form, NaN, and Infinity
-* Decoder option to detect and reject duplicate map keys
-* Decoder checks for well-formedness and validates data
-* Decoder doesn't crash and avoids resource exhaustion from malformed/malicious CBOR data
+|     | CBOR&nbsp;Feature&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Description |
+| --- | :--- | :--- |
+| ✔️ | CBOR tags | API supports built-in and user-defined tags. |
+| ✔️ | Preferred serialization | Integers encode to smallest form. Optional float64→float32→float16. |
+| ✔️ | Duplicate map keys | Always forbid for encoding, option to allow/forbid for for decoding. |
+| ✔️ | Indefinite length data | Option to allow/forbid for encoding and decoding. |
+| ✔️ | Well-formedness checks | Always checked and enforced. |
+| ✔️ | Basic validity checks | UTF-8 validity, etc. checked after well-formedness. |
+| ✔️ | Security checks | Prevents integer overflow and resource exhaustion described in RFC 7049 Section 8 Security Considerations. |
 
 Known limitations are noted in the [Limitations section](#limitations). 
-
-Integers always encode to the shortest form that preserves value. Floats can optionally encode to shortest form:  
-float64 -> float32 -> float16 when values can be preserved.
 
 Go nil values for slices, maps, pointers, etc. are encoded as CBOR null.  Empty slices, maps, etc. are encoded as empty CBOR arrays and maps.
 
@@ -369,7 +386,10 @@ When decoding well-formed CBOR arrays and maps, decoder saves the first error it
 
 See [Options](#options) section for detailed settings or [Features](#features) section for a summary of options.
 
-__Duplicate Map Key Options__
+__Click to expand topic:__
+
+<details>
+ <summary>Duplicate Map Keys</summary><p>
 
 This library provides options for fast detection and rejection of duplicate map keys based on applying a Go-specific data model to CBOR's extended generic data model in order to determine duplicate vs distinct map keys. Detection relies on whether the CBOR map key would be a duplicate "key" when decoded and applied to the user-provided Go map or struct. 
 
@@ -377,7 +397,9 @@ This library provides options for fast detection and rejection of duplicate map 
 
 `DupMapKeyEnforcedAPF` enforces detection and rejection of duplidate map keys. Decoding stops immediately and returns `DupMapKeyError` when the first duplicate key is detected. The error includes the duplicate map key and the index number. 
 
-APF suffix means "Allow Partial Fill" so the destination map or struct can contain some decoded values at the time of error. It is the caller's responsibility to respond to the `DupMapKeyError` by discarding the partially filled result if that's required by their protocol. 
+APF suffix means "Allow Partial Fill" so the destination map or struct can contain some decoded values at the time of error. It is the caller's responsibility to respond to the `DupMapKeyError` by discarding the partially filled result if that's required by their protocol.
+
+</details>
 
 ## Limitations
 
