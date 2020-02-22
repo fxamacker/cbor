@@ -74,7 +74,7 @@ Using Go modules is recommended.
 $ GO111MODULE=on go get github.com/fxamacker/cbor/v2
 ```
 
-```
+```go
 import (
 	"github.com/fxamacker/cbor/v2" // imports as package "cbor"
 )
@@ -100,14 +100,15 @@ Functions with identical signatures to encoding/json include:
 __Default Mode__  
 
 If default options are acceptable, package level functions can be used for encoding and decoding.
-```
-b, err := cbor.Marshal(v)
 
-err := cbor.Unmarshal(b, &v)
+```go
+b, err := cbor.Marshal(v)        // encode v to []byte b
 
-encoder := cbor.NewEncoder(w)
+err := cbor.Unmarshal(b, &v)     // decode []byte b to v
 
-decoder := cbor.NewDecoder(r)
+encoder := cbor.NewEncoder(w)    // create encoder with io.Writer w
+
+decoder := cbor.NewDecoder(r)    // create decoder with io.Reader r
 ```
 
 __Modes__
@@ -127,28 +128,27 @@ __Creating and Using Encoding Modes__
 
 Most apps will probably create one EncMode and DecMode before init().  However, there's no limit and each can use different options.
 
-```
+```go
 // Create EncOptions using either struct literal or a function.
 opts := cbor.CanonicalEncOptions()
 
-// If needed, modify encoding options
-opts.Time = cbor.TimeUnix
+// If needed, modify opts. For example: opts.Time = cbor.TimeUnix
 
 // Create reusable EncMode interface with immutable options, safe for concurrent use.
 em, err := opts.EncMode()   
 
 // Use EncMode like encoding/json, with same function signatures.
-b, err := em.Marshal(v)
-// or
-encoder := em.NewEncoder(w)
-err := encoder.Encode(v)
+b, err := em.Marshal(v)      // encode v to []byte b
+
+encoder := em.NewEncoder(w)  // create encoder with io.Writer w
+err := encoder.Encode(v)     // encode v to io.Writer w
 ```
 
 __Creating Modes With CBOR Tags__
 
 A TagSet is used to specify CBOR tags.
  
-```
+```go
 em, err := opts.EncMode()                  // no tags
 em, err := opts.EncModeWithTags(ts)        // immutable tags
 em, err := opts.EncModeWithSharedTags(ts)  // mutable shared tags
@@ -158,12 +158,14 @@ TagSet and all modes using it are safe for concurrent use.  Equivalent API is av
 
 __Predefined Encoding Options__
 
+```go
+func CanonicalEncOptions() EncOptions {}            // settings for RFC 7049 Canonical CBOR
+func CTAP2EncOptions() EncOptions {}                // settings for FIDO2 CTAP2 Canonical CBOR
+func CoreDetEncOptions() EncOptions {}              // settings from a draft RFC (subject to change)
+func PreferredUnsortedEncOptions() EncOptions {}    // settings from a draft RFC (subject to change)
 ```
-func CanonicalEncOptions() EncOptions     // settings for RFC 7049 Canonical CBOR
-func CTAP2EncOptions() EncOptions         // settings for FIDO2 CTAP2 Canonical CBOR
-func CoreDetEncOptions() EncOptions       // modern settings from a draft RFC (subject to change)
-func PreferredUnsortedEncOptions() EncOptions  // modern settings from a draft RFC (subject to change)
-```
+
+The empty curly braces prevent a syntax highlighting bug on GitHub, please ignore them.
 
 __Struct Tags (keyasint, toarray, omitempty)__
 
@@ -432,7 +434,8 @@ EncMode and DecMode use immutable options so their behavior won't accidentally c
 __API for Default Mode__
 
 If default options are acceptable, then you don't need to create EncMode or DecMode.
-```
+
+```go
 Marshal(v interface{}) ([]byte, error)
 NewEncoder(w io.Writer) *Encoder
 
@@ -441,7 +444,8 @@ NewDecoder(r io.Reader) *Decoder
 ```
 
 __API for Creating & Using Encoding Modes__
-```
+
+```go
 // EncMode interface uses immutable options and is safe for concurrent use.
 type EncMode interface {
 	Marshal(v interface{}) ([]byte, error)
@@ -455,25 +459,29 @@ type EncOptions struct {
 }
 
 // EncMode returns an EncMode interface created from EncOptions.
-func (opts EncOptions) EncMode() (EncMode, error) 
+func (opts EncOptions) EncMode() (EncMode, error) {}
 
 // EncModeWithTags returns EncMode with options and tags that are both immutable. 
-func (opts EncOptions) EncModeWithTags(tags TagSet) (EncMode, error)
+func (opts EncOptions) EncModeWithTags(tags TagSet) (EncMode, error) {}
 
 // EncModeWithSharedTags returns EncMode with immutable options and mutable shared tags. 
-func (opts EncOptions) EncModeWithSharedTags(tags TagSet) (EncMode, error)
+func (opts EncOptions) EncModeWithSharedTags(tags TagSet) (EncMode, error) {}
 ```
 
+The empty curly braces prevent a syntax highlighting bug, please ignore them.
+
 __API for Predefined Encoding Options__
-```
-func CanonicalEncOptions() EncOptions     // settings for RFC 7049 Canonical CBOR
-func CTAP2EncOptions() EncOptions         // settings for FIDO2 CTAP2 Canonical CBOR
-func CoreDetEncOptions() EncOptions       // modern settings from a draft RFC (subject to change)
-func PreferredUnsortedEncOptions() EncOptions  // modern settings from a draft RFC (subject to change)
+
+```go
+func CanonicalEncOptions() EncOptions {}            // settings for RFC 7049 Canonical CBOR
+func CTAP2EncOptions() EncOptions {}                // settings for FIDO2 CTAP2 Canonical CBOR
+func CoreDetEncOptions() EncOptions {}              // settings from a draft RFC (subject to change)
+func PreferredUnsortedEncOptions() EncOptions {}    // settings from a draft RFC (subject to change)
 ```
 
 __API for Creating & Using Decoding Modes__
-```
+
+```go
 // DecMode interface uses immutable options and is safe for concurrent use.
 type DecMode interface {
 	Unmarshal(data []byte, v interface{}) error
@@ -487,14 +495,16 @@ type DecOptions struct {
 }
 
 // DecMode returns a DecMode interface created from DecOptions.
-func (opts DecOptions) DecMode() (DecMode, error)
+func (opts DecOptions) DecMode() (DecMode, error) {}
 
 // DecModeWithTags returns DecMode with options and tags that are both immutable. 
-func (opts DecOptions) DecModeWithTags(tags TagSet) (DecMode, error)
+func (opts DecOptions) DecModeWithTags(tags TagSet) (DecMode, error) {}
 
 // DecModeWithSharedTags returns DecMode with immutable options and mutable shared tags. 
-func (opts DecOptions) DecModeWithSharedTags(tags TagSet) (DecMode, error)
+func (opts DecOptions) DecModeWithSharedTags(tags TagSet) (DecMode, error) {}
 ```
+
+The empty curly braces prevent a syntax highlighting bug, please ignore them.
 
 __API for Using CBOR Tags__
 
@@ -502,7 +512,7 @@ __API for Using CBOR Tags__
 
 `Tag` and `RawTag` can be used to encode/decode a tag number with a Go value, but `TagSet` is generally recommended.
 
-```
+```go
 type TagSet interface {
     // Add adds given tag number(s), content type, and tag options to TagSet.
     Add(opts TagOptions, contentType reflect.Type, num uint64, nestedNum ...uint64) error
@@ -513,7 +523,8 @@ type TagSet interface {
 ```
 
 `Tag` and `RawTag` types can also be used to encode/decode tag number with Go value.
-```
+
+```go
 type Tag struct {
     Number  uint64
     Content interface{}
@@ -634,14 +645,15 @@ Functions with identical signatures to encoding/json include:
 __Default Mode__  
 
 If default options are acceptable, package level functions can be used for encoding and decoding.
-```
-b, err := cbor.Marshal(v)
 
-err := cbor.Unmarshal(b, &v)
+```go
+b, err := cbor.Marshal(v)        // encode v to []byte b
 
-encoder := cbor.NewEncoder(w)
+err := cbor.Unmarshal(b, &v)     // decode []byte b to v
 
-decoder := cbor.NewDecoder(r)
+encoder := cbor.NewEncoder(w)    // create encoder with io.Writer w
+
+decoder := cbor.NewDecoder(r)    // create decoder with io.Reader r
 ```
 
 __Modes__
@@ -659,21 +671,20 @@ __Creating and Using Encoding Modes__
 
 EncMode is an interface ([API](#api)) created from EncOptions struct.  EncMode uses immutable options after being created and is safe for concurrent use.  For best performance, EncMode should be reused.
 
-```
+```go
 // Create EncOptions using either struct literal or a function.
 opts := cbor.CanonicalEncOptions()
 
-// If needed, modify encoding options
-opts.Time = cbor.TimeUnix
+// If needed, modify opts. For example: opts.Time = cbor.TimeUnix
 
 // Create reusable EncMode interface with immutable options, safe for concurrent use.
 em, err := opts.EncMode()   
 
 // Use EncMode like encoding/json, with same function signatures.
-b, err := em.Marshal(v)
-// or
-encoder := em.NewEncoder(w)
-err := encoder.Encode(v)
+b, err := em.Marshal(v)      // encode v to []byte b
+
+encoder := em.NewEncoder(w)  // create encoder with io.Writer w
+err := encoder.Encode(v)     // encode v to io.Writer w
 ```
 
 __Struct Tags (keyasint, toarray, omitempty)__
@@ -687,7 +698,8 @@ The `keyasint`, `toarray`, and `omitempty` struct tags make it easy to use compa
 <hr>
 
 __Decoding CWT (CBOR Web Token)__ using `keyasint` and `toarray` struct tags:
-```
+
+```go
 // Signed CWT is defined in RFC 8392
 type signedCWT struct {
 	_           struct{} `cbor:",toarray"`
@@ -713,7 +725,8 @@ if err := cbor.Unmarshal(data, &v); err != nil {
 ```
 
 __Encoding CWT (CBOR Web Token)__ using `keyasint` and `toarray` struct tags:
-```
+
+```go
 // Use signedCWT struct defined in "Decoding CWT" example.
 
 var v signedCWT
@@ -724,7 +737,8 @@ if data, err := cbor.Marshal(v); err != nil {
 ```
 
 __Encoding and Decoding CWT (CBOR Web Token) with CBOR Tags__
-```
+
+```go
 // Use signedCWT struct defined in "Decoding CWT" example.
 
 // Create TagSet (safe for concurrency).
