@@ -184,6 +184,10 @@ type DecOptions struct {
 	// TimeTag specifies whether to check validity of time.Time (e.g. valid tag number and tag content type).
 	// For now, valid tag number means 0 or 1 as specified in RFC 7049 if the Go type is time.Time.
 	TimeTag DecTagMode
+
+	// MaxNestedLevel specifies the max nested levels allowed for any combination of CBOR array, maps, and tags.
+	// Default is 32 levels and users can specify [4, 256].
+	MaxNestedLevel int
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -240,7 +244,12 @@ func (opts DecOptions) decMode() (*decMode, error) {
 	if !opts.TimeTag.valid() {
 		return nil, errors.New("cbor: invalid TimeTag " + strconv.Itoa(int(opts.TimeTag)))
 	}
-	dm := decMode{dupMapKey: opts.DupMapKey, timeTag: opts.TimeTag}
+	if opts.MaxNestedLevel == 0 {
+		opts.MaxNestedLevel = 32
+	} else if opts.MaxNestedLevel < 4 || opts.MaxNestedLevel > 256 {
+		return nil, errors.New("cbor: invalid MaxNestedLevel " + strconv.Itoa(opts.MaxNestedLevel) + " (range is [4, 256])")
+	}
+	dm := decMode{dupMapKey: opts.DupMapKey, timeTag: opts.TimeTag, maxNestedLevel: opts.MaxNestedLevel}
 	return &dm, nil
 }
 
@@ -252,16 +261,17 @@ type DecMode interface {
 }
 
 type decMode struct {
-	tags      tagProvider
-	dupMapKey DupMapKeyMode
-	timeTag   DecTagMode
+	tags           tagProvider
+	dupMapKey      DupMapKeyMode
+	timeTag        DecTagMode
+	maxNestedLevel int
 }
 
-var defaultDecMode = &decMode{}
+var defaultDecMode, _ = DecOptions{}.decMode()
 
 // DecOptions returns user specified options used to create this DecMode.
 func (dm *decMode) DecOptions() DecOptions {
-	return DecOptions{DupMapKey: dm.dupMapKey, TimeTag: dm.timeTag}
+	return DecOptions{DupMapKey: dm.dupMapKey, TimeTag: dm.timeTag, MaxNestedLevel: dm.maxNestedLevel}
 }
 
 // Unmarshal parses the CBOR-encoded data and stores the result in the value
@@ -291,7 +301,10 @@ func (d *decodeState) value(v interface{}) error {
 		return &InvalidUnmarshalError{reflect.TypeOf(v)}
 	}
 
-	if _, err := valid(d.data[d.off:]); err != nil {
+	off := d.off // Save offset before data validation
+	err := d.valid()
+	d.off = off // Restore offset
+	if err != nil {
 		return err
 	}
 

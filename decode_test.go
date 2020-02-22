@@ -1171,6 +1171,7 @@ var invalidCBORUnmarshalTests = []struct {
 	{"Tag number not followed by tag content", []byte{0xc0}, "unexpected EOF", false},
 	{"Definite length strings with tagged chunk", hexDecode("5fc64401020304ff"), "cbor: wrong element type tag for indefinite-length byte string", false},
 	{"Definite length strings with tagged chunk", hexDecode("7fc06161ff"), "cbor: wrong element type tag for indefinite-length UTF-8 text string", false},
+	{"Indefinite length strings with invalid head", hexDecode("7f61"), "unexpected EOF", false},
 	{"Invalid nested tag number", hexDecode("d864dc1a514b67b0"), "cbor: invalid additional information", true},
 	// Data from 7049bis G.1
 	// Premature end of the input
@@ -1547,23 +1548,6 @@ func TestUnmarshalPrefilledStruct(t *testing.T) {
 	}
 	if !reflect.DeepEqual(prefilledStruct.B[:cap(prefilledStruct.B)], []int{2, 3, 400, 500}) {
 		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, prefilledStruct.B, prefilledStruct.B, []int{2, 3, 400, 500}, []int{2, 3, 400, 500})
-	}
-}
-
-func TestValid(t *testing.T) {
-	var buf bytes.Buffer
-	for _, t := range marshalTests {
-		buf.Write(t.cborData)
-	}
-	cborData := buf.Bytes()
-	var err error
-	for i := 0; i < len(marshalTests); i++ {
-		if cborData, err = valid(cborData); err != nil {
-			t.Errorf("Valid() returned error %v", err)
-		}
-	}
-	if len(cborData) != 0 {
-		t.Errorf("Valid() returned leftover data 0x%x, want none", cborData)
 	}
 }
 
@@ -2861,7 +2845,7 @@ func TestUnmarshalToNotNilInterface(t *testing.T) {
 }
 
 func TestDecOptions(t *testing.T) {
-	opts1 := DecOptions{TimeTag: DecTagRequired, DupMapKey: DupMapKeyEnforcedAPF}
+	opts1 := DecOptions{TimeTag: DecTagRequired, DupMapKey: DupMapKeyEnforcedAPF, MaxNestedLevel: 100}
 	dm, err := opts1.DecMode()
 	if err != nil {
 		t.Errorf("DecMode() returned an error %v", err)
@@ -2917,6 +2901,47 @@ func TestDecModeInvalidDuplicateMapKey(t *testing.T) {
 		t.Errorf("DecMode() didn't return an error")
 	} else if err.Error() != wantErrorMsg {
 		t.Errorf("DecMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+}
+
+func TestDecModeDefaultMaxNestedLevel(t *testing.T) {
+	dm, err := DecOptions{}.DecMode()
+	if err != nil {
+		t.Errorf("DecMode() returned error %v", err)
+	} else {
+		maxNestedLevel := dm.DecOptions().MaxNestedLevel
+		if maxNestedLevel != 32 {
+			t.Errorf("DecOptions().MaxNestedLevel = %d, want %v", maxNestedLevel, 32)
+		}
+	}
+}
+
+func TestDecModeInvalidMaxNestedLevel(t *testing.T) {
+	testCases := []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "MaxNestedLevel < 4",
+			opts:         DecOptions{MaxNestedLevel: 1},
+			wantErrorMsg: "cbor: invalid MaxNestedLevel 1 (range is [4, 256])",
+		},
+		{
+			name:         "MaxNestedLevel > 256",
+			opts:         DecOptions{MaxNestedLevel: 257},
+			wantErrorMsg: "cbor: invalid MaxNestedLevel 257 (range is [4, 256])",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
 	}
 }
 
