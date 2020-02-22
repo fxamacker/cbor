@@ -245,6 +245,7 @@ __Click to expand topic:__
 | --- | :--- | :--- |
 | ✔️ | CBOR tags | API supports built-in and user-defined tags. |
 | ✔️ | Preferred serialization | Ints encode to fewest bytes. Optional float64→float32→float16 if value fits. |
+| ✔️ | Sort map keys | Unsorted, length-first (Canonical CBOR), and bytewise-lexicographic (CTAP2) |
 | ✔️ | Duplicate map keys | Always forbid for encoding, option to allow/forbid for for decoding. |
 | ✔️ | Indefinite length data | Option to allow/forbid for encoding and decoding. |
 | ✔️ | Well-formedness checks | Always checked and enforced. |
@@ -366,12 +367,15 @@ This library is a full-featured generic CBOR [(RFC 7049)](https://tools.ietf.org
 |     | CBOR&nbsp;Feature&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Description |
 | --- | :--- | :--- |
 | ✔️ | CBOR tags | API supports built-in and user-defined tags. |
-| ✔️ | Preferred serialization | Integers encode to smallest form. Optional float64→float32→float16. |
+| ✔️ | Preferred serialization | Ints encode to fewest bytes. Optional float64→float32→float16 if value fits. |
+| ✔️ | Sort map keys | Unsorted, length-first (Canonical CBOR), and bytewise-lexicographic (CTAP2) |
 | ✔️ | Duplicate map keys | Always forbid for encoding, option to allow/forbid for for decoding. |
 | ✔️ | Indefinite length data | Option to allow/forbid for encoding and decoding. |
 | ✔️ | Well-formedness checks | Always checked and enforced. |
 | ✔️ | Basic validity checks | UTF-8 validity, etc. checked after well-formedness. |
-| ✔️ | Security checks | Prevents integer overflow and resource exhaustion described in RFC 7049 Section 8 Security Considerations. |
+| ✔️ | Security checks | Prevents integer overflow and resource exhaustion described in RFC7049&nbsp;Section&nbsp;8&nbsp;Security&nbsp;Considerations. |
+
+See the Features section for list of [Encoding Options](#encoding-options) and [Decoding Options](#decoding-options).
 
 Known limitations are noted in the [Limitations section](#limitations). 
 
