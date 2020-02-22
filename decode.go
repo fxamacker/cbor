@@ -740,22 +740,17 @@ func (d *decodeState) parseTextString() ([]byte, error) {
 	}
 	// Process indefinite length string chunks.
 	b := []byte{}
-	var err error
 	for !d.foundBreak() {
 		_, _, val = d.getHead()
 		x := d.data[d.off : d.off+int(val)]
 		d.off += int(val)
 		if !utf8.Valid(x) {
-			err = &SemanticError{"cbor: invalid UTF-8 string"}
-			break
+			for !d.foundBreak() {
+				d.skip() // Skip remaining chunk on error
+			}
+			return nil, &SemanticError{"cbor: invalid UTF-8 string"}
 		}
 		b = append(b, x...)
-	}
-	if err != nil {
-		for !d.foundBreak() {
-			d.skip() // Skip remaining chunk on error
-		}
-		return nil, err
 	}
 	return b, nil
 }
@@ -811,25 +806,28 @@ func (d *decodeState) parseArrayToArray(v reflect.Value, tInfo *typeInfo) error 
 	_, ai, val := d.getHead()
 	hasSize := (ai != 31)
 	count := int(val)
-	i := 0
+	gi := 0
+	vLen := v.Len()
 	var err error
-	for ; i < v.Len() && ((hasSize && i < count) || (!hasSize && !d.foundBreak())); i++ {
-		if lastErr := d.parseToValue(v.Index(i), tInfo.elemTypeInfo); lastErr != nil {
-			if err == nil {
-				err = lastErr
+	for ci := 0; (hasSize && ci < count) || (!hasSize && !d.foundBreak()); ci++ {
+		if gi < vLen {
+			// Read CBOR array element and set array element
+			if lastErr := d.parseToValue(v.Index(gi), tInfo.elemTypeInfo); lastErr != nil {
+				if err == nil {
+					err = lastErr
+				}
 			}
+			gi++
+		} else {
+			d.skip() // Skip remaining CBOR array element
 		}
 	}
 	// Set remaining Go array elements to zero values.
-	if i < v.Len() {
+	if gi < vLen {
 		zeroV := reflect.Zero(tInfo.elemTypeInfo.typ)
-		for ; i < v.Len(); i++ {
-			v.Index(i).Set(zeroV)
+		for ; gi < vLen; gi++ {
+			v.Index(gi).Set(zeroV)
 		}
-	}
-	// Skip remaining CBOR array elements
-	for ; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
-		d.skip()
 	}
 	return err
 }
@@ -1460,6 +1458,21 @@ func fillByteString(t cborType, val []byte, v reflect.Value) error {
 	}
 	if v.Kind() == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8 {
 		v.SetBytes(val)
+		return nil
+	}
+	if v.Kind() == reflect.Array && v.Type().Elem().Kind() == reflect.Uint8 {
+		vLen := v.Len()
+		i := 0
+		for ; i < vLen && i < len(val); i++ {
+			v.Index(i).SetUint(uint64(val[i]))
+		}
+		// Set remaining Go array elements to zero values.
+		if i < vLen {
+			zeroV := reflect.Zero(reflect.TypeOf(byte(0)))
+			for ; i < vLen; i++ {
+				v.Index(i).Set(zeroV)
+			}
+		}
 		return nil
 	}
 	return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
