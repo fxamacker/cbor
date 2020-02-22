@@ -214,13 +214,13 @@ var unmarshalTests = []unmarshalTest{
 	{
 		hexDecode("80"),
 		[]interface{}{},
-		[]interface{}{[]interface{}{}, []byte{}, []string{}, []int{}, [...]int{}, []float32{}, []float64{}},
+		[]interface{}{[]interface{}{}, []byte{}, []string{}, []int{}, [0]int{}, [1]int{0}, [5]int{0}, []float32{}, []float64{}},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
 		hexDecode("83010203"),
 		[]interface{}{uint64(1), uint64(2), uint64(3)},
-		[]interface{}{[]interface{}{uint64(1), uint64(2), uint64(3)}, []byte{1, 2, 3}, []int{1, 2, 3}, []uint{1, 2, 3}, [...]int{1, 2, 3}, []float32{1, 2, 3}, []float64{1, 2, 3}},
+		[]interface{}{[]interface{}{uint64(1), uint64(2), uint64(3)}, []byte{1, 2, 3}, []int{1, 2, 3}, []uint{1, 2, 3}, [0]int{}, [1]int{1}, [3]int{1, 2, 3}, [5]int{1, 2, 3, 0, 0}, []float32{1, 2, 3}, []float64{1, 2, 3}},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag},
 	},
 	{
@@ -249,7 +249,10 @@ var unmarshalTests = []unmarshalTest{
 			[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
+			[0]int{},
+			[1]int{1},
 			[...]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
+			[30]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 0, 0, 0, 0, 0},
 			[]float32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag},
@@ -257,7 +260,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		hexDecode("9fff"),
 		[]interface{}{},
-		[]interface{}{[]interface{}{}, []byte{}, []string{}, []int{}, [...]int{}, []float32{}, []float64{}},
+		[]interface{}{[]interface{}{}, []byte{}, []string{}, []int{}, [0]int{}, [1]int{0}, [5]int{0, 0, 0, 0, 0}, []float32{}, []float64{}},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeMapStringInt, typeTag, typeRawTag},
 	},
 	{
@@ -280,7 +283,10 @@ var unmarshalTests = []unmarshalTest{
 			[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
+			[0]int{},
+			[1]int{1},
 			[...]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
+			[30]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 0, 0, 0, 0, 0},
 			[]float32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}},
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag},
@@ -3872,5 +3878,41 @@ func TestUnmarshalDupMapKeyToStructTagTypeError(t *testing.T) {
 	}
 	if !reflect.DeepEqual(s2, wantS) {
 		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+	}
+}
+
+func TestIndefiniteLengthArrayToArray(t *testing.T) {
+	testCases := []struct {
+		name     string
+		cborData []byte
+		wantV    interface{}
+	}{
+		{
+			name:     "CBOR empty array to Go 5 elem array",
+			cborData: hexDecode("9fff"),
+			wantV:    [5]byte{},
+		},
+		{
+			name:     "CBOR 3 elem array to Go 5 elem array",
+			cborData: hexDecode("9f010203ff"),
+			wantV:    [5]byte{1, 2, 3, 0, 0},
+		},
+		{
+			name:     "CBOR 10 elem array to Go 5 elem array",
+			cborData: hexDecode("9f0102030405060708090aff"),
+			wantV:    [5]byte{1, 2, 3, 4, 5},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			v := reflect.New(reflect.TypeOf(tc.wantV))
+			if err := Unmarshal(tc.cborData, v.Interface()); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
+			}
+			if !reflect.DeepEqual(v.Elem().Interface(), tc.wantV) {
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), tc.wantV, tc.wantV)
+			}
+		})
 	}
 }
