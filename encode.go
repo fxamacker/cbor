@@ -257,7 +257,11 @@ type EncOptions struct {
 	// RFC3339 format gets tag number 0, and numeric epoch time tag number 1.
 	TimeTag EncTagMode
 
-	disableIndefiniteLength bool
+	// IndefLength specifies whether to allow indefinite length CBOR items.
+	IndefLength IndefLengthMode
+
+	// TagsMd specifies whether to allow CBOR tags (major type 6).
+	TagsMd TagsMode
 }
 
 // CanonicalEncOptions returns EncOptions for "Canonical CBOR" encoding,
@@ -278,11 +282,11 @@ type EncOptions struct {
 //
 func CanonicalEncOptions() EncOptions {
 	return EncOptions{
-		Sort:                    SortCanonical,
-		ShortestFloat:           ShortestFloat16,
-		NaNConvert:              NaNConvert7e00,
-		InfConvert:              InfConvertFloat16,
-		disableIndefiniteLength: true,
+		Sort:          SortCanonical,
+		ShortestFloat: ShortestFloat16,
+		NaNConvert:    NaNConvert7e00,
+		InfConvert:    InfConvertFloat16,
+		IndefLength:   IndefLengthForbidden,
 	}
 }
 
@@ -299,11 +303,12 @@ func CanonicalEncOptions() EncOptions {
 //
 func CTAP2EncOptions() EncOptions {
 	return EncOptions{
-		Sort:                    SortCTAP2,
-		ShortestFloat:           ShortestFloatNone,
-		NaNConvert:              NaNConvertNone,
-		InfConvert:              InfConvertNone,
-		disableIndefiniteLength: true,
+		Sort:          SortCTAP2,
+		ShortestFloat: ShortestFloatNone,
+		NaNConvert:    NaNConvertNone,
+		InfConvert:    InfConvertNone,
+		IndefLength:   IndefLengthForbidden,
+		TagsMd:        TagsForbidden,
 	}
 }
 
@@ -320,11 +325,11 @@ func CTAP2EncOptions() EncOptions {
 //
 func CoreDetEncOptions() EncOptions {
 	return EncOptions{
-		Sort:                    SortCoreDeterministic,
-		ShortestFloat:           ShortestFloat16,
-		NaNConvert:              NaNConvert7e00,
-		InfConvert:              InfConvertFloat16,
-		disableIndefiniteLength: true,
+		Sort:          SortCoreDeterministic,
+		ShortestFloat: ShortestFloat16,
+		NaNConvert:    NaNConvert7e00,
+		InfConvert:    InfConvertFloat16,
+		IndefLength:   IndefLengthForbidden,
 	}
 }
 
@@ -360,6 +365,9 @@ func (opts EncOptions) EncMode() (EncMode, error) {
 
 // EncModeWithTags returns EncMode with options and tags that are both immutable (safe for concurrency).
 func (opts EncOptions) EncModeWithTags(tags TagSet) (EncMode, error) {
+	if opts.TagsMd == TagsForbidden {
+		return nil, errors.New("cbor: cannot create EncMode with TagSet when TagsMd is TagsForbidden")
+	}
 	if tags == nil {
 		return nil, errors.New("cbor: cannot create EncMode with nil value as TagSet")
 	}
@@ -385,6 +393,9 @@ func (opts EncOptions) EncModeWithTags(tags TagSet) (EncMode, error) {
 
 // EncModeWithSharedTags returns EncMode with immutable options and mutable shared tags (safe for concurrency).
 func (opts EncOptions) EncModeWithSharedTags(tags TagSet) (EncMode, error) {
+	if opts.TagsMd == TagsForbidden {
+		return nil, errors.New("cbor: cannot create EncMode with TagSet when TagsMd is TagsForbidden")
+	}
 	if tags == nil {
 		return nil, errors.New("cbor: cannot create EncMode with nil value as TagSet")
 	}
@@ -415,14 +426,24 @@ func (opts EncOptions) encMode() (*encMode, error) {
 	if !opts.TimeTag.valid() {
 		return nil, errors.New("cbor: invalid TimeTag " + strconv.Itoa(int(opts.TimeTag)))
 	}
+	if !opts.IndefLength.valid() {
+		return nil, errors.New("cbor: invalid IndefLength " + strconv.Itoa(int(opts.IndefLength)))
+	}
+	if !opts.TagsMd.valid() {
+		return nil, errors.New("cbor: invalid TagsMd " + strconv.Itoa(int(opts.TagsMd)))
+	}
+	if opts.TagsMd == TagsForbidden && opts.TimeTag == EncTagRequired {
+		return nil, errors.New("cbor: cannot set TagsMd to TagsForbidden when TimeTag is EncTagRequired")
+	}
 	em := encMode{
-		sort:                    opts.Sort,
-		shortestFloat:           opts.ShortestFloat,
-		nanConvert:              opts.NaNConvert,
-		infConvert:              opts.InfConvert,
-		time:                    opts.Time,
-		timeTag:                 opts.TimeTag,
-		disableIndefiniteLength: opts.disableIndefiniteLength,
+		sort:          opts.Sort,
+		shortestFloat: opts.ShortestFloat,
+		nanConvert:    opts.NaNConvert,
+		infConvert:    opts.InfConvert,
+		time:          opts.Time,
+		timeTag:       opts.TimeTag,
+		indefLength:   opts.IndefLength,
+		tagsMd:        opts.TagsMd,
 	}
 	return &em, nil
 }
@@ -435,14 +456,15 @@ type EncMode interface {
 }
 
 type encMode struct {
-	tags                    tagProvider
-	sort                    SortMode
-	shortestFloat           ShortestFloatMode
-	nanConvert              NaNConvertMode
-	infConvert              InfConvertMode
-	time                    TimeMode
-	timeTag                 EncTagMode
-	disableIndefiniteLength bool
+	tags          tagProvider
+	sort          SortMode
+	shortestFloat ShortestFloatMode
+	nanConvert    NaNConvertMode
+	infConvert    InfConvertMode
+	time          TimeMode
+	timeTag       EncTagMode
+	indefLength   IndefLengthMode
+	tagsMd        TagsMode
 }
 
 var defaultEncMode = &encMode{}
@@ -450,13 +472,14 @@ var defaultEncMode = &encMode{}
 // EncOptions returns user specified options used to create this EncMode.
 func (em *encMode) EncOptions() EncOptions {
 	return EncOptions{
-		Sort:                    em.sort,
-		ShortestFloat:           em.shortestFloat,
-		NaNConvert:              em.nanConvert,
-		InfConvert:              em.infConvert,
-		Time:                    em.time,
-		TimeTag:                 em.timeTag,
-		disableIndefiniteLength: em.disableIndefiniteLength,
+		Sort:          em.sort,
+		ShortestFloat: em.shortestFloat,
+		NaNConvert:    em.nanConvert,
+		InfConvert:    em.infConvert,
+		Time:          em.time,
+		TimeTag:       em.timeTag,
+		IndefLength:   em.indefLength,
+		TagsMd:        em.tagsMd,
 	}
 }
 
@@ -1097,6 +1120,9 @@ func encodeBinaryMarshalerType(e *encodeState, em *encMode, v reflect.Value) err
 }
 
 func encodeMarshalerType(e *encodeState, em *encMode, v reflect.Value) error {
+	if em.tagsMd == TagsForbidden && v.Type() == typeRawTag {
+		return errors.New("cbor: cannot encode cbor.RawTag when TagsMd is TagsForbidden")
+	}
 	m, ok := v.Interface().(Marshaler)
 	if !ok {
 		pv := reflect.New(v.Type())
@@ -1112,6 +1138,10 @@ func encodeMarshalerType(e *encodeState, em *encMode, v reflect.Value) error {
 }
 
 func encodeTag(e *encodeState, em *encMode, v reflect.Value) error {
+	if em.tagsMd == TagsForbidden {
+		return errors.New("cbor: cannot encode cbor.Tag when TagsMd is TagsForbidden")
+	}
+
 	t := v.Interface().(Tag)
 
 	// Marshal tag number

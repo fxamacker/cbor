@@ -176,6 +176,40 @@ func (dmkm DupMapKeyMode) valid() bool {
 	return dmkm < maxDupMapKeyMode
 }
 
+// IndefLengthMode specifies whether to allow indefinite length items.
+type IndefLengthMode int
+
+const (
+	// IndefLengthAllowed allows indefinite length items.
+	IndefLengthAllowed IndefLengthMode = iota
+
+	// IndefLengthForbidden disallows indefinite length items.
+	IndefLengthForbidden
+
+	maxIndefLengthMode
+)
+
+func (m IndefLengthMode) valid() bool {
+	return m < maxIndefLengthMode
+}
+
+// TagsMode specifies whether to allow CBOR tags.
+type TagsMode int
+
+const (
+	// TagsAllowed allows CBOR tags.
+	TagsAllowed TagsMode = iota
+
+	// TagsForbidden disallows CBOR tags.
+	TagsForbidden
+
+	maxTagsMode
+)
+
+func (tm TagsMode) valid() bool {
+	return tm < maxTagsMode
+}
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -184,6 +218,24 @@ type DecOptions struct {
 	// TimeTag specifies whether to check validity of time.Time (e.g. valid tag number and tag content type).
 	// For now, valid tag number means 0 or 1 as specified in RFC 7049 if the Go type is time.Time.
 	TimeTag DecTagMode
+
+	// MaxNestedLevels specifies the max nested levels allowed for any combination of CBOR array, maps, and tags.
+	// Default is 32 levels and it can be set to [4, 256].
+	MaxNestedLevels int
+
+	// MaxArrayElements specifies the max number of elements for CBOR arrays.
+	// Default is 128*1024=131072 and it can be set to [16, 134217728]
+	MaxArrayElements int
+
+	// MaxMapPairs specifies the max number of key-value pairs for CBOR maps.
+	// Default is 128*1024=131072 and it can be set to [16, 134217728]
+	MaxMapPairs int
+
+	// IndefLength specifies whether to allow indefinite length CBOR items.
+	IndefLength IndefLengthMode
+
+	// TagsMd specifies whether to allow CBOR tags (major type 6).
+	TagsMd TagsMode
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -193,6 +245,9 @@ func (opts DecOptions) DecMode() (DecMode, error) {
 
 // DecModeWithTags returns DecMode with options and tags that are both immutable (safe for concurrency).
 func (opts DecOptions) DecModeWithTags(tags TagSet) (DecMode, error) {
+	if opts.TagsMd == TagsForbidden {
+		return nil, errors.New("cbor: cannot create DecMode with TagSet when TagsMd is TagsForbidden")
+	}
 	if tags == nil {
 		return nil, errors.New("cbor: cannot create DecMode with nil value as TagSet")
 	}
@@ -222,6 +277,9 @@ func (opts DecOptions) DecModeWithTags(tags TagSet) (DecMode, error) {
 
 // DecModeWithSharedTags returns DecMode with immutable options and mutable shared tags (safe for concurrency).
 func (opts DecOptions) DecModeWithSharedTags(tags TagSet) (DecMode, error) {
+	if opts.TagsMd == TagsForbidden {
+		return nil, errors.New("cbor: cannot create DecMode with TagSet when TagsMd is TagsForbidden")
+	}
 	if tags == nil {
 		return nil, errors.New("cbor: cannot create DecMode with nil value as TagSet")
 	}
@@ -233,6 +291,16 @@ func (opts DecOptions) DecModeWithSharedTags(tags TagSet) (DecMode, error) {
 	return dm, nil
 }
 
+const (
+	defaultMaxArrayElements = 131072
+	minMaxArrayElements     = 16
+	maxMaxArrayElements     = 134217728
+
+	defaultMaxMapPairs = 131072
+	minMaxMapPairs     = 16
+	maxMaxMapPairs     = 134217728
+)
+
 func (opts DecOptions) decMode() (*decMode, error) {
 	if !opts.DupMapKey.valid() {
 		return nil, errors.New("cbor: invalid DupMapKey " + strconv.Itoa(int(opts.DupMapKey)))
@@ -240,7 +308,36 @@ func (opts DecOptions) decMode() (*decMode, error) {
 	if !opts.TimeTag.valid() {
 		return nil, errors.New("cbor: invalid TimeTag " + strconv.Itoa(int(opts.TimeTag)))
 	}
-	dm := decMode{dupMapKey: opts.DupMapKey, timeTag: opts.TimeTag}
+	if !opts.IndefLength.valid() {
+		return nil, errors.New("cbor: invalid IndefLength " + strconv.Itoa(int(opts.IndefLength)))
+	}
+	if !opts.TagsMd.valid() {
+		return nil, errors.New("cbor: invalid TagsMd " + strconv.Itoa(int(opts.TagsMd)))
+	}
+	if opts.MaxNestedLevels == 0 {
+		opts.MaxNestedLevels = 32
+	} else if opts.MaxNestedLevels < 4 || opts.MaxNestedLevels > 256 {
+		return nil, errors.New("cbor: invalid MaxNestedLevels " + strconv.Itoa(opts.MaxNestedLevels) + " (range is [4, 256])")
+	}
+	if opts.MaxArrayElements == 0 {
+		opts.MaxArrayElements = defaultMaxArrayElements
+	} else if opts.MaxArrayElements < minMaxArrayElements || opts.MaxArrayElements > maxMaxArrayElements {
+		return nil, errors.New("cbor: invalid MaxArrayElements " + strconv.Itoa(opts.MaxArrayElements) + " (range is [" + strconv.Itoa(minMaxArrayElements) + ", " + strconv.Itoa(maxMaxArrayElements) + "])")
+	}
+	if opts.MaxMapPairs == 0 {
+		opts.MaxMapPairs = defaultMaxMapPairs
+	} else if opts.MaxMapPairs < minMaxMapPairs || opts.MaxMapPairs > maxMaxMapPairs {
+		return nil, errors.New("cbor: invalid MaxMapPairs " + strconv.Itoa(opts.MaxMapPairs) + " (range is [" + strconv.Itoa(minMaxMapPairs) + ", " + strconv.Itoa(maxMaxMapPairs) + "])")
+	}
+	dm := decMode{
+		dupMapKey:        opts.DupMapKey,
+		timeTag:          opts.TimeTag,
+		maxNestedLevels:  opts.MaxNestedLevels,
+		maxArrayElements: opts.MaxArrayElements,
+		maxMapPairs:      opts.MaxMapPairs,
+		indefLength:      opts.IndefLength,
+		tagsMd:           opts.TagsMd,
+	}
 	return &dm, nil
 }
 
@@ -252,16 +349,29 @@ type DecMode interface {
 }
 
 type decMode struct {
-	tags      tagProvider
-	dupMapKey DupMapKeyMode
-	timeTag   DecTagMode
+	tags             tagProvider
+	dupMapKey        DupMapKeyMode
+	timeTag          DecTagMode
+	maxNestedLevels  int
+	maxArrayElements int
+	maxMapPairs      int
+	indefLength      IndefLengthMode
+	tagsMd           TagsMode
 }
 
-var defaultDecMode = &decMode{}
+var defaultDecMode, _ = DecOptions{}.decMode()
 
 // DecOptions returns user specified options used to create this DecMode.
 func (dm *decMode) DecOptions() DecOptions {
-	return DecOptions{DupMapKey: dm.dupMapKey, TimeTag: dm.timeTag}
+	return DecOptions{
+		DupMapKey:        dm.dupMapKey,
+		TimeTag:          dm.timeTag,
+		MaxNestedLevels:  dm.maxNestedLevels,
+		MaxArrayElements: dm.maxArrayElements,
+		MaxMapPairs:      dm.maxMapPairs,
+		IndefLength:      dm.indefLength,
+		TagsMd:           dm.tagsMd,
+	}
 }
 
 // Unmarshal parses the CBOR-encoded data and stores the result in the value
@@ -291,7 +401,10 @@ func (d *decodeState) value(v interface{}) error {
 		return &InvalidUnmarshalError{reflect.TypeOf(v)}
 	}
 
-	if _, err := valid(d.data[d.off:]); err != nil {
+	off := d.off // Save offset before data validation
+	err := d.valid()
+	d.off = off // Restore offset
+	if err != nil {
 		return err
 	}
 
