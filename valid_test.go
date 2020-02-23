@@ -87,44 +87,44 @@ func TestDepthError(t *testing.T) {
 		{
 			name:         "33-level array",
 			cborData:     hexDecode("82018181818181818181818181818181818181818181818181818181818181818101"),
-			opts:         DecOptions{MaxNestedLevel: 4},
-			wantErrorMsg: "cbor: reached max nested level 4",
+			opts:         DecOptions{MaxNestedLevels: 4},
+			wantErrorMsg: "cbor: exceeded max nested level 4",
 		},
 		{
 			name:         "33-level array",
 			cborData:     hexDecode("82018181818181818181818181818181818181818181818181818181818181818101"),
-			opts:         DecOptions{MaxNestedLevel: 10},
-			wantErrorMsg: "cbor: reached max nested level 10",
+			opts:         DecOptions{MaxNestedLevels: 10},
+			wantErrorMsg: "cbor: exceeded max nested level 10",
 		},
 		{
 			name:         "33-level array",
 			cborData:     hexDecode("8201818181818181818181818181818181818181818181818181818181818181818101"),
 			opts:         DecOptions{},
-			wantErrorMsg: "cbor: reached max nested level 32",
+			wantErrorMsg: "cbor: exceeded max nested level 32",
 		},
 		{
 			name:         "33-level indefinite length array",
 			cborData:     hexDecode("9f01818181818181818181818181818181818181818181818181818181818181818101ff"),
 			opts:         DecOptions{},
-			wantErrorMsg: "cbor: reached max nested level 32",
+			wantErrorMsg: "cbor: exceeded max nested level 32",
 		},
 		{
 			name:         "33-level map",
 			cborData:     hexDecode("a101818181818181818181818181818181818181818181818181818181818181818101"),
 			opts:         DecOptions{},
-			wantErrorMsg: "cbor: reached max nested level 32",
+			wantErrorMsg: "cbor: exceeded max nested level 32",
 		},
 		{
 			name:         "33-level indefinite length map",
 			cborData:     hexDecode("bf01818181818181818181818181818181818181818181818181818181818181818101ff"),
 			opts:         DecOptions{},
-			wantErrorMsg: "cbor: reached max nested level 32",
+			wantErrorMsg: "cbor: exceeded max nested level 32",
 		},
 		{
 			name:         "33-level tag",
 			cborData:     hexDecode("d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d86474323031332d30332d32315432303a30343a30305a"),
 			opts:         DecOptions{},
-			wantErrorMsg: "cbor: reached max nested level 32",
+			wantErrorMsg: "cbor: exceeded max nested level 32",
 		},
 	}
 	for _, tc := range testCases {

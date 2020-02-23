@@ -163,8 +163,8 @@ var cborIndefHeader = map[cborType][]byte{
 }
 
 func (enc *Encoder) startIndefinite(typ cborType) error {
-	if enc.em.disableIndefiniteLength {
-		return errors.New("cbor: indefinite-length items are not allowed")
+	if enc.em.indefLength == IndefLengthForbidden {
+		return &IndefiniteLengthError{typ}
 	}
 	_, err := enc.w.Write(cborIndefHeader[typ])
 	if err == nil {

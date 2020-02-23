@@ -2845,7 +2845,14 @@ func TestUnmarshalToNotNilInterface(t *testing.T) {
 }
 
 func TestDecOptions(t *testing.T) {
-	opts1 := DecOptions{TimeTag: DecTagRequired, DupMapKey: DupMapKeyEnforcedAPF, MaxNestedLevel: 100}
+	opts1 := DecOptions{
+		TimeTag:          DecTagRequired,
+		DupMapKey:        DupMapKeyEnforcedAPF,
+		IndefLength:      IndefLengthForbidden,
+		MaxNestedLevels:  100,
+		MaxMapPairs:      101,
+		MaxArrayElements: 102,
+	}
 	dm, err := opts1.DecMode()
 	if err != nil {
 		t.Errorf("DecMode() returned an error %v", err)
@@ -2909,9 +2916,9 @@ func TestDecModeDefaultMaxNestedLevel(t *testing.T) {
 	if err != nil {
 		t.Errorf("DecMode() returned error %v", err)
 	} else {
-		maxNestedLevel := dm.DecOptions().MaxNestedLevel
-		if maxNestedLevel != 32 {
-			t.Errorf("DecOptions().MaxNestedLevel = %d, want %v", maxNestedLevel, 32)
+		maxNestedLevels := dm.DecOptions().MaxNestedLevels
+		if maxNestedLevels != 32 {
+			t.Errorf("DecOptions().MaxNestedLevels = %d, want %v", maxNestedLevels, 32)
 		}
 	}
 }
@@ -2923,14 +2930,14 @@ func TestDecModeInvalidMaxNestedLevel(t *testing.T) {
 		wantErrorMsg string
 	}{
 		{
-			name:         "MaxNestedLevel < 4",
-			opts:         DecOptions{MaxNestedLevel: 1},
-			wantErrorMsg: "cbor: invalid MaxNestedLevel 1 (range is [4, 256])",
+			name:         "MaxNestedLevels < 4",
+			opts:         DecOptions{MaxNestedLevels: 1},
+			wantErrorMsg: "cbor: invalid MaxNestedLevels 1 (range is [4, 256])",
 		},
 		{
-			name:         "MaxNestedLevel > 256",
-			opts:         DecOptions{MaxNestedLevel: 257},
-			wantErrorMsg: "cbor: invalid MaxNestedLevel 257 (range is [4, 256])",
+			name:         "MaxNestedLevels > 256",
+			opts:         DecOptions{MaxNestedLevels: 257},
+			wantErrorMsg: "cbor: invalid MaxNestedLevels 257 (range is [4, 256])",
 		},
 	}
 	for _, tc := range testCases {
@@ -2942,6 +2949,108 @@ func TestDecModeInvalidMaxNestedLevel(t *testing.T) {
 				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
 			}
 		})
+	}
+}
+
+func TestDecModeDefaultMaxMapPairs(t *testing.T) {
+	dm, err := DecOptions{}.DecMode()
+	if err != nil {
+		t.Errorf("DecMode() returned error %v", err)
+	} else {
+		maxMapPairs := dm.DecOptions().MaxMapPairs
+		if maxMapPairs != defaultMaxMapPairs {
+			t.Errorf("DecOptions().MaxMapPairs = %d, want %v", maxMapPairs, defaultMaxMapPairs)
+		}
+	}
+}
+
+func TestDecModeInvalidMaxMapPairs(t *testing.T) {
+	testCases := []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "MaxMapPairs < 16",
+			opts:         DecOptions{MaxMapPairs: 1},
+			wantErrorMsg: "cbor: invalid MaxMapPairs 1 (range is [16, 134217728])",
+		},
+		{
+			name:         "MaxMapPairs > 134217728",
+			opts:         DecOptions{MaxMapPairs: 134217729},
+			wantErrorMsg: "cbor: invalid MaxMapPairs 134217729 (range is [16, 134217728])",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestDecModeDefaultMaxArrayElements(t *testing.T) {
+	dm, err := DecOptions{}.DecMode()
+	if err != nil {
+		t.Errorf("DecMode() returned error %v", err)
+	} else {
+		maxArrayElements := dm.DecOptions().MaxArrayElements
+		if maxArrayElements != defaultMaxArrayElements {
+			t.Errorf("DecOptions().MaxArrayElementsr = %d, want %v", maxArrayElements, defaultMaxArrayElements)
+		}
+	}
+}
+
+func TestDecModeInvalidMaxArrayElements(t *testing.T) {
+	testCases := []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "MaxArrayElements < 16",
+			opts:         DecOptions{MaxArrayElements: 1},
+			wantErrorMsg: "cbor: invalid MaxArrayElements 1 (range is [16, 134217728])",
+		},
+		{
+			name:         "MaxArrayElements > 134217728",
+			opts:         DecOptions{MaxArrayElements: 134217729},
+			wantErrorMsg: "cbor: invalid MaxArrayElements 134217729 (range is [16, 134217728])",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestDecModeInvalidIndefiniteLengthMode(t *testing.T) {
+	wantErrorMsg := "cbor: invalid IndefLength 101"
+	_, err := DecOptions{IndefLength: 101}.DecMode()
+	if err == nil {
+		t.Errorf("DecMode() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("DecMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+}
+
+func TestDecModeInvalidTagsMode(t *testing.T) {
+	wantErrorMsg := "cbor: invalid TagsMd 101"
+	_, err := DecOptions{TagsMd: 101}.DecMode()
+	if err == nil {
+		t.Errorf("DecMode() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("DecMode() returned error %q, want %q", err.Error(), wantErrorMsg)
 	}
 }
 
@@ -3939,5 +4048,156 @@ func TestIndefiniteLengthArrayToArray(t *testing.T) {
 				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), tc.wantV, tc.wantV)
 			}
 		})
+	}
+}
+
+func TestExceedMaxArrayElements(t *testing.T) {
+	testCases := []struct {
+		name         string
+		opts         DecOptions
+		cborData     []byte
+		wantErrorMsg string
+	}{
+		{
+			name:         "array",
+			opts:         DecOptions{MaxArrayElements: 16},
+			cborData:     hexDecode("910101010101010101010101010101010101"),
+			wantErrorMsg: "cbor: exceeded max number of elements 16 for CBOR array",
+		},
+		{
+			name:         "indefinite length array",
+			opts:         DecOptions{MaxArrayElements: 16},
+			cborData:     hexDecode("9f0101010101010101010101010101010101ff"),
+			wantErrorMsg: "cbor: exceeded max number of elements 16 for CBOR array",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, _ := tc.opts.DecMode()
+			var v interface{}
+			if err := dm.Unmarshal(tc.cborData, &v); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestExceedMaxMapPairs(t *testing.T) {
+	testCases := []struct {
+		name         string
+		opts         DecOptions
+		cborData     []byte
+		wantErrorMsg string
+	}{
+		{
+			name:         "array",
+			opts:         DecOptions{MaxMapPairs: 16},
+			cborData:     hexDecode("b101010101010101010101010101010101010101010101010101010101010101010101"),
+			wantErrorMsg: "cbor: exceeded max number of key-value pairs 16 for CBOR map",
+		},
+		{
+			name:         "indefinite length array",
+			opts:         DecOptions{MaxMapPairs: 16},
+			cborData:     hexDecode("bf01010101010101010101010101010101010101010101010101010101010101010101ff"),
+			wantErrorMsg: "cbor: exceeded max number of key-value pairs 16 for CBOR map",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, _ := tc.opts.DecMode()
+			var v interface{}
+			if err := dm.Unmarshal(tc.cborData, &v); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestDecIndefiniteLengthOption(t *testing.T) {
+	testCases := []struct {
+		name         string
+		opts         DecOptions
+		cborData     []byte
+		wantErrorMsg string
+	}{
+		{
+			name:         "byte string",
+			opts:         DecOptions{IndefLength: IndefLengthForbidden},
+			cborData:     hexDecode("5fff"),
+			wantErrorMsg: "cbor: indefinite-length byte string isn't allowed",
+		},
+		{
+			name:         "text string",
+			opts:         DecOptions{IndefLength: IndefLengthForbidden},
+			cborData:     hexDecode("7fff"),
+			wantErrorMsg: "cbor: indefinite-length UTF-8 text string isn't allowed",
+		},
+		{
+			name:         "array",
+			opts:         DecOptions{IndefLength: IndefLengthForbidden},
+			cborData:     hexDecode("9fff"),
+			wantErrorMsg: "cbor: indefinite-length array isn't allowed",
+		},
+		{
+			name:         "indefinite length array",
+			opts:         DecOptions{IndefLength: IndefLengthForbidden},
+			cborData:     hexDecode("bfff"),
+			wantErrorMsg: "cbor: indefinite-length map isn't allowed",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Default option allows indefinite length items
+			var v interface{}
+			if err := Unmarshal(tc.cborData, &v); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned an error %v", tc.cborData, err)
+			}
+
+			dm, _ := tc.opts.DecMode()
+			if err := dm.Unmarshal(tc.cborData, &v); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestDecTagsMdOption(t *testing.T) {
+	cborData := hexDecode("c074323031332d30332d32315432303a30343a30305a")
+	wantErrorMsg := "cbor: CBOR tag isn't allowed"
+
+	// Default option allows CBOR tags
+	var v interface{}
+	if err := Unmarshal(cborData, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned an error %v", cborData, err)
+	}
+
+	// Decoding CBOR tags with TagsForbidden option returns error
+	dm, _ := DecOptions{TagsMd: TagsForbidden}.DecMode()
+	if err := dm.Unmarshal(cborData, &v); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err.Error(), wantErrorMsg)
+	}
+
+	// Create DecMode with TagSet and TagsForbidden option returns error
+	wantErrorMsg = "cbor: cannot create DecMode with TagSet when TagsMd is TagsForbidden"
+	tags := NewTagSet()
+	_, err := DecOptions{TagsMd: TagsForbidden}.DecModeWithTags(tags)
+	if err == nil {
+		t.Errorf("DecModeWithTags() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("DecModeWithTags() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+	_, err = DecOptions{TagsMd: TagsForbidden}.DecModeWithSharedTags(tags)
+	if err == nil {
+		t.Errorf("DecModeWithSharedTags() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("DecModeWithSharedTags() returned error %q, want %q", err.Error(), wantErrorMsg)
 	}
 }

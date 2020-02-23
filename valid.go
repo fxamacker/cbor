@@ -26,11 +26,46 @@ func (e *SemanticError) Error() string { return e.msg }
 
 // MaxNestedLevelError indicates exceeded max nested level of any combination of CBOR arrays/maps/tags.
 type MaxNestedLevelError struct {
-	maxNestedLevel int
+	maxNestedLevels int
 }
 
 func (e *MaxNestedLevelError) Error() string {
-	return "cbor: reached max nested level " + strconv.Itoa(e.maxNestedLevel)
+	return "cbor: exceeded max nested level " + strconv.Itoa(e.maxNestedLevels)
+}
+
+// MaxArrayElementsError indicates exceeded max number of elements for CBOR arrays.
+type MaxArrayElementsError struct {
+	maxArrayElements int
+}
+
+func (e *MaxArrayElementsError) Error() string {
+	return "cbor: exceeded max number of elements " + strconv.Itoa(e.maxArrayElements) + " for CBOR array"
+}
+
+// MaxMapPairsError indicates exceeded max number of key-value pairs for CBOR maps.
+type MaxMapPairsError struct {
+	maxMapPairs int
+}
+
+func (e *MaxMapPairsError) Error() string {
+	return "cbor: exceeded max number of key-value pairs " + strconv.Itoa(e.maxMapPairs) + " for CBOR map"
+}
+
+// IndefiniteLengthError indicates found disallowed indefinite length items.
+type IndefiniteLengthError struct {
+	t cborType
+}
+
+func (e *IndefiniteLengthError) Error() string {
+	return "cbor: indefinite-length " + e.t.String() + " isn't allowed"
+}
+
+// TagsMdError indicates found disallowed CBOR tags.
+type TagsMdError struct {
+}
+
+func (e *TagsMdError) Error() string {
+	return "cbor: CBOR tag isn't allowed"
 }
 
 // valid checks whether CBOR data is complete and well-formed.
@@ -52,6 +87,9 @@ func (d *decodeState) validInternal(depth int) (int, error) {
 	switch t {
 	case cborTypeByteString, cborTypeTextString:
 		if ai == 31 {
+			if d.dm.indefLength == IndefLengthForbidden {
+				return 0, &IndefiniteLengthError{t}
+			}
 			return d.validIndefiniteString(t, depth)
 		}
 		valInt := int(val)
@@ -65,19 +103,33 @@ func (d *decodeState) validInternal(depth int) (int, error) {
 		d.off += valInt
 	case cborTypeArray, cborTypeMap:
 		depth++
-		if depth > d.dm.maxNestedLevel {
-			return 0, &MaxNestedLevelError{d.dm.maxNestedLevel}
+		if depth > d.dm.maxNestedLevels {
+			return 0, &MaxNestedLevelError{d.dm.maxNestedLevels}
 		}
 
 		if ai == 31 {
-			return d.validIndefiniteArrOrMap(t, depth)
+			if d.dm.indefLength == IndefLengthForbidden {
+				return 0, &IndefiniteLengthError{t}
+			}
+			return d.validIndefiniteArrayOrMap(t, depth)
 		}
 
 		valInt := int(val)
 		if valInt < 0 {
 			// Detect integer overflow
-			return 0, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
+			return 0, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, it would cause integer overflow")
 		}
+
+		if t == cborTypeArray {
+			if valInt > d.dm.maxArrayElements {
+				return 0, &MaxArrayElementsError{d.dm.maxArrayElements}
+			}
+		} else {
+			if valInt > d.dm.maxMapPairs {
+				return 0, &MaxMapPairsError{d.dm.maxMapPairs}
+			}
+		}
+
 		count := 1
 		if t == cborTypeMap {
 			count = 2
@@ -96,6 +148,10 @@ func (d *decodeState) validInternal(depth int) (int, error) {
 		}
 		depth = maxDepth
 	case cborTypeTag:
+		if d.dm.tagsMd == TagsForbidden {
+			return 0, &TagsMdError{}
+		}
+
 		// Scan nested tag numbers to avoid recursion.
 		for {
 			if len(d.data) == d.off { // Tag number must be followed by tag content.
@@ -108,8 +164,8 @@ func (d *decodeState) validInternal(depth int) (int, error) {
 				return 0, err
 			}
 			depth++
-			if depth > d.dm.maxNestedLevel {
-				return 0, &MaxNestedLevelError{d.dm.maxNestedLevel}
+			if depth > d.dm.maxNestedLevels {
+				return 0, &MaxNestedLevelError{d.dm.maxNestedLevels}
 			}
 		}
 		// Check tag content.
@@ -144,8 +200,8 @@ func (d *decodeState) validIndefiniteString(t cborType, depth int) (int, error) 
 	return depth, nil
 }
 
-// validIndefiniteArrOrMap checks indefinite length array/map's well-formedness and returns max depth and error.
-func (d *decodeState) validIndefiniteArrOrMap(t cborType, depth int) (int, error) {
+// validIndefiniteArrayOrMap checks indefinite length array/map's well-formedness and returns max depth and error.
+func (d *decodeState) validIndefiniteArrayOrMap(t cborType, depth int) (int, error) {
 	var err error
 	maxDepth := depth
 	i := 0
@@ -165,6 +221,15 @@ func (d *decodeState) validIndefiniteArrOrMap(t cborType, depth int) (int, error
 			maxDepth = dpt
 		}
 		i++
+		if t == cborTypeArray {
+			if i > d.dm.maxArrayElements {
+				return 0, &MaxArrayElementsError{d.dm.maxArrayElements}
+			}
+		} else {
+			if i%2 == 0 && i/2 > d.dm.maxMapPairs {
+				return 0, &MaxMapPairsError{d.dm.maxMapPairs}
+			}
+		}
 	}
 	if t == cborTypeMap && i%2 == 1 {
 		return 0, &SyntaxError{"cbor: unexpected \"break\" code"}

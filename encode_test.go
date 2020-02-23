@@ -43,10 +43,6 @@ type outer struct {
 	unexportedField   int64
 }
 
-const (
-	wantIndefiniteLengthErrorMsg = "cbor: indefinite-length items are not allowed"
-)
-
 // CBOR test data are from https://tools.ietf.org/html/rfc7049#appendix-A.
 var marshalTests = []marshalTest{
 	// positive integer
@@ -373,7 +369,7 @@ func TestMarshalLargeTextString(t *testing.T) {
 
 func TestMarshalLargeArray(t *testing.T) {
 	// []string{"水", "水", "水", ...}
-	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 10000000}
+	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 131072}
 	tests := make([]marshalTest, len(lengths))
 	for i, length := range lengths {
 		cborData := bytes.NewBuffer(encodeCborHeader(cborTypeArray, uint64(length)))
@@ -390,7 +386,7 @@ func TestMarshalLargeArray(t *testing.T) {
 
 func TestMarshalLargeMapCanonical(t *testing.T) {
 	// map[int]int {0:0, 1:1, 2:2, ...}
-	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 1000000}
+	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 131072}
 	tests := make([]marshalTest, len(lengths))
 	for i, length := range lengths {
 		cborData := bytes.NewBuffer(encodeCborHeader(cborTypeMap, uint64(length)))
@@ -409,7 +405,7 @@ func TestMarshalLargeMapCanonical(t *testing.T) {
 
 func TestMarshalLargeMap(t *testing.T) {
 	// map[int]int {0:0, 1:1, 2:2, ...}
-	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 1000000}
+	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 131072}
 	for _, length := range lengths {
 		m1 := make(map[int]int, length)
 		for i := 0; i < length; i++ {
@@ -2770,6 +2766,7 @@ func TestCanonicalEncOptions(t *testing.T) { //nolint:dupl
 	wantShortestFloat := ShortestFloat16
 	wantNaNConvert := NaNConvert7e00
 	wantInfConvert := InfConvertFloat16
+	wantErrorMsg := "cbor: indefinite-length array isn't allowed"
 	em, err := CanonicalEncOptions().EncMode()
 	if err != nil {
 		t.Errorf("EncMode() returned an error %v", err)
@@ -2790,8 +2787,8 @@ func TestCanonicalEncOptions(t *testing.T) { //nolint:dupl
 	enc := em.NewEncoder(ioutil.Discard)
 	if err := enc.StartIndefiniteArray(); err == nil {
 		t.Errorf("StartIndefiniteArray() didn't return an error")
-	} else if err.Error() != wantIndefiniteLengthErrorMsg {
-		t.Errorf("StartIndefiniteArray() returned error %q, want %q", err.Error(), wantIndefiniteLengthErrorMsg)
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("StartIndefiniteArray() returned error %q, want %q", err.Error(), wantErrorMsg)
 	}
 }
 
@@ -2800,6 +2797,7 @@ func TestCTAP2EncOptions(t *testing.T) { //nolint:dupl
 	wantShortestFloat := ShortestFloatNone
 	wantNaNConvert := NaNConvertNone
 	wantInfConvert := InfConvertNone
+	wantErrorMsg := "cbor: indefinite-length array isn't allowed"
 	em, err := CTAP2EncOptions().EncMode()
 	if err != nil {
 		t.Errorf("EncMode() returned an error %v", err)
@@ -2820,8 +2818,8 @@ func TestCTAP2EncOptions(t *testing.T) { //nolint:dupl
 	enc := em.NewEncoder(ioutil.Discard)
 	if err := enc.StartIndefiniteArray(); err == nil {
 		t.Errorf("StartIndefiniteArray() didn't return an error")
-	} else if err.Error() != wantIndefiniteLengthErrorMsg {
-		t.Errorf("StartIndefiniteArray() returned error %q, want %q", err.Error(), wantIndefiniteLengthErrorMsg)
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("StartIndefiniteArray() returned error %q, want %q", err.Error(), wantErrorMsg)
 	}
 }
 
@@ -2830,6 +2828,7 @@ func TestCoreDetEncOptions(t *testing.T) { //nolint:dupl
 	wantShortestFloat := ShortestFloat16
 	wantNaNConvert := NaNConvert7e00
 	wantInfConvert := InfConvertFloat16
+	wantErrorMsg := "cbor: indefinite-length array isn't allowed"
 	em, err := CoreDetEncOptions().EncMode()
 	if err != nil {
 		t.Errorf("EncMode() returned an error %v", err)
@@ -2850,8 +2849,8 @@ func TestCoreDetEncOptions(t *testing.T) { //nolint:dupl
 	enc := em.NewEncoder(ioutil.Discard)
 	if err := enc.StartIndefiniteArray(); err == nil {
 		t.Errorf("StartIndefiniteArray() didn't return an error")
-	} else if err.Error() != wantIndefiniteLengthErrorMsg {
-		t.Errorf("StartIndefiniteArray() returned error %q, want %q", err.Error(), wantIndefiniteLengthErrorMsg)
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("StartIndefiniteArray() returned error %q, want %q", err.Error(), wantErrorMsg)
 	}
 }
 
@@ -2883,6 +2882,26 @@ func TestPreferredUnsortedEncOptions(t *testing.T) {
 	}
 }
 
+func TestEncModeInvalidIndefiniteLengthMode(t *testing.T) {
+	wantErrorMsg := "cbor: invalid IndefLength 101"
+	_, err := EncOptions{IndefLength: 101}.EncMode()
+	if err == nil {
+		t.Errorf("EncMode() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("EncMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+}
+
+func TestEncModeInvalidTagsMode(t *testing.T) {
+	wantErrorMsg := "cbor: invalid TagsMd 101"
+	_, err := EncOptions{TagsMd: 101}.EncMode()
+	if err == nil {
+		t.Errorf("EncMode() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("EncMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+}
+
 func TestEncOptions(t *testing.T) {
 	opts1 := EncOptions{
 		Sort:          SortBytewiseLexical,
@@ -2891,6 +2910,8 @@ func TestEncOptions(t *testing.T) {
 		InfConvert:    InfConvertNone,
 		Time:          TimeRFC3339Nano,
 		TimeTag:       EncTagRequired,
+		IndefLength:   IndefLengthForbidden,
+		TagsMd:        TagsAllowed,
 	}
 	em, err := opts1.EncMode()
 	if err != nil {
@@ -2910,5 +2931,113 @@ func TestEncModeInvalidTimeTag(t *testing.T) {
 		t.Errorf("EncMode() didn't return an error")
 	} else if err.Error() != wantErrorMsg {
 		t.Errorf("EncMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+}
+
+func TestEncIndefiniteLengthOption(t *testing.T) {
+	// Default option allows indefinite length items
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+	if err := enc.StartIndefiniteByteString(); err != nil {
+		t.Errorf("StartIndefiniteByteString() returned an error %v", err)
+	}
+	if err := enc.StartIndefiniteTextString(); err != nil {
+		t.Errorf("StartIndefiniteTextString() returned an error %v", err)
+	}
+	if err := enc.StartIndefiniteArray(); err != nil {
+		t.Errorf("StartIndefiniteArray() returned an error %v", err)
+	}
+	if err := enc.StartIndefiniteMap(); err != nil {
+		t.Errorf("StartIndefiniteMap() returned an error %v", err)
+	}
+
+	// StartIndefiniteXXX returns error when IndefLength = IndefLengthForbidden
+	em, _ := EncOptions{IndefLength: IndefLengthForbidden}.EncMode()
+	enc = em.NewEncoder(&buf)
+	wantErrorMsg := "cbor: indefinite-length byte string isn't allowed"
+	if err := enc.StartIndefiniteByteString(); err == nil {
+		t.Errorf("StartIndefiniteByteString() didn't return an error")
+	} else if _, ok := err.(*IndefiniteLengthError); !ok {
+		t.Errorf("StartIndefiniteByteString() error type %T, want *IndefiniteLengthError", err)
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("StartIndefiniteByteString() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+
+	wantErrorMsg = "cbor: indefinite-length UTF-8 text string isn't allowed"
+	if err := enc.StartIndefiniteTextString(); err == nil {
+		t.Errorf("StartIndefiniteTextString() didn't return an error")
+	} else if _, ok := err.(*IndefiniteLengthError); !ok {
+		t.Errorf("StartIndefiniteTextString() error type %T, want *IndefiniteLengthError", err)
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("StartIndefiniteTextString() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+
+	wantErrorMsg = "cbor: indefinite-length array isn't allowed"
+	if err := enc.StartIndefiniteArray(); err == nil {
+		t.Errorf("StartIndefiniteArray() didn't return an error")
+	} else if _, ok := err.(*IndefiniteLengthError); !ok {
+		t.Errorf("StartIndefiniteArray() error type %T, want *IndefiniteLengthError", err)
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("StartIndefiniteArray() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+
+	wantErrorMsg = "cbor: indefinite-length map isn't allowed"
+	if err := enc.StartIndefiniteMap(); err == nil {
+		t.Errorf("StartIndefiniteMap() didn't return an error")
+	} else if _, ok := err.(*IndefiniteLengthError); !ok {
+		t.Errorf("StartIndefiniteMap() error type %T, want *IndefiniteLengthError", err)
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("StartIndefiniteMap() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+}
+
+func TestEncTagsMdOption(t *testing.T) {
+	// Default option allows encoding CBOR tags
+	tag := Tag{123, "hello"}
+	if _, err := Marshal(tag); err != nil {
+		t.Errorf("Marshal() returned an error %v", err)
+	}
+
+	// Create EncMode with TimeTag = EncTagRequired and TagsForbidden option returns error
+	wantErrorMsg := "cbor: cannot set TagsMd to TagsForbidden when TimeTag is EncTagRequired"
+	_, err := EncOptions{TimeTag: EncTagRequired, TagsMd: TagsForbidden}.EncMode()
+	if err == nil {
+		t.Errorf("EncModeWithTags() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("EncModeWithTags() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+
+	// Create EncMode with TagSet and TagsForbidden option returns error
+	wantErrorMsg = "cbor: cannot create EncMode with TagSet when TagsMd is TagsForbidden"
+	tags := NewTagSet()
+	_, err = EncOptions{TagsMd: TagsForbidden}.EncModeWithTags(tags)
+	if err == nil {
+		t.Errorf("EncModeWithTags() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("EncModeWithTags() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+	_, err = EncOptions{TagsMd: TagsForbidden}.EncModeWithSharedTags(tags)
+	if err == nil {
+		t.Errorf("EncModeWithSharedTags() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("EncModeWithSharedTags() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+
+	// Encoding Tag and TagsForbidden option returns error
+	wantErrorMsg = "cbor: cannot encode cbor.Tag when TagsMd is TagsForbidden"
+	em, _ := EncOptions{TagsMd: TagsForbidden}.EncMode()
+	if _, err := em.Marshal(&tag); err == nil {
+		t.Errorf("Marshal() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("Marshal() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+
+	// Encoding RawTag and TagsForbidden option returns error
+	wantErrorMsg = "cbor: cannot encode cbor.RawTag when TagsMd is TagsForbidden"
+	rawTag := RawTag{123, []byte{01}}
+	if _, err := em.Marshal(&rawTag); err == nil {
+		t.Errorf("Marshal() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("Marshal() returned error %q, want %q", err.Error(), wantErrorMsg)
 	}
 }
