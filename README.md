@@ -204,7 +204,7 @@ Latest version is v2.x, which has:
   * CoreDetEncOptions() is subject to change because it uses draft standard.
   * PreferredUnsortedEncOptions() is subject to change because it uses draft standard.
 * __Passed all tests__ – v2.x passed all 375+ tests on amd64, arm64, ppc64le and s390x with linux.
-* __Passed fuzzing__ – v2.2 passed 446+ million execs in coverage-guided fuzzing on Feb 24, 2020 (still fuzzing.)
+* __Passed fuzzing__ – v2.2 passed 459+ million execs in coverage-guided fuzzing on Feb 24, 2020 (still fuzzing.)
 
 __Why v2.x?__:
 
@@ -221,8 +221,9 @@ __Recent Activity__:
    24-28% faster and 53-61% fewer allocs than both v1.5 and v2.0.1.
 
 * Release v2.2 (Feb. 24, 2020)
-   - [x] CBOR BSTR <--> Go byte array. In the meantime, use CBOR BSTR with Go byte slice.   
-   - [x] Add more encoding and decoding options (MaxNestedLevels, MaxArrayElements, MaxMapKeyPairs, TagMd, etc.)
+   - [x] CBOR BSTR <--> Go byte array (byte slices were already supported)
+   - [x] Add more encoding and decoding options (MaxNestedLevels, MaxArrayElements, MaxMapKeyPairs, TagsMd, etc.)
+   - [x] Fix potential error when decoding shorter CBOR indef length array to Go array (slice wasn't affected). This bug affects all prior versions of 1.x and 2.x.
 
 <hr>
 
@@ -253,16 +254,7 @@ __Click to expand topic:__
 <details>
  <summary>Supported CBOR Features (Highlights)</summary><p>
 
-|     | CBOR Feature | Description |
-| --- | :--- | :--- |
-| ✔️ | CBOR tags | API supports built-in and user-defined tags. |
-| ✔️ | Preferred&nbsp;serialization | Integers encode to fewest bytes. Optional float64→float32→float16 if value fits. |
-| ✔️ | Sort map keys | Unsorted, length-first (Canonical CBOR), and bytewise-lexicographic (CTAP2) |
-| ✔️ | Duplicate map keys | Always forbid for encoding, option to allow/forbid for for decoding. |
-| ✔️ | Indefinite length data | Option to allow/forbid for encoding and decoding. |
-| ✔️ | Well&#8209;formedness&nbsp;checks | Always checked and enforced. |
-| ✔️ | Basic validity checks | UTF-8 validity, etc. checked after well-formedness. |
-| ✔️ | Security considerations | Prevent integer overflow and resource exhaustion described in RFC7049&nbsp;Section&nbsp;8&nbsp;Security&nbsp;Considerations. |
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_features.svg?sanitize=1 "CBOR Features")
 
 </details>
 
@@ -383,16 +375,7 @@ See [Options](#options) section for details about each setting.
 ## Standards
 This library is a full-featured generic CBOR [(RFC 7049)](https://tools.ietf.org/html/rfc7049) encoder and decoder.  Notable CBOR features include:
 
-|     | CBOR Feature | Description |
-| --- | :--- | :--- |
-| ✔️ | CBOR tags | API supports built-in and user-defined tags. |
-| ✔️ | Preferred&nbsp;serialization | Integers encode to fewest bytes. Optional float64→float32→float16 if value fits. |
-| ✔️ | Sort map keys | Unsorted, length-first (Canonical CBOR), and bytewise-lexicographic (CTAP2) |
-| ✔️ | Duplicate map keys | Always forbid for encoding, option to allow/forbid for for decoding. |
-| ✔️ | Indefinite length data | Option to allow/forbid for encoding and decoding. |
-| ✔️ | Well&#8209;formedness&nbsp;checks | Always checked and enforced. |
-| ✔️ | Basic validity checks | UTF-8 validity, etc. checked after well-formedness. |
-| ✔️ | Security considerations | Prevent integer overflow and resource exhaustion described in RFC7049&nbsp;Section&nbsp;8&nbsp;Security&nbsp;Considerations. |
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_features.svg?sanitize=1 "CBOR Features")
 
 See the Features section for list of [Encoding Options](#encoding-options) and [Decoding Options](#decoding-options).
 
