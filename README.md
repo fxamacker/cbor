@@ -12,21 +12,31 @@
 
 __What is CBOR__?  [CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049)) is a binary data format inspired by JSON and MessagePack.  CBOR is used in [IETF](https://www.ietf.org) Internet Standards such as COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)) and CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)). WebAuthn also uses CBOR.
 
-__`fxamacker/cbor`__ is safe and fast.  It safely handles malformed CBOR data:
+<br>
+
+__`fxamacker/cbor`__ safely handles malformed CBOR data:
 
 ![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_security_table.svg?sanitize=1 "CBOR Security Comparison")
 
-__`fxamacker/cbor`__ is fast when using CBOR data with Go structs:
+For more info about CBOR security considerations, see [Section 8 of RFC 7049](https://tools.ietf.org/html/rfc7049#section-8).
+
+<br>
+
+__`fxamacker/cbor`__ is fast and memory efficient when using CBOR data with Go structs:
 
 ![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_speed_table.svg?sanitize=1 "CBOR Speed Comparison")
 
-Benchmarks used data from [RFC 8392 Appendix A.1](https://tools.ietf.org/html/rfc8392#appendix-A.1) and default options for each CBOR library.
+Benchmarks used example data from [RFC 8392 Appendix A.1](https://tools.ietf.org/html/rfc8392#appendix-A.1) and default options for CBOR libraries.
 
-__`fxamacker/cbor`__ produces smaller binaries. All builds of cisco/senml had MessagePack feature removed:
+<br>
 
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_size_comparison.png "CBOR library and program size comparison chart")
+__`fxamacker/cbor`__ produces smaller binaries.
+
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_app_size_barchart.svg?sanitize=1 "CBOR program size comparison bar chart")
 
 <hr>
+
+__`fxamacker/cbor`__ provides identical API to Go's encoding packages, plus struct tags like `toarray` and `keyasint`.
 
 __Standard API__: functions with signatures identical to [`encoding/json`](https://golang.org/pkg/encoding/json/) include:  
 `Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, and `decoder.Decode`.
@@ -107,6 +117,8 @@ If Go modules feature isn't used, please see [Installation](#installation) about
 
 ## Quick Start
 🛡️ Use Go's `io.LimitReader` to limit size when decoding very large or indefinite size data.
+
+Please use "/v2": `import "github.com/fxamacker/cbor/v2"`, it will import as "cbor" (when using Go modules).
 
 Functions with identical signatures to encoding/json include:  
 `Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, `decoder.Decode`.
