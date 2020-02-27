@@ -48,7 +48,7 @@ __Struct tags__ like __`toarray`__ & __`keyasint`__ translate Go struct fields t
 
 <br>
 
-[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_api_struct_tags.png)](#usage) 
+[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_struct_tags_api.svg?sanitize=1)](#usage) 
 
 <hr>
 
@@ -741,7 +741,7 @@ The `keyasint`, `toarray`, and `omitempty` struct tags make it easy to use compa
 
 <hr>
 
-[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_api_struct_tags.png)](#usage)
+[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_struct_tags_api.svg?sanitize=1)](#usage) 
 
 <hr>
 
