@@ -345,30 +345,13 @@ Integers always encode to the shortest form that preserves value.  By default, t
 
 Encoding of other data types and map key sort order are determined by encoder options.
 
-| Encoding Option | Available Settings (defaults in bold, aliases in italics) |
-| --------------- | --------------------------------------------------------- |
-| EncOptions.Sort | __`SortNone`__, `SortLengthFirst`, `SortBytewiseLexical`, _`SortCanonical`_, _`SortCTAP2`_, _`SortCoreDeterministic`_ |
-| EncOptions.Time | __`TimeUnix`__, `TimeUnixMicro`, `TimeUnixDynamic`, `TimeRFC3339`, `TimeRFC3339Nano` |
-| EncOptions.TimeTag | __`EncTagNone`__, `EncTagRequired` |
-| EncOptions.ShortestFloat | __`ShortestFloatNone`__, `ShortestFloat16` |
-| EncOptions.InfConvert | __`InfConvertFloat16`__, `InfConvertNone` |
-| EncOptions.NaNConvert | __`NaNConvert7e00`__, `NaNConvertNone`, `NaNConvertQuiet`, `NaNConvertPreserveSignal` |
-| EncOptions.IndefLength | __`IndefLengthAllowed`__, `IndefLengthForbidden` |
-| EncOptions.TagsMd | __`TagsAllowed`__, `TagsForbidden` |
+[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_encoptions.svg?sanitize=1)](#usage) 
 
 See [Options](#options) section for details about each setting.
 
 ### Decoding Options
 
-| Decoding Option | Available Settings (defaults in bold, aliases in italics) |
-| --------------- | --------------------------------------------------------- |
-| DecOptions.TimeTag | __`DecTagIgnored`__, `DecTagOptional`, `DecTagRequired` |
-| DecOptions.DupMapKey | __`DupMapKeyQuiet`__, `DupMapKeyEnforcedAPF` |
-| DecOptions.IndefLength | __`IndefLengthAllowed`__, `IndefLengthForbidden` |
-| DecOptions.TagsMd | __`TagsAllowed`__, `TagsForbidden` |
-| DecOptions.MaxNestedLevels | __32__, can be set to [4, 256] |
-| DecOptions.MaxArrayElements | __131072__, can be set to [16, 134217728] |
-| DecOptions.MaxMapPairs | __131072__, can be set to [16, 134217728] |
+[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_decoptions.svg?sanitize=1)](#usage) 
 
 See [Options](#options) section for details about each setting.
 
