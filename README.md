@@ -48,7 +48,7 @@ __Struct tags__ like __`toarray`__ & __`keyasint`__ translate Go struct fields t
 
 <br>
 
-[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_struct_tags_api.svg?sanitize=1)](#usage) 
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_struct_tags_api.svg?sanitize=1 "CBOR API and Go Struct Tags")
 
 <hr>
 
@@ -118,7 +118,8 @@ If Go modules feature isn't used, please see [Installation](#installation) about
 ## Quick Start
 🛡️ Use Go's `io.LimitReader` to limit size when decoding very large or indefinite size data.
 
-Please use "/v2": `import "github.com/fxamacker/cbor/v2"`, it will import as "cbor" (when using Go modules).
+Import using "/v2" like this: `import "github.com/fxamacker/cbor/v2"`, and  
+it will import version 2.x as package "cbor" (when using Go modules).
 
 Functions with identical signatures to encoding/json include:  
 `Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, `decoder.Decode`.
