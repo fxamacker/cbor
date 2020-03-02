@@ -32,7 +32,7 @@ Benchmarks used example data from [RFC 8392 Appendix A.1](https://tools.ietf.org
 
 __`fxamacker/cbor`__ produces smaller binaries.
 
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_app_size_barchart.svg?sanitize=1 "CBOR program size comparison bar chart")
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_size_comparison.png "CBOR library and program size comparison chart")
 
 <hr>
 
