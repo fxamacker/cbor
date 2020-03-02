@@ -90,13 +90,15 @@ New struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data suc
 
 ## Installation
 
-👉 If Go modules aren't used, delete or modify example_test.go  
-from `"github.com/fxamacker/cbor/v2"` to `"github.com/fxamacker/cbor"`
-
 Using Go modules is recommended.
+
+Use "/v2" when using `go get`.
+
 ```
 $ GO111MODULE=on go get github.com/fxamacker/cbor/v2
 ```
+
+Also use "/v2" when importing.
 
 ```go
 import (
@@ -104,7 +106,8 @@ import (
 )
 ```
 
-[Released versions](https://github.com/fxamacker/cbor/releases) benefit from longer fuzz tests.
+If Go modules aren't used, delete or modify example_test.go to change the import  
+from `"github.com/fxamacker/cbor/v2"` to `"github.com/fxamacker/cbor"`
 
 ## System Requirements
 
@@ -236,7 +239,7 @@ __Recent Activity__:
 * Release v2.2 (Feb. 24, 2020)
    - [x] CBOR BSTR <--> Go byte array (byte slices were already supported)
    - [x] Add more encoding and decoding options (MaxNestedLevels, MaxArrayElements, MaxMapKeyPairs, TagsMd, etc.)
-   - [x] Fix potential error when decoding shorter CBOR indef length array to Go array (slice wasn't affected). This bug affects all prior versions of 1.x and 2.x.
+   - [x] Fix potential error when decoding shorter CBOR indef length array to Go array (slice wasn't affected). This bug affects all prior versions of 1.x and 2.x. It was found by a recently updated fxamacker/cbor-fuzz.
 
 <hr>
 
