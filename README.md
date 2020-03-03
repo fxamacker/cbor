@@ -349,13 +349,13 @@ Integers always encode to the shortest form that preserves value.  By default, t
 
 Encoding of other data types and map key sort order are determined by encoder options.
 
-[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_encoptions.svg?sanitize=1)](#usage) 
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_encoptions.svg?sanitize=1) "CBOR Encoding Options")
 
 See [Options](#options) section for details about each setting.
 
 ### Decoding Options
 
-[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_decoptions.svg?sanitize=1)](#usage) 
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_decoptions.svg?sanitize=1) "CBOR Decoding Options")
 
 See [Options](#options) section for details about each setting.
 
@@ -728,7 +728,7 @@ The `keyasint`, `toarray`, and `omitempty` struct tags make it easy to use compa
 
 <hr>
 
-[![CBOR API](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_struct_tags_api.svg?sanitize=1)](#usage) 
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_struct_tags_api.svg?sanitize=1) "CBOR API and Struct Tags")
 
 <hr>
 
