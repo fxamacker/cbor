@@ -728,7 +728,7 @@ The `keyasint`, `toarray`, and `omitempty` struct tags make it easy to use compa
 
 <hr>
 
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_struct_tags_api.svg?sanitize=1) "CBOR API and Struct Tags")
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_struct_tags_api.svg?sanitize=1 "CBOR API and Struct Tags")
 
 <hr>
 
