@@ -20,7 +20,7 @@ For more info about CBOR security considerations, see [Section 8 of RFC 7049](ht
 
 <hr>
 
-__`fxamacker/cbor`__ is easy and saves time. Stuct tags __`toarray`__ and __`keyasint`__ are killer features for using CBOR.
+__`fxamacker/cbor`__ is easy and saves time. Struct tags __`toarray`__ and __`keyasint`__ are killer features for using CBOR.
 
 <br>
 
