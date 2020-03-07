@@ -7,48 +7,34 @@
 [![](https://github.com/fxamacker/cbor/workflows/cover%20%E2%89%A598%25/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3A%22cover+%E2%89%A598%25%22)
 [![](https://github.com/fxamacker/cbor/workflows/linters/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Alinters)
 [![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor)
-[![Release](https://img.shields.io/github/release/fxamacker/cbor.svg?style=flat-square)](https://github.com/fxamacker/cbor/releases)
-[![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE)
+[![](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/release_version_badge.svg?sanitize=1)](https://github.com/fxamacker/cbor/releases)
+[![](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/license_badge.svg?sanitize=1)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE)
 
 __What is CBOR__?  [CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049)) is a binary data format inspired by JSON and MessagePack.  CBOR is used in [IETF](https://www.ietf.org) Internet Standards such as COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)) and CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)). WebAuthn also uses CBOR.
 
-<br>
-
-__`fxamacker/cbor`__ safely handles malformed CBOR data:
+__`fxamacker/cbor`__ safely handles malformed CBOR data.
 
 ![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_security_table.svg?sanitize=1 "CBOR Security Comparison")
 
 For more info about CBOR security considerations, see [Section 8 of RFC 7049](https://tools.ietf.org/html/rfc7049#section-8).
 
-<br>
-
-__`fxamacker/cbor`__ is fast and memory efficient when using CBOR data with Go structs:
-
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_speed_table.svg?sanitize=1 "CBOR Speed Comparison")
-
-Benchmarks used example data from [RFC 8392 Appendix A.1](https://tools.ietf.org/html/rfc8392#appendix-A.1) and default options for CBOR libraries.
-
-<br>
-
-__`fxamacker/cbor`__ produces smaller binaries.
-
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_size_comparison.png "CBOR library and program size comparison chart")
-
 <hr>
 
-__`fxamacker/cbor`__ provides identical API to Go's encoding packages, plus struct tags like `toarray` and `keyasint`.
-
-__Standard API__: functions with signatures identical to [`encoding/json`](https://golang.org/pkg/encoding/json/) include:  
-`Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, and `decoder.Decode`.
-
-__Standard interfaces__ allow custom encoding or decoding:  
-`BinaryMarshaler`, `BinaryUnmarshaler`, `Marshaler`, and `Unmarshaler`.
-
-__Struct tags__ like __`toarray`__ & __`keyasint`__ translate Go struct fields to CBOR array elements, etc.
+Struct tags like __`toarray`__ & __`keyasint`__ translate Go struct fields to CBOR array elements, etc.
 
 <br>
 
 ![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_struct_tags_api.svg?sanitize=1 "CBOR API and Go Struct Tags")
+
+<hr>
+
+__`fxamacker/cbor`__ provides standard API and interfaces.
+
+__Standard API__.  Functions with signatures identical to [`encoding/json`](https://golang.org/pkg/encoding/json/) include:  
+`Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `encoder.Encode`, and `decoder.Decode`.
+
+__Standard Interfaces__.  Custom encoding and decoding is handled by implementing:  
+`BinaryMarshaler`, `BinaryUnmarshaler`, `Marshaler`, and `Unmarshaler`.
 
 <hr>
 
@@ -57,6 +43,41 @@ __`fxamacker/cbor`__ is a full-featured CBOR encoder and decoder.  Support for C
 ![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_features.svg?sanitize=1 "CBOR Features")
 
 <hr>
+
+__`fxamacker/cbor`__ can produce smaller apps that run faster and use less memory.
+
+__Click to expand:__
+
+<details>
+  <summary>CBOR App Size Comparison</summary><p>
+  
+__`fxamacker/cbor`__ can produce smaller apps.
+  
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_size_comparison.png "CBOR library and program size comparison chart")
+
+</details>
+
+<details>
+  <summary>CBOR Speed Comparison</summary><p>
+
+__`fxamacker/cbor`__ can be faster for CBOR data such as CBOR Web Tokens.
+
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_speed_comparison.png "CBOR library speed comparison chart")
+
+</details>
+
+<details>
+  <summary>CBOR Memory Comparison</summary><p>
+
+__`fxamacker/cbor`__ can use less memory for CBOR data such as CBOR Web Tokens.
+
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_memory_table.svg?sanitize=1 "CBOR Memory Comparison")
+
+</details>
+
+Benchmarks used example data from [RFC 8392 Appendix A.1](https://tools.ietf.org/html/rfc8392#appendix-A.1) and default options for CBOR libraries.
+
+<br>
 
 ⚓  [__Installation__](#installation) • [__System Requirements__](#system-requirements) • [__Quick Start Guide__](#quick-start)
 
@@ -824,11 +845,9 @@ __This library is faster__ for encoding and decoding CBOR Web Token (CWT).  Howe
 
 ![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_speed_comparison.png "CBOR library speed comparison chart")
 
-The resource intensive `codec.CborHandle` initialization (in the other library) was placed outside the benchmark loop to make sure their library wasn't penalized.
-
 __This library uses less memory__ for encoding and decoding CBOR Web Token (CWT) using test data from RFC 8392 A.1.
 
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_memory_table.svg?sanitize=1 "CBOR Speed Comparison")
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_memory_table.svg?sanitize=1 "CBOR Memory Comparison")
 
 Doing your own comparisons is highly recommended.  Use your most common message sizes and data types.
 
@@ -918,7 +937,7 @@ CBOR BSTR <--> Go array in #133.
 
 __Help clarifying CBOR RFC 7049 or 7049bis__
 
-* Carsten Bormann for RFC 7049 (CBOR), his fast confirmation to my RFC 7049 errata, approving my pull request to 7049bis, and his patience when I misread a line in 7049bis.
+* Carsten Bormann for RFC 7049 (CBOR), adding this library to cbor.io, his fast confirmation to my RFC 7049 errata, approving my pull request to 7049bis, and his patience when I misread a line in 7049bis.
 * Laurence Lundblade for his help on the IETF mailing list for 7049bis and for pointing out on a CBORbis issue that CBOR Undefined might be problematic translating to JSON.
 * Jeffrey Yasskin for his help on the IETF mailing list for 7049bis.
 
