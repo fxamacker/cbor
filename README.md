@@ -244,7 +244,7 @@ Latest version is v2.x, which has:
   * PreferredUnsortedEncOptions() is subject to change because it uses draft standard.
 * __Passed all tests__ – v2.x passed all 375+ tests on amd64, arm64, ppc64le and s390x with linux.
 * __Passed fuzzing__ – v2.2 passed 459+ million execs in coverage-guided fuzzing on Feb 24 (release date)  
-and 3.1+ billion execs on March 7, 2020.
+and 3.2+ billion execs on March 7, 2020.
 
 __Why v2.x?__:
 
