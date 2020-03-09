@@ -22,7 +22,7 @@ For more info, see [RFC 7049 Section 8 (Security Considerations)](https://tools.
 
 __fxamacker/cbor__ is easy.  It provides standard API and interfaces.
 
-__Standard API__.  Functions signatures identical to [`encoding/json`](https://golang.org/pkg/encoding/json/) include:  
+__Standard API__.  Function signatures identical to [`encoding/json`](https://golang.org/pkg/encoding/json/) include:  
 `Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `(*Encoder).Encode`, and `(*Decoder).Decode`.
 
 __Standard Interfaces__.  Custom encoding and decoding is handled by implementing:  
