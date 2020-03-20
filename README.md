@@ -954,9 +954,9 @@ This project has adopted the [Contributor Covenant Code of Conduct](CODE_OF_COND
 Please refer to [How to Contribute](CONTRIBUTING.md).
 
 ## Security Policy
-Security fixes are provided for the latest released version.
+Security fixes are provided for the latest released version of fxamacker/cbor.
 
-To report security vulnerabilities, please email [faye.github@gmail.com](mailto:faye.github@gmail.com) and allow time for the problem to be resolved before reporting it to the public.
+For the full text of the Security Policy, see [SECURITY.md](SECURITY.md).
 
 ## Disclaimers
 Phrases like "no crashes", "doesn't crash", and "is secure" mean there are no known crash bugs in the latest version based on results of unit tests and coverage-guided fuzzing.  They don't imply the software is 100% bug-free or 100% invulnerable to all known and unknown attacks.
