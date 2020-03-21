@@ -1,50 +1,33 @@
----
-name: "Code pull request"
-about: Contribute code to this project
-title: ''
-labels: ''
-assignees: ''
+<!--
+Thank you for your interest in contributing to fxamacker/cbor!
+-->
 
----
+#### Description (motivation)
 
-#### Motivation for PR
+
+<!-- For code contributions, please complete all the items below this line. -->
+<!-- For documentation-only contributions, please delete everything below this line. -->
 
 #### PR Was Proposed and Welcomed in Currently Open Issue
 This PR was proposed and welcomed by maintainer(s) in issue #
 
 Closes #
 
-#### Does PR Include Unit Tests for Newly Added Code (yes/no)?
+#### Checklist (for code PR only, ignore for docs PR)
 
-#### Does PR Pass All 18 Required Linters (yes/no)?
-<!--
-    - deadcode
-    - errcheck
-    - goconst
-    - gocyclo
-    - gofmt
-    - goimports
-    - golint
-    - gosec
-    - govet
-    - ineffassign
-    - maligned
-    - misspell
-    - staticcheck
-    - structcheck
-    - typecheck
-    - unconvert
-    - unused
-    - varcheck
--->
+- [ ] Include unit tests that cover the new code
+- [ ] Pass all unit tests 
+- [ ] Pass all 18 ci linters (golint, gosec, staticcheck, etc.)
+- [ ] Sign each commit with your real name and email.  
+      Last line of each commit message should be in this format:  
+      Signed-off-by: Firstname Lastname <firstname.lastname@example.com>
+- [ ] Certify the Developer's Certificate of Origin 1.1
+      (see next section).
 
-#### Did You Sign Each Commit With Your Real Name and Email (yes/no)?
-<!--  Did you add the following to the end of each commit message using
-       your name and your email:
-       Signed-off-by: Joe Smith <joe.smith@email.com> 
--->
+#### Certify the Developer's Certificate of Origin 1.1
 
-#### Do You Certify the Developer's Certificate of Origin 1.1 (yes/no)?
+- [ ] By marking this item as completed, I certify 
+      the Developer Certificate of Origin 1.1.
 
 ```
 Developer Certificate of Origin
