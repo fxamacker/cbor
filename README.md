@@ -434,6 +434,25 @@ APF suffix means "Allow Partial Fill" so the destination map or struct can conta
 
 </details>
 
+<details>
+ <summary>Tag Validity</summary><p>
+
+This library checks tag validity for built-in tags (currently tag numbers 0 and 1):
+
+* Inadmissible type for tag content 
+* Inadmissible value for tag content
+
+Unknown tag data items (not tag number 0 or 1) are handled in two ways:
+
+* When decoding into an empty interface, unknown tag data item will be decoded into `cbor.Tag` data type, which contains tag number and tag content.  The tag content will be decoded into the default Go data type for the CBOR data type.
+* When decoding into other Go types, unknown tag data item is decoded into the specified Go type.  If Go type is registered with a tag number, the tag number can optionally be verified.
+
+Decoder also has an option to forbid tag data items (treat any tag data item as error) which is specified by protocols such as CTAP2 Canonical CBOR.  
+
+For more information, see [decoding options](#decoding-options-1) and [tag options](#tag-options).
+
+</details>
+
 ## Limitations
 
 If any of these limitations prevent you from using this library, please open an issue along with a link to your project.
@@ -727,6 +746,24 @@ Conversions for infinity and NaN use InfConvert and NaNConvert settings.
 |TagsAllowed (default) | allow CBOR tags (major type 6) |
 |TagsForbidden | forbid CBOR tags (major type 6) |
 
+
+### Tag Options
+
+TagOptions specifies how encoder and decoder handle tag number registered with TagSet.
+
+| TagOptions.DecTag | Description |
+| ------------------ | ----------- |
+| DecTagIgnored (default) | Tag numbers are ignored (if present). |
+| DecTagOptional | Tag numbers are only checked for validity if present. |
+| DecTagRequired | Tag numbers must be provided except for CBOR Null and CBOR Undefined. |
+
+<br>
+
+| TagOptions.EncTag | Description |
+| ------------------ | ----------- |
+| EncTagNone (default) | Tag number will not be encoded. |
+| EncTagRequired | Tag number will be encoded. |
+	
 <hr>
 
 ⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
