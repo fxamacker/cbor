@@ -109,7 +109,7 @@ Struct tags for CBOR and JSON like `` `cbor:"name,omitempty"` `` and `` `json:"n
 
 New struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data such as COSE, CWT, and SenML easier to use. 
 
-⚓  [Quick Start](#quick-start) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Quick Start](#quick-start) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Options](#options) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [License](#license)
 
 ## Installation
 
@@ -224,17 +224,17 @@ __Struct Tags (keyasint, toarray, omitempty)__
 
 The `keyasint`, `toarray`, and `omitempty` struct tags make it easy to use compact CBOR message formats.  Internet standards often use CBOR arrays and CBOR maps with int keys to save space.
 
-__More Info About API, Options, and Usage__
+The following sections provide more info:
 
-Options are listed in the Features section: [Encoding Options](#encoding-options) and [Decoding Options](#decoding-options)
-
-For more details about each setting, see [Options](#options) section.
-
-For additional API and usage examples, see [API](#api) and [Usage](#usage) sections.
+* [Struct Tags](#struct-tags-1)
+* [Decoding Options](#decoding-options)
+* [Encoding Options](#encoding-options)
+* [API](#api) 
+* [Usage](#usage) 
 
 <hr>
 
-⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Quick Start](#quick-start) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Options](#options) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [License](#license)
 
 ## Current Status
 Latest version is v2.x, which has:
@@ -267,7 +267,7 @@ __Recent Activity__:
 
 <hr>
 
-⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Quick Start](#quick-start) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Options](#options) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [License](#license)
 
 ## Design Goals 
 This library is designed to be a generic CBOR encoder and decoder.  It was initially created for a [WebAuthn (FIDO2) server library](https://github.com/fxamacker/webauthn), because existing CBOR libraries (in Go) didn't meet certain criteria in 2019.
@@ -315,7 +315,7 @@ Features not in Go's standard library are usually not added.  However, the __`to
 
 <hr>
 
-⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Quick Start](#quick-start) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Options](#options) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [License](#license)
 
 ## Features
 
@@ -333,13 +333,15 @@ Standard interfaces allow user-defined types to have custom CBOR encoding and de
 
 ### Struct Tags
 
-Support "cbor" and "json" keys in Go's struct tags. If both are specified, then "cbor" is used.
+Support "cbor" and "json" keys in Go's struct tags. If both are specified for the same field, then "cbor" is used.
 
-* `toarray` struct tag allows named struct fields for elements of CBOR arrays.
-* `keyasint` struct tag allows named struct fields for elements of CBOR maps with int keys.
-* `omitempty` struct tag excludes empty field values from being encoded.
+* a different field name can be specified, like encoding/json.
+* `omitempty` omits (ignores) field if value is empty, like encoding/json.
+* `-` always omits (ignores) field, like encoding/json.
+* `keyasint` treats fields as elements of CBOR maps with specified int key.
+* `toarray` treats fields as elements of CBOR arrays.
 
-See [Usage](#usage).
+See [Struct Tags](#struct-tags-1) for more info.
 
 ### CBOR Tags (New in v2.1)
 
@@ -393,7 +395,7 @@ See [Options](#options) section for details about each setting.
 
 <hr>
 
-⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Quick Start](#quick-start) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Options](#options) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [License](#license)
 
 ## Standards
 This library is a full-featured generic CBOR [(RFC 7049)](https://tools.ietf.org/html/rfc7049) encoder and decoder.  Notable CBOR features include:
@@ -464,7 +466,7 @@ If any of these limitations prevent you from using this library, please open an 
 
 <hr>
 
-⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Quick Start](#quick-start) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Options](#options) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [License](#license)
 
 ## API
 Many function signatures are identical to Go's encoding/json, such as:  
@@ -591,11 +593,55 @@ See [API docs (godoc.org)](https://godoc.org/github.com/fxamacker/cbor) for more
 
 <hr>
 
-⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Quick Start](#quick-start) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Options](#options) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [License](#license)
 
 ## Options
 
-Options for the decoding and encoding are listed here.
+Struct tags, decoding options, and encoding options.
+
+### Struct Tags
+
+This library supports both "cbor" and "json" key for some (not all) struct tags.  If "cbor" and "json" keys are both present for the same field, then "cbor" key will be used.
+
+| Key | Format Str | Scope | Description |
+| --- | ---------- | ----- | ------------|
+| cbor or json | "myName" | field | Name of field to use such as "myName", etc. like encoding/json. |
+| cbor or json | ",omitempty" | field | Omit (ignore) this field if value is empty, like encoding/json. |
+| cbor or json | "-" | field | Omit (ignore) this field always, like encoding/json. |
+| cbor | ",keyasint" | field | Treat field as an element of CBOR map with specified int as key. |
+| cbor | ",toarray" | struct | Treat each field as an element of CBOR array. This automatically disables "omitempty" and "keyasint" for all fields in the struct. |
+
+The "keyasint" struct tag requires an integer key to be specified:
+
+```
+type myStruct struct {
+    MyField     int64    `cbor:-1,keyasint,omitempty`
+    OurField    string   `cbor:0,keyasint,omitempty`
+    FooField    Foo      `cbor:5,keyasint,omitempty`
+    BarField    Bar      `cbor:hello,omitempty`
+    ...
+}
+```
+
+The "toarray" struct tag requires a special field "_" (underscore) to indicate "toarray" applies to the entire struct:
+
+```
+type myStruct struct {
+    _           struct{}    `cbor:",toarray"`
+    MyField     int64
+    OurField    string
+    ...
+}
+```
+
+__Click to expand:__
+
+<details>
+  <summary>Example Using CBOR Web Tokens</summary><p>
+   
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_struct_tags_api.svg?sanitize=1 "CBOR API and Go Struct Tags")
+
+</details>
 
 ### Decoding Options
 
@@ -766,7 +812,7 @@ TagOptions specifies how encoder and decoder handle tag number registered with T
 	
 <hr>
 
-⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Quick Start](#quick-start) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Options](#options) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [License](#license)
 
 ## Usage
 🛡️ Use Go's `io.LimitReader` to limit size when decoding very large or indefinite size data.
@@ -903,7 +949,7 @@ For more examples, see [examples_test.go](example_test.go).
 
 <hr>
 
-⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Quick Start](#quick-start) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Options](#options) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [License](#license)
 
 ## Comparisons
 
@@ -929,7 +975,7 @@ Doing your own comparisons is highly recommended.  Use your most common message 
 
 <hr>
 
-⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Quick Start](#quick-start) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Options](#options) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [License](#license)
 
 ## Benchmarks
 
@@ -972,7 +1018,7 @@ To prevent excessive delays, fuzzing is not restarted for a release if changes a
 
 <hr>
 
-⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Quick Start](#quick-start) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Options](#options) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [License](#license)
 
 ## Versions and API Changes
 This project uses [Semantic Versioning](https://semver.org), so the API is always backwards compatible unless the major version number changes.  
@@ -1030,4 +1076,4 @@ fxamacker/cbor is licensed under the MIT License.  See [LICENSE](LICENSE) for th
 
 <hr>
 
-⚓  [Install](#installation) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [Security Policy](#security-policy) • [License](#license)
+⚓  [Quick Start](#quick-start) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Options](#options) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [License](#license)
