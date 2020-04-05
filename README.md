@@ -179,7 +179,7 @@ __Creating and Using Encoding Modes__
 
 💡 Avoid using init().  For best performance, reuse EncMode and DecMode after creating them.
 
-Most apps will probably create one EncMode and DecMode before init().  However, there's no limit and each can use different options.
+Most apps will probably create one EncMode and DecMode before init().  There's no limit and each can use different options.
 
 ```go
 // Create EncOptions using either struct literal or a function.
@@ -196,6 +196,8 @@ b, err := em.Marshal(v)      // encode v to []byte b
 encoder := em.NewEncoder(w)  // create encoder with io.Writer w
 err := encoder.Encode(v)     // encode v to io.Writer w
 ```
+
+Both `em.Marshal(v)` and `encoder.Encode(v)` use encoding options specified during creation of encoding mode `em`.
 
 __Creating Modes With CBOR Tags__
 
