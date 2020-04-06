@@ -13,7 +13,7 @@ to their smallest forms (e.g. float16) when values fit.
 Struct tags like "keyasint", "toarray" and "omitempty" make CBOR data smaller
 and easier to use with structs.
 
-For example, "toarray" tag makes struct fields encode to CBOR array elements.  And 
+For example, "toarray" tag makes struct fields encode to CBOR array elements.  And
 "keyasint" makes a field encode to an element of CBOR map with specified int key.
 
 Latest docs can be viewed at https://github.com/fxamacker/cbor#cbor-library-in-go
@@ -33,7 +33,7 @@ Standard interfaces include:
 Custom encoding and decoding is possible by implementing standard interfaces for
 user-defined Go types.
 
-Codec functions are available at package-level (using defaults options) or by 
+Codec functions are available at package-level (using defaults options) or by
 creating modes from options at runtime.
 
 "Mode" in this API means definite way of encoding (EncMode) or decoding (DecMode).
@@ -44,7 +44,7 @@ EncMode and DecMode interfaces are created from EncOptions or DecOptions structs
     em := cbor.CanonicalEncOptions().EncMode()
     em := cbor.CTAP2EncOptions().EncMode()
 
-Modes use immutable options to avoid side-effects and simplify concurrency. Behavior of 
+Modes use immutable options to avoid side-effects and simplify concurrency. Behavior of
 modes won't accidentally change at runtime after they're created.
 
 Modes are intended to be reused and are safe for concurrent use.
@@ -90,13 +90,13 @@ Creating and Using Encoding Modes
     // Create reusable EncMode interface with immutable options, safe for concurrent use.
     em, err := opts.EncMode()
 
-    // Use EncMode like encoding/json, with same function signatures.    
+    // Use EncMode like encoding/json, with same function signatures.
     b, err := em.Marshal(v)
-    // or    
+    // or
     encoder := em.NewEncoder(w)
     err := encoder.Encode(v)
-    
-    // NOTE: Both em.Marshal(v) and encoder.Encode(v) use encoding options 
+
+    // NOTE: Both em.Marshal(v) and encoder.Encode(v) use encoding options
     // specified during creation of em (encoding mode).
 
 CBOR Options
