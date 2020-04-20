@@ -210,6 +210,28 @@ func (tm TagsMode) valid() bool {
 	return tm < maxTagsMode
 }
 
+// IntDecMode specifies which Go int type (int64 or uint64) should
+// be used when decoding CBOR int (major type 0 and 1) to Go interface{}.
+type IntDecMode int
+
+const (
+	// IntDecConvertNone affects how CBOR int (major type 0 and 1) decodes to Go interface{}.
+	// It makes CBOR positive int (major type 0) decode to uint64 value, and
+	// CBOR negative int (major type 1) decode to int64 value.
+	IntDecConvertNone IntDecMode = iota
+
+	// IntDecConvertSigned affects how CBOR int (major type 0 and 1) decodes to Go interface{}.
+	// It makes CBOR positive/negative int (major type 0 and 1) decode to int64 value.
+	// If value overflows int64, UnmarshalTypeError is returned.
+	IntDecConvertSigned
+
+	maxIntDec
+)
+
+func (idm IntDecMode) valid() bool {
+	return idm < maxIntDec
+}
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -236,6 +258,10 @@ type DecOptions struct {
 
 	// TagsMd specifies whether to allow CBOR tags (major type 6).
 	TagsMd TagsMode
+
+	// IntDec specifies which Go integer type (int64 or uint64) to use
+	// when decoding CBOR int (major type 0 and 1) to Go interface{}.
+	IntDec IntDecMode
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -314,6 +340,9 @@ func (opts DecOptions) decMode() (*decMode, error) {
 	if !opts.TagsMd.valid() {
 		return nil, errors.New("cbor: invalid TagsMd " + strconv.Itoa(int(opts.TagsMd)))
 	}
+	if !opts.IntDec.valid() {
+		return nil, errors.New("cbor: invalid IntDec " + strconv.Itoa(int(opts.IntDec)))
+	}
 	if opts.MaxNestedLevels == 0 {
 		opts.MaxNestedLevels = 32
 	} else if opts.MaxNestedLevels < 4 || opts.MaxNestedLevels > 256 {
@@ -337,6 +366,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		maxMapPairs:      opts.MaxMapPairs,
 		indefLength:      opts.IndefLength,
 		tagsMd:           opts.TagsMd,
+		intDec:           opts.IntDec,
 	}
 	return &dm, nil
 }
@@ -357,6 +387,7 @@ type decMode struct {
 	maxMapPairs      int
 	indefLength      IndefLengthMode
 	tagsMd           TagsMode
+	intDec           IntDecMode
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -371,6 +402,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		MaxMapPairs:      dm.maxMapPairs,
 		IndefLength:      dm.indefLength,
 		TagsMd:           dm.tagsMd,
+		IntDec:           dm.intDec,
 	}
 }
 
@@ -732,13 +764,23 @@ func (d *decodeState) parse() (interface{}, error) {
 	switch t {
 	case cborTypePositiveInt:
 		_, _, val := d.getHead()
-		return val, nil
+		if d.dm.intDec == IntDecConvertNone {
+			return val, nil
+		}
+		if val > math.MaxInt64 {
+			return nil, &UnmarshalTypeError{
+				Value:  t.String(),
+				Type:   reflect.TypeOf(int64(0)),
+				errMsg: strconv.FormatUint(val, 10) + " overflows Go's int64",
+			}
+		}
+		return int64(val), nil
 	case cborTypeNegativeInt:
 		_, _, val := d.getHead()
 		if val > math.MaxInt64 {
 			return nil, &UnmarshalTypeError{
 				Value:  t.String(),
-				Type:   reflect.TypeOf([]interface{}(nil)).Elem(),
+				Type:   reflect.TypeOf(int64(0)),
 				errMsg: "-1-" + strconv.FormatUint(val, 10) + " overflows Go's int64",
 			}
 		}

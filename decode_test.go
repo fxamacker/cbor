@@ -4201,3 +4201,62 @@ func TestDecTagsMdOption(t *testing.T) {
 		t.Errorf("DecModeWithSharedTags() returned error %q, want %q", err.Error(), wantErrorMsg)
 	}
 }
+
+func TestDecModeInvalidIntDec(t *testing.T) {
+	wantErrorMsg := "cbor: invalid IntDec 101"
+	_, err := DecOptions{IntDec: 101}.DecMode()
+	if err == nil {
+		t.Errorf("DecMode() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("DecMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+}
+
+func TestIntDec(t *testing.T) {
+	dm, err := DecOptions{IntDec: IntDecConvertSigned}.DecMode()
+	if err != nil {
+		t.Errorf("DecMode() returned an error %+v", err)
+	}
+
+	testCases := []struct {
+		name         string
+		cborData     []byte
+		wantObj      interface{}
+		wantErrorMsg string
+	}{
+		{
+			name:     "CBOR pos int",
+			cborData: hexDecode("1a000f4240"),
+			wantObj:  int64(1000000),
+		},
+		{
+			name:         "CBOR pos int overflows int64",
+			cborData:     hexDecode("1bffffffffffffffff"),
+			wantErrorMsg: "18446744073709551615 overflows Go's int64",
+		},
+		{
+			name:     "CBOR neg int",
+			cborData: hexDecode("3903e7"),
+			wantObj:  int64(-1000),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var v interface{}
+			err := dm.Unmarshal(tc.cborData, &v)
+			if err == nil {
+				if tc.wantErrorMsg != "" {
+					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.cborData, tc.wantErrorMsg)
+				} else if !reflect.DeepEqual(v, tc.wantObj) {
+					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantObj, tc.wantObj)
+				}
+			} else {
+				if tc.wantErrorMsg == "" {
+					t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+				}
+			}
+		})
+	}
+}
