@@ -518,7 +518,12 @@ func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error { //n
 		case specialTypeTag:
 			return d.parseToTag(v)
 		case specialTypeTime:
-			return d.parseToTime(v)
+			tm, err := d.parseToTime()
+			if err != nil {
+				return err
+			}
+			v.Set(reflect.ValueOf(tm))
+			return nil
 		case specialTypeUnmarshalerIface:
 			return d.parseToUnmarshaler(v)
 		}
@@ -532,7 +537,7 @@ func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error { //n
 				d.skip() // Required tag number is absent, skip entire tag
 				return &UnmarshalTypeError{Value: t.String(), Type: tInfo.typ, errMsg: "expect CBOR tag value"}
 			}
-		} else if err := d.validRegisteredTagNums(tInfo.nonPtrType, tagItem.num); err != nil {
+		} else if err := d.validRegisteredTagNums(tagItem); err != nil {
 			d.skip() // Skip tag content
 			return err
 		}
@@ -636,15 +641,13 @@ func (d *decodeState) parseToTag(v reflect.Value) error {
 	return nil
 }
 
-func (d *decodeState) parseToTime(v reflect.Value) error {
+func (d *decodeState) parseToTime() (tm time.Time, err error) {
 	t := d.nextCBORType()
 
-	// Verify that tag number or absent of tag number is acceptable to specified timeTag.
+	// Verify that tag number or absence of tag number is acceptable to specified timeTag.
 	if t == cborTypeTag {
 		if d.dm.timeTag == DecTagIgnored {
 			// Skip tag number
-			d.getHead()
-			t = d.nextCBORType()
 			for t == cborTypeTag {
 				d.getHead()
 				t = d.nextCBORType()
@@ -660,83 +663,61 @@ func (d *decodeState) parseToTime(v reflect.Value) error {
 				// Tag content (date/time text string in RFC 3339 format) must be string type.
 				if t != cborTypeTextString {
 					d.skip()
-					return errors.New("cbor: tag number 0 must be followed by text string, got " + t.String())
+					err = errors.New("cbor: tag number 0 must be followed by text string, got " + t.String())
+					return
 				}
 			case 1:
 				// Tag content (epoch date/time) must be uint, int, or float type.
 				if t != cborTypePositiveInt && t != cborTypeNegativeInt && (d.data[d.off] < 0xf9 || d.data[d.off] > 0xfb) {
 					d.skip()
-					return errors.New("cbor: tag number 1 must be followed by integer or floating-point number, got " + t.String())
+					err = errors.New("cbor: tag number 1 must be followed by integer or floating-point number, got " + t.String())
+					return
 				}
 			default:
 				d.skip()
-				return errors.New("cbor: wrong tag number for time.Time, got " + strconv.Itoa(int(tagNum)) + ", expect 0 or 1")
+				err = errors.New("cbor: wrong tag number for time.Time, got " + strconv.Itoa(int(tagNum)) + ", expect 0 or 1")
+				return
 			}
 		}
 	} else {
 		if d.dm.timeTag == DecTagRequired {
 			d.skip()
-			return &UnmarshalTypeError{Value: t.String(), Type: typeTime, errMsg: "expect CBOR tag value"}
+			err = &UnmarshalTypeError{Value: t.String(), Type: typeTime, errMsg: "expect CBOR tag value"}
+			return
 		}
 	}
 
-	switch t {
-	case cborTypePositiveInt:
-		_, _, val := d.getHead()
-		tm := time.Unix(int64(val), 0)
-		v.Set(reflect.ValueOf(tm))
-		return nil
-	case cborTypeNegativeInt:
-		_, _, val := d.getHead()
-		if val > math.MaxInt64 {
-			return &UnmarshalTypeError{
-				Value:  t.String(),
-				Type:   typeTime,
-				errMsg: "-1-" + strconv.FormatUint(val, 10) + " overflows Go's int64",
-			}
-		}
-		nValue := int64(-1) ^ int64(val)
-		tm := time.Unix(nValue, 0)
-		v.Set(reflect.ValueOf(tm))
-		return nil
-	case cborTypeTextString:
-		b, err := d.parseTextString()
-		if err != nil {
-			return err
-		}
-		tm, err := time.Parse(time.RFC3339, string(b))
-		if err != nil {
-			return errors.New("cbor: cannot set " + string(b) + " for time.Time: " + err.Error())
-		}
-		v.Set(reflect.ValueOf(tm))
-		return nil
-	case cborTypePrimitives:
-		_, ai, val := d.getHead()
-		var f float64
-		switch ai {
-		case 22, 23:
-			v.Set(reflect.ValueOf(time.Time{}))
-			return nil
-		case 25:
-			f = float64(float16.Frombits(uint16(val)).Float32())
-		case 26:
-			f = float64(math.Float32frombits(uint32(val)))
-		case 27:
-			f = math.Float64frombits(val)
-		default:
-			return &UnmarshalTypeError{Value: t.String(), Type: typeTime}
-		}
-		if math.IsNaN(f) || math.IsInf(f, 0) {
-			v.Set(reflect.ValueOf(time.Time{}))
-			return nil
-		}
-		f1, f2 := math.Modf(f)
-		tm := time.Unix(int64(f1), int64(f2*1e9))
-		v.Set(reflect.ValueOf(tm))
-		return nil
+	var content interface{}
+	content, err = d.parse()
+	if err != nil {
+		return
 	}
-	d.skip()
-	return &UnmarshalTypeError{Value: t.String(), Type: typeTime}
+
+	switch c := content.(type) {
+	case nil:
+		return
+	case uint64:
+		return time.Unix(int64(c), 0), nil
+	case int64:
+		return time.Unix(c, 0), nil
+	case float64:
+		if math.IsNaN(c) || math.IsInf(c, 0) {
+			return
+		}
+		f1, f2 := math.Modf(c)
+		return time.Unix(int64(f1), int64(f2*1e9)), nil
+	case string:
+		tm, err = time.Parse(time.RFC3339, c)
+		if err != nil {
+			tm = time.Time{}
+			err = errors.New("cbor: cannot set " + c + " for time.Time: " + err.Error())
+			return
+		}
+		return
+	default:
+		err = &UnmarshalTypeError{Value: t.String(), Type: typeTime}
+		return
+	}
 }
 
 // parseToUnmarshaler assumes data is well-formed, and does not perform bounds checking.
@@ -795,37 +776,21 @@ func (d *decodeState) parse() (interface{}, error) {
 		}
 		return string(b), nil
 	case cborTypeTag:
+		tagOff := d.off
 		_, _, tagNum := d.getHead()
-		nt := d.nextCBORType()
+		contentOff := d.off
+
+		if tagNum == 0 || tagNum == 1 {
+			// Parse tagged time.
+			d.off = tagOff
+			return d.parseToTime()
+		}
+
+		// Parse tag content
+		d.off = contentOff
 		content, err := d.parse()
 		if err != nil {
 			return nil, err
-		}
-		switch tagNum {
-		case 0:
-			// Tag content should be date/time text string in RFC 3339 format.
-			s, ok := content.(string)
-			if !ok {
-				return nil, errors.New("cbor: tag number 0 must be followed by text string, got " + nt.String())
-			}
-			tm, err := time.Parse(time.RFC3339, s)
-			if err != nil {
-				return nil, errors.New("cbor: cannot set " + s + " for time.Time: " + err.Error())
-			}
-			return tm, nil
-		case 1:
-			// Tag content should be epoch date/time.
-			switch content := content.(type) {
-			case uint64:
-				return time.Unix(int64(content), 0), nil
-			case int64:
-				return time.Unix(content, 0), nil
-			case float64:
-				f1, f2 := math.Modf(content)
-				return time.Unix(int64(f1), int64(f2*1e9)), nil
-			default:
-				return nil, errors.New("cbor: tag number 1 must be followed by integer or floating-point number, got " + nt.String())
-			}
 		}
 		return Tag{tagNum, content}, nil
 	case cborTypePrimitives:
@@ -1393,22 +1358,16 @@ func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error {
 
 // validRegisteredTagNums verifies that tag numbers match registered tag numbers of type t.
 // validRegisteredTagNums assumes next CBOR data type is tag.  It scans all tag numbers, and stops at tag content.
-func (d *decodeState) validRegisteredTagNums(t reflect.Type, registeredTagNums []uint64) error {
+func (d *decodeState) validRegisteredTagNums(registeredTag *tagItem) error {
 	// Scan until next cbor data is tag content.
-	tagNums := make([]uint64, 0, 2)
+	tagNums := make([]uint64, 0, 1)
 	for d.nextCBORType() == cborTypeTag {
 		_, _, val := d.getHead()
 		tagNums = append(tagNums, val)
 	}
 
-	// Verify that tag numbers match registered tag numbers of type t
-	if len(tagNums) != len(registeredTagNums) {
-		return &WrongTagError{t, registeredTagNums, tagNums}
-	}
-	for i, n := range registeredTagNums {
-		if n != tagNums[i] {
-			return &WrongTagError{t, registeredTagNums, tagNums}
-		}
+	if !registeredTag.equalTagNum(tagNums) {
+		return &WrongTagError{registeredTag.contentType, registeredTag.num, tagNums}
 	}
 	return nil
 }
