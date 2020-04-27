@@ -1415,7 +1415,7 @@ func (d *decodeState) validRegisteredTagNums(t reflect.Type, registeredTagNums [
 
 func (d *decodeState) getRegisteredTagItem(vt reflect.Type) *tagItem {
 	if d.dm.tags != nil {
-		return d.dm.tags.get(vt)
+		return d.dm.tags.getTagItemFromType(vt)
 	}
 	return nil
 }

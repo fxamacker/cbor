@@ -485,7 +485,7 @@ func (em *encMode) EncOptions() EncOptions {
 
 func (em *encMode) encTagBytes(t reflect.Type) []byte {
 	if em.tags != nil {
-		if tagItem := em.tags.get(t); tagItem != nil {
+		if tagItem := em.tags.getTagItemFromType(t); tagItem != nil {
 			return tagItem.cborTagNum
 		}
 	}

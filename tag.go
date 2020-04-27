@@ -123,7 +123,7 @@ type TagSet interface {
 }
 
 type tagProvider interface {
-	get(t reflect.Type) *tagItem
+	getTagItemFromType(t reflect.Type) *tagItem
 }
 
 type tagItem struct {
@@ -131,6 +131,25 @@ type tagItem struct {
 	cborTagNum  []byte
 	contentType reflect.Type
 	opts        TagOptions
+}
+
+func (t *tagItem) equalTagNum(num []uint64) bool {
+	// Fast path to compare 1 tag number
+	if len(t.num) == 1 && len(num) == 1 && t.num[0] == num[0] {
+		return true
+	}
+
+	if len(t.num) != len(num) {
+		return false
+	}
+
+	for i := 0; i < len(t.num); i++ {
+		if t.num[i] != num[i] {
+			return false
+		}
+	}
+
+	return true
 }
 
 type (
@@ -142,7 +161,7 @@ type (
 	}
 )
 
-func (t tagSet) get(typ reflect.Type) *tagItem {
+func (t tagSet) getTagItemFromType(typ reflect.Type) *tagItem {
 	return t[typ]
 }
 
@@ -165,8 +184,13 @@ func (t *syncTagSet) Add(opts TagOptions, contentType reflect.Type, num uint64, 
 	}
 	t.Lock()
 	defer t.Unlock()
-	if _, ok := t.t[contentType]; ok {
-		return errors.New("cbor: content type " + contentType.String() + " already exists in TagSet")
+	for typ, ti := range t.t {
+		if typ == contentType {
+			return errors.New("cbor: content type " + contentType.String() + " already exists in TagSet")
+		}
+		if ti.equalTagNum(tag.num) {
+			return fmt.Errorf("cbor: tag number %v already exists in TagSet", tag.num)
+		}
 	}
 	t.t[contentType] = tag
 	return nil
@@ -182,7 +206,7 @@ func (t *syncTagSet) Remove(contentType reflect.Type) {
 	t.Unlock()
 }
 
-func (t *syncTagSet) get(typ reflect.Type) *tagItem {
+func (t *syncTagSet) getTagItemFromType(typ reflect.Type) *tagItem {
 	t.RLock()
 	ti := t.t[typ]
 	t.RUnlock()
