@@ -379,7 +379,7 @@ func TestAddTagError(t *testing.T) {
 	}
 }
 
-func TestAddDuplicateTagError(t *testing.T) {
+func TestAddDuplicateTagContentTypeError(t *testing.T) {
 	type myInt int
 	myIntType := reflect.TypeOf(myInt(0))
 	wantErrorMsg := "cbor: content type cbor.myInt already exists in TagSet"
@@ -393,7 +393,49 @@ func TestAddDuplicateTagError(t *testing.T) {
 	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 101); err == nil {
 		t.Errorf("TagSet.Add(%s, %d) didn't return an error", myIntType.String(), 101)
 	} else if err.Error() != wantErrorMsg {
-		t.Errorf("TagSet.Add(%s, %d) returned error msg %q, want %q", myIntType, 100, err, wantErrorMsg)
+		t.Errorf("TagSet.Add(%s, %d) returned error msg %q, want %q", myIntType, 101, err, wantErrorMsg)
+	}
+}
+
+func TestAddDuplicateTagNumError(t *testing.T) {
+	type myBool bool
+	type myInt int
+	myBoolType := reflect.TypeOf(myBool(false))
+	myIntType := reflect.TypeOf(myInt(0))
+	wantErrorMsg := "cbor: tag number [100] already exists in TagSet"
+
+	tags := NewTagSet()
+
+	// Add myIntType and 100 to tags
+	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100); err != nil {
+		t.Errorf("TagSet.Add(%s, %d) returned error %v", myIntType.String(), 100, err)
+	}
+	// Add myBoolType and 100 to tags
+	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myBoolType, 100); err == nil {
+		t.Errorf("TagSet.Add(%s, %d) didn't return an error", myBoolType.String(), 100)
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("TagSet.Add(%s, %d) returned error msg %q, want %q", myBoolType, 100, err, wantErrorMsg)
+	}
+}
+
+func TestAddDuplicateTagNumsError(t *testing.T) {
+	type myBool bool
+	type myInt int
+	myBoolType := reflect.TypeOf(myBool(false))
+	myIntType := reflect.TypeOf(myInt(0))
+	wantErrorMsg := "cbor: tag number [100 101] already exists in TagSet"
+
+	tags := NewTagSet()
+
+	// Add myIntType and [100, 101] to tags
+	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100, 101); err != nil {
+		t.Errorf("TagSet.Add(%s, %d, %d) returned error %v", myIntType.String(), 100, 101, err)
+	}
+	// Add myBoolType and [100, 101] to tags
+	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myBoolType, 100, 101); err == nil {
+		t.Errorf("TagSet.Add(%s, %d, %d) didn't return an error", myBoolType.String(), 100, 101)
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("TagSet.Add(%s, %d, %d) returned error msg %q, want %q", myBoolType, 100, 101, err, wantErrorMsg)
 	}
 }
 
