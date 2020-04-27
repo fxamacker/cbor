@@ -1847,7 +1847,7 @@ func TestDecodeTimeError(t *testing.T) {
 		{
 			name:         "negative integer overflow",
 			cborData:     hexDecode("3bffffffffffffffff"),
-			wantErrorMsg: "cbor: cannot unmarshal negative integer into Go value of type time.Time",
+			wantErrorMsg: "cbor: cannot unmarshal negative integer into Go value of type int64",
 		},
 	}
 	for _, tc := range testCases {
