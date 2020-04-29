@@ -1924,6 +1924,98 @@ func TestDecodeTimeWithTagError(t *testing.T) {
 	}
 }
 
+func TestDecodeTag0Error(t *testing.T) {
+	cborData := hexDecode("c01a514b67b0") // 0(1363896240)
+	wantErrorMsg := "cbor: tag number 0 must be followed by text string, got positive integer"
+
+	timeTagIgnoredDM, _ := DecOptions{TimeTag: DecTagIgnored}.DecMode()
+	timeTagOptionalDM, _ := DecOptions{TimeTag: DecTagOptional}.DecMode()
+	timeTagRequiredDM, _ := DecOptions{TimeTag: DecTagRequired}.DecMode()
+
+	testCases := []struct {
+		name string
+		dm   DecMode
+	}{
+		{name: "DecTagIgnored", dm: timeTagIgnoredDM},
+		{name: "DecTagOptional", dm: timeTagOptionalDM},
+		{name: "DecTagRequired", dm: timeTagRequiredDM},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Decode to interface{}
+			var v interface{}
+			if err := tc.dm.Unmarshal(cborData, &v); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", cborData, wantErrorMsg)
+			} else if !strings.Contains(err.Error(), wantErrorMsg) {
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err, wantErrorMsg)
+			}
+
+			// Decode to time.Time
+			var tm time.Time
+			if err := tc.dm.Unmarshal(cborData, &tm); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", cborData, wantErrorMsg)
+			} else if !strings.Contains(err.Error(), wantErrorMsg) {
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err, wantErrorMsg)
+			}
+
+			// Decode to uint64
+			var ui uint64
+			if err := tc.dm.Unmarshal(cborData, &ui); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", cborData, wantErrorMsg)
+			} else if !strings.Contains(err.Error(), wantErrorMsg) {
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err, wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestDecodeTag1Error(t *testing.T) {
+	cborData := hexDecode("c174323031332d30332d32315432303a30343a30305a") // 1("2013-03-21T20:04:00Z")
+	wantErrorMsg := "cbor: tag number 1 must be followed by integer or floating-point number, got UTF-8 text string"
+
+	timeTagIgnoredDM, _ := DecOptions{TimeTag: DecTagIgnored}.DecMode()
+	timeTagOptionalDM, _ := DecOptions{TimeTag: DecTagOptional}.DecMode()
+	timeTagRequiredDM, _ := DecOptions{TimeTag: DecTagRequired}.DecMode()
+
+	testCases := []struct {
+		name string
+		dm   DecMode
+	}{
+		{name: "DecTagIgnored", dm: timeTagIgnoredDM},
+		{name: "DecTagOptional", dm: timeTagOptionalDM},
+		{name: "DecTagRequired", dm: timeTagRequiredDM},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Decode to interface{}
+			var v interface{}
+			if err := tc.dm.Unmarshal(cborData, &v); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", cborData, wantErrorMsg)
+			} else if !strings.Contains(err.Error(), wantErrorMsg) {
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err, wantErrorMsg)
+			}
+
+			// Decode to time.Time
+			var tm time.Time
+			if err := tc.dm.Unmarshal(cborData, &tm); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", cborData, wantErrorMsg)
+			} else if !strings.Contains(err.Error(), wantErrorMsg) {
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err, wantErrorMsg)
+			}
+
+			// Decode to string
+			var s string
+			if err := tc.dm.Unmarshal(cborData, &s); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", cborData, wantErrorMsg)
+			} else if !strings.Contains(err.Error(), wantErrorMsg) {
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err, wantErrorMsg)
+			}
+		})
+	}
+}
+
 func TestDecodeTimeStreaming(t *testing.T) {
 	// Decoder decodes from mixed invalid and valid time.
 	testCases := []struct {
