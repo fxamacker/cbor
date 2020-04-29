@@ -766,6 +766,24 @@ func (d *decodeState) parse() (interface{}, error) {
 			return d.parseToTime()
 		}
 
+		if d.dm.tags != nil {
+			// Parse to specified type if tag number is registered.
+			tagNums := []uint64{tagNum}
+			for d.nextCBORType() == cborTypeTag {
+				_, _, num := d.getHead()
+				tagNums = append(tagNums, num)
+			}
+			registeredType := d.dm.tags.getTypeFromTagNum(tagNums)
+			if registeredType != nil {
+				d.off = tagOff
+				rv := reflect.New(registeredType)
+				if err := d.parseToValue(rv.Elem(), getTypeInfo(registeredType)); err != nil {
+					return nil, err
+				}
+				return rv.Elem().Interface(), nil
+			}
+		}
+
 		// Parse tag content
 		d.off = contentOff
 		content, err := d.parse()
