@@ -1252,7 +1252,7 @@ func (n *number3) UnmarshalCBOR(data []byte) (err error) {
 	}
 
 	if rawTag.Number != 100 {
-		return fmt.Errorf("Wrong tag number %d, want %d", rawTag.Number, 101)
+		return fmt.Errorf("wrong tag number %d, want %d", rawTag.Number, 101)
 	}
 
 	var v map[string]uint64
@@ -1294,7 +1294,7 @@ func TestDecodeRegisterTagForUnmarshaler(t *testing.T) {
 
 	// Decode to registered type.
 	var v2 number3
-	if err := dm.Unmarshal(cborData, &v2); err != nil {
+	if err = dm.Unmarshal(cborData, &v2); err != nil {
 		t.Errorf("Unmarshal() returned error %v", err)
 	}
 	if !reflect.DeepEqual(wantObj, v2) {
