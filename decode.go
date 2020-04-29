@@ -442,15 +442,6 @@ func (d *decodeState) value(v interface{}) error {
 
 	rv = rv.Elem()
 
-	if rv.Kind() == reflect.Interface && rv.NumMethod() == 0 {
-		// Fast path to decode to empty interface without retrieving typeInfo.
-		iv, err := d.parse()
-		if iv != nil {
-			rv.Set(reflect.ValueOf(iv))
-		}
-		return err
-	}
-
 	return d.parseToValue(rv, getTypeInfo(rv.Type()))
 }
 
@@ -507,6 +498,17 @@ func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error { //n
 		}
 	}
 
+	// Check validity of supported built-in tags.
+	if d.nextCBORType() == cborTypeTag {
+		off := d.off
+		_, _, tagNum := d.getHead()
+		if err := validBuiltinTag(tagNum, d.data[d.off]); err != nil {
+			d.skip()
+			return err
+		}
+		d.off = off
+	}
+
 	if tInfo.spclType != specialTypeNone {
 		switch tInfo.spclType {
 		case specialTypeEmptyIface:
@@ -546,13 +548,9 @@ func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error { //n
 	t := d.nextCBORType()
 
 	// Skip tag number(s) here to avoid recursion
-	if t == cborTypeTag {
+	for t == cborTypeTag {
 		d.getHead()
 		t = d.nextCBORType()
-		for t == cborTypeTag {
-			d.getHead()
-			t = d.nextCBORType()
-		}
 	}
 
 	switch t {
@@ -655,25 +653,7 @@ func (d *decodeState) parseToTime() (tm time.Time, err error) {
 		} else {
 			// Read tag number
 			_, _, tagNum := d.getHead()
-
-			// Verify tag number (0 or 1) is followed by appropriate tag content type.
-			t = d.nextCBORType()
-			switch tagNum {
-			case 0:
-				// Tag content (date/time text string in RFC 3339 format) must be string type.
-				if t != cborTypeTextString {
-					d.skip()
-					err = errors.New("cbor: tag number 0 must be followed by text string, got " + t.String())
-					return
-				}
-			case 1:
-				// Tag content (epoch date/time) must be uint, int, or float type.
-				if t != cborTypePositiveInt && t != cborTypeNegativeInt && (d.data[d.off] < 0xf9 || d.data[d.off] > 0xfb) {
-					d.skip()
-					err = errors.New("cbor: tag number 1 must be followed by integer or floating-point number, got " + t.String())
-					return
-				}
-			default:
+			if tagNum != 0 && tagNum != 1 {
 				d.skip()
 				err = errors.New("cbor: wrong tag number for time.Time, got " + strconv.Itoa(int(tagNum)) + ", expect 0 or 1")
 				return
@@ -1640,4 +1620,24 @@ func fieldByIndex(v reflect.Value, index []int) (reflect.Value, error) {
 		v = v.Field(i)
 	}
 	return v, nil
+}
+
+// validBuiltinTag checks that supported built-in tag numbers are followed by expected content types.
+func validBuiltinTag(tagNum uint64, contentHead byte) error {
+	t := cborType(contentHead & 0xe0)
+	switch tagNum {
+	case 0:
+		// Tag content (date/time text string in RFC 3339 format) must be string type.
+		if t != cborTypeTextString {
+			return errors.New("cbor: tag number 0 must be followed by text string, got " + t.String())
+		}
+		return nil
+	case 1:
+		// Tag content (epoch date/time) must be uint, int, or float type.
+		if t != cborTypePositiveInt && t != cborTypeNegativeInt && (contentHead < 0xf9 || contentHead > 0xfb) {
+			return errors.New("cbor: tag number 1 must be followed by integer or floating-point number, got " + t.String())
+		}
+		return nil
+	}
+	return nil
 }
