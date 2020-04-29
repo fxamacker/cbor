@@ -2,6 +2,7 @@ package cbor
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"reflect"
 	"strings"
@@ -332,20 +333,22 @@ func TestAddTagError(t *testing.T) {
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
 			wantErrorMsg: "cbor: cannot add cbor.RawTag to TagSet",
 		},
-		{
-			name:         "cbor.Unmarshaler",
-			typ:          reflect.TypeOf(number2(0)),
-			num:          107,
-			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagNone},
-			wantErrorMsg: "cbor: cannot add cbor.Unmarshaler to TagSet with DecTag != DecTagIgnored",
-		},
-		{
-			name:         "cbor.Marshaler",
-			typ:          reflect.TypeOf(number2(0)),
-			num:          108,
-			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
-			wantErrorMsg: "cbor: cannot add cbor.Marshaler to TagSet with EncTag != EncTagNone",
-		},
+		/*
+			{
+				name:         "cbor.Unmarshaler",
+				typ:          reflect.TypeOf(number2(0)),
+				num:          107,
+				opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagNone},
+				wantErrorMsg: "cbor: cannot add cbor.Unmarshaler to TagSet with DecTag != DecTagIgnored",
+			},
+			{
+				name:         "cbor.Marshaler",
+				typ:          reflect.TypeOf(number2(0)),
+				num:          108,
+				opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
+				wantErrorMsg: "cbor: cannot add cbor.Marshaler to TagSet with EncTag != EncTagNone",
+			},
+		*/
 		{
 			name:         "tag number 0",
 			typ:          reflect.TypeOf(myInt(0)),
@@ -1103,7 +1106,7 @@ func TestTagMarshalError(t *testing.T) {
 	}
 }
 
-func TestTagMarshal(t *testing.T) {
+func TestEncodeTag(t *testing.T) {
 	m := make(map[interface{}]bool)
 	m[10] = true
 	m[100] = true
@@ -1135,5 +1138,172 @@ func TestTagMarshal(t *testing.T) {
 	}
 	if !bytes.Equal(b, bytewiseSortedCborData) {
 		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, bytewiseSortedCborData)
+	}
+}
+
+func TestDecodeTagToEmptyIface(t *testing.T) {
+	type myBool bool
+	type myUint uint
+
+	typeMyBool := reflect.TypeOf(myBool(false))
+	typeMyUint := reflect.TypeOf(myUint(0))
+
+	tags := NewTagSet()
+	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typeMyBool, 100); err != nil {
+		t.Fatalf("TagSet.Add(%s, %d) returned error %v", typeMyBool, 100, err)
+	}
+	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typeMyUint, 101, 102); err != nil {
+		t.Fatalf("TagSet.Add(%s, %d, %d) returned error %v", typeMyUint, 101, 102, err)
+	}
+
+	dm, _ := DecOptions{}.DecModeWithTags(tags)
+	dmSharedTags, _ := DecOptions{}.DecModeWithSharedTags(tags)
+
+	testCases := []struct {
+		name     string
+		cborData []byte
+		wantObj  interface{}
+	}{
+		{
+			name:     "registered myBool",
+			cborData: hexDecode("d864f5"), // 100(true)
+			wantObj:  myBool(true),
+		},
+		{
+			name:     "registered myUint",
+			cborData: hexDecode("d865d86600"), // 101(102(0))
+			wantObj:  myUint(0),
+		},
+		{
+			name:     "not registered bool",
+			cborData: hexDecode("d865f5"), // 101(true)
+			wantObj:  Tag{101, true},
+		},
+		{
+			name:     "not registered uint",
+			cborData: hexDecode("d865d86700"), // 101(103(0))
+			wantObj:  Tag{101, Tag{103, uint64(0)}},
+		},
+		{
+			name:     "not registered uint",
+			cborData: hexDecode("d865d866d86700"), // 101(102(103(0)))
+			wantObj:  Tag{101, Tag{102, Tag{103, uint64(0)}}},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var v1 interface{}
+			if err := dm.Unmarshal(tc.cborData, &v1); err != nil {
+				t.Errorf("Unmarshal() returned error %v", err)
+			}
+			if !reflect.DeepEqual(tc.wantObj, v1) {
+				t.Errorf("Unmarshal to interface{} returned different values: %v, %v", tc.wantObj, v1)
+			}
+
+			var v2 interface{}
+			if err := dmSharedTags.Unmarshal(tc.cborData, &v2); err != nil {
+				t.Errorf("Unmarshal() returned error %v", err)
+			}
+			if !reflect.DeepEqual(tc.wantObj, v2) {
+				t.Errorf("Unmarshal to interface{} returned different values: %v, %v", tc.wantObj, v2)
+			}
+		})
+	}
+}
+
+func TestDecodeRegisteredTagToEmptyIfaceError(t *testing.T) {
+	type myInt int
+
+	typeMyInt := reflect.TypeOf(myInt(0))
+
+	tags := NewTagSet()
+	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typeMyInt, 101, 102); err != nil {
+		t.Fatalf("TagSet.Add(%s, %d, %d) returned error %v", typeMyInt, 101, 102, err)
+	}
+
+	dm, _ := DecOptions{}.DecModeWithTags(tags)
+
+	cborData := hexDecode("d865d8663bffffffffffffffff") // 101(102(-18446744073709551616))
+
+	var v interface{}
+	if err := dm.Unmarshal(cborData, &v); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	} else if _, ok := err.(*UnmarshalTypeError); !ok {
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+	} else if !strings.Contains(err.Error(), "cannot unmarshal") {
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), "cannot unmarshal")
+	}
+}
+
+type number3 uint64
+
+// MarshalCBOR marshals number3 to CBOR tagged map (tag number 100)
+func (n number3) MarshalCBOR() (data []byte, err error) {
+	m := map[string]uint64{"num": uint64(n)}
+	return Marshal(Tag{100, m})
+}
+
+// UnmarshalCBOR unmarshals CBOR tagged map to number3
+func (n *number3) UnmarshalCBOR(data []byte) (err error) {
+	var rawTag RawTag
+	if err := Unmarshal(data, &rawTag); err != nil {
+		return err
+	}
+
+	if rawTag.Number != 100 {
+		return fmt.Errorf("wrong tag number %d, want %d", rawTag.Number, 101)
+	}
+
+	var v map[string]uint64
+	if err := Unmarshal(rawTag.Content, &v); err != nil {
+		return err
+	}
+	*n = number3(v["num"])
+	return nil
+}
+
+func TestDecodeRegisterTagForUnmarshaler(t *testing.T) {
+	typ := reflect.TypeOf(number3(0))
+
+	tags := NewTagSet()
+	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 100); err != nil {
+		t.Fatalf("TagSet.Add(%s, %d) returned error %v", typ, 100, err)
+	}
+
+	cborData := hexDecode("d864a1636e756d01") // 100({"num": 1})
+	wantObj := number3(1)
+
+	dm, _ := DecOptions{}.DecModeWithTags(tags)
+	em, _ := EncOptions{}.EncModeWithTags(tags)
+
+	// Decode to empty interface.  Unmarshal() should return object of registered type.
+	var v1 interface{}
+	if err := dm.Unmarshal(cborData, &v1); err != nil {
+		t.Errorf("Unmarshal() returned error %v", err)
+	}
+	if !reflect.DeepEqual(wantObj, v1) {
+		t.Errorf("Unmarshal() returned different values: %v (%T), %v (%T)", wantObj, wantObj, v1, v1)
+	}
+	b, err := em.Marshal(v1)
+	if err != nil {
+		t.Errorf("Marshal(%v) returned error %v", v1, err)
+	} else if !bytes.Equal(b, cborData) {
+		t.Errorf("Marshal(%v) returned %v, want %v", v1, b, cborData)
+	}
+
+	// Decode to registered type.
+	var v2 number3
+	if err = dm.Unmarshal(cborData, &v2); err != nil {
+		t.Errorf("Unmarshal() returned error %v", err)
+	}
+	if !reflect.DeepEqual(wantObj, v2) {
+		t.Errorf("Unmarshal() returned different values: %v, %v", wantObj, v2)
+	}
+	b, err = em.Marshal(v2)
+	if err != nil {
+		t.Errorf("Marshal(%v) returned error %v", v2, err)
+	} else if !bytes.Equal(b, cborData) {
+		t.Errorf("Marshal(%v) returned %v, want %v", v2, b, cborData)
 	}
 }

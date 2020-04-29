@@ -124,6 +124,7 @@ type TagSet interface {
 
 type tagProvider interface {
 	getTagItemFromType(t reflect.Type) *tagItem
+	getTypeFromTagNum(num []uint64) reflect.Type
 }
 
 type tagItem struct {
@@ -163,6 +164,15 @@ type (
 
 func (t tagSet) getTagItemFromType(typ reflect.Type) *tagItem {
 	return t[typ]
+}
+
+func (t tagSet) getTypeFromTagNum(num []uint64) reflect.Type {
+	for typ, tag := range t {
+		if tag.equalTagNum(num) {
+			return typ
+		}
+	}
+	return nil
 }
 
 // NewTagSet returns TagSet (safe for concurrency).
@@ -213,6 +223,13 @@ func (t *syncTagSet) getTagItemFromType(typ reflect.Type) *tagItem {
 	return ti
 }
 
+func (t *syncTagSet) getTypeFromTagNum(num []uint64) reflect.Type {
+	t.RLock()
+	rt := t.t.getTypeFromTagNum(num)
+	t.RUnlock()
+	return rt
+}
+
 func newTagItem(opts TagOptions, contentType reflect.Type, num uint64, nestedNum ...uint64) (*tagItem, error) {
 	if opts.DecTag == DecTagIgnored && opts.EncTag == EncTagNone {
 		return nil, errors.New("cbor: cannot add tag with DecTagIgnored and EncTagNone options to TagSet")
@@ -232,12 +249,12 @@ func newTagItem(opts TagOptions, contentType reflect.Type, num uint64, nestedNum
 	if num == 0 || num == 1 {
 		return nil, errors.New("cbor: cannot add tag number 0 or 1 to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead")
 	}
-	if reflect.PtrTo(contentType).Implements(typeMarshaler) && opts.EncTag != EncTagNone {
-		return nil, errors.New("cbor: cannot add cbor.Marshaler to TagSet with EncTag != EncTagNone")
-	}
-	if reflect.PtrTo(contentType).Implements(typeUnmarshaler) && opts.DecTag != DecTagIgnored {
-		return nil, errors.New("cbor: cannot add cbor.Unmarshaler to TagSet with DecTag != DecTagIgnored")
-	}
+	//if reflect.PtrTo(contentType).Implements(typeMarshaler) && opts.EncTag != EncTagNone {
+	//return nil, errors.New("cbor: cannot add cbor.Marshaler to TagSet with EncTag != EncTagNone")
+	//}
+	//if reflect.PtrTo(contentType).Implements(typeUnmarshaler) && opts.DecTag != DecTagIgnored {
+	//return nil, errors.New("cbor: cannot add cbor.Unmarshaler to TagSet with DecTag != DecTagIgnored")
+	//}
 
 	te := tagItem{num: []uint64{num}, opts: opts, contentType: contentType}
 	te.num = append(te.num, nestedNum...)
