@@ -269,11 +269,11 @@ type DecOptions struct {
 	MaxNestedLevels int
 
 	// MaxArrayElements specifies the max number of elements for CBOR arrays.
-	// Default is 128*1024=131072 and it can be set to [16, 134217728]
+	// Default is 128*1024=131072 and it can be set to [16, 2147483647]
 	MaxArrayElements int
 
 	// MaxMapPairs specifies the max number of key-value pairs for CBOR maps.
-	// Default is 128*1024=131072 and it can be set to [16, 134217728]
+	// Default is 128*1024=131072 and it can be set to [16, 2147483647]
 	MaxMapPairs int
 
 	// IndefLength specifies whether to allow indefinite length CBOR items.
@@ -347,11 +347,11 @@ func (opts DecOptions) DecModeWithSharedTags(tags TagSet) (DecMode, error) {
 const (
 	defaultMaxArrayElements = 131072
 	minMaxArrayElements     = 16
-	maxMaxArrayElements     = 134217728
+	maxMaxArrayElements     = 2147483647
 
 	defaultMaxMapPairs = 131072
 	minMaxMapPairs     = 16
-	maxMaxMapPairs     = 134217728
+	maxMaxMapPairs     = 2147483647
 )
 
 func (opts DecOptions) decMode() (*decMode, error) {

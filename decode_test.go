@@ -3068,12 +3068,12 @@ func TestDecModeInvalidMaxMapPairs(t *testing.T) {
 		{
 			name:         "MaxMapPairs < 16",
 			opts:         DecOptions{MaxMapPairs: 1},
-			wantErrorMsg: "cbor: invalid MaxMapPairs 1 (range is [16, 134217728])",
+			wantErrorMsg: "cbor: invalid MaxMapPairs 1 (range is [16, 2147483647])",
 		},
 		{
-			name:         "MaxMapPairs > 134217728",
-			opts:         DecOptions{MaxMapPairs: 134217729},
-			wantErrorMsg: "cbor: invalid MaxMapPairs 134217729 (range is [16, 134217728])",
+			name:         "MaxMapPairs > 2147483647",
+			opts:         DecOptions{MaxMapPairs: 2147483648},
+			wantErrorMsg: "cbor: invalid MaxMapPairs 2147483648 (range is [16, 2147483647])",
 		},
 	}
 	for _, tc := range testCases {
@@ -3109,12 +3109,12 @@ func TestDecModeInvalidMaxArrayElements(t *testing.T) {
 		{
 			name:         "MaxArrayElements < 16",
 			opts:         DecOptions{MaxArrayElements: 1},
-			wantErrorMsg: "cbor: invalid MaxArrayElements 1 (range is [16, 134217728])",
+			wantErrorMsg: "cbor: invalid MaxArrayElements 1 (range is [16, 2147483647])",
 		},
 		{
-			name:         "MaxArrayElements > 134217728",
-			opts:         DecOptions{MaxArrayElements: 134217729},
-			wantErrorMsg: "cbor: invalid MaxArrayElements 134217729 (range is [16, 134217728])",
+			name:         "MaxArrayElements > 2147483647",
+			opts:         DecOptions{MaxArrayElements: 2147483648},
+			wantErrorMsg: "cbor: invalid MaxArrayElements 2147483648 (range is [16, 2147483647])",
 		},
 	}
 	for _, tc := range testCases {
