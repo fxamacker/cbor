@@ -2938,12 +2938,15 @@ func TestUnmarshalToNotNilInterface(t *testing.T) {
 
 func TestDecOptions(t *testing.T) {
 	opts1 := DecOptions{
-		TimeTag:          DecTagRequired,
-		DupMapKey:        DupMapKeyEnforcedAPF,
-		IndefLength:      IndefLengthForbidden,
-		MaxNestedLevels:  100,
-		MaxMapPairs:      101,
-		MaxArrayElements: 102,
+		TimeTag:           DecTagRequired,
+		DupMapKey:         DupMapKeyEnforcedAPF,
+		IndefLength:       IndefLengthForbidden,
+		MaxNestedLevels:   100,
+		MaxMapPairs:       101,
+		MaxArrayElements:  102,
+		TagsMd:            TagsForbidden,
+		IntDec:            IntDecConvertSigned,
+		ExtraReturnErrors: ExtraDecErrorUnknownField,
 	}
 	dm, err := opts1.DecMode()
 	if err != nil {
@@ -4350,5 +4353,121 @@ func TestIntDec(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestDecModeInvalidExtraError(t *testing.T) {
+	wantErrorMsg := "cbor: invalid ExtraReturnErrors 3"
+	_, err := DecOptions{ExtraReturnErrors: 3}.DecMode()
+	if err == nil {
+		t.Errorf("DecMode() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("DecMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+}
+
+func TestExtraErrorCondUnknowField(t *testing.T) {
+	type s struct {
+		A string
+		B string
+		C string
+	}
+
+	dm, _ := DecOptions{}.DecMode()
+	dmUnknownFieldError, _ := DecOptions{ExtraReturnErrors: ExtraDecErrorUnknownField}.DecMode()
+
+	testCases := []struct {
+		name         string
+		cborData     []byte
+		dm           DecMode
+		wantObj      interface{}
+		wantErrorMsg string
+	}{
+		{
+			name:     "field by field match",
+			cborData: hexDecode("a3614161616142616261436163"), // map[string]string{"A": "a", "B": "b", "C": "c"}
+			dm:       dm,
+			wantObj:  s{A: "a", B: "b", C: "c"},
+		},
+		{
+			name:     "field by field match with ExtraDecErrorUnknownField",
+			cborData: hexDecode("a3614161616142616261436163"), // map[string]string{"A": "a", "B": "b", "C": "c"}
+			dm:       dmUnknownFieldError,
+			wantObj:  s{A: "a", B: "b", C: "c"},
+		},
+		{
+			name:     "CBOR map less field",
+			cborData: hexDecode("a26141616161426162"), // map[string]string{"A": "a", "B": "b"}
+			dm:       dm,
+			wantObj:  s{A: "a", B: "b", C: ""},
+		},
+		{
+			name:     "CBOR map less field with ExtraDecErrorUnknownField",
+			cborData: hexDecode("a26141616161426162"), // map[string]string{"A": "a", "B": "b"}
+			dm:       dmUnknownFieldError,
+			wantObj:  s{A: "a", B: "b", C: ""},
+		},
+		{
+			name:     "CBOR map unknown field",
+			cborData: hexDecode("a461416161614261626143616361446164"), // map[string]string{"A": "a", "B": "b", "C": "c", "D": "d"}
+			dm:       dm,
+			wantObj:  s{A: "a", B: "b", C: "c"},
+		},
+		{
+			name:         "CBOR map unknown field with ExtraDecErrorUnknownField",
+			cborData:     hexDecode("a461416161614261626143616361446164"), // map[string]string{"A": "a", "B": "b", "C": "c", "D": "d"}
+			dm:           dmUnknownFieldError,
+			wantErrorMsg: "cbor: found unknown field at map element index 3",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var v s
+			err := tc.dm.Unmarshal(tc.cborData, &v)
+			if err == nil {
+				if tc.wantErrorMsg != "" {
+					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.cborData, tc.wantErrorMsg)
+				} else if !reflect.DeepEqual(v, tc.wantObj) {
+					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantObj, tc.wantObj)
+				}
+			} else {
+				if tc.wantErrorMsg == "" {
+					t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+				}
+			}
+		})
+	}
+}
+
+func TestStreamExtraErrorCondUnknowField(t *testing.T) {
+	type s struct {
+		A string
+		B string
+		C string
+	}
+
+	cborData := hexDecode("a461416161614461646142616261436163a3614161616142616261436163") // map[string]string{"A": "a", "D": "d", "B": "b", "C": "c"}, map[string]string{"A": "a", "B": "b", "C": "c"}
+	wantErrorMsg := "cbor: found unknown field at map element index 1"
+	wantObj := s{A: "a", B: "b", C: "c"}
+
+	dmUnknownFieldError, _ := DecOptions{ExtraReturnErrors: ExtraDecErrorUnknownField}.DecMode()
+	dec := dmUnknownFieldError.NewDecoder(bytes.NewReader(cborData))
+
+	var v1 s
+	err := dec.Decode(&v1)
+	if err == nil {
+		t.Errorf("Decode() didn't return an error, want %q", wantErrorMsg)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Decode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+
+	var v2 s
+	err = dec.Decode(&v2)
+	if err != nil {
+		t.Errorf("Decode() returned an error %v", err)
+	} else if !reflect.DeepEqual(v2, wantObj) {
+		t.Errorf("Decode() return %v (%T), want %v (%T)", v2, v2, wantObj, wantObj)
 	}
 }

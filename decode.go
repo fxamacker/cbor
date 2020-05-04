@@ -153,6 +153,15 @@ func (e *DupMapKeyError) Error() string {
 	return fmt.Sprintf("cbor: found duplicate map key \"%v\" at map element index %d", e.Key, e.Index)
 }
 
+// UnknownFieldError describes detected unknown field in CBOR map when decoding to Go struct.
+type UnknownFieldError struct {
+	Index int
+}
+
+func (e *UnknownFieldError) Error() string {
+	return fmt.Sprintf("cbor: found unknown field at map element index %d", e.Index)
+}
+
 // DupMapKeyMode specifies how to enforce duplicate map key.
 type DupMapKeyMode int
 
@@ -232,6 +241,20 @@ func (idm IntDecMode) valid() bool {
 	return idm < maxIntDec
 }
 
+// ExtraDecErrorCond specifies extra conditions that should be treated as errors.
+type ExtraDecErrorCond int
+
+const (
+	// ExtraDecErrorNone indicates no extra error condition.
+	ExtraDecErrorNone ExtraDecErrorCond = 0
+
+	// ExtraDecErrorUnknownField indicates error condition when destination
+	// Go struct doesn't have a field matching a CBOR map key.
+	ExtraDecErrorUnknownField = 1 << 0
+
+	maxExtraDecError int = 1 << 1
+)
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -262,6 +285,10 @@ type DecOptions struct {
 	// IntDec specifies which Go integer type (int64 or uint64) to use
 	// when decoding CBOR int (major type 0 and 1) to Go interface{}.
 	IntDec IntDecMode
+
+	// ExtraReturnErrors specifies extra conditions that should be treated as errors.
+	// ExtraReturnErrors is a bit set of ExtraDecErrorCond values.
+	ExtraReturnErrors int
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -358,15 +385,19 @@ func (opts DecOptions) decMode() (*decMode, error) {
 	} else if opts.MaxMapPairs < minMaxMapPairs || opts.MaxMapPairs > maxMaxMapPairs {
 		return nil, errors.New("cbor: invalid MaxMapPairs " + strconv.Itoa(opts.MaxMapPairs) + " (range is [" + strconv.Itoa(minMaxMapPairs) + ", " + strconv.Itoa(maxMaxMapPairs) + "])")
 	}
+	if opts.ExtraReturnErrors >= maxExtraDecError {
+		return nil, errors.New("cbor: invalid ExtraReturnErrors " + strconv.Itoa(opts.ExtraReturnErrors))
+	}
 	dm := decMode{
-		dupMapKey:        opts.DupMapKey,
-		timeTag:          opts.TimeTag,
-		maxNestedLevels:  opts.MaxNestedLevels,
-		maxArrayElements: opts.MaxArrayElements,
-		maxMapPairs:      opts.MaxMapPairs,
-		indefLength:      opts.IndefLength,
-		tagsMd:           opts.TagsMd,
-		intDec:           opts.IntDec,
+		dupMapKey:         opts.DupMapKey,
+		timeTag:           opts.TimeTag,
+		maxNestedLevels:   opts.MaxNestedLevels,
+		maxArrayElements:  opts.MaxArrayElements,
+		maxMapPairs:       opts.MaxMapPairs,
+		indefLength:       opts.IndefLength,
+		tagsMd:            opts.TagsMd,
+		intDec:            opts.IntDec,
+		extraReturnErrors: opts.ExtraReturnErrors,
 	}
 	return &dm, nil
 }
@@ -379,15 +410,16 @@ type DecMode interface {
 }
 
 type decMode struct {
-	tags             tagProvider
-	dupMapKey        DupMapKeyMode
-	timeTag          DecTagMode
-	maxNestedLevels  int
-	maxArrayElements int
-	maxMapPairs      int
-	indefLength      IndefLengthMode
-	tagsMd           TagsMode
-	intDec           IntDecMode
+	tags              tagProvider
+	dupMapKey         DupMapKeyMode
+	timeTag           DecTagMode
+	maxNestedLevels   int
+	maxArrayElements  int
+	maxMapPairs       int
+	indefLength       IndefLengthMode
+	tagsMd            TagsMode
+	intDec            IntDecMode
+	extraReturnErrors int
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -395,14 +427,15 @@ var defaultDecMode, _ = DecOptions{}.decMode()
 // DecOptions returns user specified options used to create this DecMode.
 func (dm *decMode) DecOptions() DecOptions {
 	return DecOptions{
-		DupMapKey:        dm.dupMapKey,
-		TimeTag:          dm.timeTag,
-		MaxNestedLevels:  dm.maxNestedLevels,
-		MaxArrayElements: dm.maxArrayElements,
-		MaxMapPairs:      dm.maxMapPairs,
-		IndefLength:      dm.indefLength,
-		TagsMd:           dm.tagsMd,
-		IntDec:           dm.intDec,
+		DupMapKey:         dm.dupMapKey,
+		TimeTag:           dm.timeTag,
+		MaxNestedLevels:   dm.maxNestedLevels,
+		MaxArrayElements:  dm.maxArrayElements,
+		MaxMapPairs:       dm.maxMapPairs,
+		IndefLength:       dm.indefLength,
+		TagsMd:            dm.tagsMd,
+		IntDec:            dm.intDec,
+		ExtraReturnErrors: dm.extraReturnErrors,
 	}
 }
 
@@ -1192,16 +1225,25 @@ func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error {
 		}
 	}
 
-	foundFldIdx := make([]bool, len(structType.fields))
+	var err, lastErr error
+
+	// Get CBOR map size
 	_, ai, val := d.getHead()
 	hasSize := (ai != 31)
 	count := int(val)
-	var err, lastErr error
+
+	// Keeps track of matched struct fields
+	foundFldIdx := make([]bool, len(structType.fields))
+
+	// Keeps track of CBOR map keys to detect duplicate map key
 	keyCount := 0
-	var mapKeys map[interface{}]struct{} // Store map keys, used for detecting duplicate map key.
+	var mapKeys map[interface{}]struct{}
 	if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
 		mapKeys = make(map[interface{}]struct{}, len(structType.fields))
 	}
+
+	errOnUnknownField := (d.dm.extraReturnErrors & ExtraDecErrorUnknownField) > 0
+
 	for j := 0; (hasSize && j < count) || (!hasSize && !d.foundBreak()); j++ {
 		var f *field
 		var k interface{} // Used by duplicate map key detection
@@ -1326,6 +1368,17 @@ func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error {
 		}
 
 		if f == nil {
+			if errOnUnknownField {
+				err = &UnknownFieldError{j}
+				d.skip() // Skip value
+				j++
+				// skip the rest of the map
+				for ; (hasSize && j < count) || (!hasSize && !d.foundBreak()); j++ {
+					d.skip()
+					d.skip()
+				}
+				return err
+			}
 			d.skip() // Skip value
 			continue
 		}
