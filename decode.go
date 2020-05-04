@@ -386,7 +386,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		return nil, errors.New("cbor: invalid MaxMapPairs " + strconv.Itoa(opts.MaxMapPairs) + " (range is [" + strconv.Itoa(minMaxMapPairs) + ", " + strconv.Itoa(maxMaxMapPairs) + "])")
 	}
 	if opts.ExtraReturnErrors >= maxExtraDecError {
-		return nil, errors.New("cbor: invalid ExtraReturnErrors " + strconv.Itoa(int(opts.ExtraReturnErrors)))
+		return nil, errors.New("cbor: invalid ExtraReturnErrors " + strconv.Itoa(opts.ExtraReturnErrors))
 	}
 	dm := decMode{
 		dupMapKey:         opts.DupMapKey,
