@@ -696,13 +696,13 @@ Go's `time` package provides `IsZero` function, which reports whether t represen
 
 | DecOptions.MaxArrayElements | Description |
 | --------------------------- | ----------- |
-| 131072 (default) | allowed setting is [16, 134217728] |
+| 131072 (default) | allowed setting is [16, 2147483647] |
 
 <br>
 
 | DecOptions.MaxMapPairs | Description |
 | ---------------------- | ----------- |
-| 131072 (default) | allowed setting is [16, 134217728] |
+| 131072 (default) | allowed setting is [16, 2147483647] |
 
 ### Encoding Options
 
