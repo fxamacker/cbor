@@ -289,6 +289,11 @@ type DecOptions struct {
 	// ExtraReturnErrors specifies extra conditions that should be treated as errors.
 	// ExtraReturnErrors is a bit set of ExtraDecErrorCond values.
 	ExtraReturnErrors int
+
+	// JsonCompatibleMaps specifies that all maps should decode into map[string]interface{}
+	// instead of map[interface{}]interface{}.  If this is not possible, an error will
+	// be returned.
+	JsonCompatibleMaps bool
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -398,6 +403,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		tagsMd:            opts.TagsMd,
 		intDec:            opts.IntDec,
 		extraReturnErrors: opts.ExtraReturnErrors,
+		jsonCompatibleMaps: opts.JsonCompatibleMaps,
 	}
 	return &dm, nil
 }
@@ -420,6 +426,7 @@ type decMode struct {
 	tagsMd            TagsMode
 	intDec            IntDecMode
 	extraReturnErrors int
+	jsonCompatibleMaps bool
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -436,6 +443,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		TagsMd:            dm.tagsMd,
 		IntDec:            dm.intDec,
 		ExtraReturnErrors: dm.extraReturnErrors,
+		JsonCompatibleMaps: dm.jsonCompatibleMaps,
 	}
 }
 
@@ -644,7 +652,11 @@ func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error { //n
 		if tInfo.nonPtrKind == reflect.Struct {
 			return d.parseMapToStruct(v, tInfo)
 		} else if tInfo.nonPtrKind == reflect.Map {
-			return d.parseMapToMap(v, tInfo)
+			if !d.dm.jsonCompatibleMaps || tInfo.typ.Key().Kind() == reflect.String {
+				return d.parseMapToMap(v, tInfo)
+			} else {
+				return errors.New("Non-json compatible map key kind %s" + tInfo.typ.String())
+			}
 		}
 		d.skip()
 		return &UnmarshalTypeError{Value: t.String(), Type: tInfo.nonPtrType}
@@ -847,6 +859,9 @@ func (d *decodeState) parse() (interface{}, error) {
 	case cborTypeArray:
 		return d.parseArray()
 	case cborTypeMap:
+		if d.dm.jsonCompatibleMaps {
+			return d.parseJsonMap()
+		}
 		return d.parseMap()
 	}
 	return nil, nil
@@ -981,6 +996,68 @@ func (d *decodeState) parseArrayToArray(v reflect.Value, tInfo *typeInfo) error 
 		}
 	}
 	return err
+}
+
+func (d *decodeState) parseJsonMap() (map[string]interface{}, error) {
+	_, ai, val := d.getHead()
+	hasSize := (ai != 31)
+	count := int(val)
+	m := make(map[string]interface{})
+	var k, e interface{}
+	var err, lastErr error
+	keyCount := 0
+	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
+		// Parse CBOR map key.
+		if k, lastErr = d.parse(); lastErr != nil {
+			if err == nil {
+				err = lastErr
+			}
+			d.skip()
+			continue
+		}
+
+		// Detect if CBOR map key can be used as Go map key.
+		kkind := reflect.ValueOf(k).Kind()
+		if tag, ok := k.(Tag); ok {
+			kkind = tag.contentKind()
+		}
+		if kkind != reflect.String {
+			if err == nil {
+				err = errors.New("cbor: invalid map key type: " + kkind.String())
+			}
+			d.skip()
+			continue
+		}
+
+		// Parse CBOR map value.
+		if e, lastErr = d.parse(); lastErr != nil {
+			if err == nil {
+				err = lastErr
+			}
+			continue
+		}
+
+		// Add key-value pair to Go map.
+		m[k.(string)] = e
+
+		// Detect duplicate map key.
+		if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
+			newKeyCount := len(m)
+			if newKeyCount == keyCount {
+				m[k.(string)] = nil
+				err = &DupMapKeyError{k, i}
+				i++
+				// skip the rest of the map
+				for ; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
+					d.skip() // Skip map key
+					d.skip() // Skip map value
+				}
+				return m, err
+			}
+			keyCount = newKeyCount
+		}
+	}
+	return m, err
 }
 
 func (d *decodeState) parseMap() (map[interface{}]interface{}, error) {

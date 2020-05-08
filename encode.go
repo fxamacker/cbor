@@ -262,6 +262,10 @@ type EncOptions struct {
 
 	// TagsMd specifies whether to allow CBOR tags (major type 6).
 	TagsMd TagsMode
+
+	// JsonCompatibleMaps forces the Encoder to throw an error if it encounters
+	// a map that has something besides string keys
+	JsonCompatibleMaps bool
 }
 
 // CanonicalEncOptions returns EncOptions for "Canonical CBOR" encoding,
@@ -444,6 +448,7 @@ func (opts EncOptions) encMode() (*encMode, error) {
 		timeTag:       opts.TimeTag,
 		indefLength:   opts.IndefLength,
 		tagsMd:        opts.TagsMd,
+		jsonCompatibleMaps: opts.JsonCompatibleMaps,
 	}
 	return &em, nil
 }
@@ -465,6 +470,7 @@ type encMode struct {
 	timeTag       EncTagMode
 	indefLength   IndefLengthMode
 	tagsMd        TagsMode
+	jsonCompatibleMaps bool
 }
 
 var defaultEncMode = &encMode{}
@@ -480,6 +486,7 @@ func (em *encMode) EncOptions() EncOptions {
 		TimeTag:       em.timeTag,
 		IndefLength:   em.indefLength,
 		TagsMd:        em.tagsMd,
+		JsonCompatibleMaps: em.jsonCompatibleMaps,
 	}
 }
 
@@ -831,7 +838,19 @@ func (me mapEncoder) encodeMap(e *encodeState, em *encMode, v reflect.Value) err
 	encodeHead(e, byte(cborTypeMap), uint64(mlen))
 	iter := v.MapRange()
 	for iter.Next() {
-		if err := me.kf(e, em, iter.Key()); err != nil {
+		ik := iter.Key()
+		if em.jsonCompatibleMaps {
+			ev := ik
+			for ev.Kind() != reflect.String {
+				switch ev.Kind() {
+				case reflect.Ptr, reflect.Interface:
+					ev = ev.Elem()
+				default:
+					return errors.New("Non string map key type:" + ev.Kind().String())
+				}
+			}
+		}
+		if err := me.kf(e, em, ik); err != nil {
 			return err
 		}
 		if err := me.ef(e, em, iter.Value()); err != nil {
@@ -913,7 +932,11 @@ func (me mapEncoder) encodeMapCanonical(e *encodeState, em *encMode, v reflect.V
 	iter := v.MapRange()
 	for i := 0; iter.Next(); i++ {
 		off := kve.Len()
-		if err := me.kf(kve, em, iter.Key()); err != nil {
+		ik := iter.Key()
+		if em.jsonCompatibleMaps && ik.Kind() != reflect.String {
+			return errors.New("Non string map key type:" + ik.Kind().String())
+		}
+		if err := me.kf(kve, em, ik); err != nil {
 			putEncodeState(kve)
 			putKeyValues(kvsp)
 			return err

@@ -2947,6 +2947,7 @@ func TestDecOptions(t *testing.T) {
 		TagsMd:            TagsForbidden,
 		IntDec:            IntDecConvertSigned,
 		ExtraReturnErrors: ExtraDecErrorUnknownField,
+		JsonCompatibleMaps: true,
 	}
 	dm, err := opts1.DecMode()
 	if err != nil {
@@ -4469,5 +4470,92 @@ func TestStreamExtraErrorCondUnknowField(t *testing.T) {
 		t.Errorf("Decode() returned an error %v", err)
 	} else if !reflect.DeepEqual(v2, wantObj) {
 		t.Errorf("Decode() return %v (%T), want %v (%T)", v2, v2, wantObj, wantObj)
+	}
+}
+
+func TestDecMode_JsonCompatibleMaps(t *testing.T) {
+	enc,err := CanonicalEncOptions().EncMode()
+	if err != nil {
+		t.Errorf("Error creating canonical map encoder: %v", err)
+		return
+	}
+	dec, err := DecOptions{JsonCompatibleMaps: true}.DecMode()
+	if err != nil {
+		t.Errorf("Error creating json-compatible map decoder")
+	}
+	jsonOkTests := []marshalTest{
+		{hexDecode(`81a161616162`),[]interface{}{map[interface{}]interface{}{"a":"b"}}},
+		{hexDecode(`81a16161a1616102`),[]interface{}{map[interface{}]interface{}{"a": map[interface{}]interface{}{"a":2}}}},
+		{hexDecode(`81a161616162`),[]interface{}{map[string]interface{}{"a":"b"}}},
+		{hexDecode(`81a16161a1616102`),[]interface{}{map[string]interface{}{"a": map[interface{}]interface{}{"a":2}}}},
+		{hexDecode(`81a161616162`),[]interface{}{map[interface{}]interface{}{"a":"b"}}},
+		{hexDecode(`81a16161a1616102`),[]interface{}{map[interface{}]interface{}{"a": map[string]interface{}{"a":2}}}},
+		{hexDecode(`81a161616162`),[]interface{}{map[interface{}]interface{}{"a":"b"}}},
+		{hexDecode(`81a16161a1616102`),[]interface{}{map[string]interface{}{"a": map[string]interface{}{"a":2}}}},
+	}
+	type sfa struct{
+		a string
+	}
+	errs := []string{
+		`cbor: invalid map key type: uint64`,
+		`cbor: invalid map key type: bool`,
+		`cbor: invalid map key type: map`,
+		`cbor: invalid map key type: slice`,
+	}
+	bq := [1]byte{0}
+	jsonBadTests := []marshalErrorTest{
+		{"a",map[int]interface{}{1:"b"},errs[0]},
+		{"b",map[interface{}]interface{}{"a": map[int]interface{}{1:2}},errs[0]},
+		{"a",map[bool]interface{}{true:"b"},errs[1]},
+		{"b",map[interface{}]interface{}{"a": map[bool]interface{}{true:2}},errs[1]},
+		{"a",map[sfa]interface{}{sfa{a:"a"}:"b"},errs[2]},
+		{"b",map[interface{}]interface{}{"a": map[sfa]interface{}{sfa{a:"a"}:2}},errs[2]},
+		{"a",map[[1]byte]interface{}{bq:"b"},errs[3]},
+		{"b",map[interface{}]interface{}{"a": map[[1]byte]interface{}{bq:2}},errs[3]},
+		{"a",map[interface{}]interface{}{1:"b"},errs[0]},
+		{"b",map[interface{}]interface{}{"a": map[interface{}]interface{}{1:2}},errs[0]},
+		{"a",map[interface{}]interface{}{true:"b"},errs[1]},
+		{"b",map[interface{}]interface{}{"a": map[interface{}]interface{}{true:2}},errs[1]},
+		{"a",map[interface{}]interface{}{sfa{a:"a"}:"b"},errs[2]},
+		{"b",map[interface{}]interface{}{"a": map[interface{}]interface{}{sfa{a:"a"}:2}},errs[2]},
+		{"a",map[interface{}]interface{}{bq:"b"},errs[3]},
+		{"b",map[interface{}]interface{}{"a": map[interface{}]interface{}{bq:2}},errs[3]},
+	}
+	for i,v := range jsonOkTests {
+		buf,err := enc.Marshal(v.values)
+		if err != nil {
+			t.Errorf("Error marshalling OK test at %d: %v", i, err)
+			continue
+		}
+		if !bytes.Equal(buf,v.cborData) {
+			t.Errorf("Marshall failed at %d: wanted %v, got %v",i, hex.EncodeToString(v.cborData),hex.EncodeToString(buf))
+			continue
+		}
+		var ref []interface{}
+		if err := dec.Unmarshal(buf,&ref); err != nil {
+			t.Errorf("Unexpected error unmarshalling %d: %v",i,err)
+			continue
+		}
+		switch ref[0].(type) {
+		case map[string]interface{}:
+		default:
+			t.Errorf("Unexpected final type %T",ref[0])
+		}
+	}
+	for i,v := range jsonBadTests {
+		buf, err := enc.Marshal(v.value)
+		if err != nil {
+			t.Errorf("Bad test at %d was supposed to marshal",i)
+			continue
+		}
+		var ref interface{}
+		err = dec.Unmarshal(buf,&ref)
+		if err == nil {
+			t.Errorf("Did not expect to be able to unmarshal bad at %d into %#v",i,ref)
+			continue
+		}
+		if err.Error() != v.wantErrorMsg {
+			t.Errorf("Unexpected error %s, wanted %s",err,v.wantErrorMsg)
+		}
 	}
 }

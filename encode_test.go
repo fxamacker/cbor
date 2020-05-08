@@ -6,6 +6,7 @@ package cbor
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -1896,6 +1897,72 @@ func TestMapSort(t *testing.T) {
 	}
 }
 
+func TestEncMode_JsonCompatibleMaps(t *testing.T) {
+	enc, err := EncOptions{JsonCompatibleMaps: true}.EncMode()
+	if err != nil {
+		t.Errorf("Error creating JSON compatible maps encoder: %v", err)
+		return
+	}
+	jsonOkTests := []marshalTest{
+		{hexDecode(`81a161616162`),[]interface{}{map[interface{}]interface{}{"a":"b"}}},
+		{hexDecode(`81a16161a1616102`),[]interface{}{map[interface{}]interface{}{"a": map[interface{}]interface{}{"a":2}}}},
+		{hexDecode(`81a161616162`),[]interface{}{map[string]interface{}{"a":"b"}}},
+		{hexDecode(`81a16161a1616102`),[]interface{}{map[string]interface{}{"a": map[interface{}]interface{}{"a":2}}}},
+		{hexDecode(`81a161616162`),[]interface{}{map[interface{}]interface{}{"a":"b"}}},
+		{hexDecode(`81a16161a1616102`),[]interface{}{map[interface{}]interface{}{"a": map[string]interface{}{"a":2}}}},
+		{hexDecode(`81a161616162`),[]interface{}{map[interface{}]interface{}{"a":"b"}}},
+		{hexDecode(`81a16161a1616102`),[]interface{}{map[string]interface{}{"a": map[string]interface{}{"a":2}}}},
+	}
+	type sfa struct{
+		a string
+	}
+	errs := []string{
+		`Non string map key type:int`,
+		`Non string map key type:bool`,
+		`Non string map key type:struct`,
+		`Non string map key type:array`,
+	}
+	bq := [1]byte{0}
+	jsonBadTests := []marshalErrorTest{
+		{"a",map[int]interface{}{1:"b"},errs[0]},
+		{"b",map[interface{}]interface{}{"a": map[int]interface{}{1:2}},errs[0]},
+		{"a",map[bool]interface{}{true:"b"},errs[1]},
+		{"b",map[interface{}]interface{}{"a": map[bool]interface{}{true:2}},errs[1]},
+		{"a",map[sfa]interface{}{sfa{a:"a"}:"b"},errs[2]},
+		{"b",map[interface{}]interface{}{"a": map[sfa]interface{}{sfa{a:"a"}:2}},errs[2]},
+		{"a",map[[1]byte]interface{}{bq:"b"},errs[3]},
+		{"b",map[interface{}]interface{}{"a": map[[1]byte]interface{}{bq:2}},errs[3]},
+		{"a",map[interface{}]interface{}{1:"b"},errs[0]},
+		{"b",map[interface{}]interface{}{"a": map[interface{}]interface{}{1:2}},errs[0]},
+		{"a",map[interface{}]interface{}{true:"b"},errs[1]},
+		{"b",map[interface{}]interface{}{"a": map[interface{}]interface{}{true:2}},errs[1]},
+		{"a",map[interface{}]interface{}{sfa{a:"a"}:"b"},errs[2]},
+		{"b",map[interface{}]interface{}{"a": map[interface{}]interface{}{sfa{a:"a"}:2}},errs[2]},
+		{"a",map[interface{}]interface{}{bq:"b"},errs[3]},
+		{"b",map[interface{}]interface{}{"a": map[interface{}]interface{}{bq:2}},errs[3]},
+	}
+	for i,v := range jsonOkTests {
+		buf,err := enc.Marshal(v.values)
+		if err != nil {
+			t.Errorf("Error marshalling OK test at %d: %v", i, err)
+			continue
+		}
+		if !bytes.Equal(buf,v.cborData) {
+			t.Errorf("Marshall failed at %d: wanted %v, got %v",i, hex.EncodeToString(v.cborData),hex.EncodeToString(buf))
+		}
+	}
+	for i,v := range jsonBadTests {
+		_, err := enc.Marshal(v.value)
+		if err == nil {
+			t.Errorf("Bad test at %d was not suppoed to marshal",i)
+			continue
+		}
+		if err.Error() != v.wantErrorMsg {
+			t.Errorf("Wrong error message at %d: want %s, got %s",i,v.wantErrorMsg,err)
+		}
+	}
+}
+
 func TestStructSort(t *testing.T) {
 	type T struct {
 		A bool `cbor:"aa"`
@@ -2912,6 +2979,7 @@ func TestEncOptions(t *testing.T) {
 		TimeTag:       EncTagRequired,
 		IndefLength:   IndefLengthForbidden,
 		TagsMd:        TagsAllowed,
+		JsonCompatibleMaps: true,
 	}
 	em, err := opts1.EncMode()
 	if err != nil {
@@ -3041,3 +3109,4 @@ func TestEncTagsMdOption(t *testing.T) {
 		t.Errorf("Marshal() returned error %q, want %q", err.Error(), wantErrorMsg)
 	}
 }
+
