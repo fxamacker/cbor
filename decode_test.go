@@ -4471,3 +4471,336 @@ func TestStreamExtraErrorCondUnknowField(t *testing.T) {
 		t.Errorf("Decode() return %v (%T), want %v (%T)", v2, v2, wantObj, wantObj)
 	}
 }
+
+// TestUnmarshalTagNum55799 is identical to TestUnmarshal,
+// except that CBOR test data is prefixed with tag number 55799 (0xd9d9f7).
+func TestUnmarshalTagNum55799(t *testing.T) {
+	tagNum55799 := hexDecode("d9d9f7")
+
+	for _, tc := range unmarshalTests {
+		// Prefix tag number 55799 to CBOR test data
+		cborData := make([]byte, len(tc.cborData)+6)
+		copy(cborData, tagNum55799)
+		copy(cborData[3:], tagNum55799)
+		copy(cborData[6:], tc.cborData)
+
+		// Test unmarshalling CBOR into empty interface.
+		var v interface{}
+		if err := Unmarshal(cborData, &v); err != nil {
+			t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+		} else {
+			if tm, ok := tc.emptyInterfaceValue.(time.Time); ok {
+				if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
+					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+				}
+			} else if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+			}
+		}
+
+		// Test unmarshalling CBOR into RawMessage.
+		var r RawMessage
+		if err := Unmarshal(cborData, &r); err != nil {
+			t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+		} else if !bytes.Equal(r, tc.cborData) {
+			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", cborData, r, tc.cborData)
+		}
+
+		// Test unmarshalling CBOR into compatible data types.
+		for _, value := range tc.values {
+			v := reflect.New(reflect.TypeOf(value))
+			vPtr := v.Interface()
+			if err := Unmarshal(cborData, vPtr); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+			} else {
+				if tm, ok := value.(time.Time); ok {
+					if vt, ok := v.Elem().Interface().(time.Time); !ok || !tm.Equal(vt) {
+						t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v.Elem().Interface(), v.Elem().Interface(), value, value)
+					}
+				} else if !reflect.DeepEqual(v.Elem().Interface(), value) {
+					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v.Elem().Interface(), v.Elem().Interface(), value, value)
+				}
+			}
+		}
+
+		// Test unmarshalling CBOR into incompatible data types.
+		for _, typ := range tc.wrongTypes {
+			v := reflect.New(typ)
+			vPtr := v.Interface()
+			if err := Unmarshal(cborData, vPtr); err == nil {
+				t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, typ.String())
+			} else if _, ok := err.(*UnmarshalTypeError); !ok {
+				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+			} else if !strings.Contains(err.Error(), "cannot unmarshal") {
+				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), "cannot unmarshal")
+			}
+		}
+	}
+}
+
+// TestUnmarshalFloatWithTagNum55799 is identical to TestUnmarshalFloat,
+// except that CBOR test data is prefixed with tag number 55799 (0xd9d9f7).
+func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
+	tagNum55799 := hexDecode("d9d9f7")
+
+	for _, tc := range unmarshalFloatTests {
+		// Prefix tag number 55799 to CBOR test data
+		cborData := make([]byte, len(tc.cborData)+3)
+		copy(cborData, tagNum55799)
+		copy(cborData[3:], tc.cborData)
+
+		// Test unmarshalling CBOR into empty interface.
+		var v interface{}
+		if err := Unmarshal(tc.cborData, &v); err != nil {
+			t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
+		} else {
+			testFloat(t, tc.cborData, v, tc.emptyInterfaceValue, tc.equalityThreshold)
+		}
+
+		// Test unmarshalling CBOR into RawMessage.
+		var r RawMessage
+		if err := Unmarshal(tc.cborData, &r); err != nil {
+			t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
+		} else if !bytes.Equal(r, tc.cborData) {
+			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", tc.cborData, r, tc.cborData)
+		}
+
+		// Test unmarshalling CBOR into compatible data types.
+		for _, value := range tc.values {
+			v := reflect.New(reflect.TypeOf(value))
+			vPtr := v.Interface()
+			if err := Unmarshal(tc.cborData, vPtr); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
+			} else {
+				testFloat(t, tc.cborData, v.Elem().Interface(), value, tc.equalityThreshold)
+			}
+		}
+
+		// Test unmarshalling CBOR into incompatible data types.
+		for _, typ := range tc.wrongTypes {
+			v := reflect.New(typ)
+			vPtr := v.Interface()
+			if err := Unmarshal(tc.cborData, vPtr); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
+			} else if _, ok := err.(*UnmarshalTypeError); !ok {
+				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.cborData, err)
+			} else if !strings.Contains(err.Error(), "cannot unmarshal") {
+				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborData, err.Error(), "cannot unmarshal")
+			}
+		}
+	}
+}
+
+func TestUnmarshalTagNum55799AsElement(t *testing.T) {
+	testCases := []struct {
+		name                string
+		cborData            []byte
+		emptyInterfaceValue interface{}
+		values              []interface{}
+		wrongTypes          []reflect.Type
+	}{
+		{
+			"array",
+			hexDecode("d9d9f783d9d9f701d9d9f702d9d9f703"), // 55799([55799(1), 55799(2), 55799(3)])
+			[]interface{}{uint64(1), uint64(2), uint64(3)},
+			[]interface{}{[]interface{}{uint64(1), uint64(2), uint64(3)}, []byte{1, 2, 3}, []int{1, 2, 3}, []uint{1, 2, 3}, [0]int{}, [1]int{1}, [3]int{1, 2, 3}, [5]int{1, 2, 3, 0, 0}, []float32{1, 2, 3}, []float64{1, 2, 3}},
+			[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag},
+		},
+		{
+			"map",
+			hexDecode("d9d9f7a2d9d9f701d9d9f702d9d9f703d9d9f704"), // 55799({55799(1): 55799(2), 55799(3): 55799(4)})
+			map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)},
+			[]interface{}{map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)}, map[uint]int{1: 2, 3: 4}, map[int]uint{1: 2, 3: 4}},
+			[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeByteArray, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Test unmarshalling CBOR into empty interface.
+			var v interface{}
+			if err := Unmarshal(tc.cborData, &v); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
+			} else {
+				if tm, ok := tc.emptyInterfaceValue.(time.Time); ok {
+					if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
+						t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+					}
+				} else if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
+					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+				}
+			}
+
+			// Test unmarshalling CBOR into compatible data types.
+			for _, value := range tc.values {
+				v := reflect.New(reflect.TypeOf(value))
+				vPtr := v.Interface()
+				if err := Unmarshal(tc.cborData, vPtr); err != nil {
+					t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
+				} else {
+					if tm, ok := value.(time.Time); ok {
+						if vt, ok := v.Elem().Interface().(time.Time); !ok || !tm.Equal(vt) {
+							t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), value, value)
+						}
+					} else if !reflect.DeepEqual(v.Elem().Interface(), value) {
+						t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), value, value)
+					}
+				}
+			}
+
+			// Test unmarshalling CBOR into incompatible data types.
+			for _, typ := range tc.wrongTypes {
+				v := reflect.New(typ)
+				vPtr := v.Interface()
+				if err := Unmarshal(tc.cborData, vPtr); err == nil {
+					t.Errorf("Unmarshal(0x%x, %s) didn't return an error", tc.cborData, typ.String())
+				} else if _, ok := err.(*UnmarshalTypeError); !ok {
+					t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.cborData, err)
+				} else if !strings.Contains(err.Error(), "cannot unmarshal") {
+					t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborData, err.Error(), "cannot unmarshal")
+				}
+			}
+		})
+	}
+}
+
+func TestUnmarshalTagNum55799ToBinaryUnmarshaler(t *testing.T) {
+	cborData := hexDecode("d9d9f74800000000499602d2") // 55799(h'00000000499602D2')
+	wantObj := number(1234567890)
+
+	var v number
+	if err := Unmarshal(cborData, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	} else if !reflect.DeepEqual(v, wantObj) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantObj, wantObj)
+	}
+}
+
+func TestUnmarshalTagNum55799ToUnmarshaler(t *testing.T) {
+	cborData := hexDecode("d9d9f7d864a1636e756d01") // 55799(100({"num": 1}))
+	wantObj := number3(1)
+
+	var v number3
+	if err := Unmarshal(cborData, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	} else if !reflect.DeepEqual(v, wantObj) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantObj, wantObj)
+	}
+}
+
+func TestUnmarshalTagNum55799ToRegisteredGoType(t *testing.T) {
+	type myInt int
+	typ := reflect.TypeOf(myInt(0))
+
+	tags := NewTagSet()
+	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 125); err != nil {
+		t.Fatalf("TagSet.Add(%s, %v) returned error %v", typ, 125, err)
+	}
+
+	dm, _ := DecOptions{}.DecModeWithTags(tags)
+
+	cborData := hexDecode("d9d9f7d87d01") // 55799(125(1))
+	wantObj := myInt(1)
+
+	var v myInt
+	if err := dm.Unmarshal(cborData, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	} else if !reflect.DeepEqual(v, wantObj) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantObj, wantObj)
+	}
+}
+
+// TODO: wait for clarification from 7049bis https://github.com/cbor-wg/CBORbis/issues/183
+// Nested tag number 55799 may be stripeed as well depending on 7049bis clarification.
+func TestUnmarshalNestedTagNum55799ToEmptyInterface(t *testing.T) {
+	cborData := hexDecode("d864d9d9f701") // 100(55799(1))
+	wantObj := Tag{100, Tag{55799, uint64(1)}}
+
+	var v interface{}
+	if err := Unmarshal(cborData, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	} else if !reflect.DeepEqual(v, wantObj) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantObj, wantObj)
+	}
+}
+
+func TestUnmarshalNestedTagNum55799ToValue(t *testing.T) {
+	cborData := hexDecode("d864d9d9f701") // 100(55799(1))
+	wantObj := 1
+
+	var v int
+	if err := Unmarshal(cborData, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	} else if !reflect.DeepEqual(v, wantObj) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantObj, wantObj)
+	}
+}
+
+func TestUnmarshalNestedTagNum55799ToTag(t *testing.T) {
+	cborData := hexDecode("d864d9d9f701") // 100(55799(1))
+	wantObj := Tag{100, Tag{55799, uint64(1)}}
+
+	var v Tag
+	if err := Unmarshal(cborData, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	} else if !reflect.DeepEqual(v, wantObj) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantObj, wantObj)
+	}
+}
+
+func TestUnmarshalNestedTagNum55799ToTime(t *testing.T) {
+	cborData := hexDecode("c0d9d9f774323031332d30332d32315432303a30343a30305a") // 0(55799("2013-03-21T20:04:00Z"))
+	wantErrorMsg := "tag number 0 must be followed by text string, got tag"
+
+	var v time.Time
+	if err := Unmarshal(cborData, &v); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return error", cborData)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %s, want %s", cborData, err.Error(), wantErrorMsg)
+	}
+}
+
+func TestUnmarshalNestedTagNum55799ToBinaryUnmarshaler(t *testing.T) {
+	cborData := hexDecode("d864d9d9f74800000000499602d2") // 100(55799(h'00000000499602D2'))
+	wantObj := number(1234567890)
+
+	var v number
+	if err := Unmarshal(cborData, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	} else if !reflect.DeepEqual(v, wantObj) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantObj, wantObj)
+	}
+}
+
+func TestUnmarshalNestedTagNum55799ToUnmarshaler(t *testing.T) {
+	cborData := hexDecode("d864d9d9f7a1636e756d01") // 100(55799({"num": 1}))
+	wantErrorMsg := "wrong tag content type"
+
+	var v number3
+	if err := Unmarshal(cborData, &v); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return error", cborData)
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %s, want %s", cborData, err.Error(), wantErrorMsg)
+	}
+}
+
+func TestUnmarshalNestedTagNum55799ToRegisteredGoType(t *testing.T) {
+	type myInt int
+	typ := reflect.TypeOf(myInt(0))
+
+	tags := NewTagSet()
+	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 125); err != nil {
+		t.Fatalf("TagSet.Add(%s, %v) returned error %v", typ, 125, err)
+	}
+
+	dm, _ := DecOptions{}.DecModeWithTags(tags)
+
+	cborData := hexDecode("d87dd9d9f701") // 125(55799(1))
+	wantErrorMsg := "cbor: wrong tag number for cbor.myInt, got [125 55799], expected [125]"
+
+	var v myInt
+	if err := dm.Unmarshal(cborData, &v); err == nil {
+		t.Errorf("Unmarshal() didn't return error")
+	} else if !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("Unmarshal(0x%x) returned error %s, want %s", cborData, err.Error(), wantErrorMsg)
+	}
+}

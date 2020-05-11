@@ -514,6 +514,10 @@ func (t cborType) String() string {
 	}
 }
 
+const (
+	selfDescribedCBORTagNum = 55799
+)
+
 // parseToValue assumes data is well-formed, and does not perform bounds checking.
 // This function is complicated because it's the main function that decodes CBOR data to reflect.Value.
 func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
@@ -531,6 +535,16 @@ func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error { //n
 		}
 	}
 
+	// Strip self-described CBOR tag number.
+	for d.nextCBORType() == cborTypeTag {
+		off := d.off
+		_, _, tagNum := d.getHead()
+		if tagNum != selfDescribedCBORTagNum {
+			d.off = off
+			break
+		}
+	}
+
 	// Check validity of supported built-in tags.
 	if d.nextCBORType() == cborTypeTag {
 		off := d.off
@@ -545,7 +559,7 @@ func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error { //n
 	if tInfo.spclType != specialTypeNone {
 		switch tInfo.spclType {
 		case specialTypeEmptyIface:
-			iv, err := d.parse()
+			iv, err := d.parse(false) // Skipped self-described CBOR tag number already.
 			if iv != nil {
 				v.Set(reflect.ValueOf(iv))
 			}
@@ -663,7 +677,7 @@ func (d *decodeState) parseToTag(v reflect.Value) error {
 	_, _, num := d.getHead()
 
 	// Unmarshal tag content
-	content, err := d.parse()
+	content, err := d.parse(false)
 	if err != nil {
 		return err
 	}
@@ -701,7 +715,7 @@ func (d *decodeState) parseToTime() (tm time.Time, err error) {
 	}
 
 	var content interface{}
-	content, err = d.parse()
+	content, err = d.parse(false)
 	if err != nil {
 		return
 	}
@@ -753,7 +767,19 @@ func (d *decodeState) parseToUnmarshaler(v reflect.Value) error {
 }
 
 // parse assumes data is well-formed, and does not perform bounds checking.
-func (d *decodeState) parse() (interface{}, error) {
+func (d *decodeState) parse(skipSelfDescribedTag bool) (interface{}, error) {
+	// Strip self-described CBOR tag number.
+	if skipSelfDescribedTag {
+		for d.nextCBORType() == cborTypeTag {
+			off := d.off
+			_, _, tagNum := d.getHead()
+			if tagNum != selfDescribedCBORTagNum {
+				d.off = off
+				break
+			}
+		}
+	}
+
 	t := d.nextCBORType()
 	switch t {
 	case cborTypePositiveInt:
@@ -819,7 +845,7 @@ func (d *decodeState) parse() (interface{}, error) {
 
 		// Parse tag content
 		d.off = contentOff
-		content, err := d.parse()
+		content, err := d.parse(false)
 		if err != nil {
 			return nil, err
 		}
@@ -917,7 +943,7 @@ func (d *decodeState) parseArray() ([]interface{}, error) {
 	var e interface{}
 	var err, lastErr error
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
-		if e, lastErr = d.parse(); lastErr != nil {
+		if e, lastErr = d.parse(true); lastErr != nil {
 			if err == nil {
 				err = lastErr
 			}
@@ -993,7 +1019,7 @@ func (d *decodeState) parseMap() (map[interface{}]interface{}, error) {
 	keyCount := 0
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
 		// Parse CBOR map key.
-		if k, lastErr = d.parse(); lastErr != nil {
+		if k, lastErr = d.parse(true); lastErr != nil {
 			if err == nil {
 				err = lastErr
 			}
@@ -1015,7 +1041,7 @@ func (d *decodeState) parseMap() (map[interface{}]interface{}, error) {
 		}
 
 		// Parse CBOR map value.
-		if e, lastErr = d.parse(); lastErr != nil {
+		if e, lastErr = d.parse(true); lastErr != nil {
 			if err == nil {
 				err = lastErr
 			}
@@ -1331,7 +1357,7 @@ func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error {
 			}
 			if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
 				// parse key
-				k, lastErr = d.parse()
+				k, lastErr = d.parse(true)
 				if lastErr != nil {
 					d.skip() // skip value
 					continue
