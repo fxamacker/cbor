@@ -249,6 +249,9 @@ func newTagItem(opts TagOptions, contentType reflect.Type, num uint64, nestedNum
 	if num == 0 || num == 1 {
 		return nil, errors.New("cbor: cannot add tag number 0 or 1 to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead")
 	}
+	if num == selfDescribedCBORTagNum {
+		return nil, errors.New("cbor: cannot add tag number 55799 to TagSet, it's built-in and ignored automatically")
+	}
 	//if reflect.PtrTo(contentType).Implements(typeMarshaler) && opts.EncTag != EncTagNone {
 	//return nil, errors.New("cbor: cannot add cbor.Marshaler to TagSet with EncTag != EncTagNone")
 	//}

@@ -363,6 +363,13 @@ func TestAddTagError(t *testing.T) {
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
 			wantErrorMsg: "cbor: cannot add tag number 0 or 1 to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead",
 		},
+		{
+			name:         "tag number 55799",
+			typ:          reflect.TypeOf(myInt(0)),
+			num:          55799,
+			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
+			wantErrorMsg: "cbor: cannot add tag number 55799 to TagSet, it's built-in and ignored automatically",
+		},
 	}
 	tags := NewTagSet()
 	for _, tc := range testCases {
@@ -1252,7 +1259,11 @@ func (n *number3) UnmarshalCBOR(data []byte) (err error) {
 	}
 
 	if rawTag.Number != 100 {
-		return fmt.Errorf("wrong tag number %d, want %d", rawTag.Number, 101)
+		return fmt.Errorf("wrong tag number %d, want %d", rawTag.Number, 100)
+	}
+
+	if rawTag.Content[0]&0xe0 != 0xa0 {
+		return fmt.Errorf("wrong tag content type, want map")
 	}
 
 	var v map[string]uint64
