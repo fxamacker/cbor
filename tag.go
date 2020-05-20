@@ -13,18 +13,6 @@ type Tag struct {
 	Content interface{}
 }
 
-func (t Tag) contentKind() reflect.Kind {
-	c := t.Content
-	for {
-		t, ok := c.(Tag)
-		if !ok {
-			break
-		}
-		c = t.Content
-	}
-	return reflect.ValueOf(c).Kind()
-}
-
 // RawTag represents CBOR tag data, including tag number and raw tag content.
 // RawTag implements Unmarshaler and Marshaler interfaces.
 type RawTag struct {
@@ -240,6 +228,9 @@ func newTagItem(opts TagOptions, contentType reflect.Type, num uint64, nestedNum
 	if contentType == typeTime {
 		return nil, errors.New("cbor: cannot add time.Time to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead")
 	}
+	if contentType == typeBigInt {
+		return nil, errors.New("cbor: cannot add big.Int to TagSet, it's built-in and supported automatically")
+	}
 	if contentType == typeTag {
 		return nil, errors.New("cbor: cannot add cbor.Tag to TagSet")
 	}
@@ -248,6 +239,9 @@ func newTagItem(opts TagOptions, contentType reflect.Type, num uint64, nestedNum
 	}
 	if num == 0 || num == 1 {
 		return nil, errors.New("cbor: cannot add tag number 0 or 1 to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead")
+	}
+	if num == 2 || num == 3 {
+		return nil, errors.New("cbor: cannot add tag number 2 or 3 to TagSet, it's built-in and supported automatically")
 	}
 	if num == selfDescribedCBORTagNum {
 		return nil, errors.New("cbor: cannot add tag number 55799 to TagSet, it's built-in and ignored automatically")

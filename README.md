@@ -461,7 +461,6 @@ For more information, see [decoding options](#decoding-options-1) and [tag optio
 
 If any of these limitations prevent you from using this library, please open an issue along with a link to your project.
 
-* CBOR negative int (type 1) that cannot fit into Go's int64 are not supported, such as RFC 7049 example -18446744073709551616.  Decoding these values returns `cbor.UnmarshalTypeError` like Go's `encoding/json`. However, this may be resolved in a future release by adding support for `big.Int`. Until then, users can use the API for custom encoding and decoding.
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  CBOR `Null` (0xf6) more closely matches Go's `nil`.
 * CBOR map keys with data types not supported by Go for map keys are ignored and an error is returned after continuing to decode remaining items.  
 * When using io.Reader interface to read very large or indefinite length CBOR data, Go's `io.LimitReader` should be used to limit size.

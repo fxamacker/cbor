@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
+	"math/big"
 	"reflect"
 	"strings"
 	"testing"
@@ -225,11 +226,19 @@ var marshalTests = []marshalTest{
 	}, // 1: epoch-based date/time
 	{
 		hexDecode("c249010000000000000000"),
-		[]interface{}{Tag{2, []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}}, RawTag{2, hexDecode("49010000000000000000")}},
+		[]interface{}{
+			bigIntOrPanic("18446744073709551616"),
+			Tag{2, []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			RawTag{2, hexDecode("49010000000000000000")},
+		},
 	}, // 2: positive bignum: 18446744073709551616
 	{
 		hexDecode("c349010000000000000000"),
-		[]interface{}{Tag{3, []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}}, RawTag{3, hexDecode("49010000000000000000")}},
+		[]interface{}{
+			bigIntOrPanic("-18446744073709551617"),
+			Tag{3, []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			RawTag{3, hexDecode("49010000000000000000")},
+		},
 	}, // 3: negative bignum: -18446744073709551617
 	{
 		hexDecode("c1fb41d452d9ec200000"),
@@ -2902,12 +2911,23 @@ func TestEncModeInvalidTagsMode(t *testing.T) {
 	}
 }
 
+func TestEncModeInvalidBigIntConvertMode(t *testing.T) {
+	wantErrorMsg := "cbor: invalid BigIntConvertMode 101"
+	_, err := EncOptions{BigIntConvert: 101}.EncMode()
+	if err == nil {
+		t.Errorf("EncMode() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("EncMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+}
+
 func TestEncOptions(t *testing.T) {
 	opts1 := EncOptions{
 		Sort:          SortBytewiseLexical,
 		ShortestFloat: ShortestFloat16,
 		NaNConvert:    NaNConvertPreserveSignal,
 		InfConvert:    InfConvertNone,
+		BigIntConvert: BigIntConvertNone,
 		Time:          TimeRFC3339Nano,
 		TimeTag:       EncTagRequired,
 		IndefLength:   IndefLengthForbidden,
@@ -3039,5 +3059,159 @@ func TestEncTagsMdOption(t *testing.T) {
 		t.Errorf("Marshal() didn't return an error")
 	} else if err.Error() != wantErrorMsg {
 		t.Errorf("Marshal() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+}
+
+func TestMarshalPosBigInt(t *testing.T) {
+	testCases := []struct {
+		name             string
+		cborDataShortest []byte
+		cborDataBigInt   []byte
+		value            big.Int
+	}{
+		{
+			name:             "fit uint8",
+			cborDataShortest: hexDecode("00"),
+			cborDataBigInt:   hexDecode("c240"),
+			value:            bigIntOrPanic("0"),
+		},
+		{
+			name:             "fit uint16",
+			cborDataShortest: hexDecode("1903e8"),
+			cborDataBigInt:   hexDecode("c24203e8"),
+			value:            bigIntOrPanic("1000"),
+		},
+		{
+			name:             "fit uint32",
+			cborDataShortest: hexDecode("1a000f4240"),
+			cborDataBigInt:   hexDecode("c2430f4240"),
+			value:            bigIntOrPanic("1000000"),
+		},
+		{
+			name:             "fit uint64",
+			cborDataShortest: hexDecode("1b000000e8d4a51000"),
+			cborDataBigInt:   hexDecode("c245e8d4a51000"),
+			value:            bigIntOrPanic("1000000000000"),
+		},
+		{
+			name:             "max uint64",
+			cborDataShortest: hexDecode("1bffffffffffffffff"),
+			cborDataBigInt:   hexDecode("c248ffffffffffffffff"),
+			value:            bigIntOrPanic("18446744073709551615"),
+		},
+		{
+			name:             "overflow uint64",
+			cborDataShortest: hexDecode("c249010000000000000000"),
+			cborDataBigInt:   hexDecode("c249010000000000000000"),
+			value:            bigIntOrPanic("18446744073709551616"),
+		},
+	}
+
+	dmShortest, err := EncOptions{}.EncMode()
+	if err != nil {
+		t.Errorf("EncMode() returned an error %v", err)
+	}
+	dmBigInt, err := EncOptions{BigIntConvert: BigIntConvertNone}.EncMode()
+	if err != nil {
+		t.Errorf("EncMode() returned an error %v", err)
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if b, err := dmShortest.Marshal(tc.value); err != nil {
+				t.Errorf("Marshal(%v) returned error %v", tc.value, err)
+			} else if !bytes.Equal(b, tc.cborDataShortest) {
+				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.value, b, tc.cborDataShortest)
+			}
+
+			if b, err := dmBigInt.Marshal(tc.value); err != nil {
+				t.Errorf("Marshal(%v) returned error %v", tc.value, err)
+			} else if !bytes.Equal(b, tc.cborDataBigInt) {
+				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.value, b, tc.cborDataBigInt)
+			}
+		})
+	}
+}
+
+func TestMarshalNegBigInt(t *testing.T) {
+	testCases := []struct {
+		name             string
+		cborDataShortest []byte
+		cborDataBigInt   []byte
+		value            big.Int
+	}{
+		{
+			name:             "fit int8",
+			cborDataShortest: hexDecode("20"),
+			cborDataBigInt:   hexDecode("c340"),
+			value:            bigIntOrPanic("-1"),
+		},
+		{
+			name:             "fit int16",
+			cborDataShortest: hexDecode("3903e7"),
+			cborDataBigInt:   hexDecode("c34203e7"),
+			value:            bigIntOrPanic("-1000"),
+		},
+		{
+			name:             "fit int32",
+			cborDataShortest: hexDecode("3a000f423f"),
+			cborDataBigInt:   hexDecode("c3430f423f"),
+			value:            bigIntOrPanic("-1000000"),
+		},
+		{
+			name:             "fit int64",
+			cborDataShortest: hexDecode("3b000000e8d4a50fff"),
+			cborDataBigInt:   hexDecode("c345e8d4a50fff"),
+			value:            bigIntOrPanic("-1000000000000"),
+		},
+		{
+			name:             "min int64",
+			cborDataShortest: hexDecode("3b7fffffffffffffff"),
+			cborDataBigInt:   hexDecode("c3487fffffffffffffff"),
+			value:            bigIntOrPanic("-9223372036854775808"),
+		},
+		{
+			name:             "overflow Go int64 fit CBOR neg int",
+			cborDataShortest: hexDecode("3b8000000000000000"),
+			cborDataBigInt:   hexDecode("c3488000000000000000"),
+			value:            bigIntOrPanic("-9223372036854775809"),
+		},
+		{
+			name:             "min CBOR neg int",
+			cborDataShortest: hexDecode("3bffffffffffffffff"),
+			cborDataBigInt:   hexDecode("c348ffffffffffffffff"),
+			value:            bigIntOrPanic("-18446744073709551616"),
+		},
+		{
+			name:             "overflow CBOR neg int",
+			cborDataShortest: hexDecode("c349010000000000000000"),
+			cborDataBigInt:   hexDecode("c349010000000000000000"),
+			value:            bigIntOrPanic("-18446744073709551617"),
+		},
+	}
+
+	dmShortest, err := EncOptions{}.EncMode()
+	if err != nil {
+		t.Errorf("EncMode() returned an error %v", err)
+	}
+	dmBigInt, err := EncOptions{BigIntConvert: BigIntConvertNone}.EncMode()
+	if err != nil {
+		t.Errorf("EncMode() returned an error %v", err)
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if b, err := dmShortest.Marshal(tc.value); err != nil {
+				t.Errorf("Marshal(%v) returned error %v", tc.value, err)
+			} else if !bytes.Equal(b, tc.cborDataShortest) {
+				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.value, b, tc.cborDataShortest)
+			}
+
+			if b, err := dmBigInt.Marshal(tc.value); err != nil {
+				t.Errorf("Marshal(%v) returned error %v", tc.value, err)
+			} else if !bytes.Equal(b, tc.cborDataBigInt) {
+				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.value, b, tc.cborDataBigInt)
+			}
+		})
 	}
 }
