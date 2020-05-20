@@ -817,7 +817,7 @@ func (d *decodeState) parseToUnmarshaler(v reflect.Value) error {
 }
 
 // parse assumes data is well-formed, and does not perform bounds checking.
-func (d *decodeState) parse(skipSelfDescribedTag bool) (interface{}, error) {
+func (d *decodeState) parse(skipSelfDescribedTag bool) (interface{}, error) { //nolint:gocyclo
 	// Strip self-described CBOR tag number.
 	if skipSelfDescribedTag {
 		for d.nextCBORType() == cborTypeTag {
