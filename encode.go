@@ -10,6 +10,7 @@ import (
 	"errors"
 	"io"
 	"math"
+	"math/big"
 	"reflect"
 	"sort"
 	"strconv"
@@ -235,6 +236,26 @@ func (tm TimeMode) valid() bool {
 	return tm < maxTimeMode
 }
 
+// BigIntConvertMode specifies how to encode big.Int values.
+type BigIntConvertMode int
+
+const (
+	// BigIntConvertShortest makes big.Int encode to CBOR integer if value fits.
+	// E.g. if big.Int value can be converted to CBOR integer while preserving
+	// value, encoder will encode it to CBOR interger (major type 0 or 1).
+	BigIntConvertShortest BigIntConvertMode = iota
+
+	// BigIntConvertNone makes big.Int encode to CBOR bignum (tag 2 or 3) without
+	// converting it to another CBOR type.
+	BigIntConvertNone
+
+	maxBigIntConvert
+)
+
+func (bim BigIntConvertMode) valid() bool {
+	return bim < maxBigIntConvert
+}
+
 // EncOptions specifies encoding options.
 type EncOptions struct {
 	// Sort specifies sorting order.
@@ -249,6 +270,9 @@ type EncOptions struct {
 
 	// InfConvert specifies how to encode Inf and it overrides ShortestFloatMode.
 	InfConvert InfConvertMode
+
+	// BigIntConvert specifies how to encode big.Int values.
+	BigIntConvert BigIntConvertMode
 
 	// Time specifies how to encode time.Time.
 	Time TimeMode
@@ -420,6 +444,9 @@ func (opts EncOptions) encMode() (*encMode, error) {
 	if !opts.InfConvert.valid() {
 		return nil, errors.New("cbor: invalid InfConvertMode " + strconv.Itoa(int(opts.InfConvert)))
 	}
+	if !opts.BigIntConvert.valid() {
+		return nil, errors.New("cbor: invalid BigIntConvertMode " + strconv.Itoa(int(opts.BigIntConvert)))
+	}
 	if !opts.Time.valid() {
 		return nil, errors.New("cbor: invalid TimeMode " + strconv.Itoa(int(opts.Time)))
 	}
@@ -440,6 +467,7 @@ func (opts EncOptions) encMode() (*encMode, error) {
 		shortestFloat: opts.ShortestFloat,
 		nanConvert:    opts.NaNConvert,
 		infConvert:    opts.InfConvert,
+		bigIntConvert: opts.BigIntConvert,
 		time:          opts.Time,
 		timeTag:       opts.TimeTag,
 		indefLength:   opts.IndefLength,
@@ -461,6 +489,7 @@ type encMode struct {
 	shortestFloat ShortestFloatMode
 	nanConvert    NaNConvertMode
 	infConvert    InfConvertMode
+	bigIntConvert BigIntConvertMode
 	time          TimeMode
 	timeTag       EncTagMode
 	indefLength   IndefLengthMode
@@ -476,6 +505,7 @@ func (em *encMode) EncOptions() EncOptions {
 		ShortestFloat: em.shortestFloat,
 		NaNConvert:    em.nanConvert,
 		InfConvert:    em.infConvert,
+		BigIntConvert: em.bigIntConvert,
 		Time:          em.time,
 		TimeTag:       em.timeTag,
 		IndefLength:   em.indefLength,
@@ -1099,6 +1129,41 @@ func encodeTime(e *encodeState, em *encMode, v reflect.Value) error {
 	}
 }
 
+func encodeBigInt(e *encodeState, em *encMode, v reflect.Value) error {
+	vbi := v.Interface().(big.Int)
+	sign := vbi.Sign()
+	bi := new(big.Int).SetBytes(vbi.Bytes()) // bi is absolute value of v
+	if sign < 0 {
+		// For negative number, convert to CBOR encoded number (-v-1).
+		bi.Sub(bi, big.NewInt(1))
+	}
+
+	if em.bigIntConvert == BigIntConvertShortest {
+		if bi.IsUint64() {
+			if sign >= 0 {
+				// Encode as CBOR pos int (major type 0)
+				encodeHead(e, byte(cborTypePositiveInt), bi.Uint64())
+				return nil
+			}
+			// Encode as CBOR neg int (major type 1)
+			encodeHead(e, byte(cborTypeNegativeInt), bi.Uint64())
+			return nil
+		}
+	}
+
+	tagNum := 2
+	if sign < 0 {
+		tagNum = 3
+	}
+	// Write tag number
+	encodeHead(e, byte(cborTypeTag), uint64(tagNum))
+	// Write bignum byte string
+	b := bi.Bytes()
+	encodeHead(e, byte(cborTypeByteString), uint64(len(b)))
+	e.Write(b)
+	return nil
+}
+
 func encodeBinaryMarshalerType(e *encodeState, em *encMode, v reflect.Value) error {
 	vt := v.Type()
 	m, ok := v.Interface().(encoding.BinaryMarshaler)
@@ -1193,11 +1258,13 @@ func getEncodeFuncInternal(t reflect.Type) encodeFunc {
 	if k == reflect.Ptr {
 		return getEncodeIndirectValueFunc(t)
 	}
-	if t == typeTag {
+	switch t {
+	case typeTag:
 		return encodeTag
-	}
-	if t == typeTime {
+	case typeTime:
 		return encodeTime
+	case typeBigInt:
+		return encodeBigInt
 	}
 	if reflect.PtrTo(t).Implements(typeMarshaler) {
 		return encodeMarshalerType

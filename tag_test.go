@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math/big"
 	"reflect"
 	"strings"
 	"testing"
@@ -333,6 +334,13 @@ func TestAddTagError(t *testing.T) {
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
 			wantErrorMsg: "cbor: cannot add cbor.RawTag to TagSet",
 		},
+		{
+			name:         "big.Int",
+			typ:          reflect.TypeOf(big.Int{}),
+			num:          107,
+			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
+			wantErrorMsg: "cbor: cannot add big.Int to TagSet, it's built-in and supported automatically",
+		},
 		/*
 			{
 				name:         "cbor.Unmarshaler",
@@ -362,6 +370,20 @@ func TestAddTagError(t *testing.T) {
 			num:          1,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
 			wantErrorMsg: "cbor: cannot add tag number 0 or 1 to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead",
+		},
+		{
+			name:         "tag number 2",
+			typ:          reflect.TypeOf(myInt(0)),
+			num:          2,
+			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
+			wantErrorMsg: "cbor: cannot add tag number 2 or 3 to TagSet, it's built-in and supported automatically",
+		},
+		{
+			name:         "tag number 3",
+			typ:          reflect.TypeOf(myInt(0)),
+			num:          3,
+			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
+			wantErrorMsg: "cbor: cannot add tag number 2 or 3 to TagSet, it's built-in and supported automatically",
 		},
 		{
 			name:         "tag number 55799",

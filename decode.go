@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/big"
 	"reflect"
 	"strconv"
 	"strings"
@@ -594,12 +595,6 @@ func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error { //n
 
 	t := d.nextCBORType()
 
-	// Skip tag number(s) here to avoid recursion
-	for t == cborTypeTag {
-		d.getHead()
-		t = d.nextCBORType()
-	}
-
 	switch t {
 	case cborTypePositiveInt:
 		_, _, val := d.getHead()
@@ -607,6 +602,14 @@ func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error { //n
 	case cborTypeNegativeInt:
 		_, _, val := d.getHead()
 		if val > math.MaxInt64 {
+			if tInfo.nonPtrType == typeBigInt {
+				bi := new(big.Int)
+				bi.SetUint64(val)
+				bi.Add(bi, big.NewInt(1))
+				bi.Neg(bi)
+				v.Set(reflect.ValueOf(*bi))
+				return nil
+			}
 			return &UnmarshalTypeError{
 				Value:  t.String(),
 				Type:   tInfo.nonPtrType,
@@ -644,6 +647,53 @@ func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error { //n
 			f := math.Float64frombits(val)
 			return fillFloat(t, f, v)
 		}
+	case cborTypeTag:
+		_, _, tagNum := d.getHead()
+		switch tagNum {
+		case 2:
+			// Bignum (tag 2) can be decoded to uint, int, float, slice, array, or big.Int.
+			b := d.parseByteString()
+			bi := new(big.Int).SetBytes(b)
+
+			if tInfo.nonPtrType == typeBigInt {
+				v.Set(reflect.ValueOf(*bi))
+				return nil
+			}
+			if tInfo.nonPtrKind == reflect.Slice || tInfo.nonPtrKind == reflect.Array {
+				return fillByteString(t, b, v)
+			}
+			if bi.IsUint64() {
+				return fillPositiveInt(t, bi.Uint64(), v)
+			}
+			return &UnmarshalTypeError{
+				Value:  t.String(),
+				Type:   v.Type(),
+				errMsg: bi.String() + " overflows " + v.Type().String(),
+			}
+		case 3:
+			// Bignum (tag 2) can be decoded to int, float, slice, array, or big.Int.
+			b := d.parseByteString()
+			bi := new(big.Int).SetBytes(b)
+			bi.Add(bi, big.NewInt(1))
+			bi.Neg(bi)
+
+			if tInfo.nonPtrType == typeBigInt {
+				v.Set(reflect.ValueOf(*bi))
+				return nil
+			}
+			if tInfo.nonPtrKind == reflect.Slice || tInfo.nonPtrKind == reflect.Array {
+				return fillByteString(t, b, v)
+			}
+			if bi.IsInt64() {
+				return fillNegativeInt(t, bi.Int64(), v)
+			}
+			return &UnmarshalTypeError{
+				Value:  t.String(),
+				Type:   v.Type(),
+				errMsg: bi.String() + " overflows " + v.Type().String(),
+			}
+		}
+		return d.parseToValue(v, tInfo)
 	case cborTypeArray:
 		if tInfo.nonPtrKind == reflect.Slice {
 			return d.parseArrayToSlice(v, tInfo)
@@ -767,7 +817,7 @@ func (d *decodeState) parseToUnmarshaler(v reflect.Value) error {
 }
 
 // parse assumes data is well-formed, and does not perform bounds checking.
-func (d *decodeState) parse(skipSelfDescribedTag bool) (interface{}, error) {
+func (d *decodeState) parse(skipSelfDescribedTag bool) (interface{}, error) { //nolint:gocyclo
 	// Strip self-described CBOR tag number.
 	if skipSelfDescribedTag {
 		for d.nextCBORType() == cborTypeTag {
@@ -778,6 +828,17 @@ func (d *decodeState) parse(skipSelfDescribedTag bool) (interface{}, error) {
 				break
 			}
 		}
+	}
+
+	// Check validity of supported built-in tags.
+	if d.nextCBORType() == cborTypeTag {
+		off := d.off
+		_, _, tagNum := d.getHead()
+		if err := validBuiltinTag(tagNum, d.data[d.off]); err != nil {
+			d.skip()
+			return nil, err
+		}
+		d.off = off
 	}
 
 	t := d.nextCBORType()
@@ -798,11 +859,11 @@ func (d *decodeState) parse(skipSelfDescribedTag bool) (interface{}, error) {
 	case cborTypeNegativeInt:
 		_, _, val := d.getHead()
 		if val > math.MaxInt64 {
-			return nil, &UnmarshalTypeError{
-				Value:  t.String(),
-				Type:   reflect.TypeOf(int64(0)),
-				errMsg: "-1-" + strconv.FormatUint(val, 10) + " overflows Go's int64",
-			}
+			// CBOR negative integer value overflows Go int64, use big.Int instead.
+			bi := new(big.Int).SetUint64(val)
+			bi.Add(bi, big.NewInt(1))
+			bi.Neg(bi)
+			return *bi, nil
 		}
 		nValue := int64(-1) ^ int64(val)
 		return nValue, nil
@@ -819,10 +880,20 @@ func (d *decodeState) parse(skipSelfDescribedTag bool) (interface{}, error) {
 		_, _, tagNum := d.getHead()
 		contentOff := d.off
 
-		if tagNum == 0 || tagNum == 1 {
-			// Parse tagged time.
+		switch tagNum {
+		case 0, 1:
 			d.off = tagOff
 			return d.parseToTime()
+		case 2:
+			b := d.parseByteString()
+			bi := new(big.Int).SetBytes(b)
+			return *bi, nil
+		case 3:
+			b := d.parseByteString()
+			bi := new(big.Int).SetBytes(b)
+			bi.Add(bi, big.NewInt(1))
+			bi.Neg(bi)
+			return *bi, nil
 		}
 
 		if d.dm.tags != nil {
@@ -1028,13 +1099,10 @@ func (d *decodeState) parseMap() (map[interface{}]interface{}, error) {
 		}
 
 		// Detect if CBOR map key can be used as Go map key.
-		kkind := reflect.ValueOf(k).Kind()
-		if tag, ok := k.(Tag); ok {
-			kkind = tag.contentKind()
-		}
-		if !isHashableKind(kkind) {
+		rv := reflect.ValueOf(k)
+		if !isHashableValue(rv) {
 			if err == nil {
-				err = errors.New("cbor: invalid map key type: " + kkind.String())
+				err = errors.New("cbor: invalid map key type: " + rv.Type().String())
 			}
 			d.skip()
 			continue
@@ -1117,16 +1185,10 @@ func (d *decodeState) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //
 		}
 
 		// Detect if CBOR map key can be used as Go map key.
-		if keyIsInterfaceType {
-			kkind := keyValue.Elem().Kind()
-			if keyValue.Elem().IsValid() {
-				if tag, ok := keyValue.Elem().Interface().(Tag); ok {
-					kkind = tag.contentKind()
-				}
-			}
-			if !isHashableKind(kkind) {
+		if keyIsInterfaceType && keyValue.Elem().IsValid() {
+			if !isHashableValue(keyValue.Elem()) {
 				if err == nil {
-					err = errors.New("cbor: invalid map key type: " + kkind.String())
+					err = errors.New("cbor: invalid map key type: " + keyValue.Elem().Type().String())
 				}
 				d.skip()
 				continue
@@ -1363,11 +1425,7 @@ func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error {
 					continue
 				}
 				// Detect if CBOR map key can be used as Go map key.
-				kkind := reflect.ValueOf(k).Kind()
-				if tag, ok := k.(Tag); ok {
-					kkind = tag.contentKind()
-				}
-				if !isHashableKind(kkind) {
+				if !isHashableValue(reflect.ValueOf(k)) {
 					d.skip() // skip value
 					continue
 				}
@@ -1559,6 +1617,7 @@ func (d *decodeState) nextCBORNil() bool {
 var (
 	typeIntf              = reflect.TypeOf([]interface{}(nil)).Elem()
 	typeTime              = reflect.TypeOf(time.Time{})
+	typeBigInt            = reflect.TypeOf(big.Int{})
 	typeUnmarshaler       = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
 	typeBinaryUnmarshaler = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
 )
@@ -1594,6 +1653,11 @@ func fillPositiveInt(t cborType, val uint64, v reflect.Value) error {
 		v.SetFloat(f)
 		return nil
 	}
+	if v.Type() == typeBigInt {
+		i := new(big.Int).SetUint64(val)
+		v.Set(reflect.ValueOf(*i))
+		return nil
+	}
 	return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
 }
 
@@ -1608,6 +1672,11 @@ func fillNegativeInt(t cborType, val int64, v reflect.Value) error {
 	case reflect.Float32, reflect.Float64:
 		f := float64(val)
 		v.SetFloat(f)
+		return nil
+	}
+	if v.Type() == typeBigInt {
+		i := new(big.Int).SetInt64(val)
+		v.Set(reflect.ValueOf(*i))
 		return nil
 	}
 	return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
@@ -1690,13 +1759,20 @@ func isImmutableKind(k reflect.Kind) bool {
 	}
 }
 
-func isHashableKind(k reflect.Kind) bool {
-	switch k {
+func isHashableValue(rv reflect.Value) bool {
+	switch rv.Kind() {
 	case reflect.Slice, reflect.Map, reflect.Func:
 		return false
-	default:
-		return true
+	case reflect.Struct:
+		switch rv.Type() {
+		case typeTag:
+			tag := rv.Interface().(Tag)
+			return isHashableValue(reflect.ValueOf(tag.Content))
+		case typeBigInt:
+			return false
+		}
 	}
+	return true
 }
 
 // fieldByIndex returns the nested field corresponding to the index.  It
@@ -1733,6 +1809,12 @@ func validBuiltinTag(tagNum uint64, contentHead byte) error {
 		// Tag content (epoch date/time) must be uint, int, or float type.
 		if t != cborTypePositiveInt && t != cborTypeNegativeInt && (contentHead < 0xf9 || contentHead > 0xfb) {
 			return errors.New("cbor: tag number 1 must be followed by integer or floating-point number, got " + t.String())
+		}
+		return nil
+	case 2, 3:
+		// Tag content (bignum) must be byte type.
+		if t != cborTypeByteString {
+			return errors.New("cbor: tag number 2 or 3 must be followed by byte string, got " + t.String())
 		}
 		return nil
 	}
