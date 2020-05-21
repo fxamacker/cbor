@@ -1,6 +1,11 @@
 // Copyright (c) Faye Amacker. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
+// This file contains some code from the Go standard library.
+
+// Portions (from Go) Copyright (c) 2009 The Go Authors.  Use of Go's source code
+// is governed by a BSD-style license.  See LICENSE for the full text of the license.
+
 package cbor
 
 import (
