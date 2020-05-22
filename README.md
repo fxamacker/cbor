@@ -1051,7 +1051,6 @@ Please read the license for additional disclaimers and terms.
 
 __Making this library better__  
 
-* Montgomery Edwards⁴⁴⁸ for [x448/float16](https://github.com/x448/float16), updating the docs, creating charts & slideshow, filing issues, nudging me to ask for feedback from users, helping with design of v2.0-v2.1 API, and general idea for DupMapKeyEnforcedAPF.
 * Stefan Tatschner for using this library in [sep](https://git.sr.ht/~rumpelsepp/sep), being the 1st to discover my CBOR library, requesting time.Time in issue #1, and submitting this library in a [PR to cbor.io](https://github.com/cbor/cbor.github.io/pull/56) on Aug 12, 2019.
 * Yawning Angel for using this library to [oasis-core](https://github.com/oasislabs/oasis-core), and requesting BinaryMarshaler in issue #5.
 * Jernej Kos for requesting RawMessage in issue #11 and offering feedback on v2.1 API for CBOR tags.
