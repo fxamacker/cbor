@@ -24,7 +24,6 @@ var (
 	typeUint16          = reflect.TypeOf(uint16(0))
 	typeUint32          = reflect.TypeOf(uint32(0))
 	typeUint64          = reflect.TypeOf(uint64(0))
-	typeInt             = reflect.TypeOf(int(0))
 	typeInt8            = reflect.TypeOf(int8(0))
 	typeInt16           = reflect.TypeOf(int16(0))
 	typeInt32           = reflect.TypeOf(int32(0))
