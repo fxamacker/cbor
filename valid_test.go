@@ -13,7 +13,7 @@ func TestValid(t *testing.T) {
 	for _, t := range marshalTests {
 		buf.Write(t.cborData)
 	}
-	d := decodeState{data: buf.Bytes(), dm: defaultDecMode}
+	d := decoder{data: buf.Bytes(), dm: defaultDecMode}
 	for i := 0; i < len(marshalTests); i++ {
 		if err := d.valid(); err != nil {
 			t.Errorf("Valid() returned error %v", err)
@@ -65,7 +65,7 @@ func TestDepth(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			d := decodeState{data: tc.cborData, dm: defaultDecMode}
+			d := decoder{data: tc.cborData, dm: defaultDecMode}
 			depth, err := d.validInternal(0)
 			if err != nil {
 				t.Errorf("valid(0x%x) returned error %v", tc.cborData, err)
@@ -130,7 +130,7 @@ func TestDepthError(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, _ := tc.opts.decMode()
-			d := decodeState{data: tc.cborData, dm: dm}
+			d := decoder{data: tc.cborData, dm: dm}
 			if _, err := d.validInternal(0); err == nil {
 				t.Errorf("valid(0x%x) didn't return an error", tc.cborData)
 			} else if _, ok := err.(*MaxNestedLevelError); !ok {

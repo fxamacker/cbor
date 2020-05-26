@@ -45,18 +45,18 @@ func (x *indexFieldSorter) Swap(i, j int) {
 func (x *indexFieldSorter) Less(i, j int) bool {
 	iIdx := x.fields[i].idx
 	jIdx := x.fields[j].idx
-	for k, d := range iIdx {
-		if k >= len(jIdx) {
-			// fields[j].idx is a subset of fields[i].idx.
-			return false
-		}
-		if d != jIdx[k] {
-			// fields[i].idx and fields[j].idx are different.
-			return d < jIdx[k]
+
+	minLen := len(iIdx)
+	if len(jIdx) < minLen {
+		minLen = len(jIdx)
+	}
+
+	for k := 0; k < minLen; k++ {
+		if iIdx[k] != jIdx[k] {
+			return iIdx[k] < jIdx[k]
 		}
 	}
-	// fields[i].idx is either the same as, or a subset of fields[j].idx.
-	return true
+	return len(iIdx) <= len(jIdx)
 }
 
 // nameLevelAndTagFieldSorter sorts fields by field name, idx depth, and presence of tag.
@@ -212,4 +212,29 @@ func getFieldNameAndOptionsFromTag(tag string) (name string, omitEmpty bool, key
 		keyAsInt = true
 	}
 	return
+}
+
+type embeddedFieldNullPtrFunc func(reflect.Value) (reflect.Value, error)
+
+// getFieldValue returns field value of struct v by index.  When encountering null pointer
+// to anonymous (embedded) struct field, f is called with the last traversed field value.
+func getFieldValue(v reflect.Value, idx []int, f embeddedFieldNullPtrFunc) (fv reflect.Value, err error) {
+	fv = v
+	for i, n := range idx {
+		fv = fv.Field(n)
+
+		if i < len(idx)-1 {
+			if fv.Kind() == reflect.Ptr && fv.Type().Elem().Kind() == reflect.Struct {
+				if fv.IsNil() {
+					// Null pointer to embedded struct field
+					fv, err = f(fv)
+					if err != nil || !fv.IsValid() {
+						return fv, err
+					}
+				}
+				fv = fv.Elem()
+			}
+		}
+	}
+	return fv, nil
 }

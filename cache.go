@@ -178,7 +178,7 @@ func getEncodingStructType(t reflect.Type) *encodingStructType {
 	var hasAnonymousField bool
 	var hasKeyAsInt bool
 	var hasKeyAsStr bool
-	e := getEncodeState()
+	e := getEncoderBuffer()
 	for i := 0; i < len(flds); i++ {
 		// Get field's encodeFunc
 		flds[i].ef = getEncodeFunc(flds[i].typ)
@@ -226,7 +226,7 @@ func getEncodingStructType(t reflect.Type) *encodingStructType {
 			omitEmpty = true
 		}
 	}
-	putEncodeState(e)
+	putEncoderBuffer(e)
 
 	if err != nil {
 		structType := &encodingStructType{err: err}

@@ -24,7 +24,6 @@ var (
 	typeUint16          = reflect.TypeOf(uint16(0))
 	typeUint32          = reflect.TypeOf(uint32(0))
 	typeUint64          = reflect.TypeOf(uint64(0))
-	typeInt             = reflect.TypeOf(int(0))
 	typeInt8            = reflect.TypeOf(int8(0))
 	typeInt16           = reflect.TypeOf(int16(0))
 	typeInt32           = reflect.TypeOf(int32(0))
@@ -1436,7 +1435,10 @@ func TestUnmarshalStructError1(t *testing.T) {
 	}
 
 	cborData := hexDecode("a868496e744669656c64187b6a466c6f61744669656c64fa47c3500069426f6f6c4669656c64f56b537472696e674669656c6464746573746f42797465537472696e674669656c64430103056a41727261794669656c64826568656c6c6f65776f726c64684d61704669656c64a2676d6f726e696e67f56961667465726e6f6f6ef4714e65737465645374727563744669656c64a261581903e861591a000f4240")
-	const wantUnmarshalTypeErrorType = "UTF-8 text string"
+	wantCBORType := "UTF-8 text string"
+	wantGoType := "int"
+	wantStructFieldName := "cbor.outer2.ArrayField"
+	wantErrorMsg := "cannot unmarshal UTF-8 text string into Go struct field cbor.outer2.ArrayField of type int"
 
 	var v outer2
 	if err := Unmarshal(cborData, &v); err == nil {
@@ -1445,20 +1447,17 @@ func TestUnmarshalStructError1(t *testing.T) {
 		if typeError, ok := err.(*UnmarshalTypeError); !ok {
 			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*UnmarshalTypeError)", cborData, err)
 		} else {
-			if typeError.Value != wantUnmarshalTypeErrorType {
-				t.Errorf("Unmarshal(0x%x) (*UnmarshalTypeError).Value %s, want %s", cborData, typeError.Value, wantUnmarshalTypeErrorType)
+			if typeError.CBORType != wantCBORType {
+				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).CBORType %s, want %s", cborData, typeError.CBORType, wantCBORType)
 			}
-			if typeError.Type != typeInt {
-				t.Errorf("Unmarshal(0x%x) (*UnmarshalTypeError).Type %s, want %s", cborData, typeError.Type.String(), typeInt.String())
+			if typeError.GoType != wantGoType {
+				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).GoType %s, want %s", cborData, typeError.GoType, wantGoType)
 			}
-			if typeError.Struct != "cbor.outer2" {
-				t.Errorf("Unmarshal(0x%x) (*UnmarshalTypeError).Struct %s, want %s", cborData, typeError.Struct, "cbor.outer2")
+			if typeError.StructFieldName != wantStructFieldName {
+				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).StructFieldName %s, want %s", cborData, typeError.StructFieldName, wantStructFieldName)
 			}
-			if typeError.Field != "ArrayField" {
-				t.Errorf("Unmarshal(0x%x) (*UnmarshalTypeError).Field %s, want %s", cborData, typeError.Field, "ArrayField")
-			}
-			if !strings.Contains(err.Error(), "cannot unmarshal UTF-8 text string into Go struct field") {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), "cannot unmarshal UTF-8 text string into Go struct field")
+			if !strings.Contains(err.Error(), wantErrorMsg) {
+				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
 			}
 		}
 	}
@@ -1480,8 +1479,10 @@ func TestUnmarshalStructError2(t *testing.T) {
 
 	// Unmarshal returns first error encountered, which is *UnmarshalTypeError (failed to unmarshal int into Go string)
 	cborData := hexDecode("a3fa47c35000026161614161fe6142") // {100000.0:2, "a":"A", 0xfe: B}
-	const wantUnmarshalTypeErrorMsg = "cannot unmarshal primitives into Go value of type string"
-	const wantUnmarshalTypeErrorType = "primitives"
+	wantCBORType := "primitives"
+	wantGoType := "string"
+	wantErrorMsg := "cannot unmarshal primitives into Go value of type string"
+
 	v := strc{}
 	if err := Unmarshal(cborData, &v); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
@@ -1489,14 +1490,14 @@ func TestUnmarshalStructError2(t *testing.T) {
 		if typeError, ok := err.(*UnmarshalTypeError); !ok {
 			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*UnmarshalTypeError)", cborData, err)
 		} else {
-			if typeError.Value != wantUnmarshalTypeErrorType {
-				t.Errorf("Unmarshal(0x%x) (*UnmarshalTypeError).Value %s, want %s", cborData, typeError.Value, wantUnmarshalTypeErrorType)
+			if typeError.CBORType != wantCBORType {
+				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).CBORType %s, want %s", cborData, typeError.CBORType, wantCBORType)
 			}
-			if typeError.Type != typeString {
-				t.Errorf("Unmarshal(0x%x) (*UnmarshalTypeError).Type %s, want %s", cborData, typeError.Type, typeString)
+			if typeError.GoType != wantGoType {
+				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).GoType %s, want %s", cborData, typeError.GoType, wantGoType)
 			}
-			if !strings.Contains(err.Error(), wantUnmarshalTypeErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantUnmarshalTypeErrorMsg)
+			if !strings.Contains(err.Error(), wantErrorMsg) {
+				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
 			}
 		}
 	}
