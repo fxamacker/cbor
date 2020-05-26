@@ -609,7 +609,7 @@ func TestMarshalStructCanonical(t *testing.T) {
 func TestMarshalNullPointerToEmbeddedStruct(t *testing.T) {
 	type (
 		T1 struct {
-			N int
+			X int
 		}
 		T2 struct {
 			*T1
@@ -629,14 +629,14 @@ func TestMarshalNullPointerToEmbeddedStruct(t *testing.T) {
 func TestMarshalNullPointerToStruct(t *testing.T) {
 	type (
 		T1 struct {
-			N int
+			X int
 		}
 		T2 struct {
 			T *T1
 		}
 	)
 	v := T2{}
-	wantCborData := []byte{0xa1, 0x61, 0x54, 0xf6} // {T: nil}
+	wantCborData := []byte{0xa1, 0x61, 0x54, 0xf6} // {X: nil}
 	cborData, err := Marshal(v)
 	if err != nil {
 		t.Fatalf("Marshal(%v) returned error %v", v, err)
@@ -646,194 +646,198 @@ func TestMarshalNullPointerToStruct(t *testing.T) {
 	}
 }
 
+// Struct fields encoding follows the same struct fields visibility
+// rules used by JSON encoding package.  Some struct types are from
+// tests in JSON encoding package to ensure that the same rules are
+// followed.
 func TestAnonymousFields1(t *testing.T) {
-	// Fields with the same name at the same level are ignored
+	// Fields (T1.X, T2.X) with the same name at the same level are ignored
 	type (
-		S1 struct{ x, X int }
-		S2 struct{ x, X int }
-		S  struct {
-			S1
-			S2
+		T1 struct{ x, X int }
+		T2 struct{ x, X int }
+		T  struct {
+			T1
+			T2
 		}
 	)
-	s := S{S1{1, 2}, S2{3, 4}}
+	v := T{T1{1, 2}, T2{3, 4}}
 	want := []byte{0xa0} // {}
-	b, err := Marshal(s)
+	b, err := Marshal(v)
 	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", s, err)
+		t.Errorf("Marshal(%v) returned error %v", v, err)
 	} else if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", s, b, want)
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
 	}
 }
 
 func TestAnonymousFields2(t *testing.T) {
-	// Field with the same name at a less nested level is serialized
+	// Field (T.X) with the same name at a less nested level is serialized
 	type (
-		S1 struct{ x, X int }
-		S2 struct{ x, X int }
-		S  struct {
-			S1
-			S2
+		T1 struct{ x, X int }
+		T2 struct{ x, X int }
+		T  struct {
+			T1
+			T2
 			x, X int
 		}
 	)
-	s := S{S1{1, 2}, S2{3, 4}, 5, 6}
+	v := T{T1{1, 2}, T2{3, 4}, 5, 6}
 	want := []byte{0xa1, 0x61, 0x58, 0x06} // {X:6}
-	b, err := Marshal(s)
+	b, err := Marshal(v)
 	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", s, err)
+		t.Errorf("Marshal(%v) returned error %v", v, err)
 	} else if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", s, b, want)
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
 	}
 
-	var v S
-	unmarshalWant := S{X: 6}
-	if err := Unmarshal(b, &v); err != nil {
+	var v2 T
+	unmarshalWant := T{X: 6}
+	if err := Unmarshal(b, &v2); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-	} else if !reflect.DeepEqual(v, unmarshalWant) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v, v, unmarshalWant, unmarshalWant)
+	} else if !reflect.DeepEqual(v2, unmarshalWant) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v2, v2, unmarshalWant, unmarshalWant)
 	}
 }
 
 func TestAnonymousFields3(t *testing.T) {
-	// Unexported embedded field of non-struct type should not be serialized
+	// Unexported embedded field (myInt) of non-struct type is ignored
 	type (
 		myInt int
-		S     struct {
+		T     struct {
 			myInt
 		}
 	)
-	s := S{5}
+	v := T{5}
 	want := []byte{0xa0} // {}
-	b, err := Marshal(s)
+	b, err := Marshal(v)
 	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", s, err)
+		t.Errorf("Marshal(%v) returned error %v", v, err)
 	} else if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", s, b, want)
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
 	}
 }
 
 func TestAnonymousFields4(t *testing.T) {
-	// Exported embedded field of non-struct type should be serialized
+	// Exported embedded field (MyInt) of non-struct type is serialized
 	type (
 		MyInt int
-		S     struct {
+		T     struct {
 			MyInt
 		}
 	)
-	s := S{5}
+	v := T{5}
 	want := []byte{0xa1, 0x65, 0x4d, 0x79, 0x49, 0x6e, 0x74, 0x05} // {MyInt: 5}
-	b, err := Marshal(s)
+	b, err := Marshal(v)
 	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", s, err)
+		t.Errorf("Marshal(%v) returned error %v", v, err)
 	} else if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", s, b, want)
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
 	}
 
-	var v S
-	if err = Unmarshal(b, &v); err != nil {
+	var v2 T
+	if err = Unmarshal(b, &v2); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-	} else if !reflect.DeepEqual(v, s) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v, v, s, s)
+	} else if !reflect.DeepEqual(v, v2) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v, v, v2, v2)
 	}
 }
 
 func TestAnonymousFields5(t *testing.T) {
-	// Unexported embedded field of pointer to non-struct type should not be serialized
+	// Unexported embedded field (*myInt) of pointer to non-struct type is ignored
 	type (
 		myInt int
-		S     struct {
+		T     struct {
 			*myInt
 		}
 	)
-	s := S{new(myInt)}
-	*s.myInt = 5
+	v := T{new(myInt)}
+	*v.myInt = 5
 	want := []byte{0xa0} // {}
-	b, err := Marshal(s)
+	b, err := Marshal(v)
 	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", s, err)
+		t.Errorf("Marshal(%v) returned error %v", v, err)
 	} else if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", s, b, want)
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
 	}
 }
 
 func TestAnonymousFields6(t *testing.T) {
-	// Exported embedded field of pointer to non-struct type should be serialized
+	// Exported embedded field (*MyInt) of pointer to non-struct type should be serialized
 	type (
 		MyInt int
-		S     struct {
+		T     struct {
 			*MyInt
 		}
 	)
-	s := S{new(MyInt)}
-	*s.MyInt = 5
+	v := T{new(MyInt)}
+	*v.MyInt = 5
 	want := []byte{0xa1, 0x65, 0x4d, 0x79, 0x49, 0x6e, 0x74, 0x05} // {MyInt: 5}
-	b, err := Marshal(s)
+	b, err := Marshal(v)
 	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", s, err)
+		t.Errorf("Marshal(%v) returned error %v", v, err)
 	} else if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", s, b, want)
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
 	}
 
-	var v S
-	if err = Unmarshal(b, &v); err != nil {
+	var v2 T
+	if err = Unmarshal(b, &v2); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-	} else if !reflect.DeepEqual(v, s) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v, v, s, s)
+	} else if !reflect.DeepEqual(v, v2) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v, v, v2, v2)
 	}
 }
 
 func TestAnonymousFields7(t *testing.T) {
-	// Exported fields of embedded structs should have their exported fields be serialized
+	// Exported fields (t1.X, T2.Y) of embedded structs should have their exported fields be serialized
 	type (
-		s1 struct{ x, X int }
-		S2 struct{ y, Y int }
-		S  struct {
-			s1
-			S2
+		t1 struct{ x, X int }
+		T2 struct{ y, Y int }
+		T  struct {
+			t1
+			T2
 		}
 	)
-	s := S{s1{1, 2}, S2{3, 4}}
+	v := T{t1{1, 2}, T2{3, 4}}
 	want := []byte{0xa2, 0x61, 0x58, 0x02, 0x61, 0x59, 0x04} // {X:2, Y:4}
-	b, err := Marshal(s)
+	b, err := Marshal(v)
 	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", s, err)
+		t.Errorf("Marshal(%v) returned error %v", v, err)
 	} else if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", s, b, want)
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
 	}
 
-	var v S
-	unmarshalWant := S{s1{X: 2}, S2{Y: 4}}
-	if err = Unmarshal(b, &v); err != nil {
+	var v2 T
+	unmarshalWant := T{t1{X: 2}, T2{Y: 4}}
+	if err = Unmarshal(b, &v2); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-	} else if !reflect.DeepEqual(v, unmarshalWant) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v, v, unmarshalWant, unmarshalWant)
+	} else if !reflect.DeepEqual(v2, unmarshalWant) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v2, v2, unmarshalWant, unmarshalWant)
 	}
 }
 
 func TestAnonymousFields8(t *testing.T) {
-	// Exported fields of pointers
+	// Exported fields of pointers (t1.X, T2.Y)
 	type (
-		s1 struct{ x, X int }
-		S2 struct{ y, Y int }
-		S  struct {
-			*s1
-			*S2
+		t1 struct{ x, X int }
+		T2 struct{ y, Y int }
+		T  struct {
+			*t1
+			*T2
 		}
 	)
-	s := S{&s1{1, 2}, &S2{3, 4}}
+	v := T{&t1{1, 2}, &T2{3, 4}}
 	want := []byte{0xa2, 0x61, 0x58, 0x02, 0x61, 0x59, 0x04} // {X:2, Y:4}
-	b, err := Marshal(s)
+	b, err := Marshal(v)
 	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", s, err)
+		t.Errorf("Marshal(%v) returned error %v", v, err)
 	} else if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", s, b, want)
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
 	}
 
-	// v cannot be unmarshaled to because reflect cannot allocate unexported field s1.
-	var v1 S
+	// v1 cannot be unmarshaled to because reflect cannot allocate unexported field s1.
+	var v1 T
 	wantErrorMsg := "cannot set embedded pointer to unexported struct"
-	wantV := S{S2: &S2{Y: 4}}
+	wantV := T{T2: &T2{Y: 4}}
 	err = Unmarshal(b, &v1)
 	if err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error, want error %q", b, wantErrorMsg)
@@ -844,10 +848,10 @@ func TestAnonymousFields8(t *testing.T) {
 		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", b, v1, v1, wantV, wantV)
 	}
 
-	// v can be unmarshaled to because unexported field s1 is already allocated.
-	var v2 S
-	v2.s1 = &s1{}
-	unmarshalWant := S{&s1{X: 2}, &S2{Y: 4}}
+	// v2 can be unmarshaled to because unexported field t1 is already allocated.
+	var v2 T
+	v2.t1 = &t1{}
+	unmarshalWant := T{&t1{X: 2}, &T2{Y: 4}}
 	if err = Unmarshal(b, &v2); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
 	} else if !reflect.DeepEqual(v2, unmarshalWant) {
@@ -861,192 +865,22 @@ func TestAnonymousFields9(t *testing.T) {
 		MyInt1 int
 		MyInt2 int
 		myInt  int
-		s2     struct {
+		t2     struct {
 			MyInt2
 			myInt
 		}
-		s1 struct {
+		t1 struct {
 			MyInt1
 			myInt
-			s2
+			t2
 		}
-		S struct {
-			s1
+		T struct {
+			t1
 			myInt
 		}
 	)
-	s := S{s1{1, 2, s2{3, 4}}, 6}
+	v := T{t1{1, 2, t2{3, 4}}, 6}
 	want := []byte{0xa2, 0x66, 0x4d, 0x79, 0x49, 0x6e, 0x74, 0x31, 0x01, 0x66, 0x4d, 0x79, 0x49, 0x6e, 0x74, 0x32, 0x03} // {MyInt1: 1, MyInt2: 3}
-	b, err := Marshal(s)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", s, err)
-	} else if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", s, b, want)
-	}
-
-	var v S
-	unmarshalWant := S{s1: s1{MyInt1: 1, s2: s2{MyInt2: 3}}}
-	if err = Unmarshal(b, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-	} else if !reflect.DeepEqual(v, unmarshalWant) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v, v, unmarshalWant, unmarshalWant)
-	}
-}
-
-func TestAnonymousFields10(t *testing.T) {
-	// Fields of the same struct type at the same level
-	type (
-		s3 struct {
-			Z int
-		}
-		s1 struct {
-			X int
-			s3
-		}
-		s2 struct {
-			Y int
-			s3
-		}
-		S struct {
-			s1
-			s2
-		}
-	)
-	s := S{s1{1, s3{2}}, s2{3, s3{4}}}
-	want := []byte{0xa2, 0x61, 0x58, 0x01, 0x61, 0x59, 0x03} // {X: 1, Y: 3}
-	b, err := Marshal(s)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", s, err)
-	} else if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", s, b, want)
-	}
-
-	var v S
-	unmarshalWant := S{s1: s1{X: 1}, s2: s2{Y: 3}}
-	if err = Unmarshal(b, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-	} else if !reflect.DeepEqual(v, unmarshalWant) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v, v, unmarshalWant, unmarshalWant)
-	}
-}
-
-func TestAnonymousFields11(t *testing.T) {
-	// Fields of the same struct type at different levels
-	type (
-		s2 struct {
-			X int
-		}
-		s1 struct {
-			Y int
-			s2
-		}
-		S struct {
-			s1
-			s2
-		}
-	)
-	s := S{s1{1, s2{2}}, s2{3}}
-	want := []byte{0xa2, 0x61, 0x59, 0x01, 0x61, 0x58, 0x03} // {Y: 1, X: 3}
-	b, err := Marshal(s)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", s, err)
-	} else if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", s, b, want)
-	}
-
-	var v S
-	unmarshalWant := S{s1: s1{Y: 1}, s2: s2{X: 3}}
-	if err = Unmarshal(b, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-	} else if !reflect.DeepEqual(v, unmarshalWant) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v, v, unmarshalWant, unmarshalWant)
-	}
-}
-
-func TestOmitEmpty(t *testing.T) {
-	type s struct {
-		Sr  string                 `cbor:"sr"`
-		So  string                 `cbor:"so,omitempty"`
-		Sw  string                 `cbor:"-"`
-		Ir  int                    `cbor:"omitempty"` // actually named omitempty, not an option
-		Io  int                    `cbor:"io,omitempty"`
-		Slr []string               `cbor:"slr"`
-		Slo []string               `cbor:"slo,omitempty"`
-		Mr  map[string]interface{} `cbor:"mr"`
-		Mo  map[string]interface{} `cbor:"mo,omitempty"`
-		Ms  map[string]interface{} `cbor:",omitempty"`
-		Fr  float64                `cbor:"fr"`
-		Fo  float64                `cbor:"fo,omitempty"`
-		Br  bool                   `cbor:"br"`
-		Bo  bool                   `cbor:"bo,omitempty"`
-		Ur  uint                   `cbor:"ur"`
-		Uo  uint                   `cbor:"uo,omitempty"`
-		Str struct{}               `cbor:"str"`
-		Sto struct{}               `cbor:"sto,omitempty"`
-		Pr  *int                   `cbor:"pr"`
-		Po  *int                   `cbor:"po,omitempty"`
-	}
-
-	// {"sr": "", "omitempty": 0, "slr": null, "mr": {}, "Ms": {"a": true}, "fr": 0, "br": false, "ur": 0, "str": {}, "sto": {}, "pr": nil }
-	want := []byte{0xab,
-		0x62, 0x73, 0x72, 0x60,
-		0x69, 0x6f, 0x6d, 0x69, 0x74, 0x65, 0x6d, 0x70, 0x74, 0x79, 0x00,
-		0x63, 0x73, 0x6c, 0x72, 0xf6,
-		0x62, 0x6d, 0x72, 0xa0,
-		0x62, 0x4d, 0x73, 0xa1, 0x61, 0x61, 0xf5,
-		0x62, 0x66, 0x72, 0xfb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x62, 0x62, 0x72, 0xf4,
-		0x62, 0x75, 0x72, 0x00,
-		0x63, 0x73, 0x74, 0x72, 0xa0,
-		0x63, 0x73, 0x74, 0x6f, 0xa0,
-		0x62, 0x70, 0x72, 0xf6}
-
-	var v s
-	v.Sw = "something"
-	v.Mr = map[string]interface{}{}
-	v.Mo = map[string]interface{}{}
-	v.Ms = map[string]interface{}{"a": true}
-
-	b, err := Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	} else if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
-	}
-}
-
-type StructA struct {
-	S string
-}
-
-type StructC struct {
-	S string
-}
-
-type StructD struct { // Same as StructA after tagging.
-	XXX string `cbor:"S"`
-}
-
-// StructD's tagged S field should dominate StructA's.
-type StructY struct {
-	StructA
-	StructD
-}
-
-// There are no tags here, so S should not appear.
-type StructZ struct {
-	StructA
-	StructC
-	StructY // Contains a tagged S field through StructD; should not dominate.
-}
-
-func TestTaggedFieldDominates(t *testing.T) {
-	// Test that a field with a tag dominates untagged fields.
-	v := StructY{
-		StructA{"StructA"},
-		StructD{"StructD"},
-	}
-	want := []byte{0xa1, 0x61, 0x53, 0x67, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74, 0x44} // {"S":"StructD"}
 	b, err := Marshal(v)
 	if err != nil {
 		t.Errorf("Marshal(%v) returned error %v", v, err)
@@ -1054,8 +888,8 @@ func TestTaggedFieldDominates(t *testing.T) {
 		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
 	}
 
-	var v2 StructY
-	unmarshalWant := StructY{StructD: StructD{"StructD"}}
+	var v2 T
+	unmarshalWant := T{t1: t1{MyInt1: 1, t2: t2{MyInt2: 3}}}
 	if err = Unmarshal(b, &v2); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
 	} else if !reflect.DeepEqual(v2, unmarshalWant) {
@@ -1063,13 +897,206 @@ func TestTaggedFieldDominates(t *testing.T) {
 	}
 }
 
-func TestDuplicatedFieldDisappears(t *testing.T) {
-	v := StructZ{
-		StructA{"StructA"},
-		StructC{"StructC"},
-		StructY{
-			StructA{"nested StructA"},
-			StructD{"nested StructD"},
+func TestAnonymousFields10(t *testing.T) {
+	// Fields of the same struct type at the same level
+	type (
+		t3 struct {
+			Z int
+		}
+		t1 struct {
+			X int
+			t3
+		}
+		t2 struct {
+			Y int
+			t3
+		}
+		T struct {
+			t1
+			t2
+		}
+	)
+	v := T{t1{1, t3{2}}, t2{3, t3{4}}}
+	want := []byte{0xa2, 0x61, 0x58, 0x01, 0x61, 0x59, 0x03} // {X: 1, Y: 3}
+	b, err := Marshal(v)
+	if err != nil {
+		t.Errorf("Marshal(%v) returned error %v", v, err)
+	} else if !bytes.Equal(b, want) {
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
+	}
+
+	var v2 T
+	unmarshalWant := T{t1: t1{X: 1}, t2: t2{Y: 3}}
+	if err = Unmarshal(b, &v2); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
+	} else if !reflect.DeepEqual(v2, unmarshalWant) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v2, v2, unmarshalWant, unmarshalWant)
+	}
+}
+
+func TestAnonymousFields11(t *testing.T) {
+	// Fields (T.t2.X, T.t1.t2.X) of the same struct type at different levels
+	type (
+		t2 struct {
+			X int
+		}
+		t1 struct {
+			Y int
+			t2
+		}
+		T struct {
+			t1
+			t2
+		}
+	)
+	v := T{t1{1, t2{2}}, t2{3}}
+	want := []byte{0xa2, 0x61, 0x59, 0x01, 0x61, 0x58, 0x03} // {Y: 1, X: 3}
+	b, err := Marshal(v)
+	if err != nil {
+		t.Errorf("Marshal(%v) returned error %v", v, err)
+	} else if !bytes.Equal(b, want) {
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
+	}
+
+	var v2 T
+	unmarshalWant := T{t1: t1{Y: 1}, t2: t2{X: 3}}
+	if err = Unmarshal(b, &v2); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
+	} else if !reflect.DeepEqual(v2, unmarshalWant) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v2, v2, unmarshalWant, unmarshalWant)
+	}
+}
+
+func TestAlwaysOmit(t *testing.T) {
+	type T struct {
+		I   int // never omit
+		Io  int `cbor:",omitempty"` // omit empty
+		Iao int `cbor:"-"`          // always omit
+	}
+
+	v := T{}
+	want := []byte{0xa1, 0x61, 0x49, 0x00} // {"I": 0}
+	b, err := Marshal(v)
+	if err != nil {
+		t.Errorf("Marshal(%v) returned error %v", v, err)
+	} else if !bytes.Equal(b, want) {
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
+	}
+
+	v = T{I: 1, Io: 2, Iao: 3}
+	want = []byte{0xa2, 0x61, 0x49, 0x01, 0x62, 0x49, 0x6f, 0x02} // {"I": 1, "Io": 2}
+	b, err = Marshal(v)
+	if err != nil {
+		t.Errorf("Marshal(%v) returned error %v", v, err)
+	} else if !bytes.Equal(b, want) {
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
+	}
+}
+
+func TestOmitEmpty(t *testing.T) {
+	type T struct {
+		B    bool                   `cbor:"b"`
+		Bo   bool                   `cbor:"bo,omitempty"`
+		UI   uint                   `cbor:"ui"`
+		UIo  uint                   `cbor:"uio,omitempty"`
+		I    int                    `cbor:"omitempty"` // actually named omitempty, not an option
+		Io   int                    `cbor:"io,omitempty"`
+		F    float64                `cbor:"f"`
+		Fo   float64                `cbor:"fo,omitempty"`
+		S    string                 `cbor:"s"`
+		So   string                 `cbor:"so,omitempty"`
+		Slc  []string               `cbor:"slc"`
+		Slco []string               `cbor:"slco,omitempty"`
+		M    map[string]interface{} `cbor:"m"`
+		Mo   map[string]interface{} `cbor:"mo,omitempty"`
+		Str  struct{}               `cbor:"str"`
+		Stro struct{}               `cbor:"stro,omitempty"`
+		P    *int                   `cbor:"p"`
+		Po   *int                   `cbor:"po,omitempty"`
+	}
+	// {"b": false, "ui": 0, "omitempty": 0, "f": 0, "s": "", "slc": null, "m": {}, "str": {}, "stro": {}, "p": nil }
+	want := []byte{0xaa,
+		0x61, 0x62, 0xf4,
+		0x62, 0x75, 0x69, 0x00,
+		0x69, 0x6f, 0x6d, 0x69, 0x74, 0x65, 0x6d, 0x70, 0x74, 0x79, 0x00,
+		0x61, 0x66, 0xfb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x61, 0x73, 0x60,
+		0x63, 0x73, 0x6c, 0x63, 0xf6,
+		0x61, 0x6d, 0xf6,
+		0x63, 0x73, 0x74, 0x72, 0xa0,
+		0x64, 0x73, 0x74, 0x72, 0x6f, 0xa0,
+		0x61, 0x70, 0xf6,
+	}
+
+	var v T
+	b, err := Marshal(v)
+	if err != nil {
+		t.Errorf("Marshal(%v) returned error %v", v, err)
+	} else if !bytes.Equal(b, want) {
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
+	}
+}
+
+func TestTaggedField(t *testing.T) {
+	// A field (T2.X) with a tag dominates untagged field.
+	type (
+		T1 struct {
+			S string
+		}
+		T2 struct {
+			X string `cbor:"S"`
+		}
+		T struct {
+			T1
+			T2
+		}
+	)
+	v := T{T1{"T1"}, T2{"T2"}}
+	want := []byte{0xa1, 0x61, 0x53, 0x62, 0x54, 0x32} // {"S":"T2"}
+	b, err := Marshal(v)
+	if err != nil {
+		t.Errorf("Marshal(%v) returned error %v", v, err)
+	} else if !bytes.Equal(b, want) {
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
+	}
+
+	var v2 T
+	unmarshalWant := T{T2: T2{"T2"}}
+	if err = Unmarshal(b, &v2); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
+	} else if !reflect.DeepEqual(v2, unmarshalWant) {
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v2, v2, unmarshalWant, unmarshalWant)
+	}
+}
+
+func TestDuplicatedFields(t *testing.T) {
+	// Duplicate fields (T.T1.S, T.T2.S) are ignored.
+	type (
+		T1 struct {
+			S string
+		}
+		T2 struct {
+			S string
+		}
+		T3 struct {
+			X string `cbor:"S"`
+		}
+		T4 struct {
+			T1
+			T3
+		}
+		T struct {
+			T1
+			T2
+			T4 // Contains a tagged S field through T3; should not dominate.
+		}
+	)
+	v := T{
+		T1{"T1"},
+		T2{"T2"},
+		T4{
+			T1{"nested T1"},
+			T3{"nested T3"},
 		},
 	}
 	want := []byte{0xa0} // {}
@@ -1081,61 +1108,63 @@ func TestDuplicatedFieldDisappears(t *testing.T) {
 	}
 }
 
-type (
-	S1 struct {
-		X int
-	}
-	S2 struct {
-		X int
-	}
-	S3 struct {
-		X  int
-		S1 `cbor:"S1"`
-	}
-	S4 struct {
-		X int
-		io.Reader
-	}
-)
+type TReader struct {
+	X int
+}
 
-func (s S2) Read(p []byte) (n int, err error) {
+func (s TReader) Read(p []byte) (n int, err error) {
 	return 0, nil
 }
 
 func TestTaggedAnonymousField(t *testing.T) {
-	// Test that an anonymous field with a name given in its CBOR tag is treated as having that name, rather than being anonymous.
-	s := S3{X: 1, S1: S1{X: 2}}
-	want := []byte{0xa2, 0x61, 0x58, 0x01, 0x62, 0x53, 0x31, 0xa1, 0x61, 0x58, 0x02} // {X: 1, S1: {X:2}}
-	b, err := Marshal(s)
+	// Anonymous field with a name given in its CBOR tag is treated as having that name, rather than being anonymous.
+	type (
+		T1 struct {
+			X int
+		}
+		T struct {
+			X  int
+			T1 `cbor:"T1"`
+		}
+	)
+	v := T{X: 1, T1: T1{X: 2}}
+	want := []byte{0xa2, 0x61, 0x58, 0x01, 0x62, 0x54, 0x31, 0xa1, 0x61, 0x58, 0x02} // {X: 1, T1: {X:2}}
+	b, err := Marshal(v)
 	if err != nil {
-		t.Errorf("Marshal(%+v) returned error %v", s, err)
+		t.Errorf("Marshal(%+v) returned error %v", v, err)
 	} else if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", s, b, want)
+		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, want)
 	}
 
-	var v S3
-	unmarshalWant := S3{X: 1, S1: S1{X: 2}}
-	if err = Unmarshal(b, &v); err != nil {
+	var v2 T
+	unmarshalWant := T{X: 1, T1: T1{X: 2}}
+	if err = Unmarshal(b, &v2); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-	} else if !reflect.DeepEqual(v, unmarshalWant) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", b, v, v, unmarshalWant, unmarshalWant)
+	} else if !reflect.DeepEqual(v2, unmarshalWant) {
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", b, v2, v2, unmarshalWant, unmarshalWant)
 	}
 }
 
 func TestAnonymousInterfaceField(t *testing.T) {
-	// Test that an anonymous struct field of interface type is treated the same as having that type as its name, rather than being anonymous.
-	s := S4{X: 1, Reader: S2{X: 2}}
+	// Anonymous field of interface type is treated the same as having that type as its name, rather than being anonymous.
+	type (
+		T struct {
+			X int
+			io.Reader
+		}
+	)
+	v := T{X: 1, Reader: TReader{X: 2}}
 	want := []byte{0xa2, 0x61, 0x58, 0x01, 0x66, 0x52, 0x65, 0x61, 0x64, 0x65, 0x72, 0xa1, 0x61, 0x58, 0x02} // {X: 1, Reader: {X:2}}
-	b, err := Marshal(s)
+	b, err := Marshal(v)
 	if err != nil {
-		t.Errorf("Marshal(%+v) returned error %v", s, err)
+		t.Errorf("Marshal(%+v) returned error %v", v, err)
 	} else if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", s, b, want)
+		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, want)
 	}
 
-	var v S4
-	const wantErrorMsg = "cannot unmarshal map into Go struct field cbor.S4.Reader of type io.Reader"
-	if err = Unmarshal(b, &v); err == nil {
+	var v2 T
+	const wantErrorMsg = "cannot unmarshal map into Go struct field cbor.T.Reader of type io.Reader"
+	if err = Unmarshal(b, &v2); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error, want error (*UnmarshalTypeError)", b)
 	} else {
 		if typeError, ok := err.(*UnmarshalTypeError); !ok {
@@ -1147,7 +1176,7 @@ func TestAnonymousInterfaceField(t *testing.T) {
 }
 
 func TestEncodeInterface(t *testing.T) {
-	var r io.Reader = S2{X: 2}
+	var r io.Reader = TReader{X: 2}
 	want := []byte{0xa1, 0x61, 0x58, 0x02} // {X:2}
 	b, err := Marshal(r)
 	if err != nil {

@@ -20,46 +20,57 @@ import (
 	"github.com/x448/float16"
 )
 
-// Unmarshal parses the CBOR-encoded data and stores the result in the value
-// pointed to by v using the default decoding options.  If v is nil or not a
-// pointer, Unmarshal returns an error.
+// Unmarshal parses the CBOR-encoded data into the value pointed to by v
+// using default decoding options.  If v is nil, not a pointer, or
+// a nil pointer, Unmarshal returns an error.
 //
-// Unmarshal uses the inverse of the encodings that Marshal uses, allocating
-// maps, slices, and pointers as necessary, with the following additional rules:
+// To unmarshal CBOR into a value implementing the Unmarshaler interface,
+// Unmarshal calls that value's UnmarshalCBOR method with a valid
+// CBOR value.
 //
-// To unmarshal CBOR into a pointer, Unmarshal first handles the case of the
-// CBOR being the CBOR literal null.  In that case, Unmarshal sets the pointer
-// to nil.  Otherwise, Unmarshal unmarshals the CBOR into the value pointed at
-// by the pointer.  If the pointer is nil, Unmarshal allocates a new value for
-// it to point to.
+// To unmarshal CBOR byte string into a value implementing the
+// encoding.BinaryUnmarshaler interface, Unmarshal calls that value's
+// UnmarshalBinary method with decoded CBOR byte string.
 //
-// To unmarshal CBOR into an interface value, Unmarshal stores one of these in
-// the interface value:
+// To unmarshal CBOR into a pointer, Unmarshal sets the pointer to nil
+// if CBOR data is null (0xf6) or undefined (0xf7).  Otherwise, Unmarshal
+// unmarshals CBOR into the value pointed to by the pointer.  If the
+// pointer is nil, Unmarshal creates a new value for it to point to.
 //
-//     bool, for CBOR booleans
-//     uint64, for CBOR positive integers
-//     int64, for CBOR negative integers
-//     float64, for CBOR floating points
-//     []byte, for CBOR byte strings
-//     string, for CBOR text strings
-//     []interface{}, for CBOR arrays
-//     map[interface{}]interface{}, for CBOR maps
-//     nil, for CBOR null
+// To unmarshal CBOR into an empty interface value, Unmarshal uses the
+// following rules:
 //
-// To unmarshal a CBOR array into a slice, Unmarshal allocates a new slice only
+//     CBOR booleans decode to bool.
+//     CBOR positive integers decode to uint64.
+//     CBOR negative integers decode to int64 (big.Int if value overflows).
+//     CBOR floating points decode to float64.
+//     CBOR byte strings decode to []byte.
+//     CBOR text strings decode to string.
+//     CBOR arrays decode to []interface{}.
+//     CBOR maps decode to map[interface{}]interface{}.
+//     CBOR null and undefined values decode to nil.
+//     CBOR times (tag 0 and 1) decode to time.Time.
+//     CBOR bignums (tag 2 and 3) decode to big.Int.
+//
+// To unmarshal a CBOR array into a slice, Unmarshal allocates a new slice
 // if the CBOR array is empty or slice capacity is less than CBOR array length.
-// Otherwise Unmarshal reuses the existing slice, overwriting existing elements.
-// Unmarshal sets the slice length to CBOR array length.
+// Otherwise Unmarshal overwrites existing elements, and sets slice length
+// to CBOR array length.
 //
-// To ummarshal a CBOR array into a Go array, Unmarshal decodes CBOR array
-// elements into corresponding Go array elements.  If the Go array is smaller
-// than the CBOR array, the additional CBOR array elements are discarded.  If
-// the CBOR array is smaller than the Go array, the additional Go array elements
-// are set to zero values.
+// To unmarshal a CBOR array into a Go array, Unmarshal decodes CBOR array
+// elements into Go array elements.  If the Go array is smaller than the
+// CBOR array, the extra CBOR array elements are discarded.  If the CBOR
+// array is smaller than the Go array, the extra Go array elements are
+// set to zero values.
+//
+// To unmarshal a CBOR array into a struct, struct must have a special field "_"
+// with struct tag `cbor:",toarray"`.  Go array elements are decoded into struct
+// fields.  Any "omitempty" struct field tag option is ignored in this case.
 //
 // To unmarshal a CBOR map into a map, Unmarshal allocates a new map only if the
-// map is nil.  Otherwise Unmarshal reuses the existing map, keeping existing
+// map is nil.  Otherwise Unmarshal reuses the existing map and keeps existing
 // entries.  Unmarshal stores key-value pairs from the CBOR map into Go map.
+// See DecOptions.DupMapKey to enable duplicate map key detection.
 //
 // To unmarshal a CBOR map into a struct, Unmarshal matches CBOR map keys to the
 // keys in the following priority:
@@ -68,78 +79,59 @@ import (
 //     2. "json" key in struct field tag,
 //     3. struct field name.
 //
-// Unmarshal prefers an exact match but also accepts a case-insensitive match.
-// Map keys which don't have a corresponding struct field are ignored.
+// Unmarshal tries an exact match for field name, then a case-insensitive match.
+// Map key-value pairs without corresponding struct fields are ignored.  See
+// DecOptions.ExtraReturnErrors to return error at unknown field.
 //
 // To unmarshal a CBOR text string into a time.Time value, Unmarshal parses text
 // string formatted in RFC3339.  To unmarshal a CBOR integer/float into a
 // time.Time value, Unmarshal creates an unix time with integer/float as seconds
 // and fractional seconds since January 1, 1970 UTC.
 //
-// To unmarshal CBOR into a value implementing the Unmarshaler interface,
-// Unmarshal calls that value's UnmarshalCBOR method.
+// To unmarshal CBOR null (0xf6) and undefined (0xf7) values into a
+// slice/map/pointer, Unmarshal sets Go value to nil.  Because null is often
+// used to mean "not present", unmarshalling CBOR null and undefined value
+// into any other Go type has no effect and returns no error.
 //
-// Unmarshal decodes a CBOR byte string into a value implementing
-// encoding.BinaryUnmarshaler.
-//
-// If a CBOR value is not appropriate for a given Go type, or if a CBOR number
-// overflows the Go type, Unmarshal skips that field and completes the
-// unmarshalling as best as it can.  If no more serious errors are encountered,
-// unmarshal returns an UnmarshalTypeError describing the earliest such error.
-// In any case, it's not guaranteed that all the remaining fields following the
-// problematic one will be unmarshaled into the target object.
-//
-// The CBOR null value unmarshals into a slice/map/pointer/interface by setting
-// that Go value to nil.  Because null is often used to mean "not present",
-// unmarshalling a CBOR null into any other Go type has no effect on the value
-// produces no error.
-//
-// Unmarshal ignores CBOR tag data and parses tagged data following CBOR tag.
+// Unmarshal supports CBOR tag 55799 (self-describe CBOR), tag 0 and 1 (time),
+// and tag 2 and 3 (bignum).
 func Unmarshal(data []byte, v interface{}) error {
 	return defaultDecMode.Unmarshal(data, v)
 }
 
-// Unmarshaler is the interface implemented by types that can unmarshal a CBOR
-// representation of themselves.  The input can be assumed to be a valid encoding
-// of a CBOR value. UnmarshalCBOR must copy the CBOR data if it wishes to retain
-// the data after returning.
+// Unmarshaler is the interface implemented by types that wish to unmarshal
+// CBOR data themselves.  The input is a valid CBOR value. UnmarshalCBOR
+// must copy the CBOR data if it needs to use it after returning.
 type Unmarshaler interface {
 	UnmarshalCBOR([]byte) error
 }
 
 // InvalidUnmarshalError describes an invalid argument passed to Unmarshal.
 type InvalidUnmarshalError struct {
-	Type reflect.Type
+	s string
 }
 
 func (e *InvalidUnmarshalError) Error() string {
-	if e.Type == nil {
-		return "cbor: Unmarshal(nil)"
-	}
-	if e.Type.Kind() != reflect.Ptr {
-		return "cbor: Unmarshal(non-pointer " + e.Type.String() + ")"
-	}
-	return "cbor: Unmarshal(nil " + e.Type.String() + ")"
+	return e.s
 }
 
-// UnmarshalTypeError describes a CBOR value that was not appropriate for a Go type.
+// UnmarshalTypeError describes a CBOR value that can't be decoded to a Go type.
 type UnmarshalTypeError struct {
-	Value  string       // description of CBOR value
-	Type   reflect.Type // type of Go value it could not be assigned to
-	Struct string       // struct type containing the field
-	Field  string       // name of the field holding the Go value
-	errMsg string       // additional error message (optional)
+	CBORType        string // type of CBOR value
+	GoType          string // type of Go value it could not be decoded into
+	StructFieldName string // name of the struct field holding the Go value (optional)
+	errorMsg        string // additional error message (optional)
 }
 
 func (e *UnmarshalTypeError) Error() string {
 	var s string
-	if e.Struct != "" || e.Field != "" {
-		s = "cbor: cannot unmarshal " + e.Value + " into Go struct field " + e.Struct + "." + e.Field + " of type " + e.Type.String()
+	if e.StructFieldName != "" {
+		s = "cbor: cannot unmarshal " + e.CBORType + " into Go struct field " + e.StructFieldName + " of type " + e.GoType
 	} else {
-		s = "cbor: cannot unmarshal " + e.Value + " into Go value of type " + e.Type.String()
+		s = "cbor: cannot unmarshal " + e.CBORType + " into Go value of type " + e.GoType
 	}
-	if e.errMsg != "" {
-		s += " (" + e.errMsg + ")"
+	if e.errorMsg != "" {
+		s += " (" + e.errorMsg + ")"
 	}
 	return s
 }
@@ -440,31 +432,37 @@ func (dm *decMode) DecOptions() DecOptions {
 	}
 }
 
-// Unmarshal parses the CBOR-encoded data and stores the result in the value
-// pointed to by v using dm DecMode.  If v is nil or not a pointer, Unmarshal
-// returns an error.
+// Unmarshal parses the CBOR-encoded data into the value pointed to by v
+// using dm decoding mode.  If v is nil, not a pointer, or a nil pointer,
+// Unmarshal returns an error.
 //
 // See the documentation for Unmarshal for details.
 func (dm *decMode) Unmarshal(data []byte, v interface{}) error {
-	d := decodeState{data: data, dm: dm}
+	d := decoder{data: data, dm: dm}
 	return d.value(v)
 }
 
 // NewDecoder returns a new decoder that reads from r using dm DecMode.
 func (dm *decMode) NewDecoder(r io.Reader) *Decoder {
-	return &Decoder{r: r, d: decodeState{dm: dm}}
+	return &Decoder{r: r, d: decoder{dm: dm}}
 }
 
-type decodeState struct {
+type decoder struct {
 	data []byte
 	off  int // next read offset in data
 	dm   *decMode
 }
 
-func (d *decodeState) value(v interface{}) error {
+func (d *decoder) value(v interface{}) error {
+	// v can't be nil, non-pointer, or nil pointer value.
+	if v == nil {
+		return &InvalidUnmarshalError{"cbor: Unmarshal(nil)"}
+	}
 	rv := reflect.ValueOf(v)
-	if rv.Kind() != reflect.Ptr || rv.IsNil() {
-		return &InvalidUnmarshalError{reflect.TypeOf(v)}
+	if rv.Kind() != reflect.Ptr {
+		return &InvalidUnmarshalError{"cbor: Unmarshal(non-pointer " + rv.Type().String() + ")"}
+	} else if rv.IsNil() {
+		return &InvalidUnmarshalError{"cbor: Unmarshal(nil " + rv.Type().String() + ")"}
 	}
 
 	off := d.off // Save offset before data validation
@@ -475,7 +473,6 @@ func (d *decodeState) value(v interface{}) error {
 	}
 
 	rv = rv.Elem()
-
 	return d.parseToValue(rv, getTypeInfo(rv.Type()))
 }
 
@@ -519,9 +516,9 @@ const (
 	selfDescribedCBORTagNum = 55799
 )
 
-// parseToValue assumes data is well-formed, and does not perform bounds checking.
-// This function is complicated because it's the main function that decodes CBOR data to reflect.Value.
-func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
+// parseToValue decodes CBOR data to value.  It assumes data is well-formed,
+// and does not perform bounds checking.
+func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
 	// Create new value for the pointer v to point to if CBOR value is not nil/undefined.
 	if !d.nextCBORNil() {
 		for v.Kind() == reflect.Ptr {
@@ -585,7 +582,10 @@ func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error { //n
 		if t != cborTypeTag {
 			if tagItem.opts.DecTag == DecTagRequired {
 				d.skip() // Required tag number is absent, skip entire tag
-				return &UnmarshalTypeError{Value: t.String(), Type: tInfo.typ, errMsg: "expect CBOR tag value"}
+				return &UnmarshalTypeError{
+					CBORType: t.String(),
+					GoType:   tInfo.typ.String(),
+					errorMsg: "expect CBOR tag value"}
 			}
 		} else if err := d.validRegisteredTagNums(tagItem); err != nil {
 			d.skip() // Skip tag content
@@ -602,18 +602,20 @@ func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error { //n
 	case cborTypeNegativeInt:
 		_, _, val := d.getHead()
 		if val > math.MaxInt64 {
+			// CBOR negative integer overflows int64, use big.Int to store value.
+			bi := new(big.Int)
+			bi.SetUint64(val)
+			bi.Add(bi, big.NewInt(1))
+			bi.Neg(bi)
+
 			if tInfo.nonPtrType == typeBigInt {
-				bi := new(big.Int)
-				bi.SetUint64(val)
-				bi.Add(bi, big.NewInt(1))
-				bi.Neg(bi)
 				v.Set(reflect.ValueOf(*bi))
 				return nil
 			}
 			return &UnmarshalTypeError{
-				Value:  t.String(),
-				Type:   tInfo.nonPtrType,
-				errMsg: "-1-" + strconv.FormatUint(val, 10) + " overflows Go's int64",
+				CBORType: t.String(),
+				GoType:   tInfo.nonPtrType.String(),
+				errorMsg: bi.String() + " overflows Go's int64",
 			}
 		}
 		nValue := int64(-1) ^ int64(val)
@@ -666,12 +668,12 @@ func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error { //n
 				return fillPositiveInt(t, bi.Uint64(), v)
 			}
 			return &UnmarshalTypeError{
-				Value:  t.String(),
-				Type:   v.Type(),
-				errMsg: bi.String() + " overflows " + v.Type().String(),
+				CBORType: t.String(),
+				GoType:   tInfo.nonPtrType.String(),
+				errorMsg: bi.String() + " overflows " + v.Type().String(),
 			}
 		case 3:
-			// Bignum (tag 2) can be decoded to int, float, slice, array, or big.Int.
+			// Bignum (tag 3) can be decoded to int, float, slice, array, or big.Int.
 			b := d.parseByteString()
 			bi := new(big.Int).SetBytes(b)
 			bi.Add(bi, big.NewInt(1))
@@ -688,9 +690,9 @@ func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error { //n
 				return fillNegativeInt(t, bi.Int64(), v)
 			}
 			return &UnmarshalTypeError{
-				Value:  t.String(),
-				Type:   v.Type(),
-				errMsg: bi.String() + " overflows " + v.Type().String(),
+				CBORType: t.String(),
+				GoType:   tInfo.nonPtrType.String(),
+				errorMsg: bi.String() + " overflows " + v.Type().String(),
 			}
 		}
 		return d.parseToValue(v, tInfo)
@@ -703,7 +705,7 @@ func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error { //n
 			return d.parseArrayToStruct(v, tInfo)
 		}
 		d.skip()
-		return &UnmarshalTypeError{Value: t.String(), Type: tInfo.nonPtrType}
+		return &UnmarshalTypeError{CBORType: t.String(), GoType: tInfo.nonPtrType.String()}
 	case cborTypeMap:
 		if tInfo.nonPtrKind == reflect.Struct {
 			return d.parseMapToStruct(v, tInfo)
@@ -711,16 +713,16 @@ func (d *decodeState) parseToValue(v reflect.Value, tInfo *typeInfo) error { //n
 			return d.parseMapToMap(v, tInfo)
 		}
 		d.skip()
-		return &UnmarshalTypeError{Value: t.String(), Type: tInfo.nonPtrType}
+		return &UnmarshalTypeError{CBORType: t.String(), GoType: tInfo.nonPtrType.String()}
 	}
 	return nil
 }
 
-func (d *decodeState) parseToTag(v reflect.Value) error {
+func (d *decoder) parseToTag(v reflect.Value) error {
 	t := d.nextCBORType()
 	if t != cborTypeTag {
 		d.skip()
-		return &UnmarshalTypeError{Value: t.String(), Type: typeTag}
+		return &UnmarshalTypeError{CBORType: t.String(), GoType: typeTag.String()}
 	}
 
 	// Unmarshal tag number
@@ -736,7 +738,7 @@ func (d *decodeState) parseToTag(v reflect.Value) error {
 	return nil
 }
 
-func (d *decodeState) parseToTime() (tm time.Time, err error) {
+func (d *decoder) parseToTime() (tm time.Time, err error) {
 	t := d.nextCBORType()
 
 	// Verify that tag number or absence of tag number is acceptable to specified timeTag.
@@ -759,7 +761,7 @@ func (d *decodeState) parseToTime() (tm time.Time, err error) {
 	} else {
 		if d.dm.timeTag == DecTagRequired {
 			d.skip()
-			err = &UnmarshalTypeError{Value: t.String(), Type: typeTime, errMsg: "expect CBOR tag value"}
+			err = &UnmarshalTypeError{CBORType: t.String(), GoType: typeTime.String(), errorMsg: "expect CBOR tag value"}
 			return
 		}
 	}
@@ -792,13 +794,14 @@ func (d *decodeState) parseToTime() (tm time.Time, err error) {
 		}
 		return
 	default:
-		err = &UnmarshalTypeError{Value: t.String(), Type: typeTime}
+		err = &UnmarshalTypeError{CBORType: t.String(), GoType: typeTime.String()}
 		return
 	}
 }
 
-// parseToUnmarshaler assumes data is well-formed, and does not perform bounds checking.
-func (d *decodeState) parseToUnmarshaler(v reflect.Value) error {
+// parseToUnmarshaler parses CBOR data to value implementing Unmarshaler interface.
+// It assumes data is well-formed, and does not perform bounds checking.
+func (d *decoder) parseToUnmarshaler(v reflect.Value) error {
 	if d.nextCBORNil() && v.Kind() == reflect.Ptr && v.IsNil() {
 		d.skip()
 		return nil
@@ -816,8 +819,9 @@ func (d *decodeState) parseToUnmarshaler(v reflect.Value) error {
 	return errors.New("cbor: failed to assert " + v.Type().String() + " as cbor.Unmarshaler")
 }
 
-// parse assumes data is well-formed, and does not perform bounds checking.
-func (d *decodeState) parse(skipSelfDescribedTag bool) (interface{}, error) { //nolint:gocyclo
+// parse parses CBOR data and returns value in default Go type.
+// It assumes data is well-formed, and does not perform bounds checking.
+func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //nolint:gocyclo
 	// Strip self-described CBOR tag number.
 	if skipSelfDescribedTag {
 		for d.nextCBORType() == cborTypeTag {
@@ -850,9 +854,9 @@ func (d *decodeState) parse(skipSelfDescribedTag bool) (interface{}, error) { //
 		}
 		if val > math.MaxInt64 {
 			return nil, &UnmarshalTypeError{
-				Value:  t.String(),
-				Type:   reflect.TypeOf(int64(0)),
-				errMsg: strconv.FormatUint(val, 10) + " overflows Go's int64",
+				CBORType: t.String(),
+				GoType:   reflect.TypeOf(int64(0)).String(),
+				errorMsg: strconv.FormatUint(val, 10) + " overflows Go's int64",
 			}
 		}
 		return int64(val), nil
@@ -951,7 +955,7 @@ func (d *decodeState) parse(skipSelfDescribedTag bool) (interface{}, error) { //
 
 // parseByteString parses CBOR encoded byte string.  It returns a byte slice
 // pointing to a copy of parsed data.
-func (d *decodeState) parseByteString() []byte {
+func (d *decoder) parseByteString() []byte {
 	_, ai, val := d.getHead()
 	if ai != 31 {
 		b := make([]byte, int(val))
@@ -969,14 +973,10 @@ func (d *decodeState) parseByteString() []byte {
 	return b
 }
 
-// parseTextString parses CBOR encoded text string.  It does not return a string
+// parseTextString parses CBOR encoded text string.  It returns a byte slice
 // to prevent creating an extra copy of string.  Caller should wrap returned
 // byte slice as string when needed.
-//
-// parseStruct() uses parseTextString() to improve memory and performance,
-// compared with using parse(reflect.Value).  parse(reflect.Value) sets
-// reflect.Value with parsed string, while parseTextString() returns zero-copy []byte.
-func (d *decodeState) parseTextString() ([]byte, error) {
+func (d *decoder) parseTextString() ([]byte, error) {
 	_, ai, val := d.getHead()
 	if ai != 31 {
 		b := d.data[d.off : d.off+int(val)]
@@ -1003,7 +1003,7 @@ func (d *decodeState) parseTextString() ([]byte, error) {
 	return b, nil
 }
 
-func (d *decodeState) parseArray() ([]interface{}, error) {
+func (d *decoder) parseArray() ([]interface{}, error) {
 	_, ai, val := d.getHead()
 	hasSize := (ai != 31)
 	count := int(val)
@@ -1025,17 +1025,14 @@ func (d *decodeState) parseArray() ([]interface{}, error) {
 	return v, err
 }
 
-func (d *decodeState) parseArrayToSlice(v reflect.Value, tInfo *typeInfo) error {
+func (d *decoder) parseArrayToSlice(v reflect.Value, tInfo *typeInfo) error {
 	_, ai, val := d.getHead()
 	hasSize := (ai != 31)
 	count := int(val)
 	if !hasSize {
 		count = d.numOfItemsUntilBreak() // peek ahead to get array size to preallocate slice for better performance
 	}
-	if count == 0 {
-		v.Set(reflect.MakeSlice(tInfo.nonPtrType, 0, 0))
-	}
-	if v.IsNil() || v.Cap() < count {
+	if v.IsNil() || v.Cap() < count || count == 0 {
 		v.Set(reflect.MakeSlice(tInfo.nonPtrType, count, count))
 	}
 	v.SetLen(count)
@@ -1050,7 +1047,7 @@ func (d *decodeState) parseArrayToSlice(v reflect.Value, tInfo *typeInfo) error 
 	return err
 }
 
-func (d *decodeState) parseArrayToArray(v reflect.Value, tInfo *typeInfo) error {
+func (d *decoder) parseArrayToArray(v reflect.Value, tInfo *typeInfo) error {
 	_, ai, val := d.getHead()
 	hasSize := (ai != 31)
 	count := int(val)
@@ -1080,7 +1077,7 @@ func (d *decodeState) parseArrayToArray(v reflect.Value, tInfo *typeInfo) error 
 	return err
 }
 
-func (d *decodeState) parseMap() (map[interface{}]interface{}, error) {
+func (d *decoder) parseMap() (map[interface{}]interface{}, error) {
 	_, ai, val := d.getHead()
 	hasSize := (ai != 31)
 	count := int(val)
@@ -1139,7 +1136,7 @@ func (d *decodeState) parseMap() (map[interface{}]interface{}, error) {
 	return m, err
 }
 
-func (d *decodeState) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
+func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
 	_, ai, val := d.getHead()
 	hasSize := (ai != 31)
 	count := int(val)
@@ -1238,7 +1235,7 @@ func (d *decodeState) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //
 	return err
 }
 
-func (d *decodeState) parseArrayToStruct(v reflect.Value, tInfo *typeInfo) error {
+func (d *decoder) parseArrayToStruct(v reflect.Value, tInfo *typeInfo) error {
 	structType := getDecodingStructType(tInfo.nonPtrType)
 	if structType.err != nil {
 		return structType.err
@@ -1248,9 +1245,9 @@ func (d *decodeState) parseArrayToStruct(v reflect.Value, tInfo *typeInfo) error
 		t := d.nextCBORType()
 		d.skip()
 		return &UnmarshalTypeError{
-			Value:  t.String(),
-			Type:   tInfo.nonPtrType,
-			errMsg: "cannot decode CBOR array to struct without toarray option",
+			CBORType: t.String(),
+			GoType:   tInfo.nonPtrType.String(),
+			errorMsg: "cannot decode CBOR array to struct without toarray option",
 		}
 	}
 
@@ -1265,27 +1262,41 @@ func (d *decodeState) parseArrayToStruct(v reflect.Value, tInfo *typeInfo) error
 		d.off = start
 		d.skip()
 		return &UnmarshalTypeError{
-			Value:  t.String(),
-			Type:   tInfo.typ,
-			errMsg: "cannot decode CBOR array to struct with different number of elements",
+			CBORType: t.String(),
+			GoType:   tInfo.typ.String(),
+			errorMsg: "cannot decode CBOR array to struct with different number of elements",
 		}
 	}
-	var err error
+	var err, lastErr error
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
 		f := structType.fields[i]
-		fv, lastErr := fieldByIndex(v, f.idx)
-		if lastErr != nil {
-			if err == nil {
+
+		// Get field value by index
+		var fv reflect.Value
+		if len(f.idx) == 1 {
+			fv = v.Field(f.idx[0])
+		} else {
+			fv, lastErr = getFieldValue(v, f.idx, func(v reflect.Value) (reflect.Value, error) {
+				// Return a new value for embedded field null pointer to point to, or return error.
+				if !v.CanSet() {
+					return reflect.Value{}, errors.New("cbor: cannot set embedded pointer to unexported struct: " + v.Type().String())
+				}
+				v.Set(reflect.New(v.Type().Elem()))
+				return v, nil
+			})
+			if lastErr != nil && err == nil {
 				err = lastErr
 			}
-			d.skip()
-			continue
+			if !fv.IsValid() {
+				d.skip()
+				continue
+			}
 		}
-		if lastErr := d.parseToValue(fv, f.typInfo); lastErr != nil {
+
+		if lastErr = d.parseToValue(fv, f.typInfo); lastErr != nil {
 			if err == nil {
 				if typeError, ok := lastErr.(*UnmarshalTypeError); ok {
-					typeError.Struct = tInfo.typ.String()
-					typeError.Field = f.name
+					typeError.StructFieldName = tInfo.typ.String() + "." + f.name
 					err = typeError
 				} else {
 					err = lastErr
@@ -1297,7 +1308,7 @@ func (d *decodeState) parseArrayToStruct(v reflect.Value, tInfo *typeInfo) error
 }
 
 // parseMapToStruct needs to be fast so gocyclo can be ignored for now.
-func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
+func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
 	structType := getDecodingStructType(tInfo.nonPtrType)
 	if structType.err != nil {
 		return structType.err
@@ -1307,9 +1318,9 @@ func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error {
 		t := d.nextCBORType()
 		d.skip()
 		return &UnmarshalTypeError{
-			Value:  t.String(),
-			Type:   tInfo.nonPtrType,
-			errMsg: "cannot decode CBOR map to struct with toarray option",
+			CBORType: t.String(),
+			GoType:   tInfo.nonPtrType.String(),
+			errorMsg: "cannot decode CBOR map to struct with toarray option",
 		}
 	}
 
@@ -1385,9 +1396,9 @@ func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error {
 				if val > math.MaxInt64 {
 					if err == nil {
 						err = &UnmarshalTypeError{
-							Value:  t.String(),
-							Type:   reflect.TypeOf(int64(0)),
-							errMsg: "-1-" + strconv.FormatUint(val, 10) + " overflows Go's int64",
+							CBORType: t.String(),
+							GoType:   reflect.TypeOf(int64(0)).String(),
+							errorMsg: "-1-" + strconv.FormatUint(val, 10) + " overflows Go's int64",
 						}
 					}
 					d.skip() // skip value
@@ -1412,9 +1423,9 @@ func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error {
 		} else {
 			if err == nil {
 				err = &UnmarshalTypeError{
-					Value:  t.String(),
-					Type:   reflect.TypeOf(""),
-					errMsg: "map key is of type " + t.String() + " and cannot be used to match struct field name",
+					CBORType: t.String(),
+					GoType:   reflect.TypeOf("").String(),
+					errorMsg: "map key is of type " + t.String() + " and cannot be used to match struct field name",
 				}
 			}
 			if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
@@ -1466,21 +1477,33 @@ func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error {
 			d.skip() // Skip value
 			continue
 		}
-		// reflect.Value.FieldByIndex() panics at nil pointer to unexported
-		// anonymous field.  fieldByIndex() returns error.
-		fv, lastErr := fieldByIndex(v, f.idx)
-		if lastErr != nil {
-			if err == nil {
+
+		// Get field value by index
+		var fv reflect.Value
+		if len(f.idx) == 1 {
+			fv = v.Field(f.idx[0])
+		} else {
+			fv, lastErr = getFieldValue(v, f.idx, func(v reflect.Value) (reflect.Value, error) {
+				// Return a new value for embedded field null pointer to point to, or return error.
+				if !v.CanSet() {
+					return reflect.Value{}, errors.New("cbor: cannot set embedded pointer to unexported struct: " + v.Type().String())
+				}
+				v.Set(reflect.New(v.Type().Elem()))
+				return v, nil
+			})
+			if lastErr != nil && err == nil {
 				err = lastErr
 			}
-			d.skip()
-			continue
+			if !fv.IsValid() {
+				d.skip()
+				continue
+			}
 		}
+
 		if lastErr = d.parseToValue(fv, f.typInfo); lastErr != nil {
 			if err == nil {
 				if typeError, ok := lastErr.(*UnmarshalTypeError); ok {
-					typeError.Struct = tInfo.nonPtrType.String()
-					typeError.Field = f.name
+					typeError.StructFieldName = tInfo.nonPtrType.String() + "." + f.name
 					err = typeError
 				} else {
 					err = lastErr
@@ -1493,7 +1516,7 @@ func (d *decodeState) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error {
 
 // validRegisteredTagNums verifies that tag numbers match registered tag numbers of type t.
 // validRegisteredTagNums assumes next CBOR data type is tag.  It scans all tag numbers, and stops at tag content.
-func (d *decodeState) validRegisteredTagNums(registeredTag *tagItem) error {
+func (d *decoder) validRegisteredTagNums(registeredTag *tagItem) error {
 	// Scan until next cbor data is tag content.
 	tagNums := make([]uint64, 0, 1)
 	for d.nextCBORType() == cborTypeTag {
@@ -1507,7 +1530,7 @@ func (d *decodeState) validRegisteredTagNums(registeredTag *tagItem) error {
 	return nil
 }
 
-func (d *decodeState) getRegisteredTagItem(vt reflect.Type) *tagItem {
+func (d *decoder) getRegisteredTagItem(vt reflect.Type) *tagItem {
 	if d.dm.tags != nil {
 		return d.dm.tags.getTagItemFromType(vt)
 	}
@@ -1516,7 +1539,7 @@ func (d *decodeState) getRegisteredTagItem(vt reflect.Type) *tagItem {
 
 // skip moves data offset to the next item.  skip assumes data is well-formed,
 // and does not perform bounds checking.
-func (d *decodeState) skip() {
+func (d *decoder) skip() {
 	t, ai, val := d.getHead()
 
 	if ai == 31 {
@@ -1549,7 +1572,7 @@ func (d *decodeState) skip() {
 }
 
 // getHead assumes data is well-formed, and does not perform bounds checking.
-func (d *decodeState) getHead() (t cborType, ai byte, val uint64) {
+func (d *decoder) getHead() (t cborType, ai byte, val uint64) {
 	t = cborType(d.data[d.off] & 0xe0)
 	ai = d.data[d.off] & 0x1f
 	val = uint64(ai)
@@ -1581,7 +1604,7 @@ func (d *decodeState) getHead() (t cborType, ai byte, val uint64) {
 	return
 }
 
-func (d *decodeState) numOfItemsUntilBreak() int {
+func (d *decoder) numOfItemsUntilBreak() int {
 	savedOff := d.off
 	i := 0
 	for !d.foundBreak() {
@@ -1593,7 +1616,7 @@ func (d *decodeState) numOfItemsUntilBreak() int {
 }
 
 // foundBreak assumes data is well-formed, and does not perform bounds checking.
-func (d *decodeState) foundBreak() bool {
+func (d *decoder) foundBreak() bool {
 	if d.data[d.off] == 0xff {
 		d.off++
 		return true
@@ -1601,16 +1624,16 @@ func (d *decodeState) foundBreak() bool {
 	return false
 }
 
-func (d *decodeState) reset(data []byte) {
+func (d *decoder) reset(data []byte) {
 	d.data = data
 	d.off = 0
 }
 
-func (d *decodeState) nextCBORType() cborType {
+func (d *decoder) nextCBORType() cborType {
 	return cborType(d.data[d.off] & 0xe0)
 }
 
-func (d *decodeState) nextCBORNil() bool {
+func (d *decoder) nextCBORNil() bool {
 	return d.data[d.off] == 0xf6 || d.data[d.off] == 0xf7
 }
 
@@ -1635,16 +1658,28 @@ func fillPositiveInt(t cborType, val uint64, v reflect.Value) error {
 	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		if val > math.MaxInt64 {
-			return &UnmarshalTypeError{Value: t.String(), Type: v.Type(), errMsg: strconv.FormatUint(val, 10) + " overflows " + v.Type().String()}
+			return &UnmarshalTypeError{
+				CBORType: t.String(),
+				GoType:   v.Type().String(),
+				errorMsg: strconv.FormatUint(val, 10) + " overflows " + v.Type().String(),
+			}
 		}
 		if v.OverflowInt(int64(val)) {
-			return &UnmarshalTypeError{Value: t.String(), Type: v.Type(), errMsg: strconv.FormatUint(val, 10) + " overflows " + v.Type().String()}
+			return &UnmarshalTypeError{
+				CBORType: t.String(),
+				GoType:   v.Type().String(),
+				errorMsg: strconv.FormatUint(val, 10) + " overflows " + v.Type().String(),
+			}
 		}
 		v.SetInt(int64(val))
 		return nil
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		if v.OverflowUint(val) {
-			return &UnmarshalTypeError{Value: t.String(), Type: v.Type(), errMsg: strconv.FormatUint(val, 10) + " overflows " + v.Type().String()}
+			return &UnmarshalTypeError{
+				CBORType: t.String(),
+				GoType:   v.Type().String(),
+				errorMsg: strconv.FormatUint(val, 10) + " overflows " + v.Type().String(),
+			}
 		}
 		v.SetUint(val)
 		return nil
@@ -1658,14 +1693,18 @@ func fillPositiveInt(t cborType, val uint64, v reflect.Value) error {
 		v.Set(reflect.ValueOf(*i))
 		return nil
 	}
-	return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
+	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
 }
 
 func fillNegativeInt(t cborType, val int64, v reflect.Value) error {
 	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		if v.OverflowInt(val) {
-			return &UnmarshalTypeError{Value: t.String(), Type: v.Type(), errMsg: strconv.FormatInt(val, 10) + " overflows " + v.Type().String()}
+			return &UnmarshalTypeError{
+				CBORType: t.String(),
+				GoType:   v.Type().String(),
+				errorMsg: strconv.FormatInt(val, 10) + " overflows " + v.Type().String(),
+			}
 		}
 		v.SetInt(val)
 		return nil
@@ -1679,7 +1718,7 @@ func fillNegativeInt(t cborType, val int64, v reflect.Value) error {
 		v.Set(reflect.ValueOf(*i))
 		return nil
 	}
-	return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
+	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
 }
 
 func fillBool(t cborType, val bool, v reflect.Value) error {
@@ -1687,7 +1726,7 @@ func fillBool(t cborType, val bool, v reflect.Value) error {
 		v.SetBool(val)
 		return nil
 	}
-	return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
+	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
 }
 
 func fillFloat(t cborType, val float64, v reflect.Value) error {
@@ -1695,15 +1734,15 @@ func fillFloat(t cborType, val float64, v reflect.Value) error {
 	case reflect.Float32, reflect.Float64:
 		if v.OverflowFloat(val) {
 			return &UnmarshalTypeError{
-				Value:  t.String(),
-				Type:   v.Type(),
-				errMsg: strconv.FormatFloat(val, 'E', -1, 64) + " overflows " + v.Type().String(),
+				CBORType: t.String(),
+				GoType:   v.Type().String(),
+				errorMsg: strconv.FormatFloat(val, 'E', -1, 64) + " overflows " + v.Type().String(),
 			}
 		}
 		v.SetFloat(val)
 		return nil
 	}
-	return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
+	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
 }
 
 func fillByteString(t cborType, val []byte, v reflect.Value) error {
@@ -1735,7 +1774,7 @@ func fillByteString(t cborType, val []byte, v reflect.Value) error {
 		}
 		return nil
 	}
-	return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
+	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
 }
 
 func fillTextString(t cborType, val []byte, v reflect.Value) error {
@@ -1743,7 +1782,7 @@ func fillTextString(t cborType, val []byte, v reflect.Value) error {
 		v.SetString(string(val))
 		return nil
 	}
-	return &UnmarshalTypeError{Value: t.String(), Type: v.Type()}
+	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
 }
 
 func isImmutableKind(k reflect.Kind) bool {
@@ -1773,26 +1812,6 @@ func isHashableValue(rv reflect.Value) bool {
 		}
 	}
 	return true
-}
-
-// fieldByIndex returns the nested field corresponding to the index.  It
-// allocates pointer to struct field if it is nil and settable.
-// reflect.Value.FieldByIndex() panics at nil pointer to unexported anonymous
-// field.  This function returns error.
-func fieldByIndex(v reflect.Value, index []int) (reflect.Value, error) {
-	for _, i := range index {
-		if v.Kind() == reflect.Ptr && v.Type().Elem().Kind() == reflect.Struct {
-			if v.IsNil() {
-				if !v.CanSet() {
-					return reflect.Value{}, errors.New("cbor: cannot set embedded pointer to unexported struct: " + v.Type().String())
-				}
-				v.Set(reflect.New(v.Type().Elem()))
-			}
-			v = v.Elem()
-		}
-		v = v.Field(i)
-	}
-	return v, nil
 }
 
 // validBuiltinTag checks that supported built-in tag numbers are followed by expected content types.

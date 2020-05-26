@@ -26,12 +26,12 @@ func (t *RawTag) UnmarshalCBOR(data []byte) error {
 		return errors.New("cbor.RawTag: UnmarshalCBOR on nil pointer")
 	}
 
-	d := decodeState{data: data, dm: defaultDecMode}
+	d := decoder{data: data, dm: defaultDecMode}
 
 	// Unmarshal tag number.
 	typ, _, num := d.getHead()
 	if typ != cborTypeTag {
-		return &UnmarshalTypeError{Value: typ.String(), Type: typeRawTag}
+		return &UnmarshalTypeError{CBORType: typ.String(), GoType: typeRawTag.String()}
 	}
 	t.Number = num
 
@@ -44,14 +44,14 @@ func (t *RawTag) UnmarshalCBOR(data []byte) error {
 
 // MarshalCBOR returns CBOR encoding of t.
 func (t RawTag) MarshalCBOR() ([]byte, error) {
-	e := getEncodeState()
+	e := getEncoderBuffer()
 	encodeHead(e, byte(cborTypeTag), t.Number)
 
 	buf := make([]byte, len(e.Bytes())+len(t.Content))
 	n := copy(buf, e.Bytes())
 	copy(buf[n:], t.Content)
 
-	putEncodeState(e)
+	putEncoderBuffer(e)
 	return buf, nil
 }
 
@@ -257,13 +257,13 @@ func newTagItem(opts TagOptions, contentType reflect.Type, num uint64, nestedNum
 	te.num = append(te.num, nestedNum...)
 
 	// Cache encoded tag numbers
-	e := getEncodeState()
+	e := getEncoderBuffer()
 	for _, n := range te.num {
 		encodeHead(e, byte(cborTypeTag), n)
 	}
 	te.cborTagNum = make([]byte, e.Len())
 	copy(te.cborTagNum, e.Bytes())
-	putEncodeState(e)
+	putEncoderBuffer(e)
 
 	return &te, nil
 }
