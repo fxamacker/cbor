@@ -168,7 +168,7 @@ func appendFields(t reflect.Type, idx []int, flds fields, nTypes map[reflect.Typ
 		// Parse field tag options
 		var tagFieldName string
 		var omitempty, keyasint bool
-		for i := 0; len(tag) > 0; i++ {
+		for j := 0; len(tag) > 0; j++ {
 			var token string
 			idx := strings.IndexByte(tag, ',')
 			if idx == -1 {
@@ -176,7 +176,7 @@ func appendFields(t reflect.Type, idx []int, flds fields, nTypes map[reflect.Typ
 			} else {
 				token, tag = tag[:idx], tag[idx+1:]
 			}
-			if i == 0 {
+			if j == 0 {
 				tagFieldName = token
 			} else {
 				switch token {
