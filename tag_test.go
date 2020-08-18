@@ -191,6 +191,64 @@ func TestTagBinaryMarshalerUnmarshaler(t *testing.T) {
 }
 
 func TestTagStruct(t *testing.T) {
+	type T struct {
+		S string `cbor:"s,omitempty"`
+	}
+
+	t1 := reflect.TypeOf(T{})
+
+	tags := NewTagSet()
+	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 100); err != nil {
+		t.Fatalf("TagSet.Add(%s, %d) returned error %v", t1, 100, err)
+	}
+
+	em, _ := EncOptions{}.EncModeWithTags(tags)
+	dm, _ := DecOptions{}.DecModeWithTags(tags)
+
+	cborData := hexDecode("d864a0") // {}
+	var v T
+	if err := dm.Unmarshal(cborData, &v); err != nil {
+		t.Errorf("Unmarshal() returned error %v", err)
+	}
+	b, err := em.Marshal(v)
+	if err != nil {
+		t.Errorf("Marshal(%+v) returned error %v", v, err)
+	}
+	if !bytes.Equal(b, cborData) {
+		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, cborData)
+	}
+}
+
+func TestTagFixedLengthStruct(t *testing.T) {
+	type T struct {
+		S string `cbor:"s"`
+	}
+
+	t1 := reflect.TypeOf(T{})
+
+	tags := NewTagSet()
+	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 100); err != nil {
+		t.Fatalf("TagSet.Add(%s, %d) returned error %v", t1, 100, err)
+	}
+
+	em, _ := EncOptions{}.EncModeWithTags(tags)
+	dm, _ := DecOptions{}.DecModeWithTags(tags)
+
+	cborData := hexDecode("d864a1617360") // {"s":""}
+	var v T
+	if err := dm.Unmarshal(cborData, &v); err != nil {
+		t.Errorf("Unmarshal() returned error %v", err)
+	}
+	b, err := em.Marshal(v)
+	if err != nil {
+		t.Errorf("Marshal(%+v) returned error %v", v, err)
+	}
+	if !bytes.Equal(b, cborData) {
+		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, cborData)
+	}
+}
+
+func TestTagToArrayStruct(t *testing.T) {
 	type coseHeader struct {
 		Alg int    `cbor:"1,keyasint,omitempty"`
 		Kid []byte `cbor:"4,keyasint,omitempty"`

@@ -967,74 +967,420 @@ func TestAnonymousFields11(t *testing.T) {
 	}
 }
 
-func TestAlwaysOmit(t *testing.T) {
+func TestOmitAndRenameStructField(t *testing.T) {
 	type T struct {
 		I   int // never omit
 		Io  int `cbor:",omitempty"` // omit empty
 		Iao int `cbor:"-"`          // always omit
+		R   int `cbor:"omitempty"`  // renamed to omitempty
+	}
+
+	v1 := T{}
+	// {"I": 0, "omitempty": 0}
+	want1 := []byte{0xa2,
+		0x61, 0x49, 0x00,
+		0x69, 0x6f, 0x6d, 0x69, 0x74, 0x65, 0x6d, 0x70, 0x74, 0x79, 0x00}
+
+	v2 := T{I: 1, Io: 2, Iao: 0, R: 3}
+	// {"I": 1, "Io": 2, "omitempty": 3}
+	want2 := []byte{0xa3,
+		0x61, 0x49, 0x01,
+		0x62, 0x49, 0x6f, 0x02,
+		0x69, 0x6f, 0x6d, 0x69, 0x74, 0x65, 0x6d, 0x70, 0x74, 0x79, 0x03}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	tests := []roundTripTest{
+		{"default values", v1, want1},
+		{"non-default values", v2, want2}}
+	testRoundTrip(t, tests, em, dm)
+}
+
+func TestOmitEmptyForBuiltinType(t *testing.T) {
+	type T struct {
+		B     bool           `cbor:"b"`
+		Bo    bool           `cbor:"bo,omitempty"`
+		UI    uint           `cbor:"ui"`
+		UIo   uint           `cbor:"uio,omitempty"`
+		I     int            `cbor:"i"`
+		Io    int            `cbor:"io,omitempty"`
+		F     float64        `cbor:"f"`
+		Fo    float64        `cbor:"fo,omitempty"`
+		S     string         `cbor:"s"`
+		So    string         `cbor:"so,omitempty"`
+		Slc   []string       `cbor:"slc"`
+		Slco  []string       `cbor:"slco,omitempty"`
+		M     map[int]string `cbor:"m"`
+		Mo    map[int]string `cbor:"mo,omitempty"`
+		P     *int           `cbor:"p"`
+		Po    *int           `cbor:"po,omitempty"`
+		Intf  interface{}    `cbor:"intf"`
+		Intfo interface{}    `cbor:"intfo,omitempty"`
 	}
 
 	v := T{}
-	want := []byte{0xa1, 0x61, 0x49, 0x00} // {"I": 0}
-	b, err := Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	} else if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
-	}
-
-	v = T{I: 1, Io: 2, Iao: 3}
-	want = []byte{0xa2, 0x61, 0x49, 0x01, 0x62, 0x49, 0x6f, 0x02} // {"I": 1, "Io": 2}
-	b, err = Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	} else if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
-	}
-}
-
-func TestOmitEmpty(t *testing.T) {
-	type T struct {
-		B    bool                   `cbor:"b"`
-		Bo   bool                   `cbor:"bo,omitempty"`
-		UI   uint                   `cbor:"ui"`
-		UIo  uint                   `cbor:"uio,omitempty"`
-		I    int                    `cbor:"omitempty"` // actually named omitempty, not an option
-		Io   int                    `cbor:"io,omitempty"`
-		F    float64                `cbor:"f"`
-		Fo   float64                `cbor:"fo,omitempty"`
-		S    string                 `cbor:"s"`
-		So   string                 `cbor:"so,omitempty"`
-		Slc  []string               `cbor:"slc"`
-		Slco []string               `cbor:"slco,omitempty"`
-		M    map[string]interface{} `cbor:"m"`
-		Mo   map[string]interface{} `cbor:"mo,omitempty"`
-		Str  struct{}               `cbor:"str"`
-		Stro struct{}               `cbor:"stro,omitempty"`
-		P    *int                   `cbor:"p"`
-		Po   *int                   `cbor:"po,omitempty"`
-	}
-	// {"b": false, "ui": 0, "omitempty": 0, "f": 0, "s": "", "slc": null, "m": {}, "str": {}, "stro": {}, "p": nil }
-	want := []byte{0xaa,
+	// {"b": false, "ui": 0, "i":0, "f": 0, "s": "", "slc": null, "m": {}, "p": nil, "intf": nil }
+	want := []byte{0xa9,
 		0x61, 0x62, 0xf4,
 		0x62, 0x75, 0x69, 0x00,
-		0x69, 0x6f, 0x6d, 0x69, 0x74, 0x65, 0x6d, 0x70, 0x74, 0x79, 0x00,
+		0x61, 0x69, 0x00,
 		0x61, 0x66, 0xfb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x61, 0x73, 0x60,
 		0x63, 0x73, 0x6c, 0x63, 0xf6,
 		0x61, 0x6d, 0xf6,
-		0x63, 0x73, 0x74, 0x72, 0xa0,
-		0x64, 0x73, 0x74, 0x72, 0x6f, 0xa0,
 		0x61, 0x70, 0xf6,
+		0x64, 0x69, 0x6e, 0x74, 0x66, 0xf6,
 	}
 
-	var v T
-	b, err := Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	} else if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+}
+
+func TestOmitEmptyForAnonymousStruct(t *testing.T) {
+	type T struct {
+		Str  struct{} `cbor:"str"`
+		Stro struct{} `cbor:"stro,omitempty"`
 	}
+
+	v := T{}
+	want := []byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0xa0} // {"str": {}}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+}
+
+func TestOmitEmptyForStruct1(t *testing.T) {
+	type T1 struct {
+		Bo    bool           `cbor:"bo,omitempty"`
+		UIo   uint           `cbor:"uio,omitempty"`
+		Io    int            `cbor:"io,omitempty"`
+		Fo    float64        `cbor:"fo,omitempty"`
+		So    string         `cbor:"so,omitempty"`
+		Slco  []string       `cbor:"slco,omitempty"`
+		Mo    map[int]string `cbor:"mo,omitempty"`
+		Po    *int           `cbor:"po,omitempty"`
+		Intfo interface{}    `cbor:"intfo,omitempty"`
+	}
+	type T struct {
+		Str  T1 `cbor:"str"`
+		Stro T1 `cbor:"stro,omitempty"`
+	}
+
+	v := T{}
+	want := []byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0xa0} // {"str": {}}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+}
+
+func TestOmitEmptyForStruct2(t *testing.T) {
+	type T1 struct {
+		Bo    bool           `cbor:"bo,omitempty"`
+		UIo   uint           `cbor:"uio,omitempty"`
+		Io    int            `cbor:"io,omitempty"`
+		Fo    float64        `cbor:"fo,omitempty"`
+		So    string         `cbor:"so,omitempty"`
+		Slco  []string       `cbor:"slco,omitempty"`
+		Mo    map[int]string `cbor:"mo,omitempty"`
+		Po    *int           `cbor:"po,omitempty"`
+		Intfo interface{}    `cbor:"intfo"`
+	}
+	type T struct {
+		Stro T1 `cbor:"stro,omitempty"`
+	}
+
+	v := T{}
+	want := []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0xa1, 0x65, 0x69, 0x6e, 0x74, 0x66, 0x6f, 0xf6} // {"stro": {intfo: nil}}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, []roundTripTest{{"non-default values", v, want}}, em, dm)
+}
+
+func TestOmitEmptyForNestedStruct(t *testing.T) {
+	type T1 struct {
+		Bo    bool           `cbor:"bo,omitempty"`
+		UIo   uint           `cbor:"uio,omitempty"`
+		Io    int            `cbor:"io,omitempty"`
+		Fo    float64        `cbor:"fo,omitempty"`
+		So    string         `cbor:"so,omitempty"`
+		Slco  []string       `cbor:"slco,omitempty"`
+		Mo    map[int]string `cbor:"mo,omitempty"`
+		Po    *int           `cbor:"po,omitempty"`
+		Intfo interface{}    `cbor:"intfo,omitempty"`
+	}
+	type T2 struct {
+		Stro T1 `cbor:"stro,omitempty"`
+	}
+	type T struct {
+		Str  T2 `cbor:"str"`
+		Stro T2 `cbor:"stro,omitempty"`
+	}
+
+	v := T{}
+	want := []byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0xa0} // {"str": {}}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+}
+
+func TestOmitEmptyForToArrayStruct1(t *testing.T) {
+	type T1 struct {
+		_    struct{} `cbor:",toarray"`
+		b    bool
+		ui   uint
+		i    int
+		f    float64
+		s    string
+		slc  []string
+		m    map[int]string
+		p    *int
+		intf interface{}
+	}
+	type T struct {
+		Str  T1 `cbor:"str"`
+		Stro T1 `cbor:"stro,omitempty"`
+	}
+
+	v := T{
+		Str:  T1{b: false, ui: 0, i: 0, f: 0.0, s: "", slc: nil, m: nil, p: nil, intf: nil},
+		Stro: T1{b: false, ui: 0, i: 0, f: 0.0, s: "", slc: nil, m: nil, p: nil, intf: nil},
+	}
+	want := []byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0x80} // {"str": []}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, []roundTripTest{{"no exportable fields", v, want}}, em, dm)
+}
+
+func TestOmitEmptyForToArrayStruct2(t *testing.T) {
+	type T1 struct {
+		_     struct{}       `cbor:",toarray"`
+		Bo    bool           `cbor:"bo"`
+		UIo   uint           `cbor:"uio"`
+		Io    int            `cbor:"io"`
+		Fo    float64        `cbor:"fo"`
+		So    string         `cbor:"so"`
+		Slco  []string       `cbor:"slco"`
+		Mo    map[int]string `cbor:"mo"`
+		Po    *int           `cbor:"po"`
+		Intfo interface{}    `cbor:"intfo"`
+	}
+	type T struct {
+		Stro T1 `cbor:"stro,omitempty"`
+	}
+
+	v := T{}
+	// {"stro": [false, 0, 0, 0.0, "", [], {}, nil, nil]}
+	want := []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0x89, 0xf4, 0x00, 0x00, 0xfb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60, 0xf6, 0xf6, 0xf6, 0xf6}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, []roundTripTest{{"has exportable fields", v, want}}, em, dm)
+}
+
+func TestOmitEmptyForStructWithPtrToAnonymousField(t *testing.T) {
+	type (
+		T1 struct {
+			X int `cbor:"x,omitempty"`
+			Y int `cbor:"y,omitempty"`
+		}
+		T2 struct {
+			*T1
+		}
+		T struct {
+			Stro T2 `cbor:"stro,omitempty"`
+		}
+	)
+
+	testCases := []struct {
+		name         string
+		obj          interface{}
+		wantCborData []byte
+	}{
+		{
+			name:         "null pointer to anonymous field",
+			obj:          T{},
+			wantCborData: []byte{0xa0}, // {}
+		},
+		{
+			name:         "not-null pointer to anonymous field",
+			obj:          T{T2{&T1{}}},
+			wantCborData: []byte{0xa0}, // {}
+		},
+		{
+			name:         "not empty value in field 1",
+			obj:          T{T2{&T1{X: 1}}},
+			wantCborData: []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0xa1, 0x61, 0x78, 0x01}, // {stro:{x:1}}
+		},
+		{
+			name:         "not empty value in field 2",
+			obj:          T{T2{&T1{Y: 2}}},
+			wantCborData: []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0xa1, 0x61, 0x79, 0x02}, // {stro:{y:2}}
+		},
+		{
+			name:         "not empty value in all fields",
+			obj:          T{T2{&T1{X: 1, Y: 2}}},
+			wantCborData: []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0xa2, 0x61, 0x78, 0x01, 0x61, 0x79, 0x02}, // {stro:{x:1, y:2}}
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := Marshal(tc.obj)
+			if err != nil {
+				t.Errorf("Marshal(%+v) returned error %v", tc.obj, err)
+			}
+			if !bytes.Equal(b, tc.wantCborData) {
+				t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.obj, b, tc.wantCborData)
+			}
+		})
+	}
+}
+
+func TestOmitEmptyForStructWithAnonymousField(t *testing.T) {
+	type (
+		T1 struct {
+			X int `cbor:"x,omitempty"`
+			Y int `cbor:"y,omitempty"`
+		}
+		T2 struct {
+			T1
+		}
+		T struct {
+			Stro T2 `cbor:"stro,omitempty"`
+		}
+	)
+
+	testCases := []struct {
+		name         string
+		obj          interface{}
+		wantCborData []byte
+	}{
+		{
+			name:         "default values",
+			obj:          T{},
+			wantCborData: []byte{0xa0}, // {}
+		},
+		{
+			name:         "default values",
+			obj:          T{T2{T1{}}},
+			wantCborData: []byte{0xa0}, // {}
+		},
+		{
+			name:         "not empty value in field 1",
+			obj:          T{T2{T1{X: 1}}},
+			wantCborData: []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0xa1, 0x61, 0x78, 0x01}, // {stro:{x:1}}
+		},
+		{
+			name:         "not empty value in field 2",
+			obj:          T{T2{T1{Y: 2}}},
+			wantCborData: []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0xa1, 0x61, 0x79, 0x02}, // {stro:{y:2}}
+		},
+		{
+			name:         "not empty value in all fields",
+			obj:          T{T2{T1{X: 1, Y: 2}}},
+			wantCborData: []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0xa2, 0x61, 0x78, 0x01, 0x61, 0x79, 0x02}, // {stro:{x:1, y:2}}
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := Marshal(tc.obj)
+			if err != nil {
+				t.Errorf("Marshal(%+v) returned error %v", tc.obj, err)
+			}
+			if !bytes.Equal(b, tc.wantCborData) {
+				t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.obj, b, tc.wantCborData)
+			}
+		})
+	}
+}
+
+func TestOmitEmptyForBinaryMarshaler1(t *testing.T) {
+	type T1 struct {
+		No number `cbor:"no,omitempty"`
+	}
+	type T struct {
+		Str  T1 `cbor:"str"`
+		Stro T1 `cbor:"stro,omitempty"`
+	}
+
+	testCases := []roundTripTest{
+		{
+			"empty BinaryMarshaler",
+			T1{},
+			[]byte{0xa0}, // {}
+		},
+		{
+			"empty struct containing empty BinaryMarshaler",
+			T{},
+			[]byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0xa0}, // {str: {}}
+		},
+	}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, testCases, em, dm)
+}
+
+func TestOmitEmptyForBinaryMarshaler2(t *testing.T) {
+	type T1 struct {
+		So stru `cbor:"so,omitempty"`
+	}
+	type T struct {
+		Str  T1 `cbor:"str"`
+		Stro T1 `cbor:"stro,omitempty"`
+	}
+
+	testCases := []roundTripTest{
+		{
+			"empty BinaryMarshaler",
+			T1{},
+			[]byte{0xa0}, // {}
+		},
+		{
+			"empty struct containing empty BinaryMarshaler",
+			T{},
+			[]byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0xa0}, // {str: {}}
+		},
+	}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, testCases, em, dm)
+}
+
+// omitempty is a no-op for time.Time.
+func TestOmitEmptyForTime(t *testing.T) {
+	type T struct {
+		Tm time.Time `cbor:"t,omitempty"`
+	}
+
+	v := T{}
+	want := []byte{0xa1, 0x61, 0x74, 0xf6} // {"t": nil}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+}
+
+// omitempty is a no-op for big.Int.
+func TestOmitEmptyForBigInt(t *testing.T) {
+	type T struct {
+		I big.Int `cbor:"bi,omitempty"`
+	}
+
+	v := T{}
+	want := []byte{0xa1, 0x62, 0x62, 0x69, 0xc2, 0x40} // {"bi": 2([])}
+
+	em, _ := EncOptions{BigIntConvert: BigIntConvertNone}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
 }
 
 func TestTaggedField(t *testing.T) {

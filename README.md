@@ -10,7 +10,7 @@
 [![](https://github.com/fxamacker/cbor/workflows/linters/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Alinters)
 [![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor)
 [![](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/release_version_badge.svg?sanitize=1)](https://github.com/fxamacker/cbor/releases)
-<!--[![](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/license_badge.svg?sanitize=1)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE)-->
+[![](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/license_badge.svg?sanitize=1)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE)
 
 __fxamacker/cbor__ is secure.  It rejects malformed CBOR data, can detect duplicate map keys, and more.
 
@@ -1071,12 +1071,9 @@ __Words of encouragement and support__
 
 ## License 
 Copyright © 2019-present [Faye Amacker](https://github.com/fxamacker).  
-Portions (from [Go](https://github.com/golang/go)) Copyright © 2009 The Go Authors.
 
 fxamacker/cbor is licensed under the MIT License.  See [LICENSE](LICENSE) for the full license text.  
-[Go](https://github.com/golang/go) is licensed under BSD-style license.  See [LICENSE](LICENSE) for the full license text.
 
-This library contains a small amount of code from the [Go](https://github.com/golang/go) standard library.
 <hr>
 
 ⚓  [Quick Start](#quick-start) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Options](#options) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [License](#license)
