@@ -16,6 +16,7 @@ type field struct {
 	idx       []int
 	typ       reflect.Type
 	ef        encodeFunc
+	ief       isEmptyFunc
 	typInfo   *typeInfo // used to decoder to reuse type info
 	tagged    bool      // used to choose dominant field (at the same level tagged fields dominate untagged fields)
 	omitEmpty bool      // used to skip empty field

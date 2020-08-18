@@ -1,11 +1,6 @@
 // Copyright (c) Faye Amacker. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
-// This file contains some code from the Go standard library.
-
-// Portions (from Go) Copyright (c) 2009 The Go Authors.  Use of Go's source code
-// is governed by a BSD-style license.  See LICENSE for the full text of the license.
-
 package cbor
 
 import (
@@ -582,6 +577,7 @@ func putEncoderBuffer(e *encoderBuffer) {
 }
 
 type encodeFunc func(e *encoderBuffer, em *encMode, v reflect.Value) error
+type isEmptyFunc func(v reflect.Value) (empty bool, err error)
 
 var (
 	cborFalse            = []byte{0xf4}
@@ -599,7 +595,7 @@ func encode(e *encoderBuffer, em *encMode, v reflect.Value) error {
 		return nil
 	}
 	vt := v.Type()
-	f := getEncodeFunc(vt)
+	f, _ := getEncodeFunc(vt)
 	if f == nil {
 		return &UnsupportedTypeError{vt}
 	}
@@ -991,7 +987,18 @@ func (me mapEncodeFunc) encodeCanonical(e *encoderBuffer, em *encMode, v reflect
 	return nil
 }
 
-func encodeStructToArray(e *encoderBuffer, em *encMode, v reflect.Value, flds fields) (err error) {
+func encodeStructToArray(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
+	structType, err := getEncodingStructType(v.Type())
+	if err != nil {
+		return err
+	}
+
+	if b := em.encTagBytes(v.Type()); b != nil {
+		e.Write(b)
+	}
+
+	flds := structType.fields
+
 	encodeHead(e, byte(cborTypeArray), uint64(len(flds)))
 	for i := 0; i < len(flds); i++ {
 		f := flds[i]
@@ -1019,6 +1026,10 @@ func encodeStructToArray(e *encoderBuffer, em *encMode, v reflect.Value, flds fi
 }
 
 func encodeFixedLengthStruct(e *encoderBuffer, em *encMode, v reflect.Value, flds fields) error {
+	if b := em.encTagBytes(v.Type()); b != nil {
+		e.Write(b)
+	}
+
 	encodeHead(e, byte(cborTypeMap), uint64(len(flds)))
 
 	for i := 0; i < len(flds); i++ {
@@ -1035,23 +1046,14 @@ func encodeFixedLengthStruct(e *encoderBuffer, em *encMode, v reflect.Value, fld
 }
 
 func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
-	vt := v.Type()
-	structType := getEncodingStructType(vt)
-	if structType.err != nil {
-		return structType.err
-	}
-
-	if b := em.encTagBytes(vt); b != nil {
-		e.Write(b)
-	}
-
-	if structType.toArray {
-		return encodeStructToArray(e, em, v, structType.fields)
+	structType, err := getEncodingStructType(v.Type())
+	if err != nil {
+		return err
 	}
 
 	flds := structType.getFields(em)
 
-	if !structType.hasAnonymousField && !structType.omitEmpty {
+	if structType.fixedLength {
 		return encodeFixedLengthStruct(e, em, v, flds)
 	}
 
@@ -1073,8 +1075,16 @@ func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 				continue
 			}
 		}
-		if f.omitEmpty && isEmptyValue(fv) {
-			continue
+
+		if f.omitEmpty {
+			empty, err := f.ief(fv)
+			if err != nil {
+				putEncoderBuffer(kve)
+				return err
+			}
+			if empty {
+				continue
+			}
 		}
 
 		kve.Write(f.cborName)
@@ -1084,6 +1094,10 @@ func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 			return err
 		}
 		kvcount++
+	}
+
+	if b := em.encTagBytes(v.Type()); b != nil {
+		e.Write(b)
 	}
 
 	encodeHead(e, byte(cborTypeMap), uint64(kvcount))
@@ -1261,66 +1275,79 @@ func encodeHead(e *encoderBuffer, t byte, n uint64) {
 var (
 	typeMarshaler       = reflect.TypeOf((*Marshaler)(nil)).Elem()
 	typeBinaryMarshaler = reflect.TypeOf((*encoding.BinaryMarshaler)(nil)).Elem()
+	typeRawMessage      = reflect.TypeOf(RawMessage(nil))
 )
 
-func getEncodeFuncInternal(t reflect.Type) encodeFunc {
+func getEncodeFuncInternal(t reflect.Type) (encodeFunc, isEmptyFunc) {
 	k := t.Kind()
 	if k == reflect.Ptr {
-		return getEncodeIndirectValueFunc(t)
+		return getEncodeIndirectValueFunc(t), isEmptyPtr
 	}
 	switch t {
 	case typeTag:
-		return encodeTag
+		return encodeTag, alwaysNotEmpty
 	case typeTime:
-		return encodeTime
+		return encodeTime, alwaysNotEmpty
 	case typeBigInt:
-		return encodeBigInt
+		return encodeBigInt, alwaysNotEmpty
+	case typeRawMessage:
+		return encodeMarshalerType, isEmptySlice
 	}
 	if reflect.PtrTo(t).Implements(typeMarshaler) {
-		return encodeMarshalerType
+		return encodeMarshalerType, alwaysNotEmpty
 	}
 	if reflect.PtrTo(t).Implements(typeBinaryMarshaler) {
-		return encodeBinaryMarshalerType
+		return encodeBinaryMarshalerType, isEmptyBinaryMarshaler
 	}
 	switch k {
 	case reflect.Bool:
-		return encodeBool
+		return encodeBool, isEmptyBool
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return encodeInt
+		return encodeInt, isEmptyInt
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return encodeUint
+		return encodeUint, isEmptyUint
 	case reflect.Float32, reflect.Float64:
-		return encodeFloat
+		return encodeFloat, isEmptyFloat
 	case reflect.String:
-		return encodeString
+		return encodeString, isEmptyString
 	case reflect.Slice, reflect.Array:
 		if t.Elem().Kind() == reflect.Uint8 {
-			return encodeByteString
+			return encodeByteString, isEmptySlice
 		}
-		f := getEncodeFunc(t.Elem())
+		f, _ := getEncodeFunc(t.Elem())
 		if f == nil {
-			return nil
+			return nil, nil
 		}
-		return arrayEncodeFunc{f: f}.encode
+		return arrayEncodeFunc{f: f}.encode, isEmptySlice
 	case reflect.Map:
-		kf, ef := getEncodeFunc(t.Key()), getEncodeFunc(t.Elem())
+		kf, _ := getEncodeFunc(t.Key())
+		ef, _ := getEncodeFunc(t.Elem())
 		if kf == nil || ef == nil {
-			return nil
+			return nil, nil
 		}
-		return mapEncodeFunc{kf: kf, ef: ef}.encode
+		return mapEncodeFunc{kf: kf, ef: ef}.encode, isEmptyMap
 	case reflect.Struct:
-		return encodeStruct
+		// Get struct's special field "_" tag options
+		if f, ok := t.FieldByName("_"); ok {
+			tag := f.Tag.Get("cbor")
+			if tag != "-" {
+				if hasToArrayOption(tag) {
+					return encodeStructToArray, isEmptyStruct
+				}
+			}
+		}
+		return encodeStruct, isEmptyStruct
 	case reflect.Interface:
-		return encodeIntf
+		return encodeIntf, isEmptyIntf
 	}
-	return nil
+	return nil, nil
 }
 
 func getEncodeIndirectValueFunc(t reflect.Type) encodeFunc {
 	for t.Kind() == reflect.Ptr {
 		t = t.Elem()
 	}
-	f := getEncodeFunc(t)
+	f, _ := getEncodeFunc(t)
 	if f == nil {
 		return nil
 	}
@@ -1336,24 +1363,101 @@ func getEncodeIndirectValueFunc(t reflect.Type) encodeFunc {
 	}
 }
 
-// isEmptyValue returns true if v has zero value for its type.
-// isEmptyValue was copied from stdlib's encoding/json/encode.go.
-func isEmptyValue(v reflect.Value) bool {
-	switch v.Kind() {
-	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
-		return v.Len() == 0
-	case reflect.Bool:
-		return !v.Bool()
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return v.Int() == 0
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return v.Uint() == 0
-	case reflect.Float32, reflect.Float64:
-		return v.Float() == 0
-	case reflect.Interface, reflect.Ptr:
-		return v.IsNil()
+func alwaysNotEmpty(v reflect.Value) (empty bool, err error) {
+	return false, nil
+}
+
+func isEmptyBool(v reflect.Value) (bool, error) {
+	return !v.Bool(), nil
+}
+
+func isEmptyInt(v reflect.Value) (bool, error) {
+	return v.Int() == 0, nil
+}
+
+func isEmptyUint(v reflect.Value) (bool, error) {
+	return v.Uint() == 0, nil
+}
+
+func isEmptyFloat(v reflect.Value) (bool, error) {
+	return v.Float() == 0.0, nil
+}
+
+func isEmptyString(v reflect.Value) (bool, error) {
+	return v.Len() == 0, nil
+}
+
+func isEmptySlice(v reflect.Value) (bool, error) {
+	return v.Len() == 0, nil
+}
+
+func isEmptyMap(v reflect.Value) (bool, error) {
+	return v.Len() == 0, nil
+}
+
+func isEmptyPtr(v reflect.Value) (bool, error) {
+	return v.IsNil(), nil
+}
+
+func isEmptyIntf(v reflect.Value) (bool, error) {
+	return v.IsNil(), nil
+}
+
+func isEmptyStruct(v reflect.Value) (bool, error) {
+	structType, err := getEncodingStructType(v.Type())
+	if err != nil {
+		return false, err
 	}
-	return false
+
+	if structType.toArray {
+		return len(structType.fields) == 0, nil
+	}
+
+	if len(structType.fields) > len(structType.omitEmptyFieldsIdx) {
+		return false, nil
+	}
+
+	for _, i := range structType.omitEmptyFieldsIdx {
+		f := structType.fields[i]
+
+		// Get field value
+		var fv reflect.Value
+		if len(f.idx) == 1 {
+			fv = v.Field(f.idx[0])
+		} else {
+			// Get embedded field value.  No error is expected.
+			fv, _ = getFieldValue(v, f.idx, func(v reflect.Value) (reflect.Value, error) {
+				// Skip null pointer to embedded struct
+				return reflect.Value{}, nil
+			})
+			if !fv.IsValid() {
+				continue
+			}
+		}
+
+		empty, err := f.ief(fv)
+		if err != nil {
+			return false, err
+		}
+		if !empty {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func isEmptyBinaryMarshaler(v reflect.Value) (bool, error) {
+	m, ok := v.Interface().(encoding.BinaryMarshaler)
+	if !ok {
+		pv := reflect.New(v.Type())
+		pv.Elem().Set(v)
+		m = pv.Interface().(encoding.BinaryMarshaler)
+	}
+	data, err := m.MarshalBinary()
+	if err != nil {
+		return false, err
+	}
+	return len(data) == 0, nil
 }
 
 func cannotFitFloat32(f64 float64) bool {

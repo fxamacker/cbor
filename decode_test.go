@@ -2377,12 +2377,19 @@ func TestUnmarshalStructTag4(t *testing.T) {
 type number uint64
 
 func (n number) MarshalBinary() (data []byte, err error) {
+	if n == 0 {
+		return []byte{}, nil
+	}
 	data = make([]byte, 8)
 	binary.BigEndian.PutUint64(data, uint64(n))
 	return
 }
 
 func (n *number) UnmarshalBinary(data []byte) (err error) {
+	if len(data) == 0 {
+		*n = 0
+		return nil
+	}
 	if len(data) != 8 {
 		return errors.New("number:UnmarshalBinary: invalid length")
 	}
@@ -2395,10 +2402,17 @@ type stru struct {
 }
 
 func (s *stru) MarshalBinary() ([]byte, error) {
+	if s.a == "" && s.b == "" && s.c == "" {
+		return []byte{}, nil
+	}
 	return []byte(fmt.Sprintf("%s,%s,%s", s.a, s.b, s.c)), nil
 }
 
 func (s *stru) UnmarshalBinary(data []byte) (err error) {
+	if len(data) == 0 {
+		s.a, s.b, s.c = "", "", ""
+		return nil
+	}
 	ss := strings.Split(string(data), ",")
 	if len(ss) != 3 {
 		return errors.New("stru:UnmarshalBinary: invalid element count")
