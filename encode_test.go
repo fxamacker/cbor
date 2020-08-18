@@ -1130,23 +1130,26 @@ func TestOmitEmptyForNestedStruct(t *testing.T) {
 
 func TestOmitEmptyForToArrayStruct1(t *testing.T) {
 	type T1 struct {
-		_     struct{} `cbor:",toarray"`
-		bo    bool
-		uIo   uint
-		io    int
-		fo    float64
-		so    string
-		slco  []string
-		mo    map[int]string
-		po    *int
-		intfo interface{}
+		_    struct{} `cbor:",toarray"`
+		b    bool
+		ui   uint
+		i    int
+		f    float64
+		s    string
+		slc  []string
+		m    map[int]string
+		p    *int
+		intf interface{}
 	}
 	type T struct {
 		Str  T1 `cbor:"str"`
 		Stro T1 `cbor:"stro,omitempty"`
 	}
 
-	v := T{}
+	v := T{
+		Str:  T1{b: false, ui: 0, i: 0, f: 0.0, s: "", slc: nil, m: nil, p: nil, intf: nil},
+		Stro: T1{b: false, ui: 0, i: 0, f: 0.0, s: "", slc: nil, m: nil, p: nil, intf: nil},
+	}
 	want := []byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0x80} // {"str": []}
 
 	em, _ := EncOptions{}.EncMode()
