@@ -235,18 +235,22 @@ func (idm IntDecMode) valid() bool {
 }
 
 // ExtraDecErrorCond specifies extra conditions that should be treated as errors.
-type ExtraDecErrorCond int
+type ExtraDecErrorCond uint
+
+// ExtraDecErrorNone indicates no extra error condition.
+const ExtraDecErrorNone ExtraDecErrorCond = 0
 
 const (
-	// ExtraDecErrorNone indicates no extra error condition.
-	ExtraDecErrorNone ExtraDecErrorCond = 0
-
 	// ExtraDecErrorUnknownField indicates error condition when destination
 	// Go struct doesn't have a field matching a CBOR map key.
-	ExtraDecErrorUnknownField = 1 << 0
+	ExtraDecErrorUnknownField ExtraDecErrorCond = 1 << iota
 
-	maxExtraDecError int = 1 << 1
+	maxExtraDecError
 )
+
+func (ec ExtraDecErrorCond) valid() bool {
+	return ec < maxExtraDecError
+}
 
 // DecOptions specifies decoding options.
 type DecOptions struct {
@@ -280,8 +284,7 @@ type DecOptions struct {
 	IntDec IntDecMode
 
 	// ExtraReturnErrors specifies extra conditions that should be treated as errors.
-	// ExtraReturnErrors is a bit set of ExtraDecErrorCond values.
-	ExtraReturnErrors int
+	ExtraReturnErrors ExtraDecErrorCond
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -378,8 +381,8 @@ func (opts DecOptions) decMode() (*decMode, error) {
 	} else if opts.MaxMapPairs < minMaxMapPairs || opts.MaxMapPairs > maxMaxMapPairs {
 		return nil, errors.New("cbor: invalid MaxMapPairs " + strconv.Itoa(opts.MaxMapPairs) + " (range is [" + strconv.Itoa(minMaxMapPairs) + ", " + strconv.Itoa(maxMaxMapPairs) + "])")
 	}
-	if opts.ExtraReturnErrors >= maxExtraDecError {
-		return nil, errors.New("cbor: invalid ExtraReturnErrors " + strconv.Itoa(opts.ExtraReturnErrors))
+	if !opts.ExtraReturnErrors.valid() {
+		return nil, errors.New("cbor: invalid ExtraReturnErrors " + strconv.Itoa(int(opts.ExtraReturnErrors)))
 	}
 	dm := decMode{
 		dupMapKey:         opts.DupMapKey,
@@ -412,7 +415,7 @@ type decMode struct {
 	indefLength       IndefLengthMode
 	tagsMd            TagsMode
 	intDec            IntDecMode
-	extraReturnErrors int
+	extraReturnErrors ExtraDecErrorCond
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
