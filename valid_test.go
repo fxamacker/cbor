@@ -15,12 +15,9 @@ func TestValid(t *testing.T) {
 	}
 	d := decoder{data: buf.Bytes(), dm: defaultDecMode}
 	for i := 0; i < len(marshalTests); i++ {
-		if err := d.valid(); err != nil {
+		if err := d.Valid(); err != nil {
 			t.Errorf("Valid() returned error %v", err)
 		}
-	}
-	if len(d.data) != d.off {
-		t.Errorf("Valid() didn't read all data, leftover data 0x%x", d.data[d.off:])
 	}
 }
 
