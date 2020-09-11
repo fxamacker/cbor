@@ -445,6 +445,12 @@ func (dm *decMode) Unmarshal(data []byte, v interface{}) error {
 	return d.value(v)
 }
 
+// Valid checks whether the CBOR data is complete and well-formed.
+func (dm *decMode) Valid(data []byte) error {
+	d := decoder{data: data, dm: dm}
+	return d.Valid()
+}
+
 // NewDecoder returns a new decoder that reads from r using dm DecMode.
 func (dm *decMode) NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{r: r, d: decoder{dm: dm}}
