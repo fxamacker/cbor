@@ -400,8 +400,17 @@ func (opts DecOptions) decMode() (*decMode, error) {
 
 // DecMode is the main interface for CBOR decoding.
 type DecMode interface {
+	// Unmarshal parses the CBOR-encoded data into the value pointed to by v
+	// using the decoding mode.  If v is nil, not a pointer, or a nil pointer,
+	// Unmarshal returns an error.
+	//
+	// See the documentation for Unmarshal for details.
 	Unmarshal(data []byte, v interface{}) error
+	// Valid checks whether the CBOR data is complete and well-formed.
+	Valid(data []byte) error
+	// NewDecoder returns a new decoder that reads from r using dm DecMode.
 	NewDecoder(r io.Reader) *Decoder
+	// DecOptions returns user specified options used to create this DecMode.
 	DecOptions() DecOptions
 }
 
