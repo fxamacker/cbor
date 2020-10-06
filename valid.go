@@ -70,11 +70,6 @@ func (e *TagsMdError) Error() string {
 
 // valid checks whether the CBOR data is complete and well-formed.
 func (d *decoder) valid() error {
-	off := d.off // Save offset before data validation
-	defer func() {
-		d.off = off // Restore offset
-	}()
-
 	if len(d.data) == d.off {
 		return io.EOF
 	}
