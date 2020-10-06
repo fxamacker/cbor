@@ -19,9 +19,6 @@ func TestValid(t *testing.T) {
 			t.Errorf("Valid() returned error %v", err)
 		}
 	}
-	if len(d.data) != d.off {
-		t.Errorf("Valid() didn't read all data, leftover data 0x%x", d.data[d.off:])
-	}
 }
 
 func TestDepth(t *testing.T) {

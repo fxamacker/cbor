@@ -68,7 +68,7 @@ func (e *TagsMdError) Error() string {
 	return "cbor: CBOR tag isn't allowed"
 }
 
-// valid checks whether CBOR data is complete and well-formed.
+// valid checks whether the CBOR data is complete and well-formed.
 func (d *decoder) valid() error {
 	if len(d.data) == d.off {
 		return io.EOF

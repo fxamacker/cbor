@@ -99,6 +99,11 @@ func Unmarshal(data []byte, v interface{}) error {
 	return defaultDecMode.Unmarshal(data, v)
 }
 
+// Valid checks whether the CBOR data is complete and well-formed.
+func Valid(data []byte) error {
+	return defaultDecMode.Valid(data)
+}
+
 // Unmarshaler is the interface implemented by types that wish to unmarshal
 // CBOR data themselves.  The input is a valid CBOR value. UnmarshalCBOR
 // must copy the CBOR data if it needs to use it after returning.
@@ -400,8 +405,17 @@ func (opts DecOptions) decMode() (*decMode, error) {
 
 // DecMode is the main interface for CBOR decoding.
 type DecMode interface {
+	// Unmarshal parses the CBOR-encoded data into the value pointed to by v
+	// using the decoding mode.  If v is nil, not a pointer, or a nil pointer,
+	// Unmarshal returns an error.
+	//
+	// See the documentation for Unmarshal for details.
 	Unmarshal(data []byte, v interface{}) error
+	// Valid checks whether the CBOR data is complete and well-formed.
+	Valid(data []byte) error
+	// NewDecoder returns a new decoder that reads from r using dm DecMode.
 	NewDecoder(r io.Reader) *Decoder
+	// DecOptions returns user specified options used to create this DecMode.
 	DecOptions() DecOptions
 }
 
@@ -443,6 +457,12 @@ func (dm *decMode) DecOptions() DecOptions {
 func (dm *decMode) Unmarshal(data []byte, v interface{}) error {
 	d := decoder{data: data, dm: dm}
 	return d.value(v)
+}
+
+// Valid checks whether the CBOR data is complete and well-formed.
+func (dm *decMode) Valid(data []byte) error {
+	d := decoder{data: data, dm: dm}
+	return d.valid()
 }
 
 // NewDecoder returns a new decoder that reads from r using dm DecMode.
