@@ -15,7 +15,7 @@ func TestValid(t *testing.T) {
 	}
 	d := decoder{data: buf.Bytes(), dm: defaultDecMode}
 	for i := 0; i < len(marshalTests); i++ {
-		if err := d.Valid(); err != nil {
+		if err := d.valid(); err != nil {
 			t.Errorf("Valid() returned error %v", err)
 		}
 	}

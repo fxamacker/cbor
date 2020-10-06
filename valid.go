@@ -68,8 +68,8 @@ func (e *TagsMdError) Error() string {
 	return "cbor: CBOR tag isn't allowed"
 }
 
-// Valid checks whether the CBOR data is complete and well-formed.
-func (d *decoder) Valid() error {
+// valid checks whether the CBOR data is complete and well-formed.
+func (d *decoder) valid() error {
 	off := d.off // Save offset before data validation
 	defer func() {
 		d.off = off // Restore offset
