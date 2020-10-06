@@ -99,6 +99,11 @@ func Unmarshal(data []byte, v interface{}) error {
 	return defaultDecMode.Unmarshal(data, v)
 }
 
+// Valid checks whether the CBOR data is complete and well-formed.
+func Valid(data []byte) error {
+	return defaultDecMode.Valid(data)
+}
+
 // Unmarshaler is the interface implemented by types that wish to unmarshal
 // CBOR data themselves.  The input is a valid CBOR value. UnmarshalCBOR
 // must copy the CBOR data if it needs to use it after returning.
