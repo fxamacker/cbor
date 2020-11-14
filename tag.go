@@ -26,6 +26,11 @@ func (t *RawTag) UnmarshalCBOR(data []byte) error {
 		return errors.New("cbor.RawTag: UnmarshalCBOR on nil pointer")
 	}
 
+	// Decoding CBOR null and undefined to cbor.RawTag is no-op.
+	if len(data) == 1 && (data[0] == 0xf6 || data[0] == 0xf7) {
+		return nil
+	}
+
 	d := decoder{data: data, dm: defaultDecMode}
 
 	// Unmarshal tag number.

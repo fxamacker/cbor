@@ -742,6 +742,12 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 }
 
 func (d *decoder) parseToTag(v reflect.Value) error {
+	if d.nextCBORNil() {
+		// Decoding CBOR null and undefined to cbor.Tag is no-op.
+		d.skip()
+		return nil
+	}
+
 	t := d.nextCBORType()
 	if t != cborTypeTag {
 		d.skip()
