@@ -8,7 +8,24 @@ import (
 	"testing"
 )
 
-func TestValid(t *testing.T) {
+func TestValid1(t *testing.T) {
+	for _, mt := range marshalTests {
+		if err := Valid(mt.cborData); err != nil {
+			t.Errorf("Valid() returned error %v", err)
+		}
+	}
+}
+
+func TestValid2(t *testing.T) {
+	for _, mt := range marshalTests {
+		dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+		if err := dm.Valid(mt.cborData); err != nil {
+			t.Errorf("Valid() returned error %v", err)
+		}
+	}
+}
+
+func TestValidOnStreamingData(t *testing.T) {
 	var buf bytes.Buffer
 	for _, t := range marshalTests {
 		buf.Write(t.cborData)
@@ -16,7 +33,7 @@ func TestValid(t *testing.T) {
 	d := decoder{data: buf.Bytes(), dm: defaultDecMode}
 	for i := 0; i < len(marshalTests); i++ {
 		if err := d.valid(); err != nil {
-			t.Errorf("Valid() returned error %v", err)
+			t.Errorf("valid() returned error %v", err)
 		}
 	}
 }
