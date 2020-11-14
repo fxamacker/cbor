@@ -443,14 +443,14 @@ var unmarshalTests = []unmarshalTest{
 	{
 		hexDecode("f6"),
 		nil,
-		[]interface{}{[]byte(nil), []int(nil), []string(nil), map[string]int(nil)},
-		[]reflect.Type{typeTag, typeRawTag},
+		[]interface{}{false, uint(0), uint8(0), uint16(0), uint32(0), uint64(0), int(0), int8(0), int16(0), int32(0), int64(0), float32(0.0), float64(0.0), "", []byte(nil), []int(nil), []string(nil), map[string]int(nil), time.Time{}, bigIntOrPanic("0"), Tag{}, RawTag{}},
+		nil,
 	},
 	{
 		hexDecode("f7"),
 		nil,
-		[]interface{}{[]byte(nil), []int(nil), []string(nil), map[string]int(nil)},
-		[]reflect.Type{typeTag, typeRawTag},
+		[]interface{}{false, uint(0), uint8(0), uint16(0), uint32(0), uint64(0), int(0), int8(0), int16(0), int32(0), int64(0), float32(0.0), float64(0.0), "", []byte(nil), []int(nil), []string(nil), map[string]int(nil), time.Time{}, bigIntOrPanic("0"), Tag{}, RawTag{}},
+		nil,
 	},
 	{
 		hexDecode("f0"),
@@ -1149,35 +1149,85 @@ func TestUnmarshalIntoArray(t *testing.T) {
 	}
 }
 
+type nilUnmarshaler string
+
+func (s *nilUnmarshaler) UnmarshalCBOR(data []byte) error {
+	if len(data) == 1 && (data[0] == 0xf6 || data[0] == 0xf7) {
+		*s = "null"
+	} else {
+		*s = nilUnmarshaler(data)
+	}
+	return nil
+}
+
 func TestUnmarshalNil(t *testing.T) {
-	cborData := [][]byte{hexDecode("f6"), hexDecode("f7")} // null, undefined
+	type T struct {
+		I int
+	}
+
+	cborData := [][]byte{hexDecode("f6"), hexDecode("f7")} // CBOR null and undefined values
 
 	testCases := []struct {
 		name      string
 		value     interface{}
 		wantValue interface{}
 	}{
-		// Unmarshal CBOR nil into composite types.
-		{"[]byte", []byte{1, 2, 3}, []byte(nil)},
-		{"[]string", []string{"hello", "world"}, []string(nil)},
-		{"map[string]bool", map[string]bool{"hello": true, "goodbye": false}, map[string]bool(nil)},
-		// Unmarshal CBOR nil into basic types.
-		{"int", 10, 10},
-		{"float", 1.23, 1.23},
-		{"string", "hello", "hello"},
+		// Unmarshalling CBOR null to the following types is a no-op.
 		{"bool", true, true},
-		// Unmarshal CBOR nil into nil pointers.
-		{"*int", (*int)(nil), (*int)(nil)},
-		{"*string", (*string)(nil), (*string)(nil)},
-		{"*RawMessage", (*RawMessage)(nil), (*RawMessage)(nil)},
+		{"int", int(-1), int(-1)},
+		{"int8", int8(-2), int8(-2)},
+		{"int16", int16(-3), int16(-3)},
+		{"int32", int32(-4), int32(-4)},
+		{"int64", int64(-5), int64(-5)},
+		{"uint", uint(1), uint(1)},
+		{"uint8", uint8(2), uint8(2)},
+		{"uint16", uint16(3), uint16(3)},
+		{"uint32", uint32(4), uint32(4)},
+		{"uint64", uint64(5), uint64(5)},
+		{"float32", float32(1.23), float32(1.23)},
+		{"float64", float64(4.56), float64(4.56)},
+		{"string", "hello", "hello"},
+		{"array", [3]int{1, 2, 3}, [3]int{1, 2, 3}},
+
+		// Unmarshalling CBOR null to slice/map sets Go values to nil.
+		{"[]byte", []byte{1, 2, 3}, []byte(nil)},
+		{"slice", []string{"hello", "world"}, []string(nil)},
+		{"map", map[string]bool{"hello": true, "goodbye": false}, map[string]bool(nil)},
+
+		// Unmarshalling CBOR null to time.Time is a no-op.
+		//{"time.Time", time.Date(2020, time.January, 2, 3, 4, 5, 6, time.UTC), time.Date(2020, time.January, 2, 3, 4, 5, 6, time.UTC)},
+
+		// Unmarshalling CBOR null to big.Int is a no-op.
+		{"big.Int", bigIntOrPanic("123"), bigIntOrPanic("123")},
+
+		// Unmarshalling CBOR null to user defined struct types is a no-op.
+		{"user defined struct", T{I: 123}, T{I: 123}},
+
+		// Unmarshalling CBOR null to cbor.Tag and cbor.RawTag is a no-op.
+		{"cbor.RawTag", RawTag{123, []byte{4, 5, 6}}, RawTag{123, []byte{4, 5, 6}}},
+		{"cbor.Tag", Tag{123, "hello world"}, Tag{123, "hello world"}},
+
+		// Unmarshalling to cbor.RawMessage sets cbor.RawMessage to raw CBOR bytes (0xf6 or 0xf7).
+		// It's tested in TestUnmarshal().
+
+		// Unmarshalling to types implementing cbor.BinaryUnmarshaler is a no-op.
+		//{"cbor.BinaryUnmarshaler", nilBinaryUnmarshaler("hello world"), nilBinaryUnmarshaler("hello world")},
+		{"cbor.BinaryUnmarshaler", number(456), number(456)},
+
+		// When unmarshalling to types implementing cbor.Unmarshaler,
+		// UnmarshalCBOR function receives raw CBOR bytes (0xf6 or 0xf7).
+		{"cbor.Unmarshaler", nilUnmarshaler("hello world"), nilUnmarshaler("null")},
 	}
+
+	// Unmarshalling to values of specified Go types.
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, data := range cborData {
 				v := reflect.New(reflect.TypeOf(tc.value))
 				v.Elem().Set(reflect.ValueOf(tc.value))
+
 				if err := Unmarshal(data, v.Interface()); err != nil {
-					t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
+					t.Errorf("Unmarshal(0x%x) to %T returned error %v", data, v.Elem().Interface(), err)
 				} else if !reflect.DeepEqual(v.Elem().Interface(), tc.wantValue) {
 					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v.Elem().Interface(), v.Elem().Interface(), tc.wantValue, tc.wantValue)
 				}
