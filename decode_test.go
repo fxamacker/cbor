@@ -1195,7 +1195,7 @@ func TestUnmarshalNil(t *testing.T) {
 		{"map", map[string]bool{"hello": true, "goodbye": false}, map[string]bool(nil)},
 
 		// Unmarshalling CBOR null to time.Time is a no-op.
-		//{"time.Time", time.Date(2020, time.January, 2, 3, 4, 5, 6, time.UTC), time.Date(2020, time.January, 2, 3, 4, 5, 6, time.UTC)},
+		{"time.Time", time.Date(2020, time.January, 2, 3, 4, 5, 6, time.UTC), time.Date(2020, time.January, 2, 3, 4, 5, 6, time.UTC)},
 
 		// Unmarshalling CBOR null to big.Int is a no-op.
 		{"big.Int", bigIntOrPanic("123"), bigIntOrPanic("123")},
@@ -1795,18 +1795,7 @@ func TestDecodeTime(t *testing.T) {
 		cborUnixTime    []byte
 		wantTime        time.Time
 	}{
-		{
-			name:            "zero time", // decode CBOR null to zero time
-			cborRFC3339Time: hexDecode("f6"),
-			cborUnixTime:    hexDecode("f6"),
-			wantTime:        time.Time{},
-		},
-		{
-			name:            "zero time", // decode CBOR undefined to zero time
-			cborRFC3339Time: hexDecode("f7"),
-			cborUnixTime:    hexDecode("f7"),
-			wantTime:        time.Time{},
-		},
+		// Decoding CBOR null/defined to time.Time is no-op.  See TestUnmarshalNil.
 		{
 			name:            "NaN",
 			cborRFC3339Time: hexDecode("f97e00"),
