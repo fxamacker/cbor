@@ -588,6 +588,11 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		case specialTypeTag:
 			return d.parseToTag(v)
 		case specialTypeTime:
+			if d.nextCBORNil() {
+				// Decoding CBOR null and undefined to time.Time is no-op.
+				d.skip()
+				return nil
+			}
 			tm, err := d.parseToTime()
 			if err != nil {
 				return err
