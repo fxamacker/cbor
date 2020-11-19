@@ -1193,6 +1193,28 @@ func TestTagMarshalError(t *testing.T) {
 	}
 }
 
+func TestMarshalUninitializedTag(t *testing.T) {
+	var v Tag
+	b, err := Marshal(v)
+	if err != nil {
+		t.Errorf("Marshal(%v) returned error %v", v, err)
+	}
+	if !bytes.Equal(b, cborNil) {
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, cborNil)
+	}
+}
+
+func TestMarshalUninitializedRawTag(t *testing.T) {
+	var v RawTag
+	b, err := Marshal(v)
+	if err != nil {
+		t.Errorf("Marshal(%v) returned error %v", v, err)
+	}
+	if !bytes.Equal(b, cborNil) {
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, cborNil)
+	}
+}
+
 func TestEncodeTag(t *testing.T) {
 	m := make(map[interface{}]bool)
 	m[10] = true
