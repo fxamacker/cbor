@@ -60,9 +60,14 @@ func (t RawTag) MarshalCBOR() ([]byte, error) {
 
 	encodeHead(e, byte(cborTypeTag), t.Number)
 
-	buf := make([]byte, len(e.Bytes())+len(t.Content))
+	content := t.Content
+	if len(content) == 0 {
+		content = cborNil
+	}
+
+	buf := make([]byte, len(e.Bytes())+len(content))
 	n := copy(buf, e.Bytes())
-	copy(buf[n:], t.Content)
+	copy(buf[n:], content)
 
 	putEncoderBuffer(e)
 	return buf, nil

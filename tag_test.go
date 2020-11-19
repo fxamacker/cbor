@@ -1215,6 +1215,30 @@ func TestMarshalUninitializedRawTag(t *testing.T) {
 	}
 }
 
+func TestMarshalTagWithEmptyContent(t *testing.T) {
+	v := Tag{Number: 100}       // Tag.Content is empty
+	want := hexDecode("d864f6") // 100(null)
+	b, err := Marshal(v)
+	if err != nil {
+		t.Errorf("Marshal(%v) returned error %v", v, err)
+	}
+	if !bytes.Equal(b, want) {
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
+	}
+}
+
+func TestMarshalRawTagWithEmptyContent(t *testing.T) {
+	v := RawTag{Number: 100}    // RawTag.Content is empty
+	want := hexDecode("d864f6") // 100(null)
+	b, err := Marshal(v)
+	if err != nil {
+		t.Errorf("Marshal(%v) returned error %v", v, err)
+	}
+	if !bytes.Equal(b, want) {
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
+	}
+}
+
 func TestEncodeTag(t *testing.T) {
 	m := make(map[interface{}]bool)
 	m[10] = true
