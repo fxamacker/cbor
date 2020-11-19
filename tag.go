@@ -49,7 +49,15 @@ func (t *RawTag) UnmarshalCBOR(data []byte) error {
 
 // MarshalCBOR returns CBOR encoding of t.
 func (t RawTag) MarshalCBOR() ([]byte, error) {
+	if t.Number == 0 && len(t.Content) == 0 {
+		// Marshal uninitialized cbor.RawTag
+		b := make([]byte, len(cborNil))
+		copy(b, cborNil)
+		return b, nil
+	}
+
 	e := getEncoderBuffer()
+
 	encodeHead(e, byte(cborTypeTag), t.Number)
 
 	buf := make([]byte, len(e.Bytes())+len(t.Content))

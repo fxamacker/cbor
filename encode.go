@@ -1233,6 +1233,12 @@ func encodeTag(e *encoderBuffer, em *encMode, v reflect.Value) error {
 
 	t := v.Interface().(Tag)
 
+	if t.Number == 0 && t.Content == nil {
+		// Marshal uninitialized cbor.Tag
+		e.Write(cborNil)
+		return nil
+	}
+
 	// Marshal tag number
 	encodeHead(e, byte(cborTypeTag), t.Number)
 
