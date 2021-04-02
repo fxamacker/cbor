@@ -3,7 +3,7 @@
 # CBOR library in Go
 [__fxamacker/cbor__](https://github.com/fxamacker/cbor) is a CBOR encoder & decoder in [Go](https://golang.org).  It has a standard API, CBOR tags, options for duplicate map keys, float64→32→16, `toarray`, `keyasint`, etc.  Each release passes 375+ tests and 250+ million execs fuzzing.
 
-[CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049)) is a binary data format inspired by JSON and MessagePack.  CBOR is an [Internet Standard](https://en.wikipedia.org/wiki/Internet_Standard) by [IETF](https://www.ietf.org) used in W3C [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn), COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)), CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)), and more.
+[CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049) & [RFC 8949](https://tools.ietf.org/html/rfc8949)) is a binary data format inspired by JSON and MessagePack.  CBOR is an [Internet Standard](https://en.wikipedia.org/wiki/Internet_Standard) by [IETF](https://www.ietf.org) used in W3C [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn), COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)), CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)), and more.
 
 [![](https://github.com/fxamacker/cbor/workflows/ci/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Aci)
 [![](https://github.com/fxamacker/cbor/workflows/cover%20%E2%89%A598%25/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3A%22cover+%E2%89%A598%25%22)
@@ -16,7 +16,7 @@ __fxamacker/cbor__ is secure.  It rejects malformed CBOR data, can detect duplic
 
 ![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_security_table.svg?sanitize=1 "CBOR Security Comparison")
 
-For more info, see [RFC 7049 Section 8 (Security Considerations)](https://tools.ietf.org/html/rfc7049#section-8).
+For more info, see [RFC 8949 Section 10 (Security Considerations)](https://tools.ietf.org/html/rfc8949#section-10) or [RFC 7049 Section 8](https://tools.ietf.org/html/rfc7049#section-8).
 
 <hr>
 
@@ -216,8 +216,8 @@ __Predefined Encoding Options__
 ```go
 func CanonicalEncOptions() EncOptions {}            // settings for RFC 7049 Canonical CBOR
 func CTAP2EncOptions() EncOptions {}                // settings for FIDO2 CTAP2 Canonical CBOR
-func CoreDetEncOptions() EncOptions {}              // settings from a draft RFC (subject to change)
-func PreferredUnsortedEncOptions() EncOptions {}    // settings from a draft RFC (subject to change)
+func CoreDetEncOptions() EncOptions {}              // settings for RFC 8949 Core Deterministic Encoding
+func PreferredUnsortedEncOptions() EncOptions {}    // settings for RFC 8949 Preferred Serialization
 ```
 
 The empty curly braces prevent a syntax highlighting bug on GitHub, please ignore them.
@@ -241,9 +241,7 @@ The following sections provide more info:
 ## Current Status
 Latest version is v2.x, which has:
 
-* __Stable API__ –  Six codec function signatures will never change.  No breaking API changes for other funcs in same major version.  And these two functions are subject to change until the draft RFC is approved by IETF (est. in 2020):
-  * CoreDetEncOptions() is subject to change because it uses draft standard.
-  * PreferredUnsortedEncOptions() is subject to change because it uses draft standard.
+* __Stable API__ –  Six codec function signatures will never change.  No breaking API changes for other funcs in same major version.
 * __Passed all tests__ – v2.x passed all 375+ tests on amd64, arm64, ppc64le and s390x with linux.
 * __Passed fuzzing__ – v2.2 passed 459+ million execs in coverage-guided fuzzing on Feb 24 (release date)  
 and 3.2+ billion execs on March 7, 2020.
