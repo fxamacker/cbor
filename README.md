@@ -214,10 +214,10 @@ TagSet and all modes using it are safe for concurrent use.  Equivalent API is av
 __Predefined Encoding Options__
 
 ```go
-func CanonicalEncOptions() EncOptions {}            // settings for RFC 7049 Canonical CBOR
-func CTAP2EncOptions() EncOptions {}                // settings for FIDO2 CTAP2 Canonical CBOR
-func CoreDetEncOptions() EncOptions {}              // settings for RFC 8949 Core Deterministic Encoding
-func PreferredUnsortedEncOptions() EncOptions {}    // settings for RFC 8949 Preferred Serialization
+func CanonicalEncOptions() EncOptions {}            // RFC 7049 Canonical CBOR
+func CTAP2EncOptions() EncOptions {}                // FIDO2 CTAP2 Canonical CBOR
+func CoreDetEncOptions() EncOptions {}              // RFC 8949 Core Deterministic Encoding
+func PreferredUnsortedEncOptions() EncOptions {}    // RFC 8949 Preferred Serialization
 ```
 
 The empty curly braces prevent a syntax highlighting bug on GitHub, please ignore them.
