@@ -525,10 +525,10 @@ The empty curly braces prevent a syntax highlighting bug, please ignore them.
 __API for Predefined Encoding Options__
 
 ```go
-func CanonicalEncOptions() EncOptions {}            // settings for RFC 7049 Canonical CBOR
-func CTAP2EncOptions() EncOptions {}                // settings for FIDO2 CTAP2 Canonical CBOR
-func CoreDetEncOptions() EncOptions {}              // settings from a draft RFC (subject to change)
-func PreferredUnsortedEncOptions() EncOptions {}    // settings from a draft RFC (subject to change)
+func CanonicalEncOptions() EncOptions {}            // RFC 7049 Canonical CBOR
+func CTAP2EncOptions() EncOptions {}                // FIDO2 CTAP2 Canonical CBOR
+func CoreDetEncOptions() EncOptions {}              // RFC 8949 Core Deterministic Encoding
+func PreferredUnsortedEncOptions() EncOptions {}    // RFC 8949 Preferred Serialization
 ```
 
 __API for Creating & Using Decoding Modes__
@@ -713,8 +713,6 @@ These functions are provided to create and return a modifiable EncOptions struct
 | CTAP2EncOptions() |[CTAP2 Canonical CBOR (FIDO2 CTAP2)](https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#ctap2-canonical-cbor-encoding-form). |
 | PreferredUnsortedEncOptions() |Unsorted, encode float64->float32->float16 when values fit, NaN values encoded as float16 0x7e00. |
 | CoreDetEncOptions() |PreferredUnsortedEncOptions() + map keys are sorted bytewise lexicographic. |
-
-🌱 CoreDetEncOptions() and PreferredUnsortedEncOptions() are subject to change until the draft RFC they used is approved by IETF.
 
 <br>
 
@@ -1056,7 +1054,7 @@ __Making this library better__
 CBOR BSTR <--> Go array in #133.
 * Keith Randall for [fixing Go bugs and providing workarounds](https://github.com/golang/go/issues/36400) so we don't have to wait for new versions of Go.
 
-__Help clarifying CBOR RFC 7049 or 7049bis__
+__Help clarifying CBOR RFC 7049 or 7049bis (7049bis is the draft of RFC 8949)__
 
 * Carsten Bormann for RFC 7049 (CBOR), adding this library to cbor.io, his fast confirmation to my RFC 7049 errata, approving my pull request to 7049bis, and his patience when I misread a line in 7049bis.
 * Laurence Lundblade for his help on the IETF mailing list for 7049bis and for pointing out on a CBORbis issue that CBOR Undefined might be problematic translating to JSON.
