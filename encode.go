@@ -167,6 +167,13 @@ const (
 	maxShortestFloat
 )
 
+type FloatToIntMode int
+
+const (
+	// SafeFloatToIntMode enables float values to do be safely converted to integers if possible.
+	SafeFloatToIntMode FloatToIntMode = iota
+)
+
 func (sfm ShortestFloatMode) valid() bool {
 	return sfm < maxShortestFloat
 }
@@ -291,6 +298,9 @@ type EncOptions struct {
 
 	// IndefLength specifies whether to allow indefinite length CBOR items.
 	IndefLength IndefLengthMode
+	
+	// FloatToInt specifies whether safe float to integer conversion is enabled.
+	FloatToInt FloatToIntMode
 
 	// TagsMd specifies whether to allow CBOR tags (major type 6).
 	TagsMd TagsMode
@@ -498,6 +508,7 @@ type encMode struct {
 	nanConvert    NaNConvertMode
 	infConvert    InfConvertMode
 	bigIntConvert BigIntConvertMode
+	floatToInt    FloatToIntMode
 	time          TimeMode
 	timeTag       EncTagMode
 	indefLength   IndefLengthMode
@@ -648,6 +659,14 @@ func encodeFloat(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	if math.IsInf(f64, 0) {
 		return encodeInf(e, em, v)
 	}
+	
+	if em.floatToInt==SafeFloatToIntMode && f64==float64(int64(f64)) {
+		// float can safely be converted to int.
+		// handle as int
+
+		return encodeInt(e, em, reflect.ValueOf(int64(f64)))
+	}
+	
 	fopt := em.shortestFloat
 	if v.Kind() == reflect.Float64 && (fopt == ShortestFloatNone || cannotFitFloat32(f64)) {
 		// Encode float64
