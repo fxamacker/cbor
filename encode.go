@@ -488,6 +488,7 @@ func (opts EncOptions) encMode() (*encMode, error) {
 type EncMode interface {
 	Marshal(v interface{}) ([]byte, error)
 	NewEncoder(w io.Writer) *Encoder
+	NewStreamEncoder(w io.Writer) *StreamEncoder
 	EncOptions() EncOptions
 }
 
@@ -553,6 +554,13 @@ func (em *encMode) NewEncoder(w io.Writer) *Encoder {
 	return &Encoder{w: w, em: em, e: getEncoderBuffer()}
 }
 
+// NewStreamEncoder returns a new stream encoder that writes sequentially to w using em EncMode.
+func (em *encMode) NewStreamEncoder(w io.Writer) *StreamEncoder {
+	return &StreamEncoder{
+		Encoder: &Encoder{w: w, em: em, e: getEncoderBuffer(), stream: true},
+	}
+}
+
 type encoderBuffer struct {
 	bytes.Buffer
 	scratch [16]byte
@@ -562,7 +570,7 @@ type encoderBuffer struct {
 var encoderBufferPool = sync.Pool{
 	New: func() interface{} {
 		e := new(encoderBuffer)
-		e.Grow(32) // TODO: make this configurable
+		e.Grow(64) // TODO: make this configurable
 		return e
 	},
 }
