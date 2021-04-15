@@ -86,6 +86,7 @@ type Encoder struct {
 	em         *encMode
 	e          *encoderBuffer
 	indefTypes []cborType
+	stream     bool
 }
 
 // NewEncoder returns a new encoder that writes to w using the default encoding options.
@@ -112,10 +113,10 @@ func (enc *Encoder) Encode(v interface{}) error {
 	}
 
 	err := encode(enc.e, enc.em, reflect.ValueOf(v))
-	if err == nil {
+	if err == nil && !enc.stream {
 		_, err = enc.e.WriteTo(enc.w)
+		enc.e.Reset()
 	}
-	enc.e.Reset()
 	return err
 }
 
