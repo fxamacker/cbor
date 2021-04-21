@@ -27,23 +27,29 @@ func TestStreamEncodeArray(t *testing.T) {
 		var buf bytes.Buffer
 		se := NewStreamEncoder(&buf)
 
-		se.EncodeArrayHead(2)
-
-		err := se.Encode("hello")
+		err := se.EncodeArrayHead(2)
 		if err != nil {
-			t.Errorf("StreamEncoder.Encode() returned error %v", err)
+			t.Errorf("EncodeArrayHead() returned error %v", err)
 		}
 
-		se.EncodeArrayHead(1)
+		err = se.Encode("hello")
+		if err != nil {
+			t.Errorf("Encode() returned error %v", err)
+		}
+
+		err = se.EncodeArrayHead(1)
+		if err != nil {
+			t.Errorf("EncodeArrayHead() returned error %v", err)
+		}
 
 		err = se.Encode(big.NewInt(1))
 		if err != nil {
-			t.Errorf("StreamEncoder.Encode() returned error %v", err)
+			t.Errorf("Encode() returned error %v", err)
 		}
 
 		err = se.Flush()
 		if err != nil {
-			t.Errorf("StreamEncoder.Flush() returned error %v", err)
+			t.Errorf("Flush() returned error %v", err)
 		}
 
 		if !bytes.Equal(buf.Bytes(), expected) {
@@ -77,23 +83,29 @@ func TestStreamEncodeArray(t *testing.T) {
 		var buf bytes.Buffer
 		se := em.NewStreamEncoder(&buf)
 
-		se.EncodeArrayHead(2)
+		err = se.EncodeArrayHead(2)
+		if err != nil {
+			t.Errorf("EncodeArrayHead() returned error %v", err)
+		}
 
 		err = se.Encode("hello")
 		if err != nil {
-			t.Errorf("StreamEncoder.Encode() returned error %v", err)
+			t.Errorf("Encode() returned error %v", err)
 		}
 
-		se.EncodeArrayHead(1)
+		err = se.EncodeArrayHead(1)
+		if err != nil {
+			t.Errorf("EncodeArrayHead() returned error %v", err)
+		}
 
 		err = se.Encode(big.NewInt(1))
 		if err != nil {
-			t.Errorf("StreamEncoder.Encode() returned error %v", err)
+			t.Errorf("Encode() returned error %v", err)
 		}
 
 		err = se.Flush()
 		if err != nil {
-			t.Errorf("StreamEncoder.Flush() returned error %v", err)
+			t.Errorf("Flush() returned error %v", err)
 		}
 
 		if !bytes.Equal(buf.Bytes(), expected) {
@@ -120,23 +132,29 @@ func TestStreamEncodeTag(t *testing.T) {
 		var buf bytes.Buffer
 		se := NewStreamEncoder(&buf)
 
-		se.EncodeTagHead(128)
-
-		se.EncodeArrayHead(2)
-
-		err := se.Encode("hello")
+		err := se.EncodeTagHead(128)
 		if err != nil {
-			t.Errorf("StreamEncoder.Encode() returned error %v", err)
+			t.Errorf("EncodeTagHead() returned error %v", err)
+		}
+
+		err = se.EncodeArrayHead(2)
+		if err != nil {
+			t.Errorf("EncodeArrayHead() returned error %v", err)
+		}
+
+		err = se.Encode("hello")
+		if err != nil {
+			t.Errorf("Encode() returned error %v", err)
 		}
 
 		err = se.Encode(big.NewInt(1))
 		if err != nil {
-			t.Errorf("StreamEncoder.Encode() returned error %v", err)
+			t.Errorf("Encode() returned error %v", err)
 		}
 
 		err = se.Flush()
 		if err != nil {
-			t.Errorf("StreamEncoder.Flush() returned error %v", err)
+			t.Errorf("Flush() returned error %v", err)
 		}
 
 		if !bytes.Equal(buf.Bytes(), expected) {
@@ -170,23 +188,29 @@ func TestStreamEncodeTag(t *testing.T) {
 		var buf bytes.Buffer
 		se := em.NewStreamEncoder(&buf)
 
-		se.EncodeTagHead(128)
+		err = se.EncodeTagHead(128)
+		if err != nil {
+			t.Errorf("EncodeTagHead() returned error %v", err)
+		}
 
-		se.EncodeArrayHead(2)
+		err = se.EncodeArrayHead(2)
+		if err != nil {
+			t.Errorf("EncodeArrayHead() returned error %v", err)
+		}
 
 		err = se.Encode("hello")
 		if err != nil {
-			t.Errorf("StreamEncoder.Encode() returned error %v", err)
+			t.Errorf("Encode() returned error %v", err)
 		}
 
 		err = se.Encode(big.NewInt(1))
 		if err != nil {
-			t.Errorf("StreamEncoder.Encode() returned error %v", err)
+			t.Errorf("Encode() returned error %v", err)
 		}
 
 		err = se.Flush()
 		if err != nil {
-			t.Errorf("StreamEncoder.Flush() returned error %v", err)
+			t.Errorf("Flush() returned error %v", err)
 		}
 
 		if !bytes.Equal(buf.Bytes(), expected) {

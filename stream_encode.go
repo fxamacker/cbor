@@ -30,11 +30,13 @@ func (se *StreamEncoder) Flush() error {
 }
 
 // EncodeArrayHead encodes CBOR array head of specified size.
-func (se *StreamEncoder) EncodeArrayHead(size uint64) {
+func (se *StreamEncoder) EncodeArrayHead(size uint64) error {
 	encodeHead(se.Encoder.e, byte(cborTypeArray), size)
+	return nil
 }
 
 // EncodeTagHead encodes CBOR tag head with num as tag number.
-func (se *StreamEncoder) EncodeTagHead(num uint64) {
+func (se *StreamEncoder) EncodeTagHead(num uint64) error {
 	encodeHead(se.Encoder.e, byte(cborTypeTag), num)
+	return nil
 }
