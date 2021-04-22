@@ -1264,24 +1264,24 @@ func encodeHead(e *encoderBuffer, t byte, n uint64) {
 		return
 	}
 	if n <= math.MaxUint8 {
-		e.scratch[0] = t | byte(24)
+		e.scratch[0] = t | 24
 		e.scratch[1] = byte(n)
 		e.Write(e.scratch[:2])
 		return
 	}
 	if n <= math.MaxUint16 {
-		e.scratch[0] = t | byte(25)
+		e.scratch[0] = t | 25
 		binary.BigEndian.PutUint16(e.scratch[1:], uint16(n))
 		e.Write(e.scratch[:3])
 		return
 	}
 	if n <= math.MaxUint32 {
-		e.scratch[0] = t | byte(26)
+		e.scratch[0] = t | 26
 		binary.BigEndian.PutUint32(e.scratch[1:], uint32(n))
 		e.Write(e.scratch[:5])
 		return
 	}
-	e.scratch[0] = t | byte(27)
+	e.scratch[0] = t | 27
 	binary.BigEndian.PutUint64(e.scratch[1:], n)
 	e.Write(e.scratch[:9])
 }

@@ -124,7 +124,7 @@ func TestDepthError(t *testing.T) {
 		},
 		{
 			name:         "33-level map",
-			cborData:     hexDecode("a101818181818181818181818181818181818181818181818181818181818181818101"),
+			cborData:     hexDecode("a101a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a101"),
 			opts:         DecOptions{},
 			wantErrorMsg: "cbor: exceeded max nested level 32",
 		},
@@ -145,7 +145,7 @@ func TestDepthError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, _ := tc.opts.decMode()
 			d := decoder{data: tc.cborData, dm: dm}
-			if _, err := d.validInternal(0); err == nil {
+			if err := d.valid(); err == nil {
 				t.Errorf("valid(0x%x) didn't return an error", tc.cborData)
 			} else if _, ok := err.(*MaxNestedLevelError); !ok {
 				t.Errorf("valid(0x%x) returned wrong error type %T, want (*MaxNestedLevelError)", tc.cborData, err)
