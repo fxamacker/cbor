@@ -1367,6 +1367,11 @@ var invalidCBORUnmarshalTests = []struct {
 	{"Major type 0 with additional information 31", hexDecode("1f"), "cbor: invalid additional information 31 for type positive integer", true},
 	{"Major type 1 with additional information 31", hexDecode("3f"), "cbor: invalid additional information 31 for type negative integer", true},
 	{"Major type 6 with additional information 31", hexDecode("df"), "cbor: invalid additional information 31 for type tag", true},
+	// more
+	{"End of input in a head", hexDecode("59"), "unexpected EOF", false},
+	{"End of input in a head", hexDecode("5b"), "unexpected EOF", false},
+	{"End of input in a head", hexDecode("d8"), "unexpected EOF", false},
+	{"End of input in a head", hexDecode("d9"), "unexpected EOF", false},
 }
 
 func TestInvalidCBORUnmarshal(t *testing.T) {
@@ -1680,6 +1685,7 @@ func TestLengthOverflowsInt(t *testing.T) {
 	// Data is generating by go-fuzz.
 	// string/slice/map length in uint64 cast to int causes integer overflow.
 	cborData := [][]byte{
+		hexDecode("9bcf30303030303030cfd697829782"),
 		hexDecode("bbcf30303030303030cfd697829782"),
 		hexDecode("5bcf30303030303030cfd697829782"),
 	}
