@@ -11,6 +11,7 @@ import (
 	"io"
 	"math"
 	"math/big"
+	"math/bits"
 	"reflect"
 	"strconv"
 	"strings"
@@ -267,15 +268,17 @@ type DecOptions struct {
 	TimeTag DecTagMode
 
 	// MaxNestedLevels specifies the max nested levels allowed for any combination of CBOR array, maps, and tags.
-	// Default is 32 levels and it can be set to [4, 256].
+	// Default is 32 levels and it can be set to [4, 32767].
 	MaxNestedLevels int
 
 	// MaxArrayElements specifies the max number of elements for CBOR arrays.
-	// Default is 128*1024=131072 and it can be set to [16, 2147483647]
+	// Default is 128*1024=131072 and it can be set to [16, 2147483647] on 32-bit arch
+	// or [16, 9223372036854775807] on 64-bit arch.
 	MaxArrayElements int
 
 	// MaxMapPairs specifies the max number of key-value pairs for CBOR maps.
-	// Default is 128*1024=131072 and it can be set to [16, 2147483647]
+	// Default is 128*1024=131072 and it can be set to [16, 2147483647] on 32-bit arch
+	// or [16, 9223372036854775807] on 64-bit arch.
 	MaxMapPairs int
 
 	// IndefLength specifies whether to allow indefinite length CBOR items.
@@ -346,13 +349,19 @@ func (opts DecOptions) DecModeWithSharedTags(tags TagSet) (DecMode, error) {
 }
 
 const (
+	maxInt = 1<<(bits.UintSize-1) - 1
+
 	defaultMaxArrayElements = 131072
 	minMaxArrayElements     = 16
-	maxMaxArrayElements     = 2147483647
+	maxMaxArrayElements     = maxInt
 
 	defaultMaxMapPairs = 131072
 	minMaxMapPairs     = 16
-	maxMaxMapPairs     = 2147483647
+	maxMaxMapPairs     = maxInt
+
+	defaultMaxNestedLevels = 32
+	minMaxNestedLevels     = 4
+	maxMaxNestedLevels     = 32767
 )
 
 func (opts DecOptions) decMode() (*decMode, error) {
@@ -372,19 +381,22 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		return nil, errors.New("cbor: invalid IntDec " + strconv.Itoa(int(opts.IntDec)))
 	}
 	if opts.MaxNestedLevels == 0 {
-		opts.MaxNestedLevels = 32
-	} else if opts.MaxNestedLevels < 4 || opts.MaxNestedLevels > 256 {
-		return nil, errors.New("cbor: invalid MaxNestedLevels " + strconv.Itoa(opts.MaxNestedLevels) + " (range is [4, 256])")
+		opts.MaxNestedLevels = defaultMaxNestedLevels
+	} else if opts.MaxNestedLevels < minMaxNestedLevels || opts.MaxNestedLevels > maxMaxNestedLevels {
+		return nil, errors.New("cbor: invalid MaxNestedLevels " + strconv.Itoa(opts.MaxNestedLevels) +
+			" (range is [" + strconv.Itoa(minMaxNestedLevels) + ", " + strconv.Itoa(maxMaxNestedLevels) + "])")
 	}
 	if opts.MaxArrayElements == 0 {
 		opts.MaxArrayElements = defaultMaxArrayElements
 	} else if opts.MaxArrayElements < minMaxArrayElements || opts.MaxArrayElements > maxMaxArrayElements {
-		return nil, errors.New("cbor: invalid MaxArrayElements " + strconv.Itoa(opts.MaxArrayElements) + " (range is [" + strconv.Itoa(minMaxArrayElements) + ", " + strconv.Itoa(maxMaxArrayElements) + "])")
+		return nil, errors.New("cbor: invalid MaxArrayElements " + strconv.Itoa(opts.MaxArrayElements) +
+			" (range is [" + strconv.Itoa(minMaxArrayElements) + ", " + strconv.Itoa(maxMaxArrayElements) + "])")
 	}
 	if opts.MaxMapPairs == 0 {
 		opts.MaxMapPairs = defaultMaxMapPairs
 	} else if opts.MaxMapPairs < minMaxMapPairs || opts.MaxMapPairs > maxMaxMapPairs {
-		return nil, errors.New("cbor: invalid MaxMapPairs " + strconv.Itoa(opts.MaxMapPairs) + " (range is [" + strconv.Itoa(minMaxMapPairs) + ", " + strconv.Itoa(maxMaxMapPairs) + "])")
+		return nil, errors.New("cbor: invalid MaxMapPairs " + strconv.Itoa(opts.MaxMapPairs) +
+			" (range is [" + strconv.Itoa(minMaxMapPairs) + ", " + strconv.Itoa(maxMaxMapPairs) + "])")
 	}
 	if !opts.ExtraReturnErrors.valid() {
 		return nil, errors.New("cbor: invalid ExtraReturnErrors " + strconv.Itoa(int(opts.ExtraReturnErrors)))

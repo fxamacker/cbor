@@ -12,6 +12,7 @@ import (
 	"io"
 	"math"
 	"math/big"
+	"math/bits"
 	"reflect"
 	"strings"
 	"testing"
@@ -3158,14 +3159,14 @@ func TestDecModeInvalidMaxNestedLevel(t *testing.T) {
 		wantErrorMsg string
 	}{
 		{
-			name:         "MaxNestedLevels < 4",
+			name:         "< min allowed nested levels",
 			opts:         DecOptions{MaxNestedLevels: 1},
-			wantErrorMsg: "cbor: invalid MaxNestedLevels 1 (range is [4, 256])",
+			wantErrorMsg: "cbor: invalid MaxNestedLevels 1 (range is [4, 32767])",
 		},
 		{
-			name:         "MaxNestedLevels > 256",
-			opts:         DecOptions{MaxNestedLevels: 257},
-			wantErrorMsg: "cbor: invalid MaxNestedLevels 257 (range is [4, 256])",
+			name:         "> max allowed nested levels",
+			opts:         DecOptions{MaxNestedLevels: 32768},
+			wantErrorMsg: "cbor: invalid MaxNestedLevels 32768 (range is [4, 32767])",
 		},
 	}
 	for _, tc := range testCases {
@@ -3199,15 +3200,21 @@ func TestDecModeInvalidMaxMapPairs(t *testing.T) {
 		wantErrorMsg string
 	}{
 		{
-			name:         "MaxMapPairs < 16",
+			name:         "< min allowed max map pairs",
 			opts:         DecOptions{MaxMapPairs: 1},
-			wantErrorMsg: "cbor: invalid MaxMapPairs 1 (range is [16, 2147483647])",
+			wantErrorMsg: "cbor: invalid MaxMapPairs 1 (range is [16, 9223372036854775807])",
 		},
-		{
-			name:         "MaxMapPairs > 2147483647",
+	}
+	if bits.UintSize == 32 {
+		testCases = append(testCases, struct {
+			name         string
+			opts         DecOptions
+			wantErrorMsg string
+		}{
+			name:         "> max allowed max map pairs",
 			opts:         DecOptions{MaxMapPairs: 2147483648},
 			wantErrorMsg: "cbor: invalid MaxMapPairs 2147483648 (range is [16, 2147483647])",
-		},
+		})
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -3240,15 +3247,21 @@ func TestDecModeInvalidMaxArrayElements(t *testing.T) {
 		wantErrorMsg string
 	}{
 		{
-			name:         "MaxArrayElements < 16",
+			name:         "< min allowed max array elements",
 			opts:         DecOptions{MaxArrayElements: 1},
-			wantErrorMsg: "cbor: invalid MaxArrayElements 1 (range is [16, 2147483647])",
+			wantErrorMsg: "cbor: invalid MaxArrayElements 1 (range is [16, 9223372036854775807])",
 		},
-		{
-			name:         "MaxArrayElements > 2147483647",
+	}
+	if bits.UintSize == 32 {
+		testCases = append(testCases, struct {
+			name         string
+			opts         DecOptions
+			wantErrorMsg string
+		}{
+			name:         "> max allowed max array elements",
 			opts:         DecOptions{MaxArrayElements: 2147483648},
 			wantErrorMsg: "cbor: invalid MaxArrayElements 2147483648 (range is [16, 2147483647])",
-		},
+		})
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
