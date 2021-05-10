@@ -63,12 +63,12 @@ func (t Type) String() string {
 }
 
 type WrongTypeError struct {
-	actualType   Type
-	expectedType string
+	ActualType   Type
+	ExpectedType string
 }
 
 func (e *WrongTypeError) Error() string {
-	return "cannot decode " + e.actualType.String() + " to " + e.expectedType
+	return fmt.Sprintf("cannot decode %s to %s", e.ActualType.String(), e.ExpectedType)
 }
 
 // StreamDecoder validates complete CBOR data and decodes it in chunks.
@@ -91,20 +91,12 @@ type StreamDecoder struct {
 
 // NewStreamDecoder returns a new StreamDecoder that reads from r using default DecMode.
 func NewStreamDecoder(r io.Reader) *StreamDecoder {
-	return &StreamDecoder{
-		dec: defaultDecMode.NewDecoder(r),
-	}
+	return defaultDecMode.NewStreamDecoder(r)
 }
 
 // NewByteStreamDecoder returns a new StreamDecoder that reads from data using default DecMode.
 func NewByteStreamDecoder(data []byte) *StreamDecoder {
-	return &StreamDecoder{
-		dec: &Decoder{
-			r:   nil,
-			d:   &decoder{dm: defaultDecMode},
-			buf: data,
-		},
-	}
+	return defaultDecMode.NewByteStreamDecoder(data)
 }
 
 // NextType returns the next CBOR type.
