@@ -427,6 +427,13 @@ type DecMode interface {
 	Valid(data []byte) error
 	// NewDecoder returns a new decoder that reads from r using dm DecMode.
 	NewDecoder(r io.Reader) *Decoder
+
+	// NewStreamDecoder returns a new StreamDecoder that reads from r using dm DecMode.
+	NewStreamDecoder(r io.Reader) *StreamDecoder
+
+	// NewByteStreamDecoder returns a new StreamDecoder that reads from data using dm DecMode.
+	NewByteStreamDecoder(data []byte) *StreamDecoder
+
 	// DecOptions returns user specified options used to create this DecMode.
 	DecOptions() DecOptions
 }
@@ -479,7 +486,25 @@ func (dm *decMode) Valid(data []byte) error {
 
 // NewDecoder returns a new decoder that reads from r using dm DecMode.
 func (dm *decMode) NewDecoder(r io.Reader) *Decoder {
-	return &Decoder{r: r, d: decoder{dm: dm}}
+	return &Decoder{r: r, d: &decoder{dm: dm}}
+}
+
+// NewStreamDecoder returns a new StreamDecoder that reads from r using dm DecMode.
+func (dm *decMode) NewStreamDecoder(r io.Reader) *StreamDecoder {
+	return &StreamDecoder{
+		dec: &Decoder{r: r, d: &decoder{dm: dm}},
+	}
+}
+
+// NewByteStreamDecoder returns a new StreamDecoder that reads from data using dm DecMode.
+func (dm *decMode) NewByteStreamDecoder(data []byte) *StreamDecoder {
+	return &StreamDecoder{
+		dec: &Decoder{
+			r:   nil,
+			d:   &decoder{dm: dm},
+			buf: data,
+		},
+	}
 }
 
 type decoder struct {

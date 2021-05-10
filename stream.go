@@ -12,7 +12,7 @@ import (
 // Decoder reads and decodes CBOR values from io.Reader.
 type Decoder struct {
 	r         io.Reader
-	d         decoder
+	d         *decoder
 	buf       []byte
 	off       int // next read offset in buf
 	bytesRead int
@@ -55,8 +55,14 @@ func (dec *Decoder) NumBytesRead() int {
 }
 
 func (dec *Decoder) read() (int, error) {
-	// Grow buf if needed.
+	if dec.r == nil {
+		// buf contains all the data, can't read more.
+		return 0, io.EOF
+	}
+
 	const minRead = 512
+
+	// Grow buf if needed.
 	if cap(dec.buf)-len(dec.buf)+dec.off < minRead {
 		oldUnreadBuf := dec.buf[dec.off:]
 		dec.buf = make([]byte, len(dec.buf)-dec.off, 2*cap(dec.buf)+minRead)
