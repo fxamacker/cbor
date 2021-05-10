@@ -9,10 +9,11 @@ import (
 	"unicode/utf8"
 )
 
-type CBORType uint8
+// Type represents CBOR type.
+type Type uint8
 
 const (
-	UndefinedType CBORType = iota
+	UndefinedType Type = iota
 
 	// CBOR major types
 	UintType       // CBOR major type 0
@@ -32,7 +33,7 @@ const (
 	BoolType   // BoolType is specified as part of CBOR major type 7
 )
 
-func (t CBORType) String() string {
+func (t Type) String() string {
 	switch t {
 	case UintType:
 		return "CBOR uint type"
@@ -62,7 +63,7 @@ func (t CBORType) String() string {
 }
 
 type WrongTypeError struct {
-	actualType   CBORType
+	actualType   Type
 	expectedType string
 }
 
@@ -107,7 +108,7 @@ func NewByteStreamDecoder(data []byte) *StreamDecoder {
 }
 
 // NextType returns the next CBOR type.
-func (sd *StreamDecoder) NextType() (CBORType, error) {
+func (sd *StreamDecoder) NextType() (Type, error) {
 	if err := sd.prepareNext(); err != nil {
 		return UndefinedType, err
 	}
@@ -319,7 +320,7 @@ func (sd *StreamDecoder) DecodeBytes() ([]byte, error) {
 	if ai == 31 {
 		// Indefinite length byte string isn't supported in StreamDecoder.  Skip it.
 		d.off = start
-		sd.Skip()
+		_ = sd.Skip()
 		return nil, errors.New("cbor: indefinite length byte string isn't supported")
 	}
 
@@ -353,7 +354,7 @@ func (sd *StreamDecoder) DecodeString() (string, error) {
 	if ai == 31 {
 		// Indefinite length text string isn't supported in StreamDecoder.  Skip it.
 		d.off = start
-		sd.Skip()
+		_ = sd.Skip()
 		return "", errors.New("cbor: indefinite length text string isn't supported")
 	}
 
@@ -445,7 +446,7 @@ func (sd *StreamDecoder) DecodeArrayHead() (uint64, error) {
 	if ai == 31 {
 		// Indefinite length array isn't supported in StreamDecoder.  Skip it.
 		d.off = start
-		sd.Skip()
+		_ = sd.Skip()
 		return 0, errors.New("cbor: indefinite length array isn't supported")
 	}
 
