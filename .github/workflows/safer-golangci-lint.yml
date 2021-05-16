@@ -92,5 +92,5 @@ jobs:
         
       # Run noisy linters as optional (enable them using command line parameters)
       - name: Run optional linters (not required to pass)
-        run: $(go env GOPATH)/bin/golangci-lint run --timeout=4m --issues-exit-code=0 -E dupl -E gocritic -E gosimple -E lll -E prealloc
+        run: $(go env GOPATH)/bin/golangci-lint run --timeout=4m --issues-exit-code=0 -E dupl -E gocritic -E gosimple -E lll -E nilerr -E prealloc -E revive
         shell: bash
