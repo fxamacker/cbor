@@ -47,12 +47,11 @@ linters:
     - gocyclo
     - gofmt
     - goimports
-    - golint
     - gosec
     - govet
     - ineffassign
-    - maligned
     - misspell
+    - revive
     - staticcheck
     - structcheck
     - typecheck
