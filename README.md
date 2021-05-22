@@ -16,9 +16,9 @@ __fxamacker/cbor__ is secure.  It rejects malformed CBOR data, can detect duplic
 
 |     | **fxamacker/cbor (1.0 - 2.x)** | **ugorji/go (1.1.0 - 1.1.7)** |
 | :--- | :------------------ | :--------------- |
-| **Malformed CBOR #1** | 59.8 ns/op, 32 B/op, 1 allocs/op | 💥 fatal error: out of memory |
-| **Malformed CBOR #2** | 149 ns/op, 128 B/op, 3 allocs/op | 💥 runtime: out of memory: cannot allocate |
-|     | Correctly rejected bad data. | ⚠️ Only 1 decode < 10 bytes can produce fatal error.   |
+| **Malformed CBOR 1** | 59.8 ns/op, 32 B/op, 1 allocs/op | :boom: fatal error: out of memory |
+| **Malformed CBOR 2** | 149 ns/op, 128 B/op, 3 allocs/op | :boom: runtime: out of memory: cannot allocate |
+|     | Correctly rejected bad data. | :warning: Only 1 decode < 10 bytes produces fatal error.   |
 
 For more info, see [RFC 8949 Section 10 (Security Considerations)](https://tools.ietf.org/html/rfc8949#section-10) or [RFC 7049 Section 8](https://tools.ietf.org/html/rfc7049#section-8).
 
