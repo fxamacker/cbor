@@ -14,7 +14,11 @@
 
 __fxamacker/cbor__ is secure.  It rejects malformed CBOR data, can detect duplicate map keys, and more.
 
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_security_table.svg?sanitize=1 "CBOR Security Comparison")
+|     | **fxamacker/cbor (1.0 - 2.x)** | **ugorji/go (1.1.0 - 1.1.7)** |
+| :--- | :------------------ | :--------------- |
+| **Malformed CBOR #1** | 59.8 ns/op, 32 B/op, 1 allocs/op | 💥 fatal error: out of memory |
+| **Malformed CBOR #2** | 149 ns/op, 128 B/op, 3 allocs/op | 💥 runtime: out of memory: cannot allocate |
+|     | Correctly rejected bad data. | ⚠️ Only 1 decode < 10 bytes can produce fatal error.   |
 
 For more info, see [RFC 8949 Section 10 (Security Considerations)](https://tools.ietf.org/html/rfc8949#section-10) or [RFC 7049 Section 8](https://tools.ietf.org/html/rfc7049#section-8).
 
@@ -42,7 +46,16 @@ __fxamacker/cbor__ saves time. It has killer features like __`toarray`__ and __`
 
 __fxamacker/cbor__ is a full-featured CBOR encoder and decoder.
 
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_features.svg?sanitize=1 "CBOR Features")
+|   | CBOR Feature  | Description  |
+| :--- | :--- | :--- |
+| ☑️ | CBOR tags | API supports built-in and user-defined tags.  |
+| ☑️ | Preferred serialization | Integers encode to fewest bytes. Optional float64 → float32 → float16. |
+| ☑️ | Map key sorting | Unsorted, length-first (Canonical CBOR), and bytewise-lexicographic (CTAP2). |
+| ☑️ | Duplicate map keys | Always forbid for encoding and option to allow/forbid for decoding.   |
+| ☑️ | Indefinite length data | Option to allow/forbid for encoding and decoding. |
+| ☑️ | Well-formedness | Always checked and enforced. |
+| ☑️ | Basic validity checks | Check UTF-8 validity and optionally check duplicate map keys. |
+| ☑️ | Security considerations | Prevent integer overflow and resource exhaustion (RFC 8949 Section 10). |
 
 <hr>
 
