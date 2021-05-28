@@ -1,9 +1,6 @@
 <!-- [![CBOR Library - Slideshow and Latest Docs.](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_slides.gif)](https://github.com/fxamacker/cbor/blob/master/README.md) -->
 
 # fxamacker/cbor
-[__fxamacker/cbor__](https://github.com/fxamacker/cbor) is a CBOR encoder & decoder in [Go](https://golang.org).  It has a standard API, CBOR tags, options for duplicate map keys, float64→32→16, `toarray`, `keyasint`, etc.  Each release passes 375+ tests and 250+ million execs fuzzing.
-
-[CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049) & [RFC 8949](https://tools.ietf.org/html/rfc8949)) is a binary data format inspired by JSON and MessagePack.  CBOR is an [Internet Standard](https://en.wikipedia.org/wiki/Internet_Standard) by [IETF](https://www.ietf.org) used in W3C [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn), COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)), CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)), and more.
 
 [![](https://github.com/fxamacker/cbor/workflows/ci/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Aci)
 [![](https://github.com/fxamacker/cbor/workflows/cover%20%E2%89%A598%25/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3A%22cover+%E2%89%A598%25%22)
@@ -11,17 +8,54 @@
 [![](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/release_version_badge.svg?sanitize=1)](https://github.com/fxamacker/cbor/releases)
 [![](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/license_badge.svg?sanitize=1)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE)
 
+[__fxamacker/cbor__](https://github.com/fxamacker/cbor) is a CBOR encoder & decoder in [Go](https://golang.org).  It's designed to be small, fast, safe and easy. 
+
+Features include a standard API, CBOR tags, duplicate map key detection, float64→32→16, `toarray`, `keyasint`, and more.  Each release passes 375+ tests and 250+ million execs of coverage-guided fuzzing.
+
+[CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049) & [RFC 8949](https://tools.ietf.org/html/rfc8949)) is a binary data format inspired by JSON and MessagePack.  CBOR is an [Internet Standard](https://en.wikipedia.org/wiki/Internet_Standard) by [IETF](https://www.ietf.org) used in W3C [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn), COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)), CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)), and etc.
+
 ## CBOR Library Security
 
 __fxamacker/cbor__ is secure.  It rejects malformed CBOR data and can detect duplicate map keys.  It doesn't crash when decoding bad CBOR data by having extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's `unsafe` pkg.
 
-|     | **fxamacker/cbor (1.0 - 2.x)** | **ugorji/go (1.1.0 - 1.1.7)** |
+|     | fxamacker/cbor 1.0-2.x | ugorji/go 1.1.0-1.1.7 |
 | :--- | :------------------ | :--------------- |
 | **Malformed CBOR 1** | 59.8 ns/op, 32 B/op, 1 allocs/op | :boom: fatal error: out of memory |
 | **Malformed CBOR 2** | 149 ns/op, 128 B/op, 3 allocs/op | :boom: runtime: out of memory: cannot allocate |
 |     | Correctly rejected bad data. | :warning: Only 1 decode < 10 bytes can exhaust memory.   |
 
 For more info, see [RFC 8949 Section 10 (Security Considerations)](https://tools.ietf.org/html/rfc8949#section-10) or [RFC 7049 Section 8](https://tools.ietf.org/html/rfc7049#section-8).
+
+## CBOR Library Performance
+
+__fxamacker/cbor__ is fast without sacrificing security.
+
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_speed_comparison.svg?sanitize=1 "CBOR speed comparison chart")
+
+__Click to expand:__
+
+<details>
+  <summary>CBOR Program Size Comparison</summary><p>
+
+__fxamacker/cbor__ produces smaller programs without sacrificing features.
+  
+![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_size_comparison.svg?sanitize=1 "CBOR program size comparison chart")
+
+</details>
+
+<details>
+  <summary>CBOR Memory Comparison </summary><p>
+
+__fxamacker/cbor__ uses less memory for encoding and decoding data such as CBOR Web Tokens.
+
+|  | fxamacker/cbor 2.2 | ugorji/go 1.1.7 |
+| :--- | :--- | :--- | 
+| Encode CWT | 176 bytes/op &nbsp;&nbsp;&nbsp; 2 allocs/op | 1424 bytes/op &nbsp;&nbsp;&nbsp; 4 allocs/op |
+| Decode CWT | 176 bytes/op &nbsp;&nbsp;&nbsp; 6 allocs/op | &nbsp; 568 bytes/op &nbsp;&nbsp;&nbsp; 6 allocs/op |
+		
+</details>
+
+Benchmarks used example data from [RFC 8392 Appendix A.1](https://tools.ietf.org/html/rfc8392#appendix-A.1) and default options for CBOR libraries.
 
 ## CBOR Library API
 
@@ -58,45 +92,9 @@ __fxamacker/cbor__ is a full-featured CBOR encoder and decoder.
 | ☑️ | Basic validity checks | Check UTF-8 validity and optionally check duplicate map keys. |
 | ☑️ | Security considerations | Prevent integer overflow and resource exhaustion (RFC 8949 Section 10). |
 
-## CBOR Library Performance
-
-__fxamacker/cbor__ can produce smaller programs that are faster and use less memory.
-
-__Click to expand:__
-
-<details>
-  <summary>CBOR Program Size Comparison</summary><p>
-  
-__fxamacker/cbor__ can produce smaller programs.
-  
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_size_comparison.svg?sanitize=1 "CBOR program size comparison chart")
-
-</details>
-
-<details>
-  <summary>CBOR Speed Comparison</summary><p>
-
-__fxamacker/cbor__ can be faster for CBOR data such as CBOR Web Tokens.
-
-![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_speed_comparison.svg?sanitize=1 "CBOR speed comparison chart")
-		
-</details>
-
-<details>
-  <summary>CBOR Memory Comparison</summary><p>
-
-__fxamacker/cbor__ can use less memory for CBOR data such as CBOR Web Tokens.
-
-|  | fxamacker/cbor 2.2 | ugorji/go 1.1.7 |
-| :--- | :--- | :--- | 
-| Encode CWT | 176 bytes/op &nbsp;&nbsp;&nbsp; 2 allocs/op | 1424 bytes/op &nbsp;&nbsp;&nbsp; 4 allocs/op |
-| Decode CWT | 176 bytes/op &nbsp;&nbsp;&nbsp; 6 allocs/op | &nbsp; 568 bytes/op &nbsp;&nbsp;&nbsp; 6 allocs/op |
-		
-</details>
-
-Benchmarks used example data from [RFC 8392 Appendix A.1](https://tools.ietf.org/html/rfc8392#appendix-A.1) and default options for CBOR libraries.
-
 <hr>
+
+<!--
 
 ⚓  [__Installation__](#installation) • [__System Requirements__](#system-requirements) • [__Quick Start Guide__](#quick-start)
 
@@ -125,6 +123,8 @@ __Why this CBOR library?__ It doesn't crash and it has well-balanced qualities: 
 Struct tags for CBOR and JSON like `` `cbor:"name,omitempty"` `` and `` `json:"name,omitempty"` `` are supported so you can leverage your existing code.  If both `cbor:` and `json:` tags exist then it will use `cbor:`.
 
 New struct tags like __`keyasint`__ and __`toarray`__ make compact CBOR data such as COSE, CWT, and SenML easier to use. 
+
+-->
 
 ⚓  [Quick Start](#quick-start) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Options](#options) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [License](#license)
 
@@ -256,12 +256,16 @@ The following sections provide more info:
 ⚓  [Quick Start](#quick-start) • [Status](#current-status) • [Design Goals](#design-goals) • [Features](#features) • [Standards](#standards) • [API](#api) • [Options](#options) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [License](#license)
 
 ## Current Status
-Latest version is v2.x, which has:
+Latest version is v2.2, which has:
 
 * __Stable API__ –  Six codec function signatures will never change.  No breaking API changes for other funcs in same major version.
 * __Passed all tests__ – v2.x passed all 375+ tests on amd64, arm64, ppc64le and s390x with linux.
-* __Passed fuzzing__ – v2.2 passed 459+ million execs in coverage-guided fuzzing on Feb 24 (release date)  
+* __Passed fuzzing__ – v2.2 passed 459+ million execs in coverage-guided fuzzing on Feb 24, 2020 (release date)  
 and 3.2+ billion execs on March 7, 2020.
+
+Release 2.3 is tentatively planned for summer 2021.
+
+<!--
 
 __Why v2.x?__:
 
@@ -278,9 +282,16 @@ __Recent Activity__:
    24-28% faster and 53-61% fewer allocs than both v1.5 and v2.0.1.
 
 * Release v2.2 (Feb. 24, 2020)
-   - [x] CBOR BSTR <--> Go byte array (byte slices were already supported)
+   - [x] CBOR BSTR <-=-> Go byte array (byte slices were already supported)
    - [x] Add more encoding and decoding options (MaxNestedLevels, MaxArrayElements, MaxMapKeyPairs, TagsMd, etc.)
    - [x] Fix potential error when decoding shorter CBOR indef length array to Go array (slice wasn't affected). This bug affects all prior versions of 1.x and 2.x. It was found by a recently updated fxamacker/cbor-fuzz.
+
+* Release v2.3 (Summer 2021)
+   - [x] Bug fixes.
+   - [x] Minor enhancements.
+   - [ ] increased ranges for max limits (default max limits are unchanged).
+
+-->
 
 <hr>
 
