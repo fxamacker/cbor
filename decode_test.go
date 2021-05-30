@@ -5367,9 +5367,8 @@ func TestUnmarshalTaggedDataToInterface(t *testing.T) {
 		t.Error(err)
 	}
 
-	uintFoo := UintFoo(1)
 	v := &FooStruct{
-		Foos: []Foo{&uintFoo},
+		Foos: []Foo{&Bar{1}},
 	}
 
 	want := hexDecode("a164466f6f7381c4a1614901") // {"Foos": [4({"I": 1})]}
