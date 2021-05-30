@@ -13,9 +13,9 @@ Features include CBOR tags, duplicate map key detection, float64→32→16, Go s
 
 [CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049) & [RFC 8949](https://tools.ietf.org/html/rfc8949)) is a binary data format inspired by JSON and MessagePack.  CBOR is an [Internet Standard](https://en.wikipedia.org/wiki/Internet_Standard) by [IETF](https://www.ietf.org) used in W3C [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn), COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)), CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)), and CDDL [(RFC 8610)](https://datatracker.ietf.org/doc/html/rfc8610).
 
-[CBOR Library Installation](https://github.com/x448/cbor/edit/patch-11/README.md#cbor-library-installation) shows how to install and begin using this library.
+[CBOR Library Installation](https://github.com/x448/cbor/edit/patch-11/README.md#cbor-library-installation) shows how to install and begin using this CBOR encoder and decoder.
 
-## CBOR Library Security
+## CBOR Security
 
 __fxamacker/cbor__ is secure.  It rejects malformed CBOR data and can detect duplicate map keys.  It doesn't crash when decoding bad CBOR data by having extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's `unsafe` package.
 
@@ -31,7 +31,7 @@ For more info, see:
  - [RFC 8949 Section 10 (Security Considerations)](https://tools.ietf.org/html/rfc8949#section-10) or [RFC 7049 Section 8](https://tools.ietf.org/html/rfc7049#section-8).
  - [Go warning](https://golang.org/pkg/unsafe/), "Packages that import unsafe may be non-portable and are not protected by the Go 1 compatibility guidelines."
 
-## CBOR Library Performance
+## CBOR Performance
 
 __fxamacker/cbor__ is fast without sacrificing security. It can be faster than libraries relying on `unsafe` package.
 
@@ -165,11 +165,8 @@ If default options are acceptable, package level functions can be used for encod
 
 ```go
 b, err := cbor.Marshal(v)        // encode v to []byte b
-
 err := cbor.Unmarshal(b, &v)     // decode []byte b to v
-
 encoder := cbor.NewEncoder(w)    // create encoder with io.Writer w
-
 decoder := cbor.NewDecoder(r)    // create decoder with io.Reader r
 ```
 
