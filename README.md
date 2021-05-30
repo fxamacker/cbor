@@ -5,30 +5,33 @@
 [![](https://github.com/fxamacker/cbor/workflows/ci/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Aci)
 [![](https://github.com/fxamacker/cbor/workflows/cover%20%E2%89%A598%25/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3A%22cover+%E2%89%A598%25%22)
 [![](https://github.com/fxamacker/cbor/workflows/linters/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Alinters)
+[![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor)
 [![](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/release_version_badge.svg?sanitize=1)](https://github.com/fxamacker/cbor/releases)
 [![](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/license_badge.svg?sanitize=1)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE)
 
-[__fxamacker/cbor__](https://github.com/fxamacker/cbor) is a CBOR encoder & decoder in [Go](https://golang.org).  It's designed to be small, fast, safe and easy. 
+[__fxamacker/cbor__](https://github.com/fxamacker/cbor) is a CBOR encoder & decoder in [Go](https://golang.org).  It's designed to be safe, fast, small, and easy to use. 
 
-Features include a standard API, CBOR tags, duplicate map key detection, float64→32→16, `toarray`, `keyasint`, and more.  Each release passes 375+ tests and 250+ million execs of coverage-guided fuzzing.
+Features include CBOR tags, duplicate map key detection, float64→32→16, Go struct tags (`toarray` & `keyasint`), and a standard API.  Each release passes hundreds of tests and 250+ million execs of coverage-guided fuzzing.
 
-[CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049) & [RFC 8949](https://tools.ietf.org/html/rfc8949)) is a binary data format inspired by JSON and MessagePack.  CBOR is an [Internet Standard](https://en.wikipedia.org/wiki/Internet_Standard) by [IETF](https://www.ietf.org) used in W3C [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn), COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)), CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)), and etc.
+📖 [CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049) & [RFC 8949](https://tools.ietf.org/html/rfc8949)) is a binary data format inspired by JSON and MessagePack.  CBOR is an [Internet Standard](https://en.wikipedia.org/wiki/Internet_Standard) by [IETF](https://www.ietf.org) used in W3C [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn), COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)), CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)), and etc.
 
 ## CBOR Library Security
 
-__fxamacker/cbor__ is secure.  It rejects malformed CBOR data and can detect duplicate map keys.  It doesn't crash when decoding bad CBOR data by having extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's `unsafe` pkg.
+__fxamacker/cbor__ is secure.  It rejects malformed CBOR data and can detect duplicate map keys.  It doesn't crash when decoding bad CBOR data by having extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's `unsafe` package.
 
-|     | fxamacker/cbor 1.0-2.x | ugorji/go 1.1.0-1.1.7 |
+|     | fxamacker/cbor (all versions) | ugorji/go (1.1.0 - 1.1.7) |
 | :--- | :------------------ | :--------------- |
-| **Malformed CBOR 1** | 59.8 ns/op, 32 B/op, 1 allocs/op | :boom: fatal error: out of memory |
-| **Malformed CBOR 2** | 149 ns/op, 128 B/op, 3 allocs/op | :boom: runtime: out of memory: cannot allocate |
-|     | Correctly rejected bad data. | :warning: Only 1 decode < 10 bytes can exhaust memory.   |
+| **Malformed CBOR 1** | 87.5 ns/op, 24 B/op, 2 allocs/op | :boom: fatal error: out of memory |
+| **Malformed CBOR 2** | 89.5 ns/op, 24 B/op, 2 allocs/op | :boom: runtime: out of memory: cannot allocate |
+|     | Correctly rejected bad data in all versions. <br/> Benchmark is from latest release. | :warning: Just 1 decode of 9 bytes can exhaust memory.   |
 
-For more info, see [RFC 8949 Section 10 (Security Considerations)](https://tools.ietf.org/html/rfc8949#section-10) or [RFC 7049 Section 8](https://tools.ietf.org/html/rfc7049#section-8).
+For more info, see:
+ - [RFC 8949 Section 10 (Security Considerations)](https://tools.ietf.org/html/rfc8949#section-10) or [RFC 7049 Section 8](https://tools.ietf.org/html/rfc7049#section-8).
+ - [Go warning](https://golang.org/pkg/unsafe/), "Packages that import unsafe may be non-portable and are not protected by the Go 1 compatibility guidelines."
 
 ## CBOR Library Performance
 
-__fxamacker/cbor__ is fast without sacrificing security.
+__fxamacker/cbor__ is fast without sacrificing security. It can be faster than libraries relying on `unsafe` package.
 
 ![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_speed_comparison.svg?sanitize=1 "CBOR speed comparison chart")
 
@@ -43,6 +46,52 @@ __fxamacker/cbor__ produces smaller programs without sacrificing features.
 
 </details>
 
+<details><summary>Performance Comparison: fxamacker/cbor 2.3.0 vs ugorji/go 1.2.6</summary><p>
+
+fxamacker/cbor 2.3.0 (not using `unsafe`) is faster than ugorji/go 1.2.6 (using `unsafe`).
+
+```
+name                                 old time/op    new time/op    delta
+DecodeCWTClaims-4                      2.06µs ± 1%    1.25µs ± 0%  -39.57%  (p=0.000 n=10+9)
+DecodeCOSE/128-Bit_Symmetric_Key-4     1.47µs ± 1%    0.86µs ± 0%  -41.25%  (p=0.000 n=9+9)
+DecodeCOSE/256-Bit_Symmetric_Key-4     1.50µs ± 2%    0.88µs ± 0%  -41.63%  (p=0.000 n=10+10)
+DecodeCOSE/ECDSA_P256_256-Bit_Key-4    2.22µs ± 2%    1.45µs ± 0%  -34.65%  (p=0.000 n=10+10)
+DecodeWebAuthn-4                       1.55µs ± 0%    1.32µs ± 0%  -14.97%  (p=0.000 n=9+10)
+EncodeCWTClaims-4                      1.46µs ± 0%    0.78µs ± 0%  -46.52%  (p=0.000 n=10+10)
+EncodeCOSE/128-Bit_Symmetric_Key-4     1.79µs ± 1%    0.91µs ± 0%  -49.38%  (p=0.000 n=9+10)
+EncodeCOSE/256-Bit_Symmetric_Key-4     1.79µs ± 1%    0.91µs ± 0%  -49.15%  (p=0.000 n=10+10)
+EncodeCOSE/ECDSA_P256_256-Bit_Key-4    2.09µs ± 1%    1.14µs ± 0%  -45.41%  (p=0.000 n=10+10)
+EncodeWebAuthn-4                        981ns ± 0%     823ns ± 1%  -16.05%  (p=0.000 n=10+10)
+
+name                                 old alloc/op   new alloc/op   delta
+DecodeCWTClaims-4                        760B ± 0%      176B ± 0%  -76.84%  (p=0.000 n=10+10)
+DecodeCOSE/128-Bit_Symmetric_Key-4       800B ± 0%      240B ± 0%  -70.00%  (p=0.000 n=10+10)
+DecodeCOSE/256-Bit_Symmetric_Key-4       816B ± 0%      256B ± 0%  -68.63%  (p=0.000 n=10+10)
+DecodeCOSE/ECDSA_P256_256-Bit_Key-4      913B ± 0%      352B ± 0%  -61.45%  (p=0.000 n=10+10)
+DecodeWebAuthn-4                       1.56kB ± 0%    0.99kB ± 0%  -36.41%  (p=0.000 n=10+10)
+EncodeCWTClaims-4                      1.36kB ± 0%    0.18kB ± 0%  -87.06%  (p=0.000 n=10+10)
+EncodeCOSE/128-Bit_Symmetric_Key-4     1.97kB ± 0%    0.22kB ± 0%  -88.62%  (p=0.000 n=10+10)
+EncodeCOSE/256-Bit_Symmetric_Key-4     1.97kB ± 0%    0.24kB ± 0%  -87.80%  (p=0.000 n=10+10)
+EncodeCOSE/ECDSA_P256_256-Bit_Key-4    1.97kB ± 0%    0.32kB ± 0%  -83.74%  (p=0.000 n=10+10)
+EncodeWebAuthn-4                       1.31kB ± 0%    1.09kB ± 0%  -17.07%  (p=0.000 n=10+10)
+
+name                                 old allocs/op  new allocs/op  delta
+DecodeCWTClaims-4                        6.00 ± 0%      6.00 ± 0%     ~     (all equal)
+DecodeCOSE/128-Bit_Symmetric_Key-4       4.00 ± 0%      4.00 ± 0%     ~     (all equal)
+DecodeCOSE/256-Bit_Symmetric_Key-4       4.00 ± 0%      4.00 ± 0%     ~     (all equal)
+DecodeCOSE/ECDSA_P256_256-Bit_Key-4      7.00 ± 0%      7.00 ± 0%     ~     (all equal)
+DecodeWebAuthn-4                         5.00 ± 0%      5.00 ± 0%     ~     (all equal)
+EncodeCWTClaims-4                        4.00 ± 0%      2.00 ± 0%  -50.00%  (p=0.000 n=10+10)
+EncodeCOSE/128-Bit_Symmetric_Key-4       6.00 ± 0%      2.00 ± 0%  -66.67%  (p=0.000 n=10+10)
+EncodeCOSE/256-Bit_Symmetric_Key-4       6.00 ± 0%      2.00 ± 0%  -66.67%  (p=0.000 n=10+10)
+EncodeCOSE/ECDSA_P256_256-Bit_Key-4      6.00 ± 0%      2.00 ± 0%  -66.67%  (p=0.000 n=10+10)
+EncodeWebAuthn-4                         4.00 ± 0%      2.00 ± 0%  -50.00%  (p=0.000 n=10+10)
+```
+ </details>
+
+Benchmarks used Go 1.15.12, linux_amd64, data from [RFC 8392 Appendix A.1](https://tools.ietf.org/html/rfc8392#appendix-A.1), and default build options for CBOR libraries.
+
+<!--
 <details>
   <summary>CBOR Memory Comparison </summary><p>
 
@@ -57,6 +106,8 @@ __fxamacker/cbor__ uses less memory for encoding and decoding data such as CBOR 
 
 Benchmarks used example data from [RFC 8392 Appendix A.1](https://tools.ietf.org/html/rfc8392#appendix-A.1) and default options for CBOR libraries.
 
+-->
+
 ## CBOR Library API
 
 __fxamacker/cbor__ is easy to use.  It provides standard API and interfaces.
@@ -69,9 +120,9 @@ __Standard Interfaces__.  Custom encoding and decoding is handled by implementin
 
 It's also designed to simplify concurrency and allow fast parallelism.  CBOR options can be used without creating unintended runtime side-effects.
 
-## Time-Saving Features
+## Go Struct Tags
 
-__fxamacker/cbor__ saves time. It has time-saving features like __`toarray`__ and __`keyasint`__ struct tags.
+__fxamacker/cbor__ provides Go struct tags like __`toarray`__ and __`keyasint`__ to save time and reduce encoded size of data.
 
 <br>
 
@@ -263,7 +314,7 @@ Latest version is v2.2, which has:
 * __Passed fuzzing__ – v2.2 passed 459+ million execs in coverage-guided fuzzing on Feb 24, 2020 (release date)  
 and 3.2+ billion execs on March 7, 2020.
 
-Release 2.3 is tentatively planned for summer 2021.
+Release 2.3 is being fuzz tested and is planned for release around Memorial Day (May 30 - June 1, 2021).
 
 <!--
 
@@ -1137,7 +1188,7 @@ __Words of encouragement and support__
 
 
 ## License 
-Copyright © 2019-present [Faye Amacker](https://github.com/fxamacker).  
+Copyright © 2019-2021 [Faye Amacker](https://github.com/fxamacker).  
 
 fxamacker/cbor is licensed under the MIT License.  See [LICENSE](LICENSE) for the full license text.  
 
