@@ -1,5 +1,3 @@
-<!-- [![CBOR Library - Slideshow and Latest Docs.](https://github.com/fxamacker/images/raw/master/cbor/v2.2.0/cbor_slides.gif)](https://github.com/fxamacker/cbor/blob/master/README.md) -->
-
 # fxamacker/cbor
 
 [![](https://github.com/fxamacker/cbor/workflows/ci/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Aci)
@@ -11,9 +9,9 @@
 
 [__fxamacker/cbor__](https://github.com/fxamacker/cbor) is a CBOR encoder & decoder in [Go](https://golang.org).  It's designed to be safe, fast, small, and easy to use. 
 
-Features include CBOR tags, duplicate map key detection, float64→32→16, Go struct tags (`toarray` & `keyasint`), and a standard API.  Each release passes hundreds of tests and 250+ million execs of coverage-guided fuzzing.
+Features include CBOR tags, duplicate map key detection, float64→32→16, Go struct tags (`toarray`, `keyasint`, `omitempty`), and a standard API.  Each release passes hundreds of tests and 250+ million execs of coverage-guided fuzzing.
 
-📖 [CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049) & [RFC 8949](https://tools.ietf.org/html/rfc8949)) is a binary data format inspired by JSON and MessagePack.  CBOR is an [Internet Standard](https://en.wikipedia.org/wiki/Internet_Standard) by [IETF](https://www.ietf.org) used in W3C [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn), COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)), CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)), and etc.
+📖 [CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049) & [RFC 8949](https://tools.ietf.org/html/rfc8949)) is a binary data format inspired by JSON and MessagePack.  CBOR is an [Internet Standard](https://en.wikipedia.org/wiki/Internet_Standard) by [IETF](https://www.ietf.org) used in W3C [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn), COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)), CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)), and CDDL [(RFC 8610)](https://datatracker.ietf.org/doc/html/rfc8610).
 
 ## CBOR Library Security
 
@@ -24,6 +22,8 @@ __fxamacker/cbor__ is secure.  It rejects malformed CBOR data and can detect dup
 | **Malformed CBOR 1** | 87.5 ns/op, 24 B/op, 2 allocs/op | :boom: fatal error: out of memory |
 | **Malformed CBOR 2** | 89.5 ns/op, 24 B/op, 2 allocs/op | :boom: runtime: out of memory: cannot allocate |
 |     | Correctly rejected bad data in all versions. <br/> Benchmark is from latest release. | :warning: Just 1 decode of 9 bytes can exhaust memory.   |
+
+fxamacker/cbor decoder safety settings include: MaxNestedLevels, MaxArrayElements, MaxMapPairs, and IndefLength.
 
 For more info, see:
  - [RFC 8949 Section 10 (Security Considerations)](https://tools.ietf.org/html/rfc8949#section-10) or [RFC 7049 Section 8](https://tools.ietf.org/html/rfc7049#section-8).
@@ -38,7 +38,7 @@ __fxamacker/cbor__ is fast without sacrificing security. It can be faster than l
 __Click to expand:__
 
 <details>
-  <summary>CBOR Program Size Comparison</summary><p>
+  <summary> 👉 CBOR Program Size Comparison </summary><p>
 
 __fxamacker/cbor__ produces smaller programs without sacrificing features.
   
@@ -46,7 +46,7 @@ __fxamacker/cbor__ produces smaller programs without sacrificing features.
 
 </details>
 
-<details><summary>Performance Comparison: fxamacker/cbor 2.3.0 vs ugorji/go 1.2.6</summary><p>
+<details><summary> 👉 fxamacker/cbor 2.3.0 (safe) vs ugorji/go 1.2.6 (unsafe)</summary><p>
 
 fxamacker/cbor 2.3.0 (not using `unsafe`) is faster than ugorji/go 1.2.6 (using `unsafe`).
 
@@ -89,24 +89,7 @@ EncodeWebAuthn-4                         4.00 ± 0%      2.00 ± 0%  -50.00%  (p
 ```
  </details>
 
-Benchmarks used Go 1.15.12, linux_amd64, data from [RFC 8392 Appendix A.1](https://tools.ietf.org/html/rfc8392#appendix-A.1), and default build options for CBOR libraries.
-
-<!--
-<details>
-  <summary>CBOR Memory Comparison </summary><p>
-
-__fxamacker/cbor__ uses less memory for encoding and decoding data such as CBOR Web Tokens.
-
-|  | fxamacker/cbor 2.2 | ugorji/go 1.1.7 |
-| :--- | :--- | :--- | 
-| Encode CWT | 176 bytes/op &nbsp;&nbsp;&nbsp; 2 allocs/op | 1424 bytes/op &nbsp;&nbsp;&nbsp; 4 allocs/op |
-| Decode CWT | 176 bytes/op &nbsp;&nbsp;&nbsp; 6 allocs/op | &nbsp; 568 bytes/op &nbsp;&nbsp;&nbsp; 6 allocs/op |
-		
-</details>
-
-Benchmarks used example data from [RFC 8392 Appendix A.1](https://tools.ietf.org/html/rfc8392#appendix-A.1) and default options for CBOR libraries.
-
--->
+Benchmarks used Go 1.15.12, linux_amd64 with data from [RFC 8392 Appendix A.1](https://tools.ietf.org/html/rfc8392#appendix-A.1).  Default build options were used for all CBOR libraries.  Library init code was put outside the benchmark loop for all libraries compared.
 
 ## CBOR Library API
 
@@ -118,7 +101,16 @@ __Standard API__.  Function signatures identical to [`encoding/json`](https://go
 __Standard Interfaces__.  Custom encoding and decoding is handled by implementing:  
 `BinaryMarshaler`, `BinaryUnmarshaler`, `Marshaler`, and `Unmarshaler`.
 
-It's also designed to simplify concurrency and allow fast parallelism.  CBOR options can be used without creating unintended runtime side-effects.
+__Predefined Encoding Options__.  Encoding options are easy to use and are customizable.
+
+```go
+func CanonicalEncOptions() EncOptions {}            // RFC 7049 Canonical CBOR
+func CTAP2EncOptions() EncOptions {}                // FIDO2 CTAP2 Canonical CBOR
+func CoreDetEncOptions() EncOptions {}              // RFC 8949 Core Deterministic Encoding
+func PreferredUnsortedEncOptions() EncOptions {}    // RFC 8949 Preferred Serialization
+```
+
+fxamacker/cbor designed to simplify concurrency.  CBOR options can be used without creating unintended runtime side-effects.
 
 ## Go Struct Tags
 
