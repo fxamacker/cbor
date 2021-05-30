@@ -542,6 +542,12 @@ const (
 // parseToValue decodes CBOR data to value.  It assumes data is well-formed,
 // and does not perform bounds checking.
 func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
+
+	if tInfo.spclType == specialTypeIface && !v.IsNil() {
+		v = v.Elem()
+		tInfo = getTypeInfo(v.Type())
+	}
+
 	// Create new value for the pointer v to point to if CBOR value is not nil/undefined.
 	if !d.nextCBORNil() {
 		for v.Kind() == reflect.Ptr {
