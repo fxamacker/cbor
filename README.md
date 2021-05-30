@@ -250,7 +250,7 @@ Latest version is v2.3 (May 30, 2021), which has:
 * __Stable API__ –  Six codec function signatures will never change.  No breaking API changes for other funcs in same major version.
 * __Passed all tests__ – v2.x passed all 375+ tests on amd64, arm64, ppc64le and s390x with linux.
 * __Passed fuzzing__ – v2.2 passed 459+ million execs in coverage-guided fuzzing on Feb 24, 2020 (release date)  
-and 3.2+ billion execs on March 7, 2020.  v2.3 passed 500+ million execs on May 30, 2021 (and is continuing to fuzz).
+and 3.2+ billion execs on March 7, 2020.  v2.3 passed 357+ million execs on May 30, 2021 (and is continuing to fuzz).
 
 <hr>
 
