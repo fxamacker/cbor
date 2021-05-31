@@ -1,4 +1,4 @@
-# CBOR Library in Go ![import fxamacker/cbor/v2](https://github.com/fxamacker/images/raw/master/cbor/v2.3.0/import_fxamacker_cbor.notext.svg?sanitize=1)
+# CBOR Library in Go &nbsp; [![](https://github.com/fxamacker/images/raw/master/cbor/v2.3.0/go_get_fxamacker_cbor.svg?sanitize=1)](#cbor-library-installation)
 
 [![](https://github.com/fxamacker/cbor/workflows/ci/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Aci)
 [![](https://github.com/fxamacker/cbor/workflows/cover%20%E2%89%A598%25/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3A%22cover+%E2%89%A598%25%22)
@@ -11,7 +11,7 @@
 
 [__fxamacker/cbor__](https://github.com/fxamacker/cbor) is a CBOR encoder and decoder in [Go](https://golang.org).  It's designed to be safe, fast, small, and easy to use. 
 
-Features include CBOR tags, duplicate map key detection, float64→32→16, Go struct tags (`toarray`, `keyasint`, `omitempty`), and a standard API.  Each release passes hundreds of tests and 250+ million execs fuzzing.
+Features include CBOR tags, duplicate map key detection, float64→32→16, Go struct tags (`toarray`, `keyasint`, `omitempty`), and a standard API.  Each release passes 300+ tests and 250-750+ million execs fuzzing.
 
 [CBOR Library Installation](#cbor-library-installation) shows how to install and begin using this CBOR library.
 
@@ -249,8 +249,7 @@ Latest version is v2.3 (May 30, 2021), which has:
 
 * __Stable API__ –  Six codec function signatures will never change.  No breaking API changes for other funcs in same major version.
 * __Passed all tests__ – v2.x passed all 375+ tests on amd64, arm64, ppc64le and s390x with linux.
-* __Passed fuzzing__ – v2.2 passed 459+ million execs in coverage-guided fuzzing on Feb 24, 2020 (release date)  
-and 3.2+ billion execs on March 7, 2020.  v2.3 passed 450+ million execs on May 30, 2021 (and is continuing to fuzz).
+* __Passed fuzzing__ – v2.3.0 passed 728+ million execs on May 31, 2021 (and is continuing to fuzz).  v2.2.0 passed 3.2+ billion execs on March 7, 2020.
 
 <hr>
 
