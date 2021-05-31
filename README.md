@@ -11,7 +11,7 @@
 
 [__fxamacker/cbor__](https://github.com/fxamacker/cbor) is a CBOR encoder and decoder in [Go](https://golang.org).  It's designed to be safe, fast, small, and easy to use. 
 
-Features include CBOR tags, duplicate map key detection, float64→32→16, Go struct tags (`toarray`, `keyasint`, `omitempty`), and a standard API.  Each release passes hundreds of tests and 250+ million execs of coverage-guided fuzzing.
+Features include CBOR tags, duplicate map key detection, float64→32→16, Go struct tags (`toarray`, `keyasint`, `omitempty`), and a standard API.  Each release passes hundreds of tests and 250+ million execs fuzzing.
 
 [CBOR Library Installation](#cbor-library-installation) shows how to install and begin using this CBOR library.
 
@@ -21,9 +21,9 @@ __fxamacker/cbor__ is secure.  It rejects malformed CBOR data and can detect dup
 
 |     | fxamacker/cbor (all versions) | ugorji/go (1.1.0 - 1.1.7) |
 | :--- | :------------------ | :--------------- |
-| Malformed CBOR 1 &nbsp;&nbsp;| 87.5 ns/op, 24 B/op, 2 allocs/op | :boom: fatal error: out of memory |
-| Malformed CBOR 2 &nbsp;&nbsp;| 89.5 ns/op, 24 B/op, 2 allocs/op | :boom: runtime: out of memory: cannot allocate |
-|     | Correctly rejected by all versions. <br/>Benchmark is from latest release. | :warning: Just 1 decode of 9 bytes can exhaust memory. |
+| Malformed CBOR 1| 87.5 ns/op, 24 B/op, 2 allocs/op | :boom: fatal error: out of memory |
+| Malformed CBOR 2| 89.5 ns/op, 24 B/op, 2 allocs/op | :boom: runtime: out of memory: cannot allocate |
+|     | Correctly rejected by all versions.<br/>Benchmark is from latest release. | :warning: Just 1 decode of 9 bytes can exhaust memory. |
 
 fxamacker/cbor CBOR safety settings include: MaxNestedLevels, MaxArrayElements, MaxMapPairs, and IndefLength.
 
@@ -250,7 +250,7 @@ Latest version is v2.3 (May 30, 2021), which has:
 * __Stable API__ –  Six codec function signatures will never change.  No breaking API changes for other funcs in same major version.
 * __Passed all tests__ – v2.x passed all 375+ tests on amd64, arm64, ppc64le and s390x with linux.
 * __Passed fuzzing__ – v2.2 passed 459+ million execs in coverage-guided fuzzing on Feb 24, 2020 (release date)  
-and 3.2+ billion execs on March 7, 2020.  v2.3 passed 357+ million execs on May 30, 2021 (and is continuing to fuzz).
+and 3.2+ billion execs on March 7, 2020.  v2.3 passed 450+ million execs on May 30, 2021 (and is continuing to fuzz).
 
 <hr>
 
@@ -393,8 +393,8 @@ See [Options](#options) section for details about each setting.
 | IndefLength | **IndefLengthAllowed**, IndefLengthForbidden |
 | TagsMd | **TagsAllowed**, TagsForbidden |
 | MaxNestedLevels | **32**, can be set to [4, 256] |
-| MaxArrayElements | **131072**, can be set to [16, 134217728] |
-| MaxMapPairs | **131072**, can be set to [16, 134217728] |
+| MaxArrayElements | **131072**, can be set to [16, 2147483647] |
+| MaxMapPairs | **131072**, can be set to [16, 2147483647] |
 
 See [Options](#options) section for details about each setting.
 
