@@ -1,4 +1,6 @@
-# CBOR Library in Go &nbsp; [![](https://github.com/fxamacker/images/raw/master/cbor/v2.3.0/go_get_fxamacker_cbor.svg?sanitize=1)](#cbor-library-installation)
+# CBOR Library in Go
+
+[![](https://github.com/fxamacker/images/raw/master/cbor/v2.3.0/fxamacker_cbor_banner.png)](#cbor-library-in-go)
 
 [![](https://github.com/fxamacker/cbor/workflows/ci/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Aci)
 [![](https://github.com/fxamacker/cbor/workflows/cover%20%E2%89%A598%25/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3A%22cover+%E2%89%A598%25%22)
@@ -249,7 +251,7 @@ Latest version is v2.3 (May 30, 2021), which has:
 
 * __Stable API__ –  Six codec function signatures will never change.  No breaking API changes for other funcs in same major version.
 * __Passed all tests__ – v2.x passed all 375+ tests on amd64, arm64, ppc64le and s390x with linux.
-* __Passed fuzzing__ – v2.3.0 passed 728+ million execs on May 31, 2021 (and is continuing to fuzz).  v2.2.0 passed 3.2+ billion execs on March 7, 2020.
+* __Passed fuzzing__ – v2.3.0 passed 1+ billion execs fuzzing on June 1, 2021.  v2.2.0 passed 3.2+ billion execs on March 7, 2020.
 
 <hr>
 
