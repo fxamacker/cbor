@@ -9,29 +9,21 @@
 [![](https://github.com/fxamacker/images/raw/master/cbor/v2.3.0/release_version_badge.svg?sanitize=1)](https://github.com/fxamacker/cbor/releases)
 [![](https://github.com/fxamacker/images/raw/master/cbor/v2.3.0/license_badge.svg?sanitize=1)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE)
 
-[CBOR](CBOR_GOLANG.md) ([RFC 7049](https://tools.ietf.org/html/rfc7049) & [RFC 8949](https://tools.ietf.org/html/rfc8949)) is a binary data format inspired by JSON and MessagePack.  CBOR is an [Internet Standard](https://en.wikipedia.org/wiki/Internet_Standard) by [IETF](https://www.ietf.org) used in W3C [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn), COSE ([RFC 8152](https://tools.ietf.org/html/rfc8152)), CWT ([RFC 8392 CBOR Web Token](https://tools.ietf.org/html/rfc8392)), and more.
+## What is CBOR?
 
-[__fxamacker/cbor__](https://github.com/fxamacker/cbor) is a CBOR encoder and decoder in [Go](https://golang.org).  It's designed to be safe, fast, small, and easy to use. 
+[CBOR](https://tools.ietf.org/html/rfc8949) is a concise binary data format inspired by [JSON](https://www.json.org) and [MessagePack](https://msgpack.org).  CBOR is defined in [RFC 8949](https://tools.ietf.org/html/rfc8949) (December 2020) which obsoletes [RFC 7049](https://tools.ietf.org/html/rfc7049) (October 2013).  As a self-describing format, CBOR doesn't require schemas or code generation.  
 
-Features include CBOR tags, duplicate map key detection, float64→32→16, Go struct tags (`toarray`, `keyasint`, `omitempty`), and a standard API.  Each release passes 300+ tests and 250-750+ million execs fuzzing.
+CBOR is an [Internet Standard](https://en.wikipedia.org/wiki/Internet_Standard) by [IETF](https://www.ietf.org) and is used to define other standards. It is used in [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn) by [W3C](https://www.w3.org), [COSE (RFC 8152)](https://tools.ietf.org/html/rfc8152), [CWT (RFC 8392)](https://tools.ietf.org/html/rfc8392), [CDDL (RFC 8610)](https://datatracker.ietf.org/doc/html/rfc8610) and [more](CBOR_GOLANG.md).
+
+## What is fxamacker/cbor?
+
+[__fxamacker/cbor__](https://github.com/fxamacker/cbor) is a CBOR encoder and decoder (codec) in [Go](https://golang.org).  It's like [`encoding/json`](https://golang.org/pkg/encoding/json/) for CBOR, so encoded data is smaller and more efficient to use.  This CBOR library is designed to be safe, fast, small, and easy to use. 
+
+Encoded data is self-describing and avoids problems caused by generated code (or schemas) being out of sync with data.
+
+Features include CBOR tags, big.Int, float64→32→16, Go struct tags (`toarray`, `keyasint`, `omitempty`), duplicate map key detection, and a standard API.  Each release passes 300+ tests and coverage-guided fuzz testing.
 
 [CBOR Library Installation](#cbor-library-installation) shows how to install and begin using this CBOR library.
-
-## CBOR Library Security
-
-__fxamacker/cbor__ is secure.  It rejects malformed CBOR data and can detect duplicate map keys.  It doesn't crash when decoding bad CBOR data by having extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's `unsafe` package.
-
-|     | fxamacker/cbor (all versions) | ugorji/go (1.1.0 - 1.1.7) |
-| :--- | :------------------ | :--------------- |
-| Malformed CBOR 1| 87.5 ns/op, 24 B/op, 2 allocs/op | :boom: fatal error: out of memory |
-| Malformed CBOR 2| 89.5 ns/op, 24 B/op, 2 allocs/op | :boom: runtime: out of memory: cannot allocate |
-|     | Correctly rejected by all versions.<br/>Benchmark is from latest release. | :warning: Just 1 decode of 9 bytes can exhaust memory. |
-
-fxamacker/cbor CBOR safety settings include: MaxNestedLevels, MaxArrayElements, MaxMapPairs, and IndefLength.
-
-For more info, see:
- - [RFC 8949 Section 10 (Security Considerations)](https://tools.ietf.org/html/rfc8949#section-10) or [RFC 7049 Section 8](https://tools.ietf.org/html/rfc7049#section-8).
- - [Go warning](https://golang.org/pkg/unsafe/), "Packages that import unsafe may be non-portable and are not protected by the Go 1 compatibility guidelines."
 
 ## CBOR Library Performance
 
@@ -94,6 +86,22 @@ EncodeWebAuthn-4                         4.00 ± 0%      2.00 ± 0%  -50.00%  (p
  </details>
 
 Benchmarks used Go 1.15.12, linux_amd64 with data from [RFC 8392 Appendix A.1](https://tools.ietf.org/html/rfc8392#appendix-A.1).  Default build options were used for all CBOR libraries.  Library init code was put outside the benchmark loop for all libraries compared.
+
+## CBOR Library Security
+
+__fxamacker/cbor__ is secure.  It rejects malformed CBOR data and can detect duplicate map keys.  It doesn't crash when decoding bad CBOR data by having extensive tests, coverage-guided fuzzing, data validation, and avoiding Go's `unsafe` package.
+
+|     | fxamacker/cbor (all versions) | ugorji/go (1.1.0 - 1.1.7) |
+| :--- | :------------------ | :--------------- |
+| Malformed CBOR 1| 87.5 ns/op, 24 B/op, 2 allocs/op | :boom: fatal error: out of memory |
+| Malformed CBOR 2| 89.5 ns/op, 24 B/op, 2 allocs/op | :boom: runtime: out of memory: cannot allocate |
+|     | Correctly rejected by all versions.<br/>Benchmark is from latest release. | :warning: Just 1 decode of 9 bytes can exhaust memory. |
+
+fxamacker/cbor CBOR safety settings include: MaxNestedLevels, MaxArrayElements, MaxMapPairs, and IndefLength.
+
+For more info, see:
+ - [RFC 8949 Section 10 (Security Considerations)](https://tools.ietf.org/html/rfc8949#section-10) or [RFC 7049 Section 8](https://tools.ietf.org/html/rfc7049#section-8).
+ - [Go warning](https://golang.org/pkg/unsafe/), "Packages that import unsafe may be non-portable and are not protected by the Go 1 compatibility guidelines."
 
 ## CBOR Library API
 
