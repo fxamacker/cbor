@@ -7,6 +7,7 @@
 [![](https://github.com/fxamacker/cbor/workflows/linters/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Alinters)
 [![](https://img.shields.io/badge/fuzzing-1%2B%20billion-44c010)]()
 [![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor)
+[![](https://img.shields.io/badge/go-%3E%3D%201.12-blue)]()
 [![](https://github.com/fxamacker/images/raw/master/cbor/v2.3.0/release_version_badge.svg?sanitize=1)](https://github.com/fxamacker/cbor/releases)
 [![](https://github.com/fxamacker/images/raw/master/cbor/v2.3.0/license_badge.svg?sanitize=1)](https://raw.githubusercontent.com/fxamacker/cbor/master/LICENSE)
 
