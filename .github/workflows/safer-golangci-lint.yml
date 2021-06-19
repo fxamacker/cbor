@@ -8,29 +8,33 @@
 #
 # 100% of the script for downloading, installing, and running golangci-lint
 # is embedded in this file.  The embedded SHA384 is used to verify the 
-# downloaded golangci-lint tarball (golangci-lint-1.40.1-linux-amd64.tar.gz). 
+# downloaded golangci-lint tarball (golangci-lint-1.41.1-linux-amd64.tar.gz). 
 #
 # Why?
 #   1. Avoid downloading and executing unverified wrapper scripts or actions each time a workflow runs.
 #      See https://www.securityweek.com/codecov-bash-uploader-dev-tool-compromised-supply-chain-hack
 #   2. Use openssl instead of sha256sum because it's easier to change hash algo to BLAKE2s, SHA3-256, etc.
-#   3. Use SHA384 instead of SHA256 to avoid debating strangers about length extension attacks and gzip file format.
+#   3. Use SHA384 instead of SHA256 to avoid debates about length extension attacks and gzip file format.
 #   4. Use embedded SHA384 instead of downloading CHECKSUM because CHECKSUM file isn't digitally signed.
 #   5. Use binary instead of building from source because it's probably easier to detect backdoors in one binary 
 #      than all the combined source code of dozens of linters and all their required 3rd-party packages.
 #
 # To use:
-# Copy this file into [github_repo]/.github/workflows/
+#   Step 1. Copy this file into [github_repo]/.github/workflows/
+#   Step 2. There's no step 2 if you like the default settings.
 #
-# Configure [github_repo]/.golangci.yml normally as instructed in golangci-lint docs.
+# You can create and use a config file (.golangci.yml) as described in golangci-lint docs.
 #
 # To use a newer version of golangci-lint, change these values:
 #   1. GOLINTERS_VERSION
-#   2. GOLINTERS_TGZ_HASH
+#   2. GOLINTERS_TGZ_DGST
 #
-# 2021-05-16  Created. Use golangci-lint 1.40.1, Go 1.15.x, and ubuntu-latest.
-#             sha256(tar.gz) is 7c133b4b39c0a46cf8d67265da651f169079d137ae71aee9b5934e2281bd18d3
-#             sha384(tar.gz) is d0b9e9c0eac5c5e03b9feb546d181918fca9abc94656824badccacc77aa91bc78ab99fd22094d634d3a58a91353fb1b9
+# Release v1.14.1 (June 19, 2021)
+#   - Bump Go to 1.16.x and golangci-lint to 1.41.1.
+#   - Increase default timeout to 5 minutes.
+#   - Remove optional noisy run because "noisy" is too subjective.
+#   - sha256(linux-amd64.tar.gz) is 23e1078ab00a750afcde7e7eb5aab8e908ef18bee5486eeaa2d52ee57d178580
+#   - sha384(linux-amd64.tar.gz) is 8e966704696875f39d324a2f321ac1f63edab08668d8e09fa06dbc54ffe4c4bf4796c80d611d7b40ca42a4b33c208800
 
 name: Lint
 
@@ -41,9 +45,10 @@ on:
     branches: [main, master]
 
 env:
-  GOLINTERS_VERSION: 1.40.1
+  GOLINTERS_VERSION: 1.41.1
   GOLINTERS_ARCH: linux-amd64
-  GOLINTERS_TGZ_DGST: d0b9e9c0eac5c5e03b9feb546d181918fca9abc94656824badccacc77aa91bc78ab99fd22094d634d3a58a91353fb1b9
+  GOLINTERS_TGZ_DGST: 8e966704696875f39d324a2f321ac1f63edab08668d8e09fa06dbc54ffe4c4bf4796c80d611d7b40ca42a4b33c208800
+  GOLINTERS_TIMEOUT: 5m
   OPENSSL_DGST_CMD: openssl dgst -sha384 -r
   CURL_CMD: curl --proto =https --tlsv1.2 --location --silent --show-error --fail
   
@@ -60,7 +65,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.15.x
+          go-version: 1.16.x
                       
       - name: Install golangci-lint
         run: |
@@ -85,12 +90,7 @@ jobs:
           install golangci-lint $(go env GOPATH)/bin
         shell: bash
           
-      # Run required linters enabled in .golangci.yml     
-      - name: Run required linters in .golangci.yml
-        run: $(go env GOPATH)/bin/golangci-lint run --timeout=5m
-        shell: bash
-        
-      # Run noisy linters as optional (enable them using command line parameters)
-      - name: Run optional linters (not required to pass)
-        run: $(go env GOPATH)/bin/golangci-lint run --timeout=5m --issues-exit-code=0 -E dupl -E gocritic -E gosimple -E lll -E nilerr -E prealloc -E revive
+      # Run required linters enabled in .golangci.yml (or default linters if yml doesn't exist)     
+      - name: Run golangci-lint
+        run: $(go env GOPATH)/bin/golangci-lint run --timeout="${GOLINTERS_TIMEOUT}"
         shell: bash
