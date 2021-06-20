@@ -538,8 +538,8 @@ var unmarshalFloatTests = []unmarshalFloatTest{
 	},
 	{
 		hexDecode("f98000"),
-		float64(-0.0),
-		[]interface{}{float32(-0.0), float64(-0.0)},
+		float64(-0.0), //nolint:staticcheck // we know -0.0 is 0.0 in Go
+		[]interface{}{float32(-0.0), float64(-0.0)}, //nolint:staticcheck // we know -0.0 is 0.0 in Go
 		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt},
 		0.0,
 	},
