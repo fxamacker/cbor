@@ -1128,7 +1128,7 @@ Please read the license for additional disclaimers and terms.
 
 __Making this library better__  
 
-* Stefan Tatschner for using this library in [sep](https://git.sr.ht/~rumpelsepp/sep), being the 1st to discover my CBOR library, requesting time.Time in issue #1, and submitting this library in a [PR to cbor.io](https://github.com/cbor/cbor.github.io/pull/56) on Aug 12, 2019.
+* Stefan Tatschner for using this library in [sep](https://rumpelsepp.org/projects/sep), being the 1st to discover my CBOR library, requesting time.Time in issue #1, and submitting this library in a [PR to cbor.io](https://github.com/cbor/cbor.github.io/pull/56) on Aug 12, 2019.
 * Yawning Angel for using this library to [oasis-core](https://github.com/oasislabs/oasis-core), and requesting BinaryMarshaler in issue #5.
 * Jernej Kos for requesting RawMessage in issue #11 and offering feedback on v2.1 API for CBOR tags.
 * ZenGround0 for using this library in [go-filecoin](https://github.com/filecoin-project/go-filecoin), filing "toarray" bug in issue #129, and requesting  
