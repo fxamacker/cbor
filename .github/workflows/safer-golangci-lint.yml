@@ -7,16 +7,15 @@
 # safer-golangci-lint.yml
 #
 # 100% of the script for downloading, installing, and running golangci-lint
-# is embedded in this file.  The embedded SHA384 is used to verify the 
-# downloaded golangci-lint tarball (golangci-lint-1.41.1-linux-amd64.tar.gz). 
+# is embedded in this file.  The embedded SHA384 digest is used to verify the 
+# downloaded golangci-lint tarball (golangci-lint-1.42.0-linux-amd64.tar.gz). 
 #
 # Why?
 #   1. Avoid downloading and executing unverified wrapper scripts or actions each time a workflow runs.
 #      See https://www.securityweek.com/codecov-bash-uploader-dev-tool-compromised-supply-chain-hack
-#   2. Use openssl instead of sha256sum because it's easier to change hash algo to BLAKE2s, SHA3-256, etc.
-#   3. Use SHA384 instead of SHA256 to avoid debates about length extension attacks and gzip file format.
-#   4. Use embedded SHA384 instead of downloading CHECKSUM because CHECKSUM file isn't digitally signed.
-#   5. Use binary instead of building from source because it's probably easier to detect backdoors in one binary 
+#   2. Use embedded SHA384 instead of downloading CHECKSUM because CHECKSUM file isn't digitally signed.
+#   3. Use openssl instead of sha256sum because it's easier to change hash algo to BLAKE2s, SHA3-256, etc.
+#   4. Use binary instead of building from source because it's probably easier to detect backdoors in one binary 
 #      than all the combined source code of dozens of linters and all their required 3rd-party packages.
 #
 # To use:
@@ -29,13 +28,11 @@
 #   1. GOLINTERS_VERSION
 #   2. GOLINTERS_TGZ_DGST
 #
-# Release v1.14.1 (June 19, 2021)
-#   - Bump Go to 1.16.x and golangci-lint to 1.41.1.
-#   - Increase default timeout to 5 minutes.
-#   - Remove optional noisy run because "noisy" is too subjective.
-#   - sha256(linux-amd64.tar.gz) is 23e1078ab00a750afcde7e7eb5aab8e908ef18bee5486eeaa2d52ee57d178580
-#   - sha384(linux-amd64.tar.gz) is 8e966704696875f39d324a2f321ac1f63edab08668d8e09fa06dbc54ffe4c4bf4796c80d611d7b40ca42a4b33c208800
-
+# Release v1.42.0 (August 22, 2021)
+#   - Bump golangci-lint to 1.42.0.
+#   - sha256(linux-amd64.tar.gz) is 6937f62f8e2329e94822dc11c10b871ace5557ae1fcc4ee2f9980cd6aecbc159
+#   - sha384(linux-amd64.tar.gz) is 6bc3704f79a14150467f651e4f7a3975caf555fc93fe5fae7aa3b1d5f7eaf7261d97486298d169b241b587f52e46025e
+#
 name: Lint
 
 on:  
@@ -45,9 +42,9 @@ on:
     branches: [main, master]
 
 env:
-  GOLINTERS_VERSION: 1.41.1
+  GOLINTERS_VERSION: 1.42.0
   GOLINTERS_ARCH: linux-amd64
-  GOLINTERS_TGZ_DGST: 8e966704696875f39d324a2f321ac1f63edab08668d8e09fa06dbc54ffe4c4bf4796c80d611d7b40ca42a4b33c208800
+  GOLINTERS_TGZ_DGST: 6bc3704f79a14150467f651e4f7a3975caf555fc93fe5fae7aa3b1d5f7eaf7261d97486298d169b241b587f52e46025e
   GOLINTERS_TIMEOUT: 5m
   OPENSSL_DGST_CMD: openssl dgst -sha384 -r
   CURL_CMD: curl --proto =https --tlsv1.2 --location --silent --show-error --fail
