@@ -41,7 +41,7 @@ Given these reasons, some projects replaced JSON with CBOR.  Or migrated from gR
 
 ### Who uses fxamacker/cbor?
 
-fxamacker/cbor is used by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, ConsenSys, Dapper Labs, Duo Labs (cisco), EdgeX Foundry, Mozilla, Oasis Labs, and others.
+fxamacker/cbor is used by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, ConsenSys, Dapper Labs, Duo Labs (cisco), EdgeX Foundry, Mozilla, Netherlands (govt), Oasis Labs, Taurus SA, and others.
 
 ### Why fxamacker/cbor?
 
