@@ -680,10 +680,10 @@ The "keyasint" struct tag requires an integer key to be specified:
 
 ```
 type myStruct struct {
-    MyField     int64    `cbor:-1,keyasint,omitempty`
-    OurField    string   `cbor:0,keyasint,omitempty`
-    FooField    Foo      `cbor:5,keyasint,omitempty`
-    BarField    Bar      `cbor:hello,omitempty`
+    MyField     int64    `cbor:"-1,keyasint,omitempty'`
+    OurField    string   `cbor:"0,keyasint,omitempty"`
+    FooField    Foo      `cbor:"5,keyasint,omitempty"`
+    BarField    Bar      `cbor:"hello,omitempty"`
     ...
 }
 ```
