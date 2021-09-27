@@ -1529,3 +1529,175 @@ func TestStreamDecodeReaderError(t *testing.T) {
 		t.Errorf("DecodeBytes()) returned error %q, want %q", err.Error(), expectedErrorMsg)
 	}
 }
+
+func TestStreamDecoderNumBytesDecoded(t *testing.T) {
+
+	t.Run("uint", func(t *testing.T) {
+		data := []byte{0x18, 0x18}
+
+		dec := NewByteStreamDecoder(data)
+
+		_, err := dec.DecodeUint64()
+		if err != nil {
+			t.Errorf("DecodeUint64() returned error %v", err)
+		}
+
+		bytesDecoded := dec.NumBytesDecoded()
+		if bytesDecoded != len(data) {
+			t.Errorf("NumBytesDecoded() returned %v, want %v", bytesDecoded, len(data))
+		}
+
+		// Decode after EOD
+		_, err = dec.DecodeUint64()
+		if err == nil {
+			t.Errorf("DecodeUint64() didn't return an error")
+		}
+
+		// Num of bytes decoded should remain the same
+		bytesDecoded = dec.NumBytesDecoded()
+		if bytesDecoded != len(data) {
+			t.Errorf("NumBytesDecoded() returned %v after EOD, want %v", bytesDecoded, len(data))
+		}
+	})
+
+	t.Run("byte slice", func(t *testing.T) {
+		data := []byte{0x44, 0x01, 0x02, 0x03, 0x04}
+
+		dec := NewByteStreamDecoder(data)
+
+		_, err := dec.DecodeBytes()
+		if err != nil {
+			t.Errorf("DecodeBytes() returned error %v", err)
+		}
+
+		bytesDecoded := dec.NumBytesDecoded()
+		if bytesDecoded != len(data) {
+			t.Errorf("NumBytesDecoded() returned %v, want %v", bytesDecoded, len(data))
+		}
+
+		// Decode after EOD
+		_, err = dec.DecodeUint64()
+		if err == nil {
+			t.Errorf("DecodeUint64() didn't return an error")
+		}
+
+		// Num of bytes decoded should remain the same
+		bytesDecoded = dec.NumBytesDecoded()
+		if bytesDecoded != len(data) {
+			t.Errorf("NumBytesDecoded() returned %v after EOD, want %v", bytesDecoded, len(data))
+		}
+	})
+
+	t.Run("string", func(t *testing.T) {
+
+		data := []byte{0x63, 0xe6, 0xb0, 0xb4}
+
+		dec := NewByteStreamDecoder(data)
+
+		_, err := dec.DecodeString()
+		if err != nil {
+			t.Errorf("DecodeString() returned error %v", err)
+		}
+
+		bytesDecoded := dec.NumBytesDecoded()
+		if bytesDecoded != len(data) {
+			t.Errorf("NumBytesDecoded() returned %v, want %v", bytesDecoded, len(data))
+		}
+
+		// Decode after EOD
+		_, err = dec.DecodeUint64()
+		if err == nil {
+			t.Errorf("DecodeUint64() didn't return an error")
+		}
+
+		// Num of bytes decoded should remain the same
+		bytesDecoded = dec.NumBytesDecoded()
+		if bytesDecoded != len(data) {
+			t.Errorf("NumBytesDecoded() returned %v after EOD, want %v", bytesDecoded, len(data))
+		}
+	})
+
+	t.Run("array", func(t *testing.T) {
+		data := []byte{0x83, 0x01, 0x02, 0x03}
+
+		dec := NewByteStreamDecoder(data)
+
+		count, err := dec.DecodeArrayHead()
+		if err != nil {
+			t.Errorf("DecodeArrayHead() returned error %v", err)
+		}
+
+		bytesDecoded := dec.NumBytesDecoded()
+		if bytesDecoded != 1 {
+			t.Errorf("NumBytesDecoded() returned %v after decoding array head, want %v", bytesDecoded, 1)
+		}
+
+		for i := uint64(0); i < count; i++ {
+			_, err = dec.DecodeUint64()
+			if err != nil {
+				t.Errorf("DecodeUint64() returned error %v", err)
+			}
+
+			bytesDecoded++
+
+			num := dec.NumBytesDecoded()
+			if num != bytesDecoded {
+				t.Errorf("NumBytesDecoded() returned %v after decoding element %d, want %v", num, i, bytesDecoded)
+			}
+		}
+
+		// Decode after EOD
+		_, err = dec.DecodeUint64()
+		if err == nil {
+			t.Errorf("DecodeUint64() didn't return an error")
+		}
+
+		// Num of bytes decoded should remain the same
+		num := dec.NumBytesDecoded()
+		if num != bytesDecoded {
+			t.Errorf("NumBytesDecoded() returned %v after EOD, want %v", num, bytesDecoded)
+		}
+	})
+
+	t.Run("concatenated messages", func(t *testing.T) {
+
+		data := []byte{
+			0x18, 0x18, // uint64(24)
+			0x63, 0xe6, 0xb0, 0xb4, // "水"
+		}
+
+		dec := NewByteStreamDecoder(data)
+
+		_, err := dec.DecodeUint64()
+		if err != nil {
+			t.Errorf("DecodeUint64() returned error %v", err)
+		}
+
+		bytesDecoded := dec.NumBytesDecoded()
+		if bytesDecoded != 2 {
+			t.Errorf("NumBytesDecoded() returned %v, want %v", bytesDecoded, 2)
+		}
+
+		_, err = dec.DecodeString()
+		if err != nil {
+			t.Errorf("DecodeString() returned error %v", err)
+		}
+
+		bytesDecoded = dec.NumBytesDecoded()
+		if bytesDecoded != len(data) {
+			t.Errorf("NumBytesDecoded() returned %v, want %v", bytesDecoded, len(data))
+		}
+
+		// Decode after EOD
+		_, err = dec.NextType()
+		if err == nil {
+			t.Errorf("NextType() didn't return error")
+		}
+
+		// Number of bytes decoded should remain the same
+		bytesDecoded = dec.NumBytesDecoded()
+		if bytesDecoded != len(data) {
+			t.Errorf("NumBytesDecoded() returned %v, want %v", bytesDecoded, len(data))
+		}
+	})
+}

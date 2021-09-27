@@ -84,9 +84,10 @@ func (e *WrongTypeError) Error() string {
 // If DecodeXXX() function returns other types of error,
 // CBOR data is skipped.  User can decode next CBOR data.
 type StreamDecoder struct {
-	dec            *Decoder
-	err            error
-	remainingBytes int // remaining bytes of a complete and validated CBOR data
+	dec             *Decoder
+	err             error
+	remainingBytes  int // remaining bytes of a complete and validated CBOR data
+	decodedMsgBytes int // number of bytes of decoded CBOR messages
 }
 
 // NewStreamDecoder returns a new StreamDecoder that reads from r using default DecMode.
@@ -462,11 +463,16 @@ func (sd *StreamDecoder) prepareNext() error {
 }
 
 func (sd *StreamDecoder) readAndValidateNext() error {
+
+	lastMsgBytes := sd.dec.d.off
+
 	length, err := sd._readAndValidateNext()
 	if err != nil {
 		sd.err = err
 		return err
 	}
+
+	sd.decodedMsgBytes += lastMsgBytes
 
 	sd.remainingBytes = length
 
@@ -524,4 +530,9 @@ func (sd *StreamDecoder) updateState(bytesRead int) {
 	if sd.remainingBytes < 0 {
 		sd.err = errors.New("remaining bytes are out of sync")
 	}
+}
+
+// NumBytesDecoded returns the accumulated number of bytes decoded using "DecodeXXX()"
+func (sd *StreamDecoder) NumBytesDecoded() int {
+	return sd.decodedMsgBytes + sd.dec.d.off
 }
