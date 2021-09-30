@@ -28,12 +28,12 @@
 #   1. GOLINTERS_VERSION
 #   2. GOLINTERS_TGZ_DGST
 #
-# Release v1.42.0 (August 22, 2021)
-#   - Bump golangci-lint to 1.42.0.
-#   - sha256(linux-amd64.tar.gz) is 6937f62f8e2329e94822dc11c10b871ace5557ae1fcc4ee2f9980cd6aecbc159
-#   - sha384(linux-amd64.tar.gz) is 6bc3704f79a14150467f651e4f7a3975caf555fc93fe5fae7aa3b1d5f7eaf7261d97486298d169b241b587f52e46025e
+# Release v1.42.1 (September 29, 2021)
+#   - Bump golangci-lint to 1.42.1.
+#   - sha256(linux-amd64.tar.gz) is 214b093c15863430c4b66dd39df677dab6e38fc873ded147e331740d50eea51f
+#   - sha384(linux-amd64.tar.gz) is 80e7e4afb5a58985fdd2ee7c099086541bc41a46b59dac1ae04f73c25abeafe30e5cd91dd1a57dc754efaad779c849cb
 #
-name: Lint
+name: linters
 
 on:  
   pull_request:
@@ -42,9 +42,9 @@ on:
     branches: [main, master]
 
 env:
-  GOLINTERS_VERSION: 1.42.0
+  GOLINTERS_VERSION: 1.42.1
   GOLINTERS_ARCH: linux-amd64
-  GOLINTERS_TGZ_DGST: 6bc3704f79a14150467f651e4f7a3975caf555fc93fe5fae7aa3b1d5f7eaf7261d97486298d169b241b587f52e46025e
+  GOLINTERS_TGZ_DGST: 80e7e4afb5a58985fdd2ee7c099086541bc41a46b59dac1ae04f73c25abeafe30e5cd91dd1a57dc754efaad779c849cb
   GOLINTERS_TIMEOUT: 5m
   OPENSSL_DGST_CMD: openssl dgst -sha384 -r
   CURL_CMD: curl --proto =https --tlsv1.2 --location --silent --show-error --fail
