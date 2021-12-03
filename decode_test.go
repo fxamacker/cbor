@@ -3074,6 +3074,7 @@ func TestDecOptions(t *testing.T) {
 		TagsMd:            TagsForbidden,
 		IntDec:            IntDecConvertSigned,
 		ExtraReturnErrors: ExtraDecErrorUnknownField,
+		MapType:           reflect.TypeOf((map[string]interface{})(nil)),
 	}
 	dm, err := opts1.DecMode()
 	if err != nil {
@@ -4490,6 +4491,101 @@ func TestDecModeInvalidExtraError(t *testing.T) {
 		t.Errorf("DecMode() didn't return an error")
 	} else if err.Error() != wantErrorMsg {
 		t.Errorf("DecMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+}
+
+func TestDecMapTypeOption(t *testing.T) {
+	testCases := []struct {
+		name         string
+		decOpts      DecOptions
+		cborData     []byte
+		wantObj      interface{}
+		wantErrorMsg string
+	}{
+		{
+			name:     "CBOR map[string]string to Go map[interface{}]interface{} (default)",
+			decOpts:  DecOptions{},
+			cborData: hexDecode("a3626b31627631626b32627632626b33627633"),
+			wantObj:  map[interface{}]interface{}{"k1": "v1", "k2": "v2", "k3": "v3"},
+		},
+		{
+			name:     "CBOR map[string]string to Go map[string]interface{}",
+			decOpts:  DecOptions{MapType: reflect.TypeOf((map[string]interface{})(nil))},
+			cborData: hexDecode("a3626b31627631626b32627632626b33627633"),
+			wantObj:  map[string]interface{}{"k1": "v1", "k2": "v2", "k3": "v3"},
+		},
+		{
+			name:     "CBOR map[string]string to Go map[string]string",
+			decOpts:  DecOptions{MapType: reflect.TypeOf((map[string]string)(nil))},
+			cborData: hexDecode("a3626b31627631626b32627632626b33627633"),
+			wantObj:  map[string]string{"k1": "v1", "k2": "v2", "k3": "v3"},
+		},
+		{
+			name:     "CBOR map[int]string to Go map[interface{}]interface{} (default)",
+			decOpts:  DecOptions{},
+			cborData: hexDecode("a3016276310262763203627633"),
+			wantObj:  map[interface{}]interface{}{uint64(1): "v1", uint64(2): "v2", uint64(3): "v3"},
+		},
+		{
+			name:     "CBOR map[int]string to Go map[int]string",
+			decOpts:  DecOptions{MapType: reflect.TypeOf((map[int]string)(nil))},
+			cborData: hexDecode("a3016276310262763203627633"),
+			wantObj:  map[int]string{1: "v1", 2: "v2", 3: "v3"},
+		},
+		{
+			name:     "CBOR [] of map[int]string to Go []interface{} with map[interface{}]interface{} elements (default)",
+			decOpts:  DecOptions{},
+			cborData: hexDecode("82a3626b31627631626b32627632626b33627633a2626b34627634626b35627635"),
+			wantObj:  []interface{}{map[interface{}]interface{}{"k1": "v1", "k2": "v2", "k3": "v3"}, map[interface{}]interface{}{"k4": "v4", "k5": "v5"}},
+		},
+		{
+			name:     "CBOR [] of map[int]string to Go []interface{} with map[string]interface{} elements",
+			decOpts:  DecOptions{MapType: reflect.TypeOf((map[string]interface{})(nil))},
+			cborData: hexDecode("82a3626b31627631626b32627632626b33627633a2626b34627634626b35627635"),
+			wantObj:  []interface{}{map[string]interface{}{"k1": "v1", "k2": "v2", "k3": "v3"}, map[string]interface{}{"k4": "v4", "k5": "v5"}},
+		},
+		{
+			name:         "error: CBOR map[string]string to Go map[int]interface{}",
+			decOpts:      DecOptions{MapType: reflect.TypeOf((map[int]interface{})(nil))},
+			cborData:     hexDecode("a3626b31627631626b32627632626b33627633"),
+			wantErrorMsg: "cbor: cannot unmarshal UTF-8 text string into Go value of type int",
+		},
+		{
+			name:         "error CBOR map[int]string to Go map[string]interface{}",
+			decOpts:      DecOptions{MapType: reflect.TypeOf((map[string]interface{})(nil))},
+			cborData:     hexDecode("a3016276310262763203627633"),
+			wantErrorMsg: "cbor: cannot unmarshal positive integer into Go value of type string",
+		},
+		{
+			name:         "error CBOR map[int]string to Go string",
+			decOpts:      DecOptions{MapType: reflect.TypeOf((*string)(nil))},
+			cborData:     hexDecode("a3016276310262763203627633"),
+			wantErrorMsg: "cbor: cannot unmarshal map into Go value of type string",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, err := tc.decOpts.DecMode()
+			if err != nil {
+				t.Errorf("DecMode() returned an error %+v", err)
+			}
+
+			var v interface{}
+			err = dm.Unmarshal(tc.cborData, &v)
+			if err == nil {
+				if tc.wantErrorMsg != "" {
+					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.cborData, tc.wantErrorMsg)
+				} else if !reflect.DeepEqual(v, tc.wantObj) {
+					t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantObj, tc.wantObj)
+				}
+			} else {
+				if tc.wantErrorMsg == "" {
+					t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+				}
+			}
+		})
 	}
 }
 

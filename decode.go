@@ -290,6 +290,10 @@ type DecOptions struct {
 
 	// ExtraReturnErrors specifies extra conditions that should be treated as errors.
 	ExtraReturnErrors ExtraDecErrorCond
+
+	// MapType specifies the go type to use during schema-less decoding of a CBOR map.
+	// Defaults to map[interface{}]interface{}.
+	MapType reflect.Type
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -399,6 +403,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		tagsMd:            opts.TagsMd,
 		intDec:            opts.IntDec,
 		extraReturnErrors: opts.ExtraReturnErrors,
+		mapType:           opts.MapType,
 	}
 	return &dm, nil
 }
@@ -430,6 +435,7 @@ type decMode struct {
 	tagsMd            TagsMode
 	intDec            IntDecMode
 	extraReturnErrors ExtraDecErrorCond
+	mapType           reflect.Type
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -446,6 +452,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		TagsMd:            dm.tagsMd,
 		IntDec:            dm.intDec,
 		ExtraReturnErrors: dm.extraReturnErrors,
+		MapType:           dm.mapType,
 	}
 }
 
@@ -988,6 +995,13 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 	case cborTypeArray:
 		return d.parseArray()
 	case cborTypeMap:
+		if d.dm.mapType != nil {
+			rv := reflect.New(d.dm.mapType)
+			if err := d.parseToValue(rv.Elem(), getTypeInfo(d.dm.mapType)); err != nil {
+				return nil, err
+			}
+			return rv.Elem().Interface(), nil
+		}
 		return d.parseMap()
 	}
 	return nil, nil
