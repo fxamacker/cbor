@@ -1211,11 +1211,9 @@ func TestUnmarshalNil(t *testing.T) {
 		// It's tested in TestUnmarshal().
 
 		// Unmarshalling to types implementing cbor.BinaryUnmarshaler is a no-op.
-		//{"cbor.BinaryUnmarshaler", nilBinaryUnmarshaler("hello world"), nilBinaryUnmarshaler("hello world")},
 		{"cbor.BinaryUnmarshaler", number(456), number(456)},
 
 		// When unmarshalling to types implementing cbor.Unmarshaler,
-		// UnmarshalCBOR function receives raw CBOR bytes (0xf6 or 0xf7).
 		{"cbor.Unmarshaler", nilUnmarshaler("hello world"), nilUnmarshaler("null")},
 	}
 
@@ -1710,7 +1708,7 @@ func TestMapKeyUnhashable(t *testing.T) {
 		{"nested-tagged slice as map key", hexDecode("a33030306430303030d1cb4030"), "cbor: invalid map key type: cbor.Tag"},                                   // {-17: "0000", 17(11(h'')): -17}
 		{"big.Int as map key", hexDecode("a13bbd3030303030303030"), "cbor: invalid map key type: big.Int"},                                                    // {-13632449055575519281: -17}
 		{"tagged big.Int as map key", hexDecode("a1c24901000000000000000030"), "cbor: invalid map key type: big.Int"},                                         // {18446744073709551616: -17}
-		{"tagged big.Int as map key", hexDecode("a1c34901000000000000000030"), "cbor: invalid map key type: big.Int"},                                         //{-18446744073709551617: -17}
+		{"tagged big.Int as map key", hexDecode("a1c34901000000000000000030"), "cbor: invalid map key type: big.Int"},                                         // {-18446744073709551617: -17}
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
