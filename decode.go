@@ -543,9 +543,34 @@ const (
 // and does not perform bounds checking.
 func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
 
-	if tInfo.spclType == specialTypeIface && !v.IsNil() {
-		v = v.Elem()
-		tInfo = getTypeInfo(v.Type())
+	if tInfo.spclType == specialTypeIface {
+		if !v.IsNil() {
+			// Use value type
+			v = v.Elem()
+			tInfo = getTypeInfo(v.Type())
+		} else {
+			// Create and use registered type if CBOR data is registered tag
+			if d.dm.tags != nil && d.nextCBORType() == cborTypeTag {
+
+				off := d.off
+				var tagNums []uint64
+				for d.nextCBORType() == cborTypeTag {
+					_, _, tagNum := d.getHead()
+					tagNums = append(tagNums, tagNum)
+				}
+				d.off = off
+
+				registeredType := d.dm.tags.getTypeFromTagNum(tagNums)
+				if registeredType != nil {
+					if registeredType.Implements(tInfo.nonPtrType) ||
+						reflect.PtrTo(registeredType).Implements(tInfo.nonPtrType) {
+						v.Set(reflect.New(registeredType))
+						v = v.Elem()
+						tInfo = getTypeInfo(registeredType)
+					}
+				}
+			}
+		}
 	}
 
 	// Create new value for the pointer v to point to if CBOR value is not nil/undefined.

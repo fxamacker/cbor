@@ -5400,3 +5400,93 @@ func TestUnmarshalTaggedDataToInterface(t *testing.T) {
 		t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v2, v)
 	}
 }
+
+type B interface {
+	Foo()
+}
+
+type C struct {
+	Field int
+}
+
+func (c *C) Foo() {}
+
+type D struct {
+	Field string
+}
+
+func (d *D) Foo() {}
+
+type A1 struct {
+	Field B
+}
+
+type A2 struct {
+	Fields []B
+}
+
+func TestUnmarshalRegisteredTagToInterface(t *testing.T) {
+	var err error
+	tags := NewTagSet()
+	tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeOf(C{}), 279)
+	if err != nil {
+		t.Error(err)
+	}
+	tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeOf(D{}), 280)
+	if err != nil {
+		t.Error(err)
+	}
+
+	encMode, _ := PreferredUnsortedEncOptions().EncModeWithTags(tags)
+	decMode, _ := DecOptions{}.DecModeWithTags(tags)
+
+	v1 := A1{Field: &C{Field: 5}}
+	data1, err := encMode.Marshal(v1)
+	if err != nil {
+		t.Fatalf("Marshal(%+v) returned error %v", v1, err)
+	}
+
+	v2 := A2{Fields: []B{&C{Field: 5}, &D{Field: "a"}}}
+	data2, err := encMode.Marshal(v2)
+	if err != nil {
+		t.Fatalf("Marshal(%+v) returned error %v", v2, err)
+	}
+
+	testCases := []struct {
+		name           string
+		data           []byte
+		unmarshalToObj interface{}
+		wantValue      interface{}
+	}{
+		{
+			name:           "inteface type",
+			data:           data1,
+			unmarshalToObj: &A1{},
+			wantValue:      &v1,
+		},
+		{
+			name:           "concret type",
+			data:           data1,
+			unmarshalToObj: &A1{Field: &C{}},
+			wantValue:      &v1,
+		},
+		{
+			name:           "slice of interface type",
+			data:           data2,
+			unmarshalToObj: &A2{},
+			wantValue:      &v2,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err = decMode.Unmarshal(tc.data, tc.unmarshalToObj)
+			if err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
+			}
+			if !reflect.DeepEqual(tc.unmarshalToObj, tc.wantValue) {
+				t.Errorf("Unmarshal(0x%x) = %v, want %v", tc.data, tc.unmarshalToObj, tc.wantValue)
+			}
+		})
+	}
+}
