@@ -5428,11 +5428,11 @@ type A2 struct {
 func TestUnmarshalRegisteredTagToInterface(t *testing.T) {
 	var err error
 	tags := NewTagSet()
-	tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeOf(C{}), 279)
+	err = tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeOf(C{}), 279)
 	if err != nil {
 		t.Error(err)
 	}
-	tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeOf(D{}), 280)
+	err = tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeOf(D{}), 280)
 	if err != nil {
 		t.Error(err)
 	}
@@ -5459,13 +5459,13 @@ func TestUnmarshalRegisteredTagToInterface(t *testing.T) {
 		wantValue      interface{}
 	}{
 		{
-			name:           "inteface type",
+			name:           "interface type",
 			data:           data1,
 			unmarshalToObj: &A1{},
 			wantValue:      &v1,
 		},
 		{
-			name:           "concret type",
+			name:           "concrete type",
 			data:           data1,
 			unmarshalToObj: &A1{Field: &C{}},
 			wantValue:      &v1,
