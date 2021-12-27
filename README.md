@@ -1055,8 +1055,8 @@ __This library uses less memory__ for encoding and decoding CBOR Web Token (CWT)
 
 |  | fxamacker/cbor 2.3 | ugorji/go 1.2.6 |
 | :--- | :--- | :--- | 
-| Encode CWT | 0.18 kB/op &nbsp;&nbsp;&nbsp; 2 allocs/op | 1.35 kB/op &nbsp;&nbsp;&nbsp; 4 allocs/op |
-| Decode CWT | 160 bytes/op &nbsp;&nbsp;&nbsp; 6 allocs/op | &nbsp; 744 bytes/op &nbsp;&nbsp;&nbsp; 6 allocs/op |
+| Encode CWT | 0.18 kB/op &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2 allocs/op | 1.35 kB/op &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 4 allocs/op |
+| Decode CWT | 160 bytes/op &nbsp;&nbsp;&nbsp; 6 allocs/op | 744 bytes/op &nbsp;&nbsp;&nbsp; 6 allocs/op |
 
 Running your own benchmarks is highly recommended.  Use your most common data structures and data sizes.
 
