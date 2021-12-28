@@ -14,11 +14,12 @@
 
 Features include CBOR tags, duplicate map key detection, float64→32→16, and Go struct tags (`toarray`, `keyasint`, `omitempty`).  API is close to `encoding/json` plus predefined CBOR options like Core Deterministic Encoding, Preferred Serialization, CTAP2, etc.
 
-Combining Preferred Serialization and struct tags (toarray, keyasint, omitempty) reduces programming effort and creates very compact data size.
+Combining Preferred Serialization and struct tags (`toarray`, `keyasint`, `omitempty`) reduces programming effort and creates very compact data size.
 
 fxamacker/cbor is used by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, ConsenSys, Dapper Labs, Duo Labs (cisco), EdgeX Foundry, Mozilla, Netherlands (govt), Oasis Labs, Taurus SA, Teleport, and others.
 
-Install: `go get github.com/fxamacker/cbor/v2` and `import "github.com/fxamacker/cbor/v2"`. See [Quick Start](#quick-start) to save time.
+Install with `go get github.com/fxamacker/cbor/v2` and `import "github.com/fxamacker/cbor/v2"`.  
+See [Quick Start](#quick-start) to save time.
 
 ## What is CBOR?
 
