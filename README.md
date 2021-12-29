@@ -373,6 +373,7 @@ See [Options](#options) section for details about each setting.
 * Decoder always checks for invalid UTF-8 string errors.
 * Decoder always decodes in-place to slices, maps, and structs.
 * Decoder tries case-sensitive first and falls back to case-insensitive field name match when decoding to structs. 
+* Decoder supports decoding registered CBOR tag data to interface types. 
 * Both encoder and decoder support indefinite length CBOR data (["streaming"](https://tools.ietf.org/html/rfc7049#section-2.2)).
 * Both encoder and decoder correctly handles nil slice, map, pointer, and interface values.
 
@@ -454,6 +455,7 @@ If any of these limitations prevent you from using this library, please open an 
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  CBOR `Null` (0xf6) more closely matches Go's `nil`.
 * CBOR map keys with data types not supported by Go for map keys are ignored and an error is returned after continuing to decode remaining items.  
 * When using io.Reader interface to read very large or indefinite length CBOR data, Go's `io.LimitReader` should be used to limit size.
+* When decoding registered CBOR tag data to interface type, decoder creates a pointer to registered Go type matching CBOR tag number.  Requiring a pointer for this is a Go limitation. 
 
 <hr>
 
