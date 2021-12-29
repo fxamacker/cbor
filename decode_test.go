@@ -5400,3 +5400,207 @@ func TestUnmarshalTaggedDataToInterface(t *testing.T) {
 		t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v2, v)
 	}
 }
+
+func TestDecModeInvalidDefaultMapType(t *testing.T) {
+	testCases := []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "byte slice",
+			opts:         DecOptions{DefaultMapType: reflect.TypeOf([]byte(nil))},
+			wantErrorMsg: "cbor: invalid DefaultMapType []uint8",
+		},
+		{
+			name:         "int slice",
+			opts:         DecOptions{DefaultMapType: reflect.TypeOf([]int(nil))},
+			wantErrorMsg: "cbor: invalid DefaultMapType []int",
+		},
+		{
+			name:         "string",
+			opts:         DecOptions{DefaultMapType: reflect.TypeOf("")},
+			wantErrorMsg: "cbor: invalid DefaultMapType string",
+		},
+		{
+			name:         "unnamed struct type",
+			opts:         DecOptions{DefaultMapType: reflect.TypeOf(struct{}{})},
+			wantErrorMsg: "cbor: invalid DefaultMapType struct {}",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestUnmarshalToDefaultMapType(t *testing.T) {
+
+	cborDataMapIntInt := hexDecode("a201020304")                                             // {1: 2, 3: 4}
+	cborDataMapStringInt := hexDecode("a2616101616202")                                      // {"a": 1, "b": 2}
+	cborDataArrayOfMapStringint := hexDecode("82a2616101616202a2616303616404")               // [{"a": 1, "b": 2}, {"c": 3, "d": 4}]
+	cborDataNestedMap := hexDecode("a268496e744669656c6401684d61704669656c64a2616101616202") // {"IntField": 1, "MapField": {"a": 1, "b": 2}}
+
+	decOptionsDefault := DecOptions{}
+	decOptionsMapIntfIntfType := DecOptions{DefaultMapType: reflect.TypeOf(map[interface{}]interface{}(nil))}
+	decOptionsMapStringIntType := DecOptions{DefaultMapType: reflect.TypeOf(map[string]int(nil))}
+	decOptionsMapStringIntfType := DecOptions{DefaultMapType: reflect.TypeOf(map[string]interface{}(nil))}
+
+	testCases := []struct {
+		name         string
+		opts         DecOptions
+		cborData     []byte
+		wantValue    interface{}
+		wantErrorMsg string
+	}{
+		// Decode CBOR map to map[interface{}]interface{} using default options
+		{
+			name:      "decode CBOR map[int]int to Go map[interface{}]interface{} (default)",
+			opts:      decOptionsDefault,
+			cborData:  cborDataMapIntInt,
+			wantValue: map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)},
+		},
+		{
+			name:      "decode CBOR map[string]int to Go map[interface{}]interface{} (default)",
+			opts:      decOptionsDefault,
+			cborData:  cborDataMapStringInt,
+			wantValue: map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
+		},
+		{
+			name:     "decode CBOR array of map[string]int to Go []map[interface{}]interface{} (default)",
+			opts:     decOptionsDefault,
+			cborData: cborDataArrayOfMapStringint,
+			wantValue: []interface{}{
+				map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
+				map[interface{}]interface{}{"c": uint64(3), "d": uint64(4)},
+			},
+		},
+		{
+			name:     "decode CBOR nested map to Go map[interface{}]interface{} (default)",
+			opts:     decOptionsDefault,
+			cborData: cborDataNestedMap,
+			wantValue: map[interface{}]interface{}{
+				"IntField": uint64(1),
+				"MapField": map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
+			},
+		},
+		// Decode CBOR map to map[interface{}]interface{} using default map type option
+		{
+			name:      "decode CBOR map[int]int to Go map[interface{}]interface{}",
+			opts:      decOptionsMapIntfIntfType,
+			cborData:  cborDataMapIntInt,
+			wantValue: map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)},
+		},
+		{
+			name:      "decode CBOR map[string]int to Go map[interface{}]interface{}",
+			opts:      decOptionsMapIntfIntfType,
+			cborData:  cborDataMapStringInt,
+			wantValue: map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
+		},
+		{
+			name:     "decode CBOR array of map[string]int to Go []map[interface{}]interface{}",
+			opts:     decOptionsMapIntfIntfType,
+			cborData: cborDataArrayOfMapStringint,
+			wantValue: []interface{}{
+				map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
+				map[interface{}]interface{}{"c": uint64(3), "d": uint64(4)},
+			},
+		},
+		{
+			name:     "decode CBOR nested map to Go map[interface{}]interface{}",
+			opts:     decOptionsMapIntfIntfType,
+			cborData: cborDataNestedMap,
+			wantValue: map[interface{}]interface{}{
+				"IntField": uint64(1),
+				"MapField": map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
+			},
+		},
+		// Decode CBOR map to map[string]interface{} using default map type option
+		{
+			name:         "decode CBOR map[int]int to Go map[string]interface{}",
+			opts:         decOptionsMapStringIntfType,
+			cborData:     cborDataMapIntInt,
+			wantErrorMsg: "cbor: cannot unmarshal positive integer into Go value of type string",
+		},
+		{
+			name:      "decode CBOR map[string]int to Go map[string]interface{}",
+			opts:      decOptionsMapStringIntfType,
+			cborData:  cborDataMapStringInt,
+			wantValue: map[string]interface{}{"a": uint64(1), "b": uint64(2)},
+		},
+		{
+			name:     "decode CBOR array of map[string]int to Go []map[string]interface{}",
+			opts:     decOptionsMapStringIntfType,
+			cborData: cborDataArrayOfMapStringint,
+			wantValue: []interface{}{
+				map[string]interface{}{"a": uint64(1), "b": uint64(2)},
+				map[string]interface{}{"c": uint64(3), "d": uint64(4)},
+			},
+		},
+		{
+			name:     "decode CBOR nested map to Go map[string]interface{}",
+			opts:     decOptionsMapStringIntfType,
+			cborData: cborDataNestedMap,
+			wantValue: map[string]interface{}{
+				"IntField": uint64(1),
+				"MapField": map[string]interface{}{"a": uint64(1), "b": uint64(2)},
+			},
+		},
+		// Decode CBOR map to map[string]int using default map type option
+		{
+			name:         "decode CBOR map[int]int to Go map[string]int",
+			opts:         decOptionsMapStringIntType,
+			cborData:     cborDataMapIntInt,
+			wantErrorMsg: "cbor: cannot unmarshal positive integer into Go value of type string",
+		},
+		{
+			name:      "decode CBOR map[string]int to Go map[string]int",
+			opts:      decOptionsMapStringIntType,
+			cborData:  cborDataMapStringInt,
+			wantValue: map[string]int{"a": 1, "b": 2},
+		},
+		{
+			name:     "decode CBOR array of map[string]int to Go []map[string]int",
+			opts:     decOptionsMapStringIntType,
+			cborData: cborDataArrayOfMapStringint,
+			wantValue: []interface{}{
+				map[string]int{"a": 1, "b": 2},
+				map[string]int{"c": 3, "d": 4},
+			},
+		},
+		{
+			name:         "decode CBOR nested map to Go map[string]int",
+			opts:         decOptionsMapStringIntType,
+			cborData:     cborDataNestedMap,
+			wantErrorMsg: "cbor: cannot unmarshal map into Go value of type int",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			decMode, _ := tc.opts.DecMode()
+
+			var v interface{}
+			err := decMode.Unmarshal(tc.cborData, &v)
+			if err != nil {
+				if tc.wantErrorMsg == "" {
+					t.Errorf("Unmarshal(0x%x) to empty interface returned error %v", tc.cborData, err)
+				} else if tc.wantErrorMsg != err.Error() {
+					t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+				}
+			} else {
+				if tc.wantValue == nil {
+					t.Errorf("Unmarshal(0x%x) = %v (%T), want error %q", tc.cborData, v, v, tc.wantErrorMsg)
+				} else if !reflect.DeepEqual(v, tc.wantValue) {
+					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantValue, tc.wantValue)
+				}
+			}
+		})
+	}
+}
