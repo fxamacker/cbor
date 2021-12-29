@@ -290,6 +290,11 @@ type DecOptions struct {
 
 	// ExtraReturnErrors specifies extra conditions that should be treated as errors.
 	ExtraReturnErrors ExtraDecErrorCond
+
+	// DefaultMapType specifies Go map type to create and decode to
+	// when unmarshalling CBOR into an empty interface value.
+	// By default, unmarshal uses map[interface{}]interface{}.
+	DefaultMapType reflect.Type
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -389,6 +394,9 @@ func (opts DecOptions) decMode() (*decMode, error) {
 	if !opts.ExtraReturnErrors.valid() {
 		return nil, errors.New("cbor: invalid ExtraReturnErrors " + strconv.Itoa(int(opts.ExtraReturnErrors)))
 	}
+	if opts.DefaultMapType != nil && opts.DefaultMapType.Kind() != reflect.Map {
+		return nil, fmt.Errorf("cbor: invalid DefaultMapType %s", opts.DefaultMapType)
+	}
 	dm := decMode{
 		dupMapKey:         opts.DupMapKey,
 		timeTag:           opts.TimeTag,
@@ -399,6 +407,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		tagsMd:            opts.TagsMd,
 		intDec:            opts.IntDec,
 		extraReturnErrors: opts.ExtraReturnErrors,
+		defaultMapType:    opts.DefaultMapType,
 	}
 	return &dm, nil
 }
@@ -430,6 +439,7 @@ type decMode struct {
 	tagsMd            TagsMode
 	intDec            IntDecMode
 	extraReturnErrors ExtraDecErrorCond
+	defaultMapType    reflect.Type
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -1013,6 +1023,14 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 	case cborTypeArray:
 		return d.parseArray()
 	case cborTypeMap:
+		if d.dm.defaultMapType != nil {
+			m := reflect.New(d.dm.defaultMapType)
+			err := d.parseToValue(m, getTypeInfo(m.Elem().Type()))
+			if err != nil {
+				return nil, err
+			}
+			return m.Elem().Interface(), nil
+		}
 		return d.parseMap()
 	}
 	return nil, nil
@@ -1142,7 +1160,7 @@ func (d *decoder) parseArrayToArray(v reflect.Value, tInfo *typeInfo) error {
 	return err
 }
 
-func (d *decoder) parseMap() (map[interface{}]interface{}, error) {
+func (d *decoder) parseMap() (interface{}, error) {
 	_, ai, val := d.getHead()
 	hasSize := (ai != 31)
 	count := int(val)
