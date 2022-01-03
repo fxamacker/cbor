@@ -14,9 +14,9 @@
 
 Features include CBOR tags, duplicate map key detection, float64→32→16, and Go struct tags (`toarray`, `keyasint`, `omitempty`).  API is close to `encoding/json` plus predefined CBOR options like Core Deterministic Encoding, Preferred Serialization, CTAP2, etc.
 
-CBOR [Preferred Serialization](https://www.rfc-editor.org/rfc/rfc8949.html#name-preferred-serialization) and Go struct tags (`toarray`, `keyasint`, `omitempty`) reduces programming effort and creates more compact data size.
+Using CBOR [Preferred Serialization](https://www.rfc-editor.org/rfc/rfc8949.html#name-preferred-serialization) with Go struct tags (`toarray`, `keyasint`, `omitempty`) reduces programming effort and creates smaller encoded data size.
 
-fxamacker/cbor is fuzz tested and is used by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, ConsenSys, Dapper Labs, Duo Labs (cisco), EdgeX Foundry, Mozilla, Netherlands (govt), Oasis Labs, Taurus SA, Teleport, and others.
+fxamacker/cbor has 98% coverage and is fuzz tested.  It won't exhaust RAM decoding 9 bytes of bad CBOR data.  It's used by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, ConsenSys, Dapper Labs, Duo Labs (cisco), EdgeX Foundry, Mozilla, Netherlands (govt), Oasis Labs, Taurus SA, Teleport, and others.
 
 Install with `go get github.com/fxamacker/cbor/v2` and `import "github.com/fxamacker/cbor/v2"`.  
 See [Quick Start](#quick-start) to save time.
@@ -1088,7 +1088,7 @@ __Words of encouragement and support__
 
 
 ## License 
-Copyright © 2019-2021 [Faye Amacker](https://github.com/fxamacker).  
+Copyright © 2019-2022 [Faye Amacker](https://github.com/fxamacker).  
 
 fxamacker/cbor is licensed under the MIT License.  See [LICENSE](LICENSE) for the full license text.  
 
