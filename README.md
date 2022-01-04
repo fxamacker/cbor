@@ -1,22 +1,22 @@
 # CBOR Codec in Go
 
-[![](https://github.com/fxamacker/images/raw/master/cbor/v2.3.0/fxamacker_cbor_banner.png)](#cbor-library-in-go)
+[![](https://github.com/fxamacker/images/raw/master/cbor/v2.4.0/fxamacker_cbor_banner.png)](#cbor-library-in-go)
 
 [![](https://github.com/fxamacker/cbor/workflows/ci/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Aci)
 [![](https://github.com/fxamacker/cbor/workflows/cover%20%E2%89%A598%25/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3A%22cover+%E2%89%A598%25%22)
 [![](https://github.com/fxamacker/cbor/workflows/linters/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Alinters)
 [![CodeQL](https://github.com/fxamacker/cbor/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/fxamacker/cbor/actions/workflows/codeql-analysis.yml)
-[![](https://img.shields.io/badge/fuzzing-1%2B%20billion-44c010)]()
+[![](https://img.shields.io/badge/fuzzing-3%2B%20billion%20execs-44c010)](#fuzzing-and-code-coverage)
 [![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor)
-[![](https://img.shields.io/badge/go-%3E%3D%201.12-blue)]()
+[![](https://img.shields.io/badge/go-%3E%3D%201.12-blue)](#cbor-library-installation)
 
-[__fxamacker/cbor__](https://github.com/fxamacker/cbor) is a modern [CBOR](https://tools.ietf.org/html/rfc8949) codec in [Go](https://golang.org).  It's like `encoding/json` for CBOR with time-saving features.  It balances [security](https://github.com/fxamacker/cbor/#cbor-security), usability, [speed](https://github.com/fxamacker/cbor/#cbor-performance), and other competing factors.
+[__fxamacker/cbor__](https://github.com/fxamacker/cbor) is a modern [CBOR](https://tools.ietf.org/html/rfc8949) codec in [Go](https://golang.org).  It's like `encoding/json` for CBOR with time-saving features.  It balances [security](https://github.com/fxamacker/cbor/#cbor-security), usability, [speed](https://github.com/fxamacker/cbor/#cbor-performance), data size, program size, and other competing factors.
 
 Features include CBOR tags, duplicate map key detection, float64→32→16, and Go struct tags (`toarray`, `keyasint`, `omitempty`).  API is close to `encoding/json` plus predefined CBOR options like Core Deterministic Encoding, Preferred Serialization, CTAP2, etc.
 
-Combining Preferred Serialization and struct tags (`toarray`, `keyasint`, `omitempty`) reduces programming effort and creates very compact data size.
+Using CBOR [Preferred Serialization](https://www.rfc-editor.org/rfc/rfc8949.html#name-preferred-serialization) with Go struct tags (`toarray`, `keyasint`, `omitempty`) reduces programming effort and creates smaller encoded data size.
 
-fxamacker/cbor is used by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, ConsenSys, Dapper Labs, Duo Labs (cisco), EdgeX Foundry, Mozilla, Netherlands (govt), Oasis Labs, Taurus SA, Teleport, and others.
+fxamacker/cbor has 98% coverage and is fuzz tested.  It won't exhaust RAM decoding 9 bytes of bad CBOR data.  It's used by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, ConsenSys, Dapper Labs, Duo Labs (cisco), EdgeX Foundry, Mozilla, Netherlands (govt), Oasis Labs, Taurus SA, Teleport, and others.
 
 Install with `go get github.com/fxamacker/cbor/v2` and `import "github.com/fxamacker/cbor/v2"`.  
 See [Quick Start](#quick-start) to save time.
@@ -27,7 +27,7 @@ See [Quick Start](#quick-start) to save time.
 
 CBOR is an [Internet Standard](https://en.wikipedia.org/wiki/Internet_Standard) by [IETF](https://www.ietf.org).  It's used in other standards like [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn) by [W3C](https://www.w3.org), [COSE (RFC 8152)](https://tools.ietf.org/html/rfc8152), [CWT (RFC 8392)](https://tools.ietf.org/html/rfc8392), [CDDL (RFC 8610)](https://datatracker.ietf.org/doc/html/rfc8610) and [more](CBOR_GOLANG.md).
 
-[Reasons for choosing CBOR](https://github.com/fxamacker/cbor/wiki/Why-CBOR) vary by project.  Some projects replaced protobuf, encoding/json, or encoding/gob with CBOR.  For example, by replacing gRPC+protobuf with gRPC+CBOR.
+[Reasons for choosing CBOR](https://github.com/fxamacker/cbor/wiki/Why-CBOR) vary by project.  Some projects replaced protobuf, encoding/json, encoding/gob, etc. with CBOR.  For example, by replacing protobuf with CBOR in gRPC.
 
 ## Why fxamacker/cbor?
 
@@ -1031,9 +1031,9 @@ __Over 375 tests__ must pass on 4 architectures before tagging a release.  They 
 
 __Code coverage__ must not fall below 95% when tagging a release.  Code coverage is above 98% (`go test -cover`) for cbor v2.3 which is among the highest for libraries (in Go) of this type.
 
-__Coverage-guided fuzzing__ must pass 250+ million execs using a large corpus before tagging a release.  Fuzzing is usually continued after the release is tagged and is manually stopped after reaching 1+ billion execs.  Fuzzing uses a custom version of [fxamacker/cbor-fuzz](https://github.com/fxamacker/cbor-fuzz).  
+__Coverage-guided fuzzing__ must pass 1+ billion execs using a large corpus before tagging a release.  Fuzzing is usually continued after the release is tagged and is manually stopped after reaching 1-3 billion execs.  Fuzzing uses a customized version of [dvyukov/go-fuzz](https://github.com/dvyukov/go-fuzz).
 
-To prevent delays to release schedules, fuzzing is not restarted for a release if changes are limited to docs and comments.
+To prevent delays to release schedules, fuzzing is not restarted for a release if changes are limited to ci, docs, and comments.
 
 <hr>
 
@@ -1088,7 +1088,7 @@ __Words of encouragement and support__
 
 
 ## License 
-Copyright © 2019-2021 [Faye Amacker](https://github.com/fxamacker).  
+Copyright © 2019-2022 [Faye Amacker](https://github.com/fxamacker).  
 
 fxamacker/cbor is licensed under the MIT License.  See [LICENSE](LICENSE) for the full license text.  
 
