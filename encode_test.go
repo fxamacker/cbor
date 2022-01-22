@@ -3653,3 +3653,34 @@ func TestMapWithSimpleValueKey(t *testing.T) {
 		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, encodedData, data)
 	}
 }
+
+func TestMarshalByteStringUnwrap(t *testing.T) {
+	testCases := []struct {
+		name         string
+		value        interface{}
+		wantCborData []byte
+	}{
+		{
+			name: "map with ByteString keys",
+			value: map[interface{}]interface{}{
+				NewByteString(hexDecode("abcdef")): uint64(123),
+			},
+			wantCborData: hexDecode("A143ABCDEF187B"),
+		},
+	}
+	dm, err := EncOptions{}.EncMode()
+	if err != nil {
+		t.Errorf("EncMode() returned an error %v", err)
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fmt.Printf("tc.value = %#v\n", tc.value)
+			if b, err := dm.Marshal(tc.value); err != nil {
+				t.Errorf("Marshal(%v) returned error %v", tc.value, err)
+			} else if !bytes.Equal(b, tc.wantCborData) {
+				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.value, b, tc.wantCborData)
+			}
+		})
+	}
+}
