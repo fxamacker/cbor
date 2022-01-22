@@ -4481,6 +4481,64 @@ func TestIntDec(t *testing.T) {
 	}
 }
 
+func TestDecModeInvalidMapKeyByteString(t *testing.T) {
+	wantErrorMsg := "cbor: invalid MapKeyByteString 101"
+	_, err := DecOptions{MapKeyByteString: 101}.DecMode()
+	if err == nil {
+		t.Errorf("DecMode() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("DecMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	}
+}
+
+func TestMapKeyByteString(t *testing.T) {
+	testCases := []struct {
+		name             string
+		cborData         []byte
+		wantObj          interface{}
+		wantErrorMsg     string
+		mapKeyByteString MapKeyByteStringMode
+	}{
+		{
+			name:             "CBOR map with byte string key with MapKeyByteStringFail",
+			cborData:         hexDecode("A143ABCDEF187B"),
+			wantErrorMsg:     "cbor: invalid map key type: []uint8",
+			mapKeyByteString: MapKeyByteStringFail,
+		},
+		{
+			name:     "CBOR map with byte string key with MapKeyByteStringWrap",
+			cborData: hexDecode("A143ABCDEF187B"),
+			wantObj: map[interface{}]interface{}{
+				NewByteString(hexDecode("abcdef")): uint64(123),
+			},
+			mapKeyByteString: MapKeyByteStringWrap,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, err := DecOptions{MapKeyByteString: tc.mapKeyByteString}.DecMode()
+			if err != nil {
+				t.Errorf("DecMode() returned an error %+v", err)
+			}
+			var v interface{}
+			err = dm.Unmarshal(tc.cborData, &v)
+			if err == nil {
+				if tc.wantErrorMsg != "" {
+					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.cborData, tc.wantErrorMsg)
+				} else if !reflect.DeepEqual(v, tc.wantObj) {
+					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantObj, tc.wantObj)
+				}
+			} else {
+				if tc.wantErrorMsg == "" {
+					t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+				}
+			}
+		})
+	}
+}
+
 func TestDecModeInvalidExtraError(t *testing.T) {
 	wantErrorMsg := "cbor: invalid ExtraReturnErrors 3"
 	_, err := DecOptions{ExtraReturnErrors: 3}.DecMode()

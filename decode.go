@@ -239,6 +239,26 @@ func (idm IntDecMode) valid() bool {
 	return idm < maxIntDec
 }
 
+// MapKeyByteStringMode specifies whether to use a wrapper object for byte strings.
+type MapKeyByteStringMode int
+
+const (
+	// MapKeyByteStringFail affects how a CBOR byte string as a map key is decoded.
+	// It makes the parsing fail as Go cannot use []byte as a map key.
+	MapKeyByteStringFail MapKeyByteStringMode = iota
+
+	// MapKeyByteStringWrap affects how a CBOR byte string as a map key is decoded.
+	// It allows the parsing to succeed by wrapping the byte string in a wrapper object
+	// that can be used as a map key in Go.
+	MapKeyByteStringWrap
+
+	maxMapKeyByteString
+)
+
+func (bsm MapKeyByteStringMode) valid() bool {
+	return bsm < maxMapKeyByteString
+}
+
 // ExtraDecErrorCond specifies extra conditions that should be treated as errors.
 type ExtraDecErrorCond uint
 
@@ -287,6 +307,9 @@ type DecOptions struct {
 	// IntDec specifies which Go integer type (int64 or uint64) to use
 	// when decoding CBOR int (major type 0 and 1) to Go interface{}.
 	IntDec IntDecMode
+
+	// MapKeyByteString specifies whether to use a wrapper object for byte strings.
+	MapKeyByteString MapKeyByteStringMode
 
 	// ExtraReturnErrors specifies extra conditions that should be treated as errors.
 	ExtraReturnErrors ExtraDecErrorCond
@@ -376,6 +399,9 @@ func (opts DecOptions) decMode() (*decMode, error) {
 	if !opts.IntDec.valid() {
 		return nil, errors.New("cbor: invalid IntDec " + strconv.Itoa(int(opts.IntDec)))
 	}
+	if !opts.MapKeyByteString.valid() {
+		return nil, errors.New("cbor: invalid MapKeyByteString " + strconv.Itoa(int(opts.MapKeyByteString)))
+	}
 	if opts.MaxNestedLevels == 0 {
 		opts.MaxNestedLevels = 32
 	} else if opts.MaxNestedLevels < 4 || opts.MaxNestedLevels > 256 {
@@ -406,6 +432,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		indefLength:       opts.IndefLength,
 		tagsMd:            opts.TagsMd,
 		intDec:            opts.IntDec,
+		mapKeyByteString:  opts.MapKeyByteString,
 		extraReturnErrors: opts.ExtraReturnErrors,
 		defaultMapType:    opts.DefaultMapType,
 	}
@@ -438,6 +465,7 @@ type decMode struct {
 	indefLength       IndefLengthMode
 	tagsMd            TagsMode
 	intDec            IntDecMode
+	mapKeyByteString  MapKeyByteStringMode
 	extraReturnErrors ExtraDecErrorCond
 	defaultMapType    reflect.Type
 }
@@ -455,6 +483,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		IndefLength:       dm.indefLength,
 		TagsMd:            dm.tagsMd,
 		IntDec:            dm.intDec,
+		MapKeyByteString:  dm.mapKeyByteString,
 		ExtraReturnErrors: dm.extraReturnErrors,
 	}
 }
@@ -1168,6 +1197,7 @@ func (d *decoder) parseMap() (interface{}, error) {
 	var k, e interface{}
 	var err, lastErr error
 	keyCount := 0
+	typeByteSlice := reflect.TypeOf([]byte{})
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
 		// Parse CBOR map key.
 		if k, lastErr = d.parse(true); lastErr != nil {
@@ -1180,6 +1210,11 @@ func (d *decoder) parseMap() (interface{}, error) {
 
 		// Detect if CBOR map key can be used as Go map key.
 		rv := reflect.ValueOf(k)
+		// Wrap byte string if enabled
+		if rv.IsValid() && rv.Type() == typeByteSlice && d.dm.mapKeyByteString == MapKeyByteStringWrap {
+			k = NewByteString(rv.Bytes())
+			rv = reflect.ValueOf(k)
+		}
 		if !isHashableValue(rv) {
 			if err == nil {
 				err = errors.New("cbor: invalid map key type: " + rv.Type().String())
@@ -1236,6 +1271,7 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 	keyIsInterfaceType := keyType == typeIntf // If key type is interface{}, need to check if key value is hashable.
 	var err, lastErr error
 	keyCount := v.Len()
+	typeByteSlice := reflect.TypeOf([]byte{})
 	var existingKeys map[interface{}]bool // Store existing map keys, used for detecting duplicate map key.
 	if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
 		existingKeys = make(map[interface{}]bool, keyCount)
@@ -1262,6 +1298,11 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 			}
 			d.skip()
 			continue
+		}
+		// Wrap byte string if enabled
+		if keyType == typeByteSlice && d.dm.mapKeyByteString == MapKeyByteStringWrap {
+			keyValue = reflect.ValueOf(NewByteString(keyValue.Bytes()))
+			keyType = keyValue.Type()
 		}
 
 		// Detect if CBOR map key can be used as Go map key.

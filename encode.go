@@ -786,6 +786,10 @@ func encodeFloat64(e *encoderBuffer, f64 float64) error {
 }
 
 func encodeByteString(e *encoderBuffer, em *encMode, v reflect.Value) error {
+	// Unwrap byte string
+	if v.Type() == typeByteString {
+		v = reflect.ValueOf(v.Interface().(ByteString).Bytes())
+	}
 	vk := v.Kind()
 	if vk == reflect.Slice && v.IsNil() {
 		e.Write(cborNil)
@@ -1298,6 +1302,8 @@ func getEncodeFuncInternal(t reflect.Type) (encodeFunc, isEmptyFunc) {
 		return encodeBigInt, alwaysNotEmpty
 	case typeRawMessage:
 		return encodeMarshalerType, isEmptySlice
+	case typeByteString:
+		return encodeByteString, isEmptyByteString
 	}
 	if reflect.PtrTo(t).Implements(typeMarshaler) {
 		return encodeMarshalerType, alwaysNotEmpty
@@ -1395,6 +1401,10 @@ func isEmptyString(v reflect.Value) (bool, error) {
 
 func isEmptySlice(v reflect.Value) (bool, error) {
 	return v.Len() == 0, nil
+}
+
+func isEmptyByteString(v reflect.Value) (bool, error) {
+	return len(v.Interface().(ByteString).Bytes()) == 0, nil
 }
 
 func isEmptyMap(v reflect.Value) (bool, error) {
