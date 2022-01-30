@@ -192,7 +192,7 @@ func (sd *StreamDecoder) NextSize() (uint64, error) {
 		} else if ai == 26 {
 			size = uint64(binary.BigEndian.Uint32(sd.dec.d.data[off : off+4]))
 		} else if ai == 27 {
-			size = uint64(binary.BigEndian.Uint64(sd.dec.d.data[off : off+8]))
+			size = binary.BigEndian.Uint64(sd.dec.d.data[off : off+8])
 		} else if ai == 31 {
 			return 0, &IndefiniteLengthNotSupportedError{t}
 		}
