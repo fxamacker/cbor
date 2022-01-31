@@ -2882,29 +2882,29 @@ const (
 
 var (
 	// qnan 32 bits variables
-	qnanVar0xffc00001 uint32 = qnanConst0xffc00001
-	qnanVar0x7fc00001 uint32 = qnanConst0x7fc00001
-	qnanVar0xffc02000 uint32 = qnanConst0xffc02000
-	qnanVar0x7fc02000 uint32 = qnanConst0x7fc02000
+	qnanVar0xffc00001 = qnanConst0xffc00001
+	qnanVar0x7fc00001 = qnanConst0x7fc00001
+	qnanVar0xffc02000 = qnanConst0xffc02000
+	qnanVar0x7fc02000 = qnanConst0x7fc02000
 	// snan 32 bits variables
-	snanVar0xff800001 uint32 = snanConst0xff800001
-	snanVar0x7f800001 uint32 = snanConst0x7f800001
-	snanVar0xff802000 uint32 = snanConst0xff802000
-	snanVar0x7f802000 uint32 = snanConst0x7f802000
+	snanVar0xff800001 = snanConst0xff800001
+	snanVar0x7f800001 = snanConst0x7f800001
+	snanVar0xff802000 = snanConst0xff802000
+	snanVar0x7f802000 = snanConst0x7f802000
 	// qnan 64 bits variables
-	qnanVar0xfff8000000000001 uint64 = qnanConst0xfff8000000000001
-	qnanVar0x7ff8000000000001 uint64 = qnanConst0x7ff8000000000001
-	qnanVar0xfff8000020000000 uint64 = qnanConst0xfff8000020000000
-	qnanVar0x7ff8000020000000 uint64 = qnanConst0x7ff8000020000000
-	qnanVar0xfffc000000000000 uint64 = qnanConst0xfffc000000000000
-	qnanVar0x7ffc000000000000 uint64 = qnanConst0x7ffc000000000000
+	qnanVar0xfff8000000000001 = qnanConst0xfff8000000000001
+	qnanVar0x7ff8000000000001 = qnanConst0x7ff8000000000001
+	qnanVar0xfff8000020000000 = qnanConst0xfff8000020000000
+	qnanVar0x7ff8000020000000 = qnanConst0x7ff8000020000000
+	qnanVar0xfffc000000000000 = qnanConst0xfffc000000000000
+	qnanVar0x7ffc000000000000 = qnanConst0x7ffc000000000000
 	// snan 64 bits variables
-	snanVar0xfff0000000000001 uint64 = snanConst0xfff0000000000001
-	snanVar0x7ff0000000000001 uint64 = snanConst0x7ff0000000000001
-	snanVar0xfff0000020000000 uint64 = snanConst0xfff0000020000000
-	snanVar0x7ff0000020000000 uint64 = snanConst0x7ff0000020000000
-	snanVar0xfff4000000000000 uint64 = snanConst0xfff4000000000000
-	snanVar0x7ff4000000000000 uint64 = snanConst0x7ff4000000000000
+	snanVar0xfff0000000000001 = snanConst0xfff0000000000001
+	snanVar0x7ff0000000000001 = snanConst0x7ff0000000000001
+	snanVar0xfff0000020000000 = snanConst0xfff0000020000000
+	snanVar0x7ff0000020000000 = snanConst0x7ff0000020000000
+	snanVar0xfff4000000000000 = snanConst0xfff4000000000000
+	snanVar0x7ff4000000000000 = snanConst0x7ff4000000000000
 )
 
 func TestNaNConvert(t *testing.T) {
