@@ -53,7 +53,7 @@ func TestStreamDecodeBool(t *testing.T) {
 					t.Errorf("NextType() returned %s, want %s", nt, expectedType)
 				}
 
-				wantErrorMsg := "cannot decode CBOR boolean type to string"
+				wantErrorMsg := "cbor: cannot decode CBOR boolean type to string"
 
 				// DecodeXXX() should return WrongTypeError with type mismatch (data offset is not moved)
 				_, err = sd.sd.DecodeString()
@@ -119,7 +119,7 @@ func TestStreamDecodeNil(t *testing.T) {
 				t.Errorf("NextType() returned %s, want %s", nt, expectedType)
 			}
 
-			wantErrorMsg := "cannot decode CBOR nil type to bool"
+			wantErrorMsg := "cbor: cannot decode CBOR nil type to bool"
 
 			// DecodeXXX() should return WrongTypeError with type mismatch (data offset is not moved)
 			_, err = sd.sd.DecodeBool()
@@ -196,7 +196,7 @@ func TestStreamDecodeUint(t *testing.T) {
 					t.Errorf("NextType() returned %s, want %s", nt, expectedType)
 				}
 
-				wantErrorMsg := "cannot decode CBOR uint type to bytes"
+				wantErrorMsg := "cbor: cannot decode CBOR uint type to bytes"
 
 				// DecodeXXX() should return WrongTypeError with type mismatch (data offset is not moved)
 				_, err = sd.sd.DecodeBytes()
@@ -287,9 +287,9 @@ func TestStreamDecodeInt(t *testing.T) {
 
 				var wantErrorMsg string
 				if tc.expected >= 0 {
-					wantErrorMsg = "cannot decode CBOR uint type to big.Int"
+					wantErrorMsg = "cbor: cannot decode CBOR uint type to big.Int"
 				} else {
-					wantErrorMsg = "cannot decode CBOR int type to big.Int"
+					wantErrorMsg = "cbor: cannot decode CBOR int type to big.Int"
 				}
 
 				// DecodeXXX() should return WrongTypeError with type mismatch (data offset is not moved)
@@ -408,7 +408,7 @@ func TestStreamDecodeBytes(t *testing.T) {
 					t.Errorf("NextType() returned %s, want %s", nt, expectedType)
 				}
 
-				wantErrorMsg := "cannot decode CBOR byte string type to int64"
+				wantErrorMsg := "cbor: cannot decode CBOR byte string type to int64"
 
 				// DecodeXXX() should return WrongTypeError with type mismatch (data offset is not moved)
 				i, err := sd.sd.DecodeInt64()
@@ -534,7 +534,7 @@ func TestStreamDecodeString(t *testing.T) {
 					t.Errorf("NextType() returned %s, want %s", nt, expectedType)
 				}
 
-				wantErrorMsg := "cannot decode CBOR text string type to bytes"
+				wantErrorMsg := "cbor: cannot decode CBOR text string type to bytes"
 
 				// DecodeXXX() should return WrongTypeError with type mismatch (data offset is not moved)
 				i, err := sd.sd.DecodeBytes()
@@ -718,7 +718,7 @@ func TestStreamDecodeBigInt(t *testing.T) {
 					t.Errorf("NextType() returned %s, want %s", nt, expectedType)
 				}
 
-				wantErrorMsg := "cannot decode CBOR bignum type to string"
+				wantErrorMsg := "cbor: cannot decode CBOR bignum type to string"
 
 				// DecodeXXX() should return WrongTypeError with type mismatch (data offset is not moved)
 				i, err := sd.sd.DecodeString()
@@ -795,7 +795,7 @@ func TestStreamDecodeTag(t *testing.T) {
 				t.Errorf("NextType() returned %s, want %s", nt, TagType)
 			}
 
-			wantErrorMsg := "cannot decode CBOR tag type to array"
+			wantErrorMsg := "cbor: cannot decode CBOR tag type to array"
 
 			// DecodeXXX() should return WrongTypeError with type mismatch (data offset is not moved)
 			i, err := sd.sd.DecodeArrayHead()
@@ -825,7 +825,7 @@ func TestStreamDecodeTag(t *testing.T) {
 				t.Errorf("NextType() returned %s, want %s", nt, TextStringType)
 			}
 
-			wantErrorMsg = "cannot decode CBOR text string type to array"
+			wantErrorMsg = "cbor: cannot decode CBOR text string type to array"
 
 			// DecodeXXX() should return WrongTypeError with type mismatch (data offset is not moved)
 			i, err = sd.sd.DecodeArrayHead()
@@ -890,7 +890,7 @@ func TestStreamDecodeEmptyArray(t *testing.T) {
 				t.Errorf("NextType() returned %s, want %s", nt, ArrayType)
 			}
 
-			wantErrorMsg := "cannot decode CBOR array type to tag"
+			wantErrorMsg := "cbor: cannot decode CBOR array type to tag"
 
 			// DecodeXXX() should return WrongTypeError with type mismatch (data offset is not moved)
 			i, err := sd.sd.DecodeTagNumber()
@@ -955,7 +955,7 @@ func TestStreamDecodeArray(t *testing.T) {
 				t.Errorf("NextType() returned %s, want %s", nt, ArrayType)
 			}
 
-			wantErrorMsg := "cannot decode CBOR array type to tag"
+			wantErrorMsg := "cbor: cannot decode CBOR array type to tag"
 
 			// DecodeXXX() should return WrongTypeError with type mismatch (data offset is not moved)
 			i, err := sd.sd.DecodeTagNumber()
@@ -1091,7 +1091,7 @@ func TestStreamDecodeRawBytes(t *testing.T) {
 				t.Errorf("NextType() returned %s, want %s", nt, ArrayType)
 			}
 
-			wantErrorMsg := "cannot decode CBOR array type to nil"
+			wantErrorMsg := "cbor: cannot decode CBOR array type to nil"
 
 			// DecodeXXX() should return WrongTypeError with type mismatch (data offset is not moved)
 			err = sd.sd.DecodeNil()
@@ -1148,7 +1148,7 @@ func TestStreamDecodeRawBytesZeroCopy(t *testing.T) {
 			t.Errorf("NextType() returned %s, want %s", nt, expectedType)
 		}
 
-		wantErrorMsg := "cannot decode CBOR array type to nil"
+		wantErrorMsg := "cbor: cannot decode CBOR array type to nil"
 
 		// DecodeXXX() should return WrongTypeError with type mismatch (data offset is not moved)
 		err = sd.DecodeNil()
@@ -1194,7 +1194,7 @@ func TestStreamDecodeRawBytesZeroCopy(t *testing.T) {
 			t.Errorf("NextType() returned %s, want %s", nt, expectedType)
 		}
 
-		wantErrorMsg := "cannot decode CBOR array type to uint64"
+		wantErrorMsg := "cbor: cannot decode CBOR array type to uint64"
 
 		// DecodeXXX() should return WrongTypeError with type mismatch (data offset is not moved)
 		_, err = sd.DecodeUint64()
@@ -1700,4 +1700,71 @@ func TestStreamDecoderNumBytesDecoded(t *testing.T) {
 			t.Errorf("NumBytesDecoded() returned %v, want %v", bytesDecoded, len(data))
 		}
 	})
+}
+
+func TestStreamDecodeNextSize(t *testing.T) {
+	testCases := []struct {
+		name           string
+		data           []byte
+		expectedSize   uint64
+		expectedErrMsg string
+	}{
+		{"no data", []byte{}, 0, "EOF"},
+		{"invalid data", []byte{0x1b, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07}, 0, "unexpected EOF"},
+		{"invalid data", []byte{0x9d}, 0, "cbor: invalid additional information"},
+		{"false", []byte{0xf4}, 0, "size operation is not supported"},
+		{"true", []byte{0xf5}, 0, "size operation is not supported"},
+		{"nil", []byte{0xf6}, 0, "size operation is not supported"},
+		{"uint", []byte{0x01}, 0, "size operation is not supported"},                                                            // 1
+		{"int", []byte{0x20}, 0, "size operation is not supported"},                                                             // -1
+		{"tag", []byte{0xc2, 0x49, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, 0, "size operation is not supported"}, // bignum(18446744073709551616)
+		{"empty byte string", []byte{0x40}, 0, ""},                                                                              // []
+		{"byte string", []byte{0x45, 0x01, 0x02, 0x03, 0x04, 0x05}, 5, ""},                                                      // [1, 2, 3, 4, 5]
+		{"indef length byte string", []byte{0x5f, 0x42, 0x01, 0x02, 0x043, 0x03, 0x04, 0x05, 0xff}, 0, "size is unavailable for indefinite length"},
+		{"empty text string", []byte{0x60}, 0, ""},                                                 // ""
+		{"text string", []byte{0x65, 0x68, 0x65, 0x6c, 0x6c, 0x6f}, 5, ""},                         // "hello"
+		{"text string", []byte{0x78, 0x01, 0x61}, 1, ""},                                           // "a"
+		{"text string", []byte{0x79, 0x00, 0x01, 0x61}, 1, ""},                                     // "a"
+		{"text string", []byte{0x7a, 0x00, 0x00, 0x00, 0x01, 0x61}, 1, ""},                         // "a"
+		{"text string", []byte{0x7b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x61}, 1, ""}, // "a"
+		{"indef length text string", []byte{0x7f, 0x65, 0x73, 0x74, 0x72, 0x65, 0x61, 0x64, 0x6d, 0x69, 0x6e, 0x67, 0xff}, 0, "size is unavailable for indefinite length"},
+		{"empty array", []byte{0x80}, 0, ""},                                                                         // []
+		{"array", []byte{0x83, 0x01, 0x02, 0x03}, 3, ""},                                                             // [1, 2, 3]
+		{"indef length array", []byte{0x9f, 0x01, 0x02, 0x03, 0xff}, 0, "size is unavailable for indefinite length"}, // [1, 2, 3]
+	}
+
+	for _, tc := range testCases {
+
+		// For each test case, test 2 StreamDecoders.
+
+		decoders := []struct {
+			name string
+			sd   *StreamDecoder
+		}{
+			{"byte_decoder", NewByteStreamDecoder(tc.data)},
+			{"reader_decoder", NewStreamDecoder(bytes.NewReader(tc.data))},
+		}
+
+		for _, sd := range decoders {
+
+			t.Run(sd.name+" "+tc.name, func(t *testing.T) {
+				// NextSize() peeks at next CBOR data size
+				size, err := sd.sd.NextSize()
+				if size != tc.expectedSize {
+					t.Errorf("NextSize() returned %d, want %d", size, tc.expectedSize)
+				}
+				if err == nil {
+					if tc.expectedErrMsg != "" {
+						t.Errorf("NextSize() didn't return error, want %s", tc.expectedErrMsg)
+					}
+				} else {
+					if tc.expectedErrMsg == "" {
+						t.Errorf("NextSize() returned error %v", err)
+					} else if !strings.Contains(err.Error(), tc.expectedErrMsg) {
+						t.Errorf("NextSize() returned error %v, want %s", err, tc.expectedErrMsg)
+					}
+				}
+			})
+		}
+	}
 }

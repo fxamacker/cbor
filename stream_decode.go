@@ -1,6 +1,7 @@
 package cbor
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -68,7 +69,27 @@ type WrongTypeError struct {
 }
 
 func (e *WrongTypeError) Error() string {
-	return fmt.Sprintf("cannot decode %s to %s", e.ActualType.String(), e.ExpectedType)
+	return fmt.Sprintf("cbor: cannot decode %s to %s", e.ActualType.String(), e.ExpectedType)
+}
+
+// IndefiniteLengthNotSupportedError is returned by NextSize() if next CBOR data
+// is indefinite length.
+type IndefiniteLengthNotSupportedError struct {
+	t Type
+}
+
+func (e *IndefiniteLengthNotSupportedError) Error() string {
+	return fmt.Sprintf("cbor: size is unavailable for indefinite length %s", e.t)
+}
+
+// TypeNotSupportedError is returned by NextSize() if next CBOR type
+// is not supported/implemented by NextSize().
+type TypeNotSupportedError struct {
+	t Type
+}
+
+func (e *TypeNotSupportedError) Error() string {
+	return fmt.Sprintf("cbor: size operation is not supported for %s", e.t)
 }
 
 // StreamDecoder validates complete CBOR data and decodes it in chunks.
@@ -135,6 +156,50 @@ func (sd *StreamDecoder) NextType() (Type, error) {
 		return OtherType, nil
 	}
 	return UndefinedType, errors.New("cbor: unrecognized type")
+}
+
+// NextSize returns the next CBOR data size for four CBOR types.
+// Returned uint64 represents different kind of size depending on
+// the CBOR type:
+// - byte string: length (in bytes) of byte string
+// - text string: length (in bytes) of text string
+// - array: number of array elements
+// - map: number of key/value pairs
+// Error is returned for indef length data and unsupported types.
+// Support for additional types wasn't added for simplicity.
+func (sd *StreamDecoder) NextSize() (uint64, error) {
+	t, err := sd.NextType()
+	if err != nil {
+		return 0, err
+	}
+
+	ai := sd.dec.d.data[sd.dec.d.off] & 0x1f
+
+	switch t {
+
+	case ByteStringType, TextStringType, ArrayType, MapType:
+		off := sd.dec.d.off + 1
+
+		// This function only interprets valid head because
+		// CBOR data is validated in NextType().
+		var size uint64
+		if ai < 24 {
+			size = uint64(ai)
+		} else if ai == 24 {
+			size = uint64(sd.dec.d.data[off])
+		} else if ai == 25 {
+			size = uint64(binary.BigEndian.Uint16(sd.dec.d.data[off : off+2]))
+		} else if ai == 26 {
+			size = uint64(binary.BigEndian.Uint32(sd.dec.d.data[off : off+4]))
+		} else if ai == 27 {
+			size = binary.BigEndian.Uint64(sd.dec.d.data[off : off+8])
+		} else if ai == 31 {
+			return 0, &IndefiniteLengthNotSupportedError{t}
+		}
+		return size, nil
+	}
+
+	return 0, &TypeNotSupportedError{t}
 }
 
 // Skip skips next CBOR data.
