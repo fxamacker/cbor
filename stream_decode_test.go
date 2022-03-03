@@ -624,24 +624,49 @@ func TestStreamDecodeInvalidUTF8String(t *testing.T) {
 
 	expectedType := TextStringType
 
+	dmDecodeInvalidUTF8, err := DecOptions{UTF8: UTF8DecodeInvalid}.DecMode()
+	if err != nil {
+		t.Errorf("DecMode() returned an error %+v", err)
+	}
+
 	data := []byte{0x61, 0xfe}
 
 	t.Parallel()
 
-	decoders := []struct {
-		name string
-		sd   *StreamDecoder
+	testCases := []struct {
+		name         string
+		sd           *StreamDecoder
+		wantObj      string
+		wantErrorMsg string
 	}{
-		{"byte_decoder", NewByteStreamDecoder(data)},
-		{"reader_decoder", NewStreamDecoder(bytes.NewReader(data))},
+		{
+			name:         "byte decoder",
+			sd:           NewByteStreamDecoder(data),
+			wantErrorMsg: invalidUTF8ErrorMsg,
+		},
+		{
+			name:    "byte decoder with UTF8DecodeInvalid",
+			sd:      dmDecodeInvalidUTF8.NewByteStreamDecoder(data),
+			wantObj: string([]byte{0xfe}),
+		},
+		{
+			name:         "reader decoder",
+			sd:           NewStreamDecoder(bytes.NewReader(data)),
+			wantErrorMsg: invalidUTF8ErrorMsg,
+		},
+		{
+			name:    "reader decoder with UTF8DecodeInvalid",
+			sd:      dmDecodeInvalidUTF8.NewStreamDecoder(bytes.NewReader(data)),
+			wantObj: string([]byte{0xfe}),
+		},
 	}
 
-	for _, sd := range decoders {
+	for _, tc := range testCases {
 
-		t.Run(sd.name, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 
 			// NextType() peeks at next CBOR data type (data offset is not moved)
-			nt, err := sd.sd.NextType()
+			nt, err := tc.sd.NextType()
 			if err != nil {
 				t.Errorf("NextType() returned error %v", err)
 			}
@@ -649,22 +674,34 @@ func TestStreamDecodeInvalidUTF8String(t *testing.T) {
 				t.Errorf("NextType() returned %s, want %s", nt, expectedType)
 			}
 
-			// DecodeString() should return error and string is skipped (data offset is moved)
-			_, err = sd.sd.DecodeString()
-			if _, ok := err.(*SemanticError); !ok {
-				t.Errorf("DecodeString() returned wrong type of error %T, want (*SemanticError)", err)
-			} else if err.Error() != invalidUTF8ErrorMsg {
-				t.Errorf("DecodeString() returned error %q, want error %q", err.Error(), invalidUTF8ErrorMsg)
+			// If decode option UTF8 is UTF8DecodeInvalid (default),
+			// DecodeString() returns error and string is skipped (data offset is moved).
+			// Otherwise, DecodeString() returns invalid UTF-8 string.
+			s, err := tc.sd.DecodeString()
+
+			if tc.wantErrorMsg != "" {
+				if err == nil {
+					t.Errorf("DecodeString() didn't return error")
+				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+					t.Errorf("DecodeString() returned error %q, want error %q", err.Error(), tc.wantErrorMsg)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("DecodeString() returned error %q", err)
+				}
+				if s != tc.wantObj {
+					t.Errorf("DecodeString() returned %s, want %s", s, tc.wantObj)
+				}
 			}
 
 			// NextType() should return io.EOF
-			_, err = sd.sd.NextType()
+			_, err = tc.sd.NextType()
 			if err != io.EOF {
 				t.Errorf("NextType() returned error %v, want io.EOF", err)
 			}
 
 			// DecodeString() should return io.EOF
-			_, err = sd.sd.DecodeString()
+			_, err = tc.sd.DecodeString()
 			if err != io.EOF {
 				t.Errorf("DecodeString() returned error %v, want io.EOF", err)
 			}
