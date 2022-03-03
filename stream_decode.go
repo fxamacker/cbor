@@ -423,7 +423,7 @@ func (sd *StreamDecoder) DecodeString() (string, error) {
 
 	sd.updateState(end - start)
 
-	if !utf8.Valid(b) {
+	if d.dm.utf8 == UTF8RejectInvalid && !utf8.Valid(b) {
 		return "", &SemanticError{"cbor: invalid UTF-8 string"}
 	}
 
