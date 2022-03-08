@@ -158,13 +158,14 @@ func (sd *StreamDecoder) NextType() (Type, error) {
 	return UndefinedType, errors.New("cbor: unrecognized type")
 }
 
-// NextSize returns the next CBOR data size for four CBOR types.
+// NextSize returns the next CBOR data size for five types.
 // Returned uint64 represents different kind of size depending on
-// the CBOR type:
-// - byte string: length (in bytes) of byte string
-// - text string: length (in bytes) of text string
-// - array: number of array elements
-// - map: number of key/value pairs
+// the type:
+// - ByteStringType : length (in bytes) of byte string
+// - TextStringType : length (in bytes) of text string
+// - ArrayType      : number of array elements
+// - MapType        : number of key/value pairs
+// - BigNumType     : length (in bytes) of encoded big number
 // Error is returned for indef length data and unsupported types.
 // Support for additional types wasn't added for simplicity.
 func (sd *StreamDecoder) NextSize() (uint64, error) {
@@ -173,12 +174,20 @@ func (sd *StreamDecoder) NextSize() (uint64, error) {
 		return 0, err
 	}
 
-	ai := sd.dec.d.data[sd.dec.d.off] & 0x1f
+	off := sd.dec.d.off
+
+	if t == BigNumType {
+		// NextType() validates CBOR tag data (tag number + tag content),
+		// so it's safe to increment offset to access tag content.
+		off++              // Increment offset to point to tag content
+		t = ByteStringType // tag content type is CBOR byte string
+	}
 
 	switch t {
 
 	case ByteStringType, TextStringType, ArrayType, MapType:
-		off := sd.dec.d.off + 1
+		ai := sd.dec.d.data[off] & 0x1f
+		off++
 
 		// This function only interprets valid head because
 		// CBOR data is validated in NextType().

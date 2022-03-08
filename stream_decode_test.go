@@ -1752,11 +1752,11 @@ func TestStreamDecodeNextSize(t *testing.T) {
 		{"false", []byte{0xf4}, 0, "size operation is not supported"},
 		{"true", []byte{0xf5}, 0, "size operation is not supported"},
 		{"nil", []byte{0xf6}, 0, "size operation is not supported"},
-		{"uint", []byte{0x01}, 0, "size operation is not supported"},                                                            // 1
-		{"int", []byte{0x20}, 0, "size operation is not supported"},                                                             // -1
-		{"tag", []byte{0xc2, 0x49, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, 0, "size operation is not supported"}, // bignum(18446744073709551616)
-		{"empty byte string", []byte{0x40}, 0, ""},                                                                              // []
-		{"byte string", []byte{0x45, 0x01, 0x02, 0x03, 0x04, 0x05}, 5, ""},                                                      // [1, 2, 3, 4, 5]
+		{"uint", []byte{0x01}, 0, "size operation is not supported"},                              // 1
+		{"int", []byte{0x20}, 0, "size operation is not supported"},                               // -1
+		{"tag", []byte{0xc1, 0x1a, 0x51, 0x4b, 0x67, 0xb0}, 0, "size operation is not supported"}, // epoch-based date/time
+		{"empty byte string", []byte{0x40}, 0, ""},                                                // []
+		{"byte string", []byte{0x45, 0x01, 0x02, 0x03, 0x04, 0x05}, 5, ""},                        // [1, 2, 3, 4, 5]
 		{"indef length byte string", []byte{0x5f, 0x42, 0x01, 0x02, 0x043, 0x03, 0x04, 0x05, 0xff}, 0, "size is unavailable for indefinite length"},
 		{"empty text string", []byte{0x60}, 0, ""},                                                 // ""
 		{"text string", []byte{0x65, 0x68, 0x65, 0x6c, 0x6c, 0x6f}, 5, ""},                         // "hello"
@@ -1765,9 +1765,14 @@ func TestStreamDecodeNextSize(t *testing.T) {
 		{"text string", []byte{0x7a, 0x00, 0x00, 0x00, 0x01, 0x61}, 1, ""},                         // "a"
 		{"text string", []byte{0x7b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x61}, 1, ""}, // "a"
 		{"indef length text string", []byte{0x7f, 0x65, 0x73, 0x74, 0x72, 0x65, 0x61, 0x64, 0x6d, 0x69, 0x6e, 0x67, 0xff}, 0, "size is unavailable for indefinite length"},
-		{"empty array", []byte{0x80}, 0, ""},                                                                         // []
-		{"array", []byte{0x83, 0x01, 0x02, 0x03}, 3, ""},                                                             // [1, 2, 3]
-		{"indef length array", []byte{0x9f, 0x01, 0x02, 0x03, 0xff}, 0, "size is unavailable for indefinite length"}, // [1, 2, 3]
+		{"empty array", []byte{0x80}, 0, ""},                                                                               // []
+		{"array", []byte{0x83, 0x01, 0x02, 0x03}, 3, ""},                                                                   // [1, 2, 3]
+		{"indef length array", []byte{0x9f, 0x01, 0x02, 0x03, 0xff}, 0, "size is unavailable for indefinite length"},       // [1, 2, 3]
+		{"big int 0", []byte{0xc2, 0x40}, 0, ""},                                                                           // bignum: 0
+		{"big int 1", []byte{0xc2, 0x41, 0x01}, 1, ""},                                                                     // bignum: 1
+		{"big int 18446744073709551616", []byte{0xc2, 0x49, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, 9, ""},  // bignum: 18446744073709551616
+		{"big int -1", []byte{0xc3, 0x40}, 0, ""},                                                                          // bignum: -1
+		{"big int -18446744073709551617", []byte{0xc3, 0x49, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, 9, ""}, // bignum: -18446744073709551617
 	}
 
 	for _, tc := range testCases {
