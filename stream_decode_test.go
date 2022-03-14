@@ -992,16 +992,16 @@ func TestStreamDecodeArray(t *testing.T) {
 				t.Errorf("NextType() returned %s, want %s", nt, ArrayType)
 			}
 
-			wantErrorMsg := "cbor: cannot decode CBOR array type to tag"
+			wantErrorMsg := "cbor: cannot decode CBOR array type to map"
 
 			// DecodeXXX() should return WrongTypeError with type mismatch (data offset is not moved)
-			i, err := sd.sd.DecodeTagNumber()
+			i, err := sd.sd.DecodeMapHead()
 			if err == nil {
-				t.Errorf("DecodeTagNumber() returned %v", i)
+				t.Errorf("DecodeMapHead() returned %v", i)
 			} else if _, ok := err.(*WrongTypeError); !ok {
-				t.Errorf("DecodeTagNumber() returned error %v (%T), want WrongTypeError", err, err)
+				t.Errorf("DecodeMapHead() returned error %v (%T), want WrongTypeError", err, err)
 			} else if err.Error() != wantErrorMsg {
-				t.Errorf("DecodeTagNumber() returned error %q, want %q", err.Error(), wantErrorMsg)
+				t.Errorf("DecodeMapHead() returned error %q, want %q", err.Error(), wantErrorMsg)
 			}
 
 			// DecodeArrayHead() should return uint64 value (data offset is moved)
@@ -1094,6 +1094,215 @@ func TestStreamDecodeIndefiniteLengthArray(t *testing.T) {
 			_, err = sd.sd.DecodeArrayHead()
 			if err != io.EOF {
 				t.Errorf("DecodeArrayHead() returned error %v, want io.EOF", err)
+			}
+		})
+	}
+}
+
+func TestStreamDecodeEmptyMap(t *testing.T) {
+
+	data := []byte{0xa0}
+
+	t.Parallel()
+
+	// For each test case, test 2 StreamDecoders.
+
+	decoders := []struct {
+		name string
+		sd   *StreamDecoder
+	}{
+		{"byte_decoder", NewByteStreamDecoder(data)},
+		{"reader_decoder", NewStreamDecoder(bytes.NewReader(data))},
+	}
+
+	for _, sd := range decoders {
+
+		t.Run(sd.name, func(t *testing.T) {
+
+			// NextType() peeks at next CBOR data type (data offset is not moved)
+			nt, err := sd.sd.NextType()
+			if err != nil {
+				t.Errorf("NextType() returned error %v", err)
+			}
+			if nt != MapType {
+				t.Errorf("NextType() returned %s, want %s", nt, MapType)
+			}
+
+			wantErrorMsg := "cbor: cannot decode CBOR map type to tag"
+
+			// DecodeXXX() should return WrongTypeError with type mismatch (data offset is not moved)
+			i, err := sd.sd.DecodeTagNumber()
+			if err == nil {
+				t.Errorf("DecodeTagNumber() returned %v", i)
+			} else if _, ok := err.(*WrongTypeError); !ok {
+				t.Errorf("DecodeTagNumber() returned error %v (%T), want WrongTypeError", err, err)
+			} else if err.Error() != wantErrorMsg {
+				t.Errorf("DecodeTagNumber() returned error %q, want %q", err.Error(), wantErrorMsg)
+			}
+
+			// DecodeMapHead() should return uint64 value (data offset is moved)
+			v, err := sd.sd.DecodeMapHead()
+			if err != nil {
+				t.Errorf("DecodeMapHead() returned error %v", err)
+			}
+			if v != 0 {
+				t.Errorf("DecodeMapHead() returned %v, want %v", v, 0)
+			}
+
+			// NextType() should return io.EOF
+			_, err = sd.sd.NextType()
+			if err != io.EOF {
+				t.Errorf("NextType() returned error %v, want io.EOF", err)
+			}
+
+			// DecodeMapHead() should return io.EOF
+			_, err = sd.sd.DecodeMapHead()
+			if err != io.EOF {
+				t.Errorf("DecodeMapHead() returned error %v, want io.EOF", err)
+			}
+		})
+	}
+}
+
+func TestStreamDecodeMap(t *testing.T) {
+
+	data := []byte{0xa2, 0x01, 0x02, 0x03, 0x04}
+
+	t.Parallel()
+
+	// For each test case, test 2 StreamDecoders.
+
+	decoders := []struct {
+		name string
+		sd   *StreamDecoder
+	}{
+		{"byte_decoder", NewByteStreamDecoder(data)},
+		{"reader_decoder", NewStreamDecoder(bytes.NewReader(data))},
+	}
+
+	for _, sd := range decoders {
+
+		t.Run(sd.name, func(t *testing.T) {
+
+			// NextType() peeks at next CBOR data type (data offset is not moved)
+			nt, err := sd.sd.NextType()
+			if err != nil {
+				t.Errorf("NextType() returned error %v", err)
+			}
+			if nt != MapType {
+				t.Errorf("NextType() returned %s, want %s", nt, MapType)
+			}
+
+			wantErrorMsg := "cbor: cannot decode CBOR map type to tag"
+
+			// DecodeXXX() should return WrongTypeError with type mismatch (data offset is not moved)
+			i, err := sd.sd.DecodeTagNumber()
+			if err == nil {
+				t.Errorf("DecodeTagNumber() returned %v", i)
+			} else if _, ok := err.(*WrongTypeError); !ok {
+				t.Errorf("DecodeTagNumber() returned error %v (%T), want WrongTypeError", err, err)
+			} else if err.Error() != wantErrorMsg {
+				t.Errorf("DecodeTagNumber() returned error %q, want %q", err.Error(), wantErrorMsg)
+			}
+
+			// DecodeMapHead() should return uint64 value (data offset is moved)
+			v, err := sd.sd.DecodeMapHead()
+			if err != nil {
+				t.Errorf("DecodeMapHead() returned error %v", err)
+			}
+			if v != 2 {
+				t.Errorf("DecodeMapHead() returned %v, want %v", v, 3)
+			}
+
+			e, err := sd.sd.DecodeInt64()
+			if err != nil {
+				t.Errorf("DecodeInt64() returned error %v", err)
+			}
+			if e != 1 {
+				t.Errorf("DecodeInt64() returned %v, want %v", e, 1)
+			}
+
+			e, err = sd.sd.DecodeInt64()
+			if err != nil {
+				t.Errorf("DecodeInt64() returned error %v", err)
+			}
+			if e != 2 {
+				t.Errorf("DecodeInt64() returned %v, want %v", e, 2)
+			}
+
+			e, err = sd.sd.DecodeInt64()
+			if err != nil {
+				t.Errorf("DecodeInt64() returned error %v", err)
+			}
+			if e != 3 {
+				t.Errorf("DecodeInt64() returned %v, want %v", e, 3)
+			}
+
+			e, err = sd.sd.DecodeInt64()
+			if err != nil {
+				t.Errorf("DecodeInt64() returned error %v", err)
+			}
+			if e != 4 {
+				t.Errorf("DecodeInt64() returned %v, want %v", e, 4)
+			}
+
+			// NextType() should return io.EOF
+			_, err = sd.sd.NextType()
+			if err != io.EOF {
+				t.Errorf("NextType() returned error %v, want io.EOF", err)
+			}
+
+			// DecodeMapHead() should return io.EOF
+			_, err = sd.sd.DecodeMapHead()
+			if err != io.EOF {
+				t.Errorf("DecodeMapHead() returned error %v, want io.EOF", err)
+			}
+		})
+	}
+}
+
+func TestStreamDecodeIndefiniteLengthMap(t *testing.T) {
+	data := []byte{0xbf, 0x01, 0x02, 0x03, 0x04, 0xff}
+
+	t.Parallel()
+
+	decoders := []struct {
+		name string
+		sd   *StreamDecoder
+	}{
+		{"byte_decoder", NewByteStreamDecoder(data)},
+		{"reader_decoder", NewStreamDecoder(bytes.NewReader(data))},
+	}
+
+	for _, sd := range decoders {
+
+		t.Run(sd.name, func(t *testing.T) {
+
+			// NextType() peeks at next CBOR data type (data offset is not moved)
+			nt, err := sd.sd.NextType()
+			if err != nil {
+				t.Errorf("NextType() returned error %v", err)
+			}
+			if nt != MapType {
+				t.Errorf("NextType() returned %s, want %s", nt, MapType)
+			}
+
+			// DecodeMapHead() should return error and array is skipped (data offset is moved)
+			_, err = sd.sd.DecodeMapHead()
+			if err == nil {
+				t.Errorf("DecodeMapHead() didn't return error")
+			}
+
+			// NextType() should return io.EOF
+			_, err = sd.sd.NextType()
+			if err != io.EOF {
+				t.Errorf("NextType() returned error %v, want io.EOF", err)
+			}
+
+			// DecodeMapHead() should return io.EOF
+			_, err = sd.sd.DecodeMapHead()
+			if err != io.EOF {
+				t.Errorf("DecodeMapHead() returned error %v, want io.EOF", err)
 			}
 		})
 	}
@@ -1262,7 +1471,12 @@ func TestStreamDecodeRawBytesZeroCopy(t *testing.T) {
 
 func TestStreamDecodeSkip(t *testing.T) {
 
-	data := []byte{0x18, 0x18, 0x44, 0x01, 0x02, 0x03, 0x04} // 24, []byte{1, 2, 3, 4}
+	data := []byte{
+		0x18,                               // 24
+		0x18, 0x44, 0x01, 0x02, 0x03, 0x04, // []byte{1, 2, 3, 4}
+		0x83, 0x01, 0x02, 0x03, // [1, 2, 3]
+		0xa2, 0x01, 0x02, 0x03, 0x04, // {1:2, 3:4}
+	}
 
 	t.Parallel()
 
@@ -1278,16 +1492,31 @@ func TestStreamDecodeSkip(t *testing.T) {
 
 		t.Run(sd.name+" ", func(t *testing.T) {
 
+			// Skip uint
 			err := sd.sd.Skip()
 			if err != nil {
 				t.Errorf("Skip() returned err %v", err)
 			}
 
+			// Skip byte string
 			err = sd.sd.Skip()
 			if err != nil {
 				t.Errorf("Skip() returned err %v", err)
 			}
 
+			// Skip array
+			err = sd.sd.Skip()
+			if err != nil {
+				t.Errorf("Skip() returned err %v", err)
+			}
+
+			// Skip map
+			err = sd.sd.Skip()
+			if err != nil {
+				t.Errorf("Skip() returned err %v", err)
+			}
+
+			// EOF
 			err = sd.sd.Skip()
 			if err != io.EOF {
 				t.Errorf("Skip() returned error %v, want io.EOF", err)
@@ -1298,7 +1527,12 @@ func TestStreamDecodeSkip(t *testing.T) {
 
 func TestStreamDecodeMultiData(t *testing.T) {
 
-	data := []byte{0x18, 0x18, 0x44, 0x01, 0x02, 0x03, 0x04} // 24, []byte{1, 2, 3, 4}
+	data := []byte{
+		0x18,                               // 24
+		0x18, 0x44, 0x01, 0x02, 0x03, 0x04, // []byte{1, 2, 3, 4}
+		0x83, 0x01, 0x02, 0x03, // [1, 2, 3]
+		0xa2, 0x01, 0x02, 0x03, 0x04, // {1:2, 3:4}
+	}
 
 	t.Parallel()
 
@@ -1314,6 +1548,7 @@ func TestStreamDecodeMultiData(t *testing.T) {
 
 		t.Run(sd.name, func(t *testing.T) {
 
+			// Decode uint
 			i, err := sd.sd.DecodeInt64()
 			if err != nil {
 				t.Errorf("DecodeInt64() returned error %v", err)
@@ -1322,6 +1557,7 @@ func TestStreamDecodeMultiData(t *testing.T) {
 				t.Errorf("DecodeInt64() returned %v, want %v", i, 24)
 			}
 
+			// Decode byte string
 			b, err := sd.sd.DecodeBytes()
 			if err != nil {
 				t.Errorf("DecodeBytes() returned error %v", err)
@@ -1330,7 +1566,50 @@ func TestStreamDecodeMultiData(t *testing.T) {
 				t.Errorf("DecodeBytes() returned %v, want %v", b, []byte{1, 2, 3, 4})
 			}
 
-			// NextType() should return io.EOF
+			// Decode array
+			arrayCount, err := sd.sd.DecodeArrayHead()
+			if err != nil {
+				t.Errorf("DecodeArrayHead() returned error %v", err)
+			}
+			if arrayCount != 3 {
+				t.Errorf("DecodeArrayHead() returned %v, want %v", arrayCount, 3)
+			}
+			for i := uint64(0); i < arrayCount; i++ {
+				elem, err := sd.sd.DecodeUint64()
+				if err != nil {
+					t.Errorf("DecodeUint64() returned error %v", err)
+				}
+				if elem != i+1 {
+					t.Errorf("DecodeUint64() returned %v, want %v", elem, i+1)
+				}
+			}
+
+			// Decode map
+			mapCount, err := sd.sd.DecodeMapHead()
+			if err != nil {
+				t.Errorf("DecodeMapHead() returned error %v", err)
+			}
+			if mapCount != 2 {
+				t.Errorf("DecodeMapHead() returned %v, want %v", mapCount, 2)
+			}
+			for i := uint64(0); i < mapCount; i++ {
+				k, err := sd.sd.DecodeUint64()
+				if err != nil {
+					t.Errorf("DecodeUint64() returned error %v", err)
+				}
+				if k != i*2+1 {
+					t.Errorf("DecodeUint64() returned %v, want %v", k, i*2+1)
+				}
+				v, err := sd.sd.DecodeUint64()
+				if err != nil {
+					t.Errorf("DecodeUint64() returned error %v", err)
+				}
+				if v != i*2+2 {
+					t.Errorf("DecodeUint64() returned %v, want %v", v, i*2+2)
+				}
+			}
+
+			// EOF
 			_, err = sd.sd.NextType()
 			if err != io.EOF {
 				t.Errorf("NextType() returned error %v, want io.EOF", err)
@@ -1696,33 +1975,136 @@ func TestStreamDecoderNumBytesDecoded(t *testing.T) {
 		}
 	})
 
+	t.Run("map", func(t *testing.T) {
+		data := []byte{0xa2, 0x01, 0x02, 0x03, 0x04} // {1:2, 3:4}
+
+		dec := NewByteStreamDecoder(data)
+
+		count, err := dec.DecodeMapHead()
+		if err != nil {
+			t.Errorf("DecodeMapHead() returned error %v", err)
+		}
+
+		bytesDecoded := dec.NumBytesDecoded()
+		if bytesDecoded != 1 {
+			t.Errorf("NumBytesDecoded() returned %v after decoding map head, want %v", bytesDecoded, 1)
+		}
+
+		for i := uint64(0); i < count; i++ {
+			_, err = dec.DecodeUint64()
+			if err != nil {
+				t.Errorf("DecodeUint64() returned error %v", err)
+			}
+
+			bytesDecoded++
+
+			num := dec.NumBytesDecoded()
+			if num != bytesDecoded {
+				t.Errorf("NumBytesDecoded() returned %v after decoding map key %d, want %v", num, i, bytesDecoded)
+			}
+
+			_, err = dec.DecodeUint64()
+			if err != nil {
+				t.Errorf("DecodeUint64() returned error %v", err)
+			}
+
+			bytesDecoded++
+
+			num = dec.NumBytesDecoded()
+			if num != bytesDecoded {
+				t.Errorf("NumBytesDecoded() returned %v after decoding map value %d, want %v", num, i, bytesDecoded)
+			}
+		}
+
+		// Decode after EOD
+		_, err = dec.DecodeUint64()
+		if err == nil {
+			t.Errorf("DecodeUint64() didn't return an error")
+		}
+
+		// Num of bytes decoded should remain the same
+		num := dec.NumBytesDecoded()
+		if num != bytesDecoded {
+			t.Errorf("NumBytesDecoded() returned %v after EOD, want %v", num, bytesDecoded)
+		}
+	})
+
 	t.Run("concatenated messages", func(t *testing.T) {
 
 		data := []byte{
 			0x18, 0x18, // uint64(24)
 			0x63, 0xe6, 0xb0, 0xb4, // "水"
+			0x83, 0x01, 0x02, 0x03, // [1, 2, 3]
+			0xa2, 0x01, 0x02, 0x03, 0x04, // {1:2, 3:4}
 		}
+
+		const (
+			msg1Length = 2
+			msg2Length = 4
+			msg3Length = 4
+			msg4Length = 5
+		)
 
 		dec := NewByteStreamDecoder(data)
 
+		// Decode uint64
 		_, err := dec.DecodeUint64()
 		if err != nil {
 			t.Errorf("DecodeUint64() returned error %v", err)
 		}
 
 		bytesDecoded := dec.NumBytesDecoded()
-		if bytesDecoded != 2 {
-			t.Errorf("NumBytesDecoded() returned %v, want %v", bytesDecoded, 2)
+		if bytesDecoded != msg1Length {
+			t.Errorf("NumBytesDecoded() returned %v, want %v", bytesDecoded, msg1Length)
 		}
 
+		// Decode string
 		_, err = dec.DecodeString()
 		if err != nil {
 			t.Errorf("DecodeString() returned error %v", err)
 		}
 
 		bytesDecoded = dec.NumBytesDecoded()
-		if bytesDecoded != len(data) {
-			t.Errorf("NumBytesDecoded() returned %v, want %v", bytesDecoded, len(data))
+		if bytesDecoded != msg1Length+msg2Length {
+			t.Errorf("NumBytesDecoded() returned %v, want %v", bytesDecoded, msg1Length+msg2Length)
+		}
+
+		// Decode array
+		count, err := dec.DecodeArrayHead()
+		if err != nil {
+			t.Errorf("DecodeArrayHead() returned error %v", err)
+		}
+		for i := uint64(0); i < count; i++ {
+			_, err = dec.DecodeUint64()
+			if err != nil {
+				t.Errorf("DecodeUint64() returned error %v", err)
+			}
+		}
+
+		bytesDecoded = dec.NumBytesDecoded()
+		if bytesDecoded != msg1Length+msg2Length+msg3Length {
+			t.Errorf("NumBytesDecoded() returned %v, want %v", bytesDecoded, msg1Length+msg2Length+msg3Length)
+		}
+
+		// Decode map
+		count, err = dec.DecodeMapHead()
+		if err != nil {
+			t.Errorf("DecodeMapHead() returned error %v", err)
+		}
+		for i := uint64(0); i < count; i++ {
+			_, err = dec.DecodeUint64()
+			if err != nil {
+				t.Errorf("DecodeUint64() returned error %v", err)
+			}
+			_, err = dec.DecodeUint64()
+			if err != nil {
+				t.Errorf("DecodeUint64() returned error %v", err)
+			}
+		}
+
+		bytesDecoded = dec.NumBytesDecoded()
+		if bytesDecoded != msg1Length+msg2Length+msg3Length+msg4Length {
+			t.Errorf("NumBytesDecoded() returned %v, want %v", bytesDecoded, msg1Length+msg2Length+msg3Length+msg4Length)
 		}
 
 		// Decode after EOD
@@ -1768,6 +2150,9 @@ func TestStreamDecodeNextSize(t *testing.T) {
 		{"empty array", []byte{0x80}, 0, ""},                                                                               // []
 		{"array", []byte{0x83, 0x01, 0x02, 0x03}, 3, ""},                                                                   // [1, 2, 3]
 		{"indef length array", []byte{0x9f, 0x01, 0x02, 0x03, 0xff}, 0, "size is unavailable for indefinite length"},       // [1, 2, 3]
+		{"empty map", []byte{0xa0}, 0, ""},                                                                                 // []
+		{"map", []byte{0xa2, 0x01, 0x02, 0x03, 0x04}, 2, ""},                                                               // [1, 2, 3]
+		{"indef length map", []byte{0xbf, 0x01, 0x02, 0x03, 0x04, 0xff}, 0, "size is unavailable for indefinite length"},   // [1, 2, 3]
 		{"big int 0", []byte{0xc2, 0x40}, 0, ""},                                                                           // bignum: 0
 		{"big int 1", []byte{0xc2, 0x41, 0x01}, 1, ""},                                                                     // bignum: 1
 		{"big int 18446744073709551616", []byte{0xc2, 0x49, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, 9, ""},  // bignum: 18446744073709551616

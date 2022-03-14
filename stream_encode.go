@@ -37,6 +37,12 @@ func (se *StreamEncoder) Flush() error {
 	return err
 }
 
+// EncodeMapHead encodes CBOR map head of specified size.
+func (se *StreamEncoder) EncodeMapHead(size uint64) error {
+	encodeHead(se.Encoder.e, byte(cborTypeMap), size)
+	return nil
+}
+
 // EncodeArrayHead encodes CBOR array head of specified size.
 func (se *StreamEncoder) EncodeArrayHead(size uint64) error {
 	encodeHead(se.Encoder.e, byte(cborTypeArray), size)

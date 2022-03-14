@@ -522,6 +522,35 @@ func (sd *StreamDecoder) DecodeArrayHead() (uint64, error) {
 	return val, nil
 }
 
+// DecodeMapHead decodes next CBOR data as map size.  WrongType error is returned if type is mismatched.
+func (sd *StreamDecoder) DecodeMapHead() (uint64, error) {
+	if err := sd.prepareNext(); err != nil {
+		return 0, err
+	}
+
+	d := sd.dec.d
+
+	if d.nextCBORType() != cborTypeMap {
+		t, _ := sd.NextType()
+		return 0, &WrongTypeError{t, "map"}
+	}
+
+	start := d.off
+	_, ai, val := d.getHead()
+	end := d.off
+
+	if ai == 31 {
+		// Indefinite length map isn't supported in StreamDecoder.  Skip it.
+		d.off = start
+		_ = sd.Skip()
+		return 0, errors.New("cbor: indefinite length map isn't supported")
+	}
+
+	sd.updateState(end - start)
+
+	return val, nil
+}
+
 // prepareNext reads and validates next CBOR data.
 // prepareNext can return io error or CBOR validation error.
 func (sd *StreamDecoder) prepareNext() error {
