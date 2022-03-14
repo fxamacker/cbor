@@ -1575,7 +1575,8 @@ func TestStreamDecodeMultiData(t *testing.T) {
 				t.Errorf("DecodeArrayHead() returned %v, want %v", arrayCount, 3)
 			}
 			for i := uint64(0); i < arrayCount; i++ {
-				elem, err := sd.sd.DecodeUint64()
+				var elem uint64
+				elem, err = sd.sd.DecodeUint64()
 				if err != nil {
 					t.Errorf("DecodeUint64() returned error %v", err)
 				}
@@ -1593,14 +1594,15 @@ func TestStreamDecodeMultiData(t *testing.T) {
 				t.Errorf("DecodeMapHead() returned %v, want %v", mapCount, 2)
 			}
 			for i := uint64(0); i < mapCount; i++ {
-				k, err := sd.sd.DecodeUint64()
+				var k, v uint64
+				k, err = sd.sd.DecodeUint64()
 				if err != nil {
 					t.Errorf("DecodeUint64() returned error %v", err)
 				}
 				if k != i*2+1 {
 					t.Errorf("DecodeUint64() returned %v, want %v", k, i*2+1)
 				}
-				v, err := sd.sd.DecodeUint64()
+				v, err = sd.sd.DecodeUint64()
 				if err != nil {
 					t.Errorf("DecodeUint64() returned error %v", err)
 				}
@@ -1846,7 +1848,7 @@ func TestStreamDecodeReaderError(t *testing.T) {
 	}
 }
 
-func TestStreamDecoderNumBytesDecoded(t *testing.T) {
+func TestStreamDecoderNumBytesDecoded(t *testing.T) { //nolint:gocyclo
 
 	t.Run("uint", func(t *testing.T) {
 		data := []byte{0x18, 0x18}
