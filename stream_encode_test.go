@@ -9,6 +9,161 @@ import (
 	"testing"
 )
 
+func TestStreamEncodeMap(t *testing.T) {
+	t.Parallel()
+
+	t.Run("default mode", func(t *testing.T) {
+		expected := []byte{
+			// map, 2 items follow
+			0xa2,
+			// UTF-8 string, length 5
+			0x65,
+			// h, e, l, l, o
+			0x68, 0x65, 0x6c, 0x6c, 0x6f,
+			// array, 1 items follow
+			0x81,
+			// 1
+			0x01,
+			// UTF-8 string, length 5
+			0x65,
+			// w, o, r, l, d
+			0x77, 0x6f, 0x72, 0x6c, 0x64,
+			// array, 1 items follow
+			0x81,
+			// -1
+			0x20,
+		}
+
+		var buf bytes.Buffer
+		se := NewStreamEncoder(&buf)
+
+		err := se.EncodeMapHead(2)
+		if err != nil {
+			t.Errorf("EncodeMapHead() returned error %v", err)
+		}
+
+		err = se.Encode("hello")
+		if err != nil {
+			t.Errorf("Encode() returned error %v", err)
+		}
+
+		err = se.EncodeArrayHead(1)
+		if err != nil {
+			t.Errorf("EncodeArrayHead() returned error %v", err)
+		}
+
+		err = se.Encode(big.NewInt(1))
+		if err != nil {
+			t.Errorf("Encode() returned error %v", err)
+		}
+
+		err = se.Encode("world")
+		if err != nil {
+			t.Errorf("Encode() returned error %v", err)
+		}
+
+		err = se.EncodeArrayHead(1)
+		if err != nil {
+			t.Errorf("EncodeArrayHead() returned error %v", err)
+		}
+
+		err = se.Encode(big.NewInt(-1))
+		if err != nil {
+			t.Errorf("Encode() returned error %v", err)
+		}
+
+		err = se.Flush()
+		if err != nil {
+			t.Errorf("Flush() returned error %v", err)
+		}
+
+		if !bytes.Equal(buf.Bytes(), expected) {
+			t.Errorf("StreamEncoder encoded 0x%x, want 0x%x", buf.Bytes(), expected)
+		}
+	})
+
+	t.Run("BigIntConvertNone mode", func(t *testing.T) {
+		expected := []byte{
+			// map, 2 items follow
+			0xa2,
+			// UTF-8 string, length 5
+			0x65,
+			// h, e, l, l, o
+			0x68, 0x65, 0x6c, 0x6c, 0x6f,
+			// array, 1 items follow
+			0x81,
+			// positive bignum (1)
+			0xc2,
+			// byte string, length 1
+			0x41,
+			0x01,
+			// UTF-8 string, length 5
+			0x65,
+			// w, o, r, l, d
+			0x77, 0x6f, 0x72, 0x6c, 0x64,
+			// array, 1 items follow
+			0x81,
+			// negative bignum (-1)
+			0xc3,
+			// byte string, length 1
+			0x40,
+		}
+
+		opts := EncOptions{BigIntConvert: BigIntConvertNone}
+		em, err := opts.encMode()
+		if err != nil {
+			panic(err)
+		}
+
+		var buf bytes.Buffer
+		se := em.NewStreamEncoder(&buf)
+
+		err = se.EncodeMapHead(2)
+		if err != nil {
+			t.Errorf("EncodeMapHead() returned error %v", err)
+		}
+
+		err = se.Encode("hello")
+		if err != nil {
+			t.Errorf("Encode() returned error %v", err)
+		}
+
+		err = se.EncodeArrayHead(1)
+		if err != nil {
+			t.Errorf("EncodeArrayHead() returned error %v", err)
+		}
+
+		err = se.Encode(big.NewInt(1))
+		if err != nil {
+			t.Errorf("Encode() returned error %v", err)
+		}
+
+		err = se.Encode("world")
+		if err != nil {
+			t.Errorf("Encode() returned error %v", err)
+		}
+
+		err = se.EncodeArrayHead(1)
+		if err != nil {
+			t.Errorf("EncodeArrayHead() returned error %v", err)
+		}
+
+		err = se.Encode(big.NewInt(-1))
+		if err != nil {
+			t.Errorf("Encode() returned error %v", err)
+		}
+
+		err = se.Flush()
+		if err != nil {
+			t.Errorf("Flush() returned error %v", err)
+		}
+
+		if !bytes.Equal(buf.Bytes(), expected) {
+			t.Errorf("StreamEncoder encoded 0x%x, want 0x%x", buf.Bytes(), expected)
+		}
+	})
+}
+
 func TestStreamEncodeArray(t *testing.T) {
 	t.Parallel()
 
