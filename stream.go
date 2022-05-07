@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"reflect"
+	"strconv"
 )
 
 // Decoder reads and decodes CBOR values from io.Reader.
@@ -95,6 +96,9 @@ func NewEncoder(w io.Writer) *Encoder {
 
 // Encode writes the CBOR encoding of v.
 func (enc *Encoder) Encode(v interface{}) error {
+	if enc.e == nil {
+		return errors.New("cbor: cannot encode after encoder closed")
+	}
 	if len(enc.indefTypes) > 0 && v != nil {
 		indefType := enc.indefTypes[len(enc.indefTypes)-1]
 		if indefType == cborTypeTextString {
@@ -149,6 +153,10 @@ func (enc *Encoder) StartIndefiniteMap() error {
 
 // EndIndefinite closes last opened indefinite length value.
 func (enc *Encoder) EndIndefinite() error {
+	if enc.e == nil {
+		return errors.New("cbor: cannot endIndefinite after encoder closed")
+	}
+
 	if len(enc.indefTypes) == 0 {
 		return errors.New("cbor: cannot encode \"break\" code outside indefinite length values")
 	}
@@ -159,6 +167,24 @@ func (enc *Encoder) EndIndefinite() error {
 	return err
 }
 
+// Close closes the Encoder and return the encoder buffer to the pool.
+// If io.Writer w is a io.Closer, it will be closed too.
+func (enc *Encoder) Close() error {
+	if enc.e == nil {
+		return nil
+	}
+
+	putEncoderBuffer(enc.e)
+	enc.e = nil
+	if l := len(enc.indefTypes); l > 0 {
+		return errors.New("cbor: " + strconv.Itoa(l) + " indefinite length values does not end")
+	}
+	if c, ok := enc.w.(io.Closer); ok {
+		return c.Close()
+	}
+	return nil
+}
+
 var cborIndefHeader = map[cborType][]byte{
 	cborTypeByteString: {0x5f},
 	cborTypeTextString: {0x7f},
@@ -167,6 +193,9 @@ var cborIndefHeader = map[cborType][]byte{
 }
 
 func (enc *Encoder) startIndefinite(typ cborType) error {
+	if enc.e == nil {
+		return errors.New("cbor: cannot startIndefinite after encoder closed")
+	}
 	if enc.em.indefLength == IndefLengthForbidden {
 		return &IndefiniteLengthError{typ}
 	}

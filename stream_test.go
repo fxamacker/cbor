@@ -362,6 +362,84 @@ func TestEncoderStructTag(t *testing.T) {
 	}
 }
 
+// WriteCloser
+type writeCloser struct {
+	bytes.Buffer
+	closed bool
+}
+
+func (wc *writeCloser) Close() error {
+	wc.closed = true
+	return nil
+}
+
+func TestEncoderClose(t *testing.T) {
+	want := hexDecode("bf61610161629f0203ffff")
+	w := &writeCloser{Buffer: bytes.Buffer{}}
+	em, err := EncOptions{Sort: SortCanonical}.EncMode()
+	if err != nil {
+		t.Errorf("EncMode() returned an error %v", err)
+	}
+	encoder := em.NewEncoder(w)
+	if err := encoder.StartIndefiniteMap(); err != nil {
+		t.Fatalf("StartIndefiniteMap() returned error %v", err)
+	}
+	if err := encoder.Encode("a"); err != nil {
+		t.Fatalf("Encode() returned error %v", err)
+	}
+	if err := encoder.Encode(1); err != nil {
+		t.Fatalf("Encode() returned error %v", err)
+	}
+	if err := encoder.Encode("b"); err != nil {
+		t.Fatalf("Encode() returned error %v", err)
+	}
+	if err := encoder.StartIndefiniteArray(); err != nil {
+		t.Fatalf("StartIndefiniteArray() returned error %v", err)
+	}
+	if err := encoder.Encode(2); err != nil {
+		t.Fatalf("Encode() returned error %v", err)
+	}
+	if err := encoder.Encode(3); err != nil {
+		t.Fatalf("Encode() returned error %v", err)
+	}
+	if err := encoder.EndIndefinite(); err != nil {
+		t.Fatalf("EndIndefinite() returned error %v", err)
+	}
+	if err := encoder.EndIndefinite(); err != nil {
+		t.Fatalf("EndIndefinite() returned error %v", err)
+	}
+	if !bytes.Equal(w.Bytes(), want) {
+		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+	}
+	if err := encoder.Close(); err != nil {
+		t.Fatalf("Close() returned error %v", err)
+	}
+	if !w.closed {
+		t.Fatalf("io.Closer w should be closed after encoder.Close()")
+	}
+	if err := encoder.Encode("a"); err == nil {
+		t.Fatalf("Encode() should return error after encoder.Close()")
+	}
+	if err := encoder.StartIndefiniteByteString(); err == nil {
+		t.Fatalf("StartIndefiniteByteString() should return error after encoder.Close()")
+	}
+	if err := encoder.StartIndefiniteTextString(); err == nil {
+		t.Fatalf("StartIndefiniteTextString() should return error after encoder.Close()")
+	}
+	if err := encoder.StartIndefiniteArray(); err == nil {
+		t.Fatalf("StartIndefiniteArray() should return error after encoder.Close()")
+	}
+	if err := encoder.StartIndefiniteMap(); err == nil {
+		t.Fatalf("StartIndefiniteMap() should return error after encoder.Close()")
+	}
+	if err := encoder.EndIndefinite(); err == nil {
+		t.Fatalf("EndIndefinite() should return error after encoder.Close()")
+	}
+	if err := encoder.Close(); err != nil {
+		t.Fatalf("Close() returned error %v", err)
+	}
+}
+
 func TestRawMessage(t *testing.T) {
 	type strc struct {
 		A RawMessage  `cbor:"a"`
