@@ -1,9 +1,17 @@
-# GitHub Actions - CI for Go to build & test.  See ci-go-cover.yml and safer-golangci-lint.yml for more.
+# GitHub Actions - CI for Go to build & test.
 # https://github.com/fxamacker/cbor/workflows/ci.yml
+# See ci-go-cover.yml for coverage and safer-golangci-lint.yml for linting.
 name: ci
-on: [push]
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - 'master'
+      - 'release*'
+    tags:
+      - 'v*'  
 jobs:
-
   # Test on various OS with default Go version. 
   tests:
     name: Test on ${{matrix.os}}
@@ -11,8 +19,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
-        go-version: [1.16.x, 1.17.x, 1.18.x]
-        
+        go-version: [1.16, 1.17, 1.18]
     steps:
     - name: Install Go
       uses: actions/setup-go@v3
