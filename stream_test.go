@@ -5,6 +5,7 @@ package cbor
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"reflect"
 	"testing"
@@ -386,6 +387,20 @@ func TestRawMessage(t *testing.T) {
 	}
 	if !bytes.Equal(b, cborData) {
 		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, cborData)
+	}
+
+	address := fmt.Sprintf("%p", *v.B)
+	if err := Unmarshal(v.A, v.B); err != nil {
+		t.Fatalf("Unmarshal(0x%x) returned error %v", v.A, err)
+	}
+	if address != fmt.Sprintf("%p", *v.B) {
+		t.Fatalf("Unmarshal RawMessage should reuse underlying array if it has sufficient capacity")
+	}
+	if err := Unmarshal(cborData, v.B); err != nil {
+		t.Fatalf("Unmarshal(0x%x) returned error %v", cborData, err)
+	}
+	if address == fmt.Sprintf("%p", *v.B) {
+		t.Fatalf("Unmarshal RawMessage should allocate a new underlying array if it does not have sufficient capacity")
 	}
 }
 

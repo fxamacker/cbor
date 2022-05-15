@@ -200,7 +200,6 @@ func (m *RawMessage) UnmarshalCBOR(data []byte) error {
 	if m == nil {
 		return errors.New("cbor.RawMessage: UnmarshalCBOR on nil pointer")
 	}
-	*m = make([]byte, len(data))
-	copy(*m, data)
+	*m = append((*m)[0:0], data...)
 	return nil
 }
