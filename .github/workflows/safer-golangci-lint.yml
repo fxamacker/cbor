@@ -37,6 +37,9 @@
 #
 name: linters
 
+# Remove default permissions
+permissions: {}
+
 on:  
   pull_request:
     types: [opened, synchronize, closed]
@@ -54,6 +57,8 @@ env:
 jobs:
   main:
     name: Lint
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
