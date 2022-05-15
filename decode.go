@@ -257,6 +257,26 @@ func (ec ExtraDecErrorCond) valid() bool {
 	return ec < maxExtraDecError
 }
 
+// UTF8Mode option specifies if decoder should
+// decode CBOR Text containing invalid UTF-8 string.
+type UTF8Mode int
+
+const (
+	// UTF8RejectInvalid rejects CBOR Text containing
+	// invalid UTF-8 string.
+	UTF8RejectInvalid UTF8Mode = iota
+
+	// UTF8DecodeInvalid allows decoding CBOR Text containing
+	// invalid UTF-8 string.
+	UTF8DecodeInvalid
+
+	maxUTF8Mode
+)
+
+func (um UTF8Mode) valid() bool {
+	return um < maxUTF8Mode
+}
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -295,6 +315,10 @@ type DecOptions struct {
 	// when unmarshalling CBOR into an empty interface value.
 	// By default, unmarshal uses map[interface{}]interface{}.
 	DefaultMapType reflect.Type
+
+	// UTF8 specifies if decoder should decode CBOR Text containing invalid UTF-8.
+	// By default, unmarshal rejects CBOR text containing invalid UTF-8.
+	UTF8 UTF8Mode
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -397,6 +421,9 @@ func (opts DecOptions) decMode() (*decMode, error) {
 	if opts.DefaultMapType != nil && opts.DefaultMapType.Kind() != reflect.Map {
 		return nil, fmt.Errorf("cbor: invalid DefaultMapType %s", opts.DefaultMapType)
 	}
+	if !opts.UTF8.valid() {
+		return nil, errors.New("cbor: invalid UTF8 " + strconv.Itoa(int(opts.UTF8)))
+	}
 	dm := decMode{
 		dupMapKey:         opts.DupMapKey,
 		timeTag:           opts.TimeTag,
@@ -408,6 +435,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		intDec:            opts.IntDec,
 		extraReturnErrors: opts.ExtraReturnErrors,
 		defaultMapType:    opts.DefaultMapType,
+		utf8:              opts.UTF8,
 	}
 	return &dm, nil
 }
@@ -440,6 +468,7 @@ type decMode struct {
 	intDec            IntDecMode
 	extraReturnErrors ExtraDecErrorCond
 	defaultMapType    reflect.Type
+	utf8              UTF8Mode
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -456,6 +485,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		TagsMd:            dm.tagsMd,
 		IntDec:            dm.intDec,
 		ExtraReturnErrors: dm.extraReturnErrors,
+		UTF8:              dm.utf8,
 	}
 }
 
@@ -1064,7 +1094,7 @@ func (d *decoder) parseTextString() ([]byte, error) {
 	if ai != 31 {
 		b := d.data[d.off : d.off+int(val)]
 		d.off += int(val)
-		if !utf8.Valid(b) {
+		if d.dm.utf8 == UTF8RejectInvalid && !utf8.Valid(b) {
 			return nil, &SemanticError{"cbor: invalid UTF-8 string"}
 		}
 		return b, nil
@@ -1075,7 +1105,7 @@ func (d *decoder) parseTextString() ([]byte, error) {
 		_, _, val = d.getHead()
 		x := d.data[d.off : d.off+int(val)]
 		d.off += int(val)
-		if !utf8.Valid(x) {
+		if d.dm.utf8 == UTF8RejectInvalid && !utf8.Valid(x) {
 			for !d.foundBreak() {
 				d.skip() // Skip remaining chunk on error
 			}
