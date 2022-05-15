@@ -1383,33 +1383,157 @@ func TestInvalidCBORUnmarshal(t *testing.T) {
 	}
 }
 
-func TestInvalidUTF8TextString(t *testing.T) {
-	invalidUTF8TextStringTests := []struct {
-		name         string
-		cborData     []byte
-		wantErrorMsg string
-	}{
-		{"definite length text string", hexDecode("61fe"), invalidUTF8ErrorMsg},
-		{"indefinite length text string", hexDecode("7f62e6b061b4ff"), invalidUTF8ErrorMsg},
+func TestValidUTF8String(t *testing.T) {
+	dmRejectInvalidUTF8, err := DecOptions{UTF8: UTF8RejectInvalid}.DecMode()
+	if err != nil {
+		t.Errorf("DecMode() returned an error %+v", err)
 	}
-	for _, tc := range invalidUTF8TextStringTests {
+	dmDecodeInvalidUTF8, err := DecOptions{UTF8: UTF8DecodeInvalid}.DecMode()
+	if err != nil {
+		t.Errorf("DecMode() returned an error %+v", err)
+	}
+
+	testCases := []struct {
+		name     string
+		cborData []byte
+		dm       DecMode
+		wantObj  interface{}
+	}{
+		{
+			name:     "with UTF8RejectInvalid",
+			cborData: hexDecode("6973747265616d696e67"),
+			dm:       dmRejectInvalidUTF8,
+			wantObj:  "streaming",
+		},
+		{
+			name:     "with UTF8DecodeInvalid",
+			cborData: hexDecode("6973747265616d696e67"),
+			dm:       dmDecodeInvalidUTF8,
+			wantObj:  "streaming",
+		},
+		{
+			name:     "indef length with UTF8RejectInvalid",
+			cborData: hexDecode("7f657374726561646d696e67ff"),
+			dm:       dmRejectInvalidUTF8,
+			wantObj:  "streaming",
+		},
+		{
+			name:     "indef length with UTF8DecodeInvalid",
+			cborData: hexDecode("7f657374726561646d696e67ff"),
+			dm:       dmDecodeInvalidUTF8,
+			wantObj:  "streaming",
+		},
+	}
+	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Decode to empty interface
 			var i interface{}
-			if err := Unmarshal(tc.cborData, &i); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+			err = tc.dm.Unmarshal(tc.cborData, &i)
+			if err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+			}
+			if !reflect.DeepEqual(i, tc.wantObj) {
+				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.cborData, i, i, tc.wantObj, tc.wantObj)
 			}
 
-			var s string
-			if err := Unmarshal(tc.cborData, &s); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+			// Decode to string
+			var v string
+			err = tc.dm.Unmarshal(tc.cborData, &v)
+			if err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+			}
+			if !reflect.DeepEqual(v, tc.wantObj) {
+				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantObj, tc.wantObj)
 			}
 		})
 	}
+}
+
+func TestInvalidUTF8String(t *testing.T) {
+	dmRejectInvalidUTF8, err := DecOptions{UTF8: UTF8RejectInvalid}.DecMode()
+	if err != nil {
+		t.Errorf("DecMode() returned an error %+v", err)
+	}
+	dmDecodeInvalidUTF8, err := DecOptions{UTF8: UTF8DecodeInvalid}.DecMode()
+	if err != nil {
+		t.Errorf("DecMode() returned an error %+v", err)
+	}
+
+	testCases := []struct {
+		name         string
+		cborData     []byte
+		dm           DecMode
+		wantObj      interface{}
+		wantErrorMsg string
+	}{
+		{
+			name:         "with UTF8RejectInvalid",
+			cborData:     hexDecode("61fe"),
+			dm:           dmRejectInvalidUTF8,
+			wantErrorMsg: invalidUTF8ErrorMsg,
+		},
+		{
+			name:     "with UTF8DecodeInvalid",
+			cborData: hexDecode("61fe"),
+			dm:       dmDecodeInvalidUTF8,
+			wantObj:  string([]byte{0xfe}),
+		},
+		{
+			name:         "indef length with UTF8RejectInvalid",
+			cborData:     hexDecode("7f62e6b061b4ff"),
+			dm:           dmRejectInvalidUTF8,
+			wantErrorMsg: invalidUTF8ErrorMsg,
+		},
+		{
+			name:     "indef length with UTF8DecodeInvalid",
+			cborData: hexDecode("7f62e6b061b4ff"),
+			dm:       dmDecodeInvalidUTF8,
+			wantObj:  string([]byte{0xe6, 0xb0, 0xb4}),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Decode to empty interface
+			var v interface{}
+			err = tc.dm.Unmarshal(tc.cborData, &v)
+			if tc.wantErrorMsg != "" {
+				if err == nil {
+					t.Errorf("Unmarshal(0x%x) didn't return error", tc.cborData)
+				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+					t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+				}
+				if !reflect.DeepEqual(v, tc.wantObj) {
+					t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantObj, tc.wantObj)
+				}
+			}
+
+			// Decode to string
+			var s string
+			err = tc.dm.Unmarshal(tc.cborData, &s)
+			if tc.wantErrorMsg != "" {
+				if err == nil {
+					t.Errorf("Unmarshal(0x%x) didn't return error", tc.cborData)
+				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+					t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+				}
+				if !reflect.DeepEqual(s, tc.wantObj) {
+					t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.cborData, s, s, tc.wantObj, tc.wantObj)
+				}
+			}
+		})
+	}
+
 	// Test decoding of mixed invalid text string and valid text string
+	// with UTF8RejectInvalid option (default)
 	cborData := hexDecode("7f62e6b061b4ff7f657374726561646d696e67ff")
 	dec := NewDecoder(bytes.NewReader(cborData))
 	var s string
@@ -1417,6 +1541,20 @@ func TestInvalidUTF8TextString(t *testing.T) {
 		t.Errorf("Decode() didn't return an error")
 	} else if s != "" {
 		t.Errorf("Decode() returned %q, want %q", s, "")
+	}
+	if err := dec.Decode(&s); err != nil {
+		t.Errorf("Decode() returned error %v", err)
+	} else if s != "streaming" {
+		t.Errorf("Decode() returned %q, want %q", s, "streaming")
+	}
+
+	// Test decoding of mixed invalid text string and valid text string
+	// with UTF8DecodeInvalid option
+	dec = dmDecodeInvalidUTF8.NewDecoder(bytes.NewReader(cborData))
+	if err := dec.Decode(&s); err != nil {
+		t.Errorf("Decode() returned error %q", err)
+	} else if s != string([]byte{0xe6, 0xb0, 0xb4}) {
+		t.Errorf("Decode() returned %q, want %q", s, string([]byte{0xe6, 0xb0, 0xb4}))
 	}
 	if err := dec.Decode(&s); err != nil {
 		t.Errorf("Decode() returned error %v", err)
@@ -3063,15 +3201,16 @@ func TestUnmarshalToNotNilInterface(t *testing.T) {
 
 func TestDecOptions(t *testing.T) {
 	opts1 := DecOptions{
-		TimeTag:           DecTagRequired,
 		DupMapKey:         DupMapKeyEnforcedAPF,
-		IndefLength:       IndefLengthForbidden,
+		TimeTag:           DecTagRequired,
 		MaxNestedLevels:   100,
-		MaxMapPairs:       101,
 		MaxArrayElements:  102,
+		MaxMapPairs:       101,
+		IndefLength:       IndefLengthForbidden,
 		TagsMd:            TagsForbidden,
 		IntDec:            IntDecConvertSigned,
 		ExtraReturnErrors: ExtraDecErrorUnknownField,
+		UTF8:              UTF8DecodeInvalid,
 	}
 	dm, err := opts1.DecMode()
 	if err != nil {
@@ -4563,6 +4702,16 @@ func TestExtraErrorCondUnknowField(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestInvalidUTF8Mode(t *testing.T) {
+	wantErrorMsg := "cbor: invalid UTF8 2"
+	_, err := DecOptions{UTF8: 2}.DecMode()
+	if err == nil {
+		t.Errorf("DecMode() didn't return an error")
+	} else if err.Error() != wantErrorMsg {
+		t.Errorf("DecMode() returned error %q, want %q", err.Error(), wantErrorMsg)
 	}
 }
 
