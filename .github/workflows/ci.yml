@@ -18,7 +18,7 @@ on:
 jobs:
   # Test on various OS with default Go version. 
   tests:
-    name: Test on ${{matrix.os}}
+    name: test ${{matrix.os}} go-${{ matrix.go-version }}
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read    
