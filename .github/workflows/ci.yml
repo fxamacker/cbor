@@ -2,6 +2,10 @@
 # https://github.com/fxamacker/cbor/workflows/ci.yml
 # See ci-go-cover.yml for coverage and safer-golangci-lint.yml for linting.
 name: ci
+
+# Revoke default permissions.
+permissions: {}
+
 on:
   workflow_dispatch:
   pull_request:
@@ -16,6 +20,8 @@ jobs:
   tests:
     name: Test on ${{matrix.os}}
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read    
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
@@ -25,6 +31,7 @@ jobs:
       uses: actions/setup-go@v3
       with:
         go-version: ${{ matrix.go-version }}
+        check-latest: true
         
     - name: Checkout code
       uses: actions/checkout@v3
