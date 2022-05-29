@@ -2,16 +2,16 @@
 Thank you for your interest in contributing to fxamacker/cbor!
 -->
 
-#### Description (motivation)
+### Description
 
 
 <!-- For code contributions, please complete all the items below this line. -->
 <!-- For documentation-only contributions, please delete everything below this line. -->
 
 #### PR Was Proposed and Welcomed in Currently Open Issue
-This PR was proposed and welcomed by maintainer(s) in issue #
 
-Closes #
+- [ ] This PR was proposed and welcomed by maintainer(s) in issue #___
+- [ ] Closes or Updates Issue #___
 
 #### Checklist (for code PR only, ignore for docs PR)
 
