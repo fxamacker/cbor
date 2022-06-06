@@ -292,6 +292,9 @@ type EncOptions struct {
 	// IndefLength specifies whether to allow indefinite length CBOR items.
 	IndefLength IndefLengthMode
 
+	// NilContainers specifies how to encode map[Key]Type(nil)/[]Type(nil)
+	NilContainers NilContainersMode
+
 	// TagsMd specifies whether to allow CBOR tags (major type 6).
 	TagsMd TagsMode
 }
@@ -464,6 +467,9 @@ func (opts EncOptions) encMode() (*encMode, error) {
 	if !opts.IndefLength.valid() {
 		return nil, errors.New("cbor: invalid IndefLength " + strconv.Itoa(int(opts.IndefLength)))
 	}
+	if !opts.NilContainers.valid() {
+		return nil, errors.New("cbor: invalid NilContainers " + strconv.Itoa(int(opts.NilContainers)))
+	}
 	if !opts.TagsMd.valid() {
 		return nil, errors.New("cbor: invalid TagsMd " + strconv.Itoa(int(opts.TagsMd)))
 	}
@@ -479,6 +485,7 @@ func (opts EncOptions) encMode() (*encMode, error) {
 		time:          opts.Time,
 		timeTag:       opts.TimeTag,
 		indefLength:   opts.IndefLength,
+		nilContainers: opts.NilContainers,
 		tagsMd:        opts.TagsMd,
 	}
 	return &em, nil
@@ -501,6 +508,7 @@ type encMode struct {
 	time          TimeMode
 	timeTag       EncTagMode
 	indefLength   IndefLengthMode
+	nilContainers NilContainersMode
 	tagsMd        TagsMode
 }
 
@@ -787,7 +795,7 @@ func encodeFloat64(e *encoderBuffer, f64 float64) error {
 
 func encodeByteString(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	vk := v.Kind()
-	if vk == reflect.Slice && v.IsNil() {
+	if vk == reflect.Slice && v.IsNil() && em.nilContainers == NullForNil {
 		e.Write(cborNil)
 		return nil
 	}
@@ -824,7 +832,7 @@ type arrayEncodeFunc struct {
 }
 
 func (ae arrayEncodeFunc) encode(e *encoderBuffer, em *encMode, v reflect.Value) error {
-	if v.Kind() == reflect.Slice && v.IsNil() {
+	if v.Kind() == reflect.Slice && v.IsNil() && em.nilContainers == NullForNil {
 		e.Write(cborNil)
 		return nil
 	}
@@ -849,7 +857,7 @@ type mapEncodeFunc struct {
 }
 
 func (me mapEncodeFunc) encode(e *encoderBuffer, em *encMode, v reflect.Value) error {
-	if v.IsNil() {
+	if v.IsNil() && em.nilContainers == NullForNil {
 		e.Write(cborNil)
 		return nil
 	}
