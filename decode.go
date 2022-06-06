@@ -1291,11 +1291,7 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 	hasSize := (ai != 31)
 	count := int(val)
 	if v.IsNil() {
-		mapsize := count
-		if !hasSize {
-			mapsize = 0
-		}
-		v.Set(reflect.MakeMapWithSize(tInfo.nonPtrType, mapsize))
+		v.Set(reflect.MakeMap(tInfo.nonPtrType))
 	}
 	keyType, eleType := tInfo.keyTypeInfo.typ, tInfo.elemTypeInfo.typ
 	reuseKey, reuseEle := isImmutableKind(tInfo.keyTypeInfo.kind), isImmutableKind(tInfo.elemTypeInfo.kind)
