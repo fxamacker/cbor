@@ -3188,7 +3188,7 @@ func TestStructKeyAsIntError(t *testing.T) {
 func TestUnmarshalToNotNilInterface(t *testing.T) {
 	cborData := hexDecode("83010203") // []uint64{1, 2, 3}
 	s := "hello"                      //nolint:goconst
-	var v interface{} = s             // Unmarshal() sees v as type inteface{} and sets CBOR data as default Go type.  s is unmodified.  Same behavior as encoding/json.
+	var v interface{} = s             // Unmarshal() sees v as type interface{} and sets CBOR data as default Go type.  s is unmodified.  Same behavior as encoding/json.
 	wantV := []interface{}{uint64(1), uint64(2), uint64(3)}
 	if err := Unmarshal(cborData, &v); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
@@ -4630,7 +4630,7 @@ func TestDecModeInvalidExtraError(t *testing.T) {
 	}
 }
 
-func TestExtraErrorCondUnknowField(t *testing.T) {
+func TestExtraErrorCondUnknownField(t *testing.T) {
 	type s struct {
 		A string
 		B string
@@ -4715,7 +4715,7 @@ func TestInvalidUTF8Mode(t *testing.T) {
 	}
 }
 
-func TestStreamExtraErrorCondUnknowField(t *testing.T) {
+func TestStreamExtraErrorCondUnknownField(t *testing.T) {
 	type s struct {
 		A string
 		B string
@@ -5398,63 +5398,63 @@ func TestUnmarshalToInterface(t *testing.T) {
 	}{
 		{
 			name: "uint",
-			data: hexDecode("a2016b736f6d65206d657373676502187b"), // {1: "some messge", 2: 123}
+			data: hexDecode("a2016c736f6d65206d65737361676502187b"), // {1: "some message", 2: 123}
 			v: &TestExample{
-				Message: "some messge",
+				Message: "some message",
 				Foo:     &uintFoo123,
 			},
 			unmarshalToObj: &TestExample{Foo: &uintFoo},
 		},
 		{
 			name: "int",
-			data: hexDecode("a2016b736f6d65206d65737367650220"), // {1: "some messge", 2: -1}
+			data: hexDecode("a2016c736f6d65206d6573736167650220"), // {1: "some message", 2: -1}
 			v: &TestExample{
-				Message: "some messge",
+				Message: "some message",
 				Foo:     &intFooNeg1,
 			},
 			unmarshalToObj: &TestExample{Foo: &intFoo},
 		},
 		{
 			name: "bytes",
-			data: hexDecode("a2016b736f6d65206d65737367650243010203"), // {1: "some messge", 2: [1,2,3]}
+			data: hexDecode("a2016c736f6d65206d6573736167650243010203"), // {1: "some message", 2: [1,2,3]}
 			v: &TestExample{
-				Message: "some messge",
+				Message: "some message",
 				Foo:     &byteFoo123,
 			},
 			unmarshalToObj: &TestExample{Foo: &byteFoo},
 		},
 		{
 			name: "string",
-			data: hexDecode("a2016b736f6d65206d65737367650263313233"), // {1: "some messge", 2: "123"}
+			data: hexDecode("a2016c736f6d65206d6573736167650263313233"), // {1: "some message", 2: "123"}
 			v: &TestExample{
-				Message: "some messge",
+				Message: "some message",
 				Foo:     &stringFoo123,
 			},
 			unmarshalToObj: &TestExample{Foo: &stringFoo},
 		},
 		{
 			name: "array",
-			data: hexDecode("a2016b736f6d65206d65737367650283010203"), // {1: "some messge", 2: []int{1,2,3}}
+			data: hexDecode("a2016c736f6d65206d6573736167650283010203"), // {1: "some message", 2: []int{1,2,3}}
 			v: &TestExample{
-				Message: "some messge",
+				Message: "some message",
 				Foo:     &arrayFoo123,
 			},
 			unmarshalToObj: &TestExample{Foo: &arrayFoo},
 		},
 		{
 			name: "map",
-			data: hexDecode("a2016b736f6d65206d657373676502a3010102020303"), // {1: "some messge", 2: map[int]int{1:1,2:2,3:3}}
+			data: hexDecode("a2016c736f6d65206d65737361676502a3010102020303"), // {1: "some message", 2: map[int]int{1:1,2:2,3:3}}
 			v: &TestExample{
-				Message: "some messge",
+				Message: "some message",
 				Foo:     &mapFoo123,
 			},
 			unmarshalToObj: &TestExample{Foo: &mapFoo},
 		},
 		{
 			name: "struct",
-			data: hexDecode("a2016b736f6d65206d657373676502a1011901c8"), // {1: "some messge", 2: {1: 456}}
+			data: hexDecode("a2016c736f6d65206d65737361676502a1011901c8"), // {1: "some message", 2: {1: 456}}
 			v: &TestExample{
-				Message: "some messge",
+				Message: "some message",
 				Foo:     &StructFoo{Value: 456},
 			},
 			unmarshalToObj: &TestExample{Foo: &StructFoo{}},
