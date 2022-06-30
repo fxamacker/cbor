@@ -250,7 +250,7 @@ type BigIntConvertMode int
 const (
 	// BigIntConvertShortest makes big.Int encode to CBOR integer if value fits.
 	// E.g. if big.Int value can be converted to CBOR integer while preserving
-	// value, encoder will encode it to CBOR interger (major type 0 or 1).
+	// value, encoder will encode it to CBOR integer (major type 0 or 1).
 	BigIntConvertShortest BigIntConvertMode = iota
 
 	// BigIntConvertNone makes big.Int encode to CBOR bignum (tag 2 or 3) without
