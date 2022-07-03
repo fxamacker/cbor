@@ -287,7 +287,8 @@ type DecOptions struct {
 	TimeTag DecTagMode
 
 	// MaxNestedLevels specifies the max nested levels allowed for any combination of CBOR array, maps, and tags.
-	// Default is 32 levels and it can be set to [4, 256].
+	// Default is 32 levels and it can be set to [4, 65535]. Note that higher maximum levels of nesting can
+	// require larger amounts of stack to deserialize. Don't increase this higher than you require.
 	MaxNestedLevels int
 
 	// MaxArrayElements specifies the max number of elements for CBOR arrays.
@@ -402,8 +403,8 @@ func (opts DecOptions) decMode() (*decMode, error) {
 	}
 	if opts.MaxNestedLevels == 0 {
 		opts.MaxNestedLevels = 32
-	} else if opts.MaxNestedLevels < 4 || opts.MaxNestedLevels > 256 {
-		return nil, errors.New("cbor: invalid MaxNestedLevels " + strconv.Itoa(opts.MaxNestedLevels) + " (range is [4, 256])")
+	} else if opts.MaxNestedLevels < 4 || opts.MaxNestedLevels > 65535 {
+		return nil, errors.New("cbor: invalid MaxNestedLevels " + strconv.Itoa(opts.MaxNestedLevels) + " (range is [4, 65535])")
 	}
 	if opts.MaxArrayElements == 0 {
 		opts.MaxArrayElements = defaultMaxArrayElements
