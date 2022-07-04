@@ -3131,6 +3131,44 @@ func TestUnmarshalIntoMapError(t *testing.T) {
 	}
 }
 
+func TestUnmarshalDeepNesting(t *testing.T) {
+	// Construct this object rather than embed such a large constant in the code
+	type TestNode struct {
+		Value int
+		Child *TestNode
+	}
+	n := &TestNode{Value: 0}
+	root := n
+	for i := 0; i < 65534; i++ {
+		child := &TestNode{Value: i}
+		n.Child = child
+		n = child
+	}
+	em, err := EncOptions{}.EncMode()
+	if err != nil {
+		t.Errorf("EncMode() returned error %v", err)
+	}
+	cborData, err := em.Marshal(root)
+	if err != nil {
+		t.Errorf("Marshal() deeply nested object returned error %v", err)
+	}
+
+	// Try unmarshal it
+	dm, err := DecOptions{MaxNestedLevels: 65535}.DecMode()
+	if err != nil {
+		t.Errorf("DecMode() returned error %v", err)
+	}
+	var readback TestNode
+	err = dm.Unmarshal(cborData, &readback)
+	if err != nil {
+		t.Errorf("Unmarshal() of deeply nested object returned error: %v", err)
+	}
+	if !reflect.DeepEqual(root, &readback) {
+		t.Errorf("Unmarshal() of deeply nested object did not match\nGot: %#v\n Want: %#v\n",
+			&readback, root)
+	}
+}
+
 func TestStructToArrayError(t *testing.T) {
 	type coseHeader struct {
 		Alg int    `cbor:"1,keyasint,omitempty"`
@@ -3291,12 +3329,12 @@ func TestDecModeInvalidMaxNestedLevel(t *testing.T) {
 		{
 			name:         "MaxNestedLevels < 4",
 			opts:         DecOptions{MaxNestedLevels: 1},
-			wantErrorMsg: "cbor: invalid MaxNestedLevels 1 (range is [4, 256])",
+			wantErrorMsg: "cbor: invalid MaxNestedLevels 1 (range is [4, 65535])",
 		},
 		{
-			name:         "MaxNestedLevels > 256",
-			opts:         DecOptions{MaxNestedLevels: 257},
-			wantErrorMsg: "cbor: invalid MaxNestedLevels 257 (range is [4, 256])",
+			name:         "MaxNestedLevels > 65535",
+			opts:         DecOptions{MaxNestedLevels: 65536},
+			wantErrorMsg: "cbor: invalid MaxNestedLevels 65536 (range is [4, 65535])",
 		},
 	}
 	for _, tc := range testCases {

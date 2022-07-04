@@ -362,7 +362,7 @@ See [Options](#options) section for details about each setting.
 | IndefLength | **IndefLengthAllowed**, IndefLengthForbidden |
 | TagsMd | **TagsAllowed**, TagsForbidden |
 | ExtraReturnErrors | **ExtraDecErrorNone**, ExtraDecErrorUnknownField |
-| MaxNestedLevels | **32**, can be set to [4, 256] |
+| MaxNestedLevels | **32**, can be set to [4, 65535] |
 | MaxArrayElements | **131072**, can be set to [16, 2147483647] |
 | MaxMapPairs | **131072**, can be set to [16, 2147483647] |
 
@@ -697,7 +697,7 @@ If `IntDecConvertedSigned` is used and value overflows int64, UnmarshalTypeError
 
 | DecOptions.MaxNestedLevels | Description |
 | -------------------------- | ----------- |
-| 32 (default) | allowed setting is [4, 256] |
+| 32 (default) | allowed setting is [4, 65535] |
 
 <br>
 
