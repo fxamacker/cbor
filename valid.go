@@ -74,6 +74,9 @@ func (d *decoder) valid() error {
 		return io.EOF
 	}
 	_, err := d.validInternal(0)
+	if err == nil && !d.streaming && len(d.data) != d.off {
+		err = &SyntaxError{"cbor: unexpected following extraneous " + strconv.Itoa(len(d.data)-d.off) + " bytes"}
+	}
 	return err
 }
 

@@ -5,6 +5,8 @@ package cbor
 
 import (
 	"bytes"
+	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -30,7 +32,15 @@ func TestValidOnStreamingData(t *testing.T) {
 	for _, t := range marshalTests {
 		buf.Write(t.cborData)
 	}
+
 	d := decoder{data: buf.Bytes(), dm: defaultDecMode}
+	extraBytes := len(d.data) - len(marshalTests[0].cborData)
+	wantErrorMsg := fmt.Sprintf("cbor: unexpected following extraneous %d bytes", extraBytes)
+	if err := d.valid(); !strings.Contains(err.Error(), wantErrorMsg) {
+		t.Errorf("valid() returned error %q, want %q", err, wantErrorMsg)
+	}
+
+	d = decoder{data: buf.Bytes(), dm: defaultDecMode, streaming: true}
 	for i := 0; i < len(marshalTests); i++ {
 		if err := d.valid(); err != nil {
 			t.Errorf("valid() returned error %v", err)

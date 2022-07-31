@@ -508,13 +508,14 @@ func (dm *decMode) Valid(data []byte) error {
 
 // NewDecoder returns a new decoder that reads from r using dm DecMode.
 func (dm *decMode) NewDecoder(r io.Reader) *Decoder {
-	return &Decoder{r: r, d: decoder{dm: dm}}
+	return &Decoder{r: r, d: decoder{dm: dm, streaming: true}}
 }
 
 type decoder struct {
-	data []byte
-	off  int // next read offset in data
-	dm   *decMode
+	data      []byte
+	off       int // next read offset in data
+	dm        *decMode
+	streaming bool
 }
 
 func (d *decoder) value(v interface{}) error {
