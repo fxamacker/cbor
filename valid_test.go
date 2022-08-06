@@ -35,8 +35,8 @@ func TestValidOnStreamingData(t *testing.T) {
 
 	d := decoder{data: buf.Bytes(), dm: defaultDecMode}
 	extraBytes := len(d.data) - len(marshalTests[0].cborData)
-	wantErrorMsg := fmt.Sprintf("cbor: unexpected following extraneous %d bytes", extraBytes)
-	if err := d.valid(); !strings.Contains(err.Error(), wantErrorMsg) {
+	wantErrorMsg := fmt.Sprintf("cbor: unexpected following extraneous data, %d bytes", extraBytes)
+	if err := d.valid(); err == nil || !strings.Contains(err.Error(), wantErrorMsg) {
 		t.Errorf("valid() returned error %q, want %q", err, wantErrorMsg)
 	}
 
