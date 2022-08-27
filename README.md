@@ -584,7 +584,7 @@ type RawTag struct {
 }
 ```
 
-See [API docs (godoc.org)](https://godoc.org/github.com/fxamacker/cbor) for more details and more functions.  See [Usage section](#usage) for usage and code examples.
+See [API docs (godoc.org)](https://godoc.org/github.com/fxamacker/cbor/v2) for more details and more functions.  See [Usage section](#usage) for usage and code examples.
 
 <hr>
 
