@@ -8,69 +8,66 @@
 #
 # 100% of the script for downloading, installing, and running golangci-lint
 # is embedded in this file.  The embedded SHA384 digest is used to verify the 
-# downloaded golangci-lint tarball (golangci-lint-1.42.0-linux-amd64.tar.gz). 
-#
-# Why?
-#   1. Avoid downloading and executing unverified wrapper scripts or actions each time a workflow runs.
-#      See https://www.securityweek.com/codecov-bash-uploader-dev-tool-compromised-supply-chain-hack
-#   2. Use embedded SHA384 instead of downloading CHECKSUM because CHECKSUM file isn't digitally signed.
-#   3. Use openssl instead of sha256sum because it's easier to change hash algo to BLAKE2s, SHA3-256, etc.
-#   4. Use binary instead of building from source because it's probably easier to detect backdoors in one binary 
-#      than all the combined source code of dozens of linters and all their required 3rd-party packages.
+# downloaded golangci-lint tarball (golangci-lint-1.46.2-linux-amd64.tar.gz). 
 #
 # To use:
 #   Step 1. Copy this file into [github_repo]/.github/workflows/
 #   Step 2. There's no step 2 if you like the default settings.
 #
-# You can create and use a config file (.golangci.yml) as described in golangci-lint docs.
+# Create and use a config file (.golangci.yml) as described in golangci-lint docs.
 #
 # To use a newer version of golangci-lint, change these values:
 #   1. GOLINTERS_VERSION
 #   2. GOLINTERS_TGZ_DGST
 #
-# Release v1.43.0 (Dec 5, 2021)
-#   - Bump Go to 1.17.x.
-#   - Bump golangci-lint to 1.43.0.
-#   - Checksum for golangci-lint-1.43.0-linux-amd64.tar.gz
-#     - SHA-256 is f3515cebec926257da703ba0a2b169e4a322c11dc31a8b4656b50a43e48877f4
-#     - SHA-384 is 0a5e9adc3cc93fbc2e3c8f4daee061e77407fe3e702001021ef03c8bdf39a81c36c42d35e8ba970f4f09db2279c881bf
+# Release v1.46.2 (May 19, 2022)
+#   - actions/setup-go uses check-latest: true
+#   - Remove default permissions at top level and grant only read permission in the job.
+#   - Add workflow_dispatch.
+#   - Tidy some comments.
+#   - Bump golangci-lint to 1.46.2.
+#   - Checksum for golangci-lint-1.46.2-linux-amd64.tar.gz
+#     - SHA-256 is 242cd4f2d6ac0556e315192e8555784d13da5d1874e51304711570769c4f2b9b
+#     - SHA-384 is 60ade95e447f8c9a2dfc507c271c2ff41a0e0856f077bf2f734bcd80dd8268addf8cf1625c3e47a6516eb14f23423315
 #
 name: linters
 
-# Remove default permissions
+# Remove default permissions and grant only what is required in each job.
 permissions: {}
 
-on:  
+on:
+  workflow_dispatch:
   pull_request:
     types: [opened, synchronize, closed]
   push:
     branches: [main, master]
 
 env:
-  GOLINTERS_VERSION: 1.43.0
+  GOLINTERS_VERSION: 1.46.2
   GOLINTERS_ARCH: linux-amd64
-  GOLINTERS_TGZ_DGST: 0a5e9adc3cc93fbc2e3c8f4daee061e77407fe3e702001021ef03c8bdf39a81c36c42d35e8ba970f4f09db2279c881bf
+  GOLINTERS_TGZ_DGST: 60ade95e447f8c9a2dfc507c271c2ff41a0e0856f077bf2f734bcd80dd8268addf8cf1625c3e47a6516eb14f23423315
   GOLINTERS_TIMEOUT: 5m
   OPENSSL_DGST_CMD: openssl dgst -sha384 -r
   CURL_CMD: curl --proto =https --tlsv1.2 --location --silent --show-error --fail
-  
+
 jobs:
   main:
     name: Lint
+    runs-on: ubuntu-latest
     permissions:
       contents: read
-    runs-on: ubuntu-latest
     steps:
       - name: Checkout source
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 1
-        
+
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
-          go-version: 1.17.x
-                      
+          go-version: 1.17
+          check-latest: true
+
       - name: Install golangci-lint
         run: |
           GOLINTERS_URL_PREFIX="https://github.com/golangci/golangci-lint/releases/download/v${GOLINTERS_VERSION}/"
@@ -93,7 +90,7 @@ jobs:
           tar --no-same-owner -xzf "${GOLINTERS_TGZ}" --strip-components 1
           install golangci-lint $(go env GOPATH)/bin
         shell: bash
-          
+
       # Run required linters enabled in .golangci.yml (or default linters if yml doesn't exist)     
       - name: Run golangci-lint
         run: $(go env GOPATH)/bin/golangci-lint run --timeout="${GOLINTERS_TIMEOUT}"
