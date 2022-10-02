@@ -26,6 +26,9 @@
 #   1. GOLINTERS_VERSION
 #   2. GOLINTERS_TGZ_DGST
 #
+# Customize for fxamacker/cbor (October 2, 2022)
+#   - Use Go 1.18 for now because gofmt changed in Go 1.19 and other PRs are pending.
+#
 # Release v1.49.0 (September 18, 2022)
 #   - Bump golangci-lint to 1.49.0
 #   - Bump Go to 1.19 (latest version of 1.19.x because check-latest: true).
