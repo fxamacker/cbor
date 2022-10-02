@@ -27,7 +27,7 @@
 #   2. GOLINTERS_TGZ_DGST
 #
 # Customize for fxamacker/cbor (October 2, 2022)
-#   - Use Go 1.18 for now because gofmt changed in Go 1.19 and other PRs are pending.
+#   - Use Go 1.17 for now because gofmt changed in Go 1.19 and other PRs are pending.
 #
 # Release v1.49.0 (September 18, 2022)
 #   - Bump golangci-lint to 1.49.0
@@ -54,7 +54,7 @@ on:
     branches: [main, master]
 
 env:
-  GO_VERSION: 1.18
+  GO_VERSION: 1.17
   GOLINTERS_VERSION: 1.49.0
   GOLINTERS_ARCH: linux-amd64
   GOLINTERS_TGZ_DGST: 5badc6e9fee2003621efa07e385910d9a88c89b38f6c35aded153193c5125178
