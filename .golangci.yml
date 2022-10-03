@@ -45,8 +45,8 @@ linters:
     - errcheck
     - goconst
     - gocyclo
-    - gofmt
-    - goimports
+    # - gofmt       # handled by safer-golangci-lint.yml
+    # - goimports   # handled by safer-golangci-lint.yml
     - gosec
     - govet
     - ineffassign
