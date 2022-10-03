@@ -56,8 +56,8 @@ on:
 
 env:
   GO_VERSION: 1.19
-  GOFMT_VERSION: 1.18        # version of Go for gofmt and for building goimports
-  GOLINTERS_VERSION: 1.49.0  # version of golangci-lint
+  GOFMT_VERSION: 1.18.6        # version of Go for gofmt and for building goimports
+  GOLINTERS_VERSION: 1.49.0    # version of golangci-lint
     
   GOLINTERS_ARCH: linux-amd64
   GOLINTERS_TGZ_DGST: 5badc6e9fee2003621efa07e385910d9a88c89b38f6c35aded153193c5125178 # golangci-lint 1.49.0
@@ -89,7 +89,7 @@ jobs:
         with:
           # Use GOFMT_VERSION (not GO_VERSION) for job goimports
           go-version: ${{ env.GOFMT_VERSION }}
-          check-latest: true
+          check-latest: false  # false to prevent compiled goimports digest from changing
           
       # Run goimports and print file names that didn't pass
       - name: Run goimports
