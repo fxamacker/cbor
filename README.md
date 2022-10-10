@@ -22,7 +22,7 @@ fxamacker/cbor is used by Arm Ltd., Berlin Institute of Health at Charité, Chai
 
 Microsoft Corporation had NCC Group conduct a security assessment (PDF) which includes portions of this library in its scope.
 
-fxamacker/cbor has 98% coverage and is fuzz tested
+fxamacker/cbor has 98% coverage and is fuzz tested.
 
 Install with `go get github.com/fxamacker/cbor/v2` and `import "github.com/fxamacker/cbor/v2"`.  
 See [Quick Start](#quick-start) to save time.
