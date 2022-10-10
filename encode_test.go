@@ -260,6 +260,11 @@ var marshalTests = []marshalTest{
 	{hexDecode("f4"), []interface{}{false}},
 	{hexDecode("f5"), []interface{}{true}},
 	{hexDecode("f6"), []interface{}{nil, []byte(nil), []int(nil), map[uint]bool(nil), (*int)(nil), io.Reader(nil)}},
+	// simple values
+	{hexDecode("e0"), []interface{}{SimpleValue(0)}},
+	{hexDecode("f0"), []interface{}{SimpleValue(16)}},
+	{hexDecode("f820"), []interface{}{SimpleValue(32)}},
+	{hexDecode("f8ff"), []interface{}{SimpleValue(255)}},
 	// nan, positive and negative inf
 	{hexDecode("f97c00"), []interface{}{math.Inf(1)}},
 	{hexDecode("f97e00"), []interface{}{math.NaN()}},
@@ -3588,5 +3593,63 @@ func TestMarshalNegBigInt(t *testing.T) {
 				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.value, b, tc.cborDataBigInt)
 			}
 		})
+	}
+}
+
+func TestStructWithSimpleValueFields(t *testing.T) {
+	type T struct {
+		SV1 SimpleValue `cbor:",omitempty"` // omit empty
+		SV2 SimpleValue
+	}
+
+	v1 := T{}
+	want1 := []byte{0xa1, 0x63, 0x53, 0x56, 0x32, 0xe0}
+
+	v2 := T{SV1: SimpleValue(1), SV2: SimpleValue(255)}
+	want2 := []byte{
+		0xa2,
+		0x63, 0x53, 0x56, 0x31, 0xe1,
+		0x63, 0x53, 0x56, 0x32, 0xf8, 0xff,
+	}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	tests := []roundTripTest{
+		{"default values", v1, want1},
+		{"non-default values", v2, want2}}
+	testRoundTrip(t, tests, em, dm)
+}
+
+func TestMapWithSimpleValueKey(t *testing.T) {
+	data := []byte{0xa2, 0x00, 0x00, 0xe0, 0x00} // {0: 0, simple(0): 0}
+
+	// Decode CBOR map with positive integer 0 and simple value 0 as keys.
+	// No map key duplication is detected because keys are of different CBOR types.
+	// RFC 8949 Section 5.6.1 says "a simple value 2 is not equivalent to an integer 2".
+	decOpts := DecOptions{
+		DupMapKey: DupMapKeyEnforcedAPF, // duplicated key not allowed
+	}
+	decMode, _ := decOpts.DecMode()
+
+	var v map[interface{}]interface{}
+	err := decMode.Unmarshal(data, &v)
+	if err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
+	}
+
+	// Encode decoded Go map.
+	encOpts := EncOptions{
+		Sort: SortBytewiseLexical,
+	}
+	encMode, _ := encOpts.EncMode()
+
+	encodedData, err := encMode.Marshal(v)
+	if err != nil {
+		t.Errorf("Marshal(%v) returned error %v", v, err)
+	}
+
+	// Test roundtrip produces identical CBOR data.
+	if !bytes.Equal(data, encodedData) {
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, encodedData, data)
 	}
 }

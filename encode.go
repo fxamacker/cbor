@@ -1250,6 +1250,14 @@ func encodeTag(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	return nil
 }
 
+func encodeSimpleValue(e *encoderBuffer, em *encMode, v reflect.Value) error {
+	if b := em.encTagBytes(v.Type()); b != nil {
+		e.Write(b)
+	}
+	encodeHead(e, byte(cborTypePrimitives), v.Uint())
+	return nil
+}
+
 func encodeHead(e *encoderBuffer, t byte, n uint64) {
 	if n <= 23 {
 		e.WriteByte(t | byte(n))
@@ -1290,6 +1298,8 @@ func getEncodeFuncInternal(t reflect.Type) (encodeFunc, isEmptyFunc) {
 		return getEncodeIndirectValueFunc(t), isEmptyPtr
 	}
 	switch t {
+	case typeSimpleValue:
+		return encodeSimpleValue, isEmptyUint
 	case typeTag:
 		return encodeTag, alwaysNotEmpty
 	case typeTime:

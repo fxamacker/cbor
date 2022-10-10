@@ -730,14 +730,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		return fillTextString(t, b, v)
 	case cborTypePrimitives:
 		_, ai, val := d.getHead()
-		if ai < 20 || ai == 24 {
-			return fillPositiveInt(t, val, v)
-		}
 		switch ai {
-		case 20, 21:
-			return fillBool(t, ai == 21, v)
-		case 22, 23:
-			return fillNil(t, v)
 		case 25:
 			f := float64(float16.Frombits(uint16(val)).Float32())
 			return fillFloat(t, f, v)
@@ -747,7 +740,22 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		case 27:
 			f := math.Float64frombits(val)
 			return fillFloat(t, f, v)
+		default: // ai <= 24
+			// Decode simple values (including false, true, null, and undefined)
+			if tInfo.nonPtrType == typeSimpleValue {
+				v.SetUint(val)
+				return nil
+			}
+			switch ai {
+			case 20, 21:
+				return fillBool(t, ai == 21, v)
+			case 22, 23:
+				return fillNil(t, v)
+			default:
+				return fillPositiveInt(t, val, v)
+			}
 		}
+
 	case cborTypeTag:
 		_, _, tagNum := d.getHead()
 		switch tagNum {
@@ -1033,7 +1041,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 	case cborTypePrimitives:
 		_, ai, val := d.getHead()
 		if ai < 20 || ai == 24 {
-			return val, nil
+			return SimpleValue(val), nil
 		}
 		switch ai {
 		case 20, 21:
