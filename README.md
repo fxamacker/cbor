@@ -16,9 +16,13 @@ Features include CBOR tags, duplicate map key detection, float64→32→16, and 
 
 Using CBOR [Preferred Serialization](https://www.rfc-editor.org/rfc/rfc8949.html#name-preferred-serialization) with Go struct tags (`toarray`, `keyasint`, `omitempty`) reduces programming effort and creates smaller encoded data size.
 
-Microsoft Corporation had NCC Group produce a [security assessment (PDF)](https://github.com/veraison/go-cose/blob/v1.0.0-rc.1/reports/NCC_Microsoft-go-cose-Report_2022-05-26_v1.0.pdf) which includes portions of this library in its scope.
+There are [1276 repositories](https://github.com/fxamacker/cbor/network/dependents?package_id=UGFja2FnZS0yMjcwNDY1OTQ4) that depend on fxamacker/cbor/v2. Additional 155 repositories are using version 1.x of this CBOR codec (please upgrade to v2).
 
-fxamacker/cbor has 98% coverage and is fuzz tested.  It won't exhaust RAM decoding 9 bytes of bad CBOR data.  It's used by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, ConsenSys, Dapper Labs, Duo Labs (cisco), EdgeX Foundry, Mozilla, Netherlands (govt), Oasis Labs, Taurus SA, Teleport, and others.
+fxamacker/cbor is used by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, ConsenSys, Dapper Labs, Duo Labs (cisco), EdgeX Foundry, Mozilla, National Cybersecurity Agency of France (govt), Netherlands (govt), Oasis Labs, Tailscale, Taurus SA, Teleport, TIBCO, and others.
+
+Microsoft Corporation had NCC Group conduct a security assessment (PDF) which includes portions of this library in its scope.
+
+fxamacker/cbor has 98% coverage and is fuzz tested.
 
 Install with `go get github.com/fxamacker/cbor/v2` and `import "github.com/fxamacker/cbor/v2"`.  
 See [Quick Start](#quick-start) to save time.
@@ -455,6 +459,7 @@ For more information, see [decoding options](#decoding-options-1) and [tag optio
 If any of these limitations prevent you from using this library, please open an issue along with a link to your project.
 
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  CBOR `Null` (0xf6) more closely matches Go's `nil`.
+* CBOR `simple values` that are unassigned/reserved by IANA are not fully supported until PR #370.
 * CBOR map keys with data types not supported by Go for map keys are ignored and an error is returned after continuing to decode remaining items.  
 * When using io.Reader interface to read very large or indefinite length CBOR data, Go's `io.LimitReader` should be used to limit size.
 * When decoding registered CBOR tag data to interface type, decoder creates a pointer to registered Go type matching CBOR tag number.  Requiring a pointer for this is a Go limitation. 
