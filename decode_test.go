@@ -1839,17 +1839,14 @@ func TestMapKeyUnhashable(t *testing.T) {
 		cborData     []byte
 		wantErrorMsg string
 	}{
-		{"slice as map key", hexDecode("bf8030ff"), "cbor: invalid map key type: []interface {}"},                                                             // {[]: -17}
-		{"slice as map key", hexDecode("a1813030"), "cbor: invalid map key type: []interface {}"},                                                             // {[-17]: -17}
-		{"slice as map key", hexDecode("bfd1a388f730303030303030303030303030ff"), "cbor: invalid map key type: []interface {}"},                               // {17({[undefined, -17, -17, -17, -17, -17, -17, -17]: -17, -17: -17}): -17}}
-		{"byte slice as map key", hexDecode("8f3030a730304430303030303030303030303030303030303030303030303030303030"), "cbor: invalid map key type: []uint8"}, // [-17, -17, {-17: -17, h'30303030': -17}, -17, -17, -17, -17, -17, -17, -17, -17, -17, -17, -17, -17]
-		{"map as map key", hexDecode("bf30a1a030ff"), "cbor: invalid map key type: map"},                                                                      // {-17: {{}: -17}}, empty map as map key
-		{"map as map key", hexDecode("bfb0303030303030303030303030303030303030303030303030303030303030303030ff"), "cbor: invalid map key type: map"},          // {{-17: -17}: -17}, map as key
-		{"tagged slice as map key", hexDecode("a1c84c30303030303030303030303030"), "cbor: invalid map key type: cbor.Tag"},                                    // {8(h'303030303030303030303030'): -17}
-		{"nested-tagged slice as map key", hexDecode("a33030306430303030d1cb4030"), "cbor: invalid map key type: cbor.Tag"},                                   // {-17: "0000", 17(11(h'')): -17}
-		{"big.Int as map key", hexDecode("a13bbd3030303030303030"), "cbor: invalid map key type: big.Int"},                                                    // {-13632449055575519281: -17}
-		{"tagged big.Int as map key", hexDecode("a1c24901000000000000000030"), "cbor: invalid map key type: big.Int"},                                         // {18446744073709551616: -17}
-		{"tagged big.Int as map key", hexDecode("a1c34901000000000000000030"), "cbor: invalid map key type: big.Int"},                                         // {-18446744073709551617: -17}
+		{"slice as map key", hexDecode("bf8030ff"), "cbor: invalid map key type: []interface {}"},                                                    // {[]: -17}
+		{"slice as map key", hexDecode("a1813030"), "cbor: invalid map key type: []interface {}"},                                                    // {[-17]: -17}
+		{"slice as map key", hexDecode("bfd1a388f730303030303030303030303030ff"), "cbor: invalid map key type: []interface {}"},                      // {17({[undefined, -17, -17, -17, -17, -17, -17, -17]: -17, -17: -17}): -17}}
+		{"map as map key", hexDecode("bf30a1a030ff"), "cbor: invalid map key type: map"},                                                             // {-17: {{}: -17}}, empty map as map key
+		{"map as map key", hexDecode("bfb0303030303030303030303030303030303030303030303030303030303030303030ff"), "cbor: invalid map key type: map"}, // {{-17: -17}: -17}, map as key
+		{"big.Int as map key", hexDecode("a13bbd3030303030303030"), "cbor: invalid map key type: big.Int"},                                           // {-13632449055575519281: -17}
+		{"tagged big.Int as map key", hexDecode("a1c24901000000000000000030"), "cbor: invalid map key type: big.Int"},                                // {18446744073709551616: -17}
+		{"tagged big.Int as map key", hexDecode("a1c34901000000000000000030"), "cbor: invalid map key type: big.Int"},                                // {-18446744073709551617: -17}
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -4680,16 +4677,44 @@ func TestMapKeyByteString(t *testing.T) {
 		mapKeyByteString MapKeyByteStringMode
 	}{
 		{
-			name:             "CBOR map with byte string key with MapKeyByteStringForbidden",
+			name:             "byte string map key with MapKeyByteStringForbidden",
 			cborData:         hexDecode("a143abcdef187b"),
 			wantErrorMsg:     "cbor: invalid map key type: []uint8",
 			mapKeyByteString: MapKeyByteStringForbidden,
 		},
 		{
-			name:     "CBOR map with byte string key with MapKeyByteStringAllowed",
+			name:             "tagged byte string map key with MapKeyByteStringForbidden",
+			cborData:         hexDecode("a1d86443abcdef187b"),
+			wantErrorMsg:     "cbor: invalid map key type: cbor.Tag",
+			mapKeyByteString: MapKeyByteStringForbidden,
+		},
+		{
+			name:             "nested tagged byte string map key with MapKeyByteStringForbidden",
+			cborData:         hexDecode("a1d865d86443abcdef187b"),
+			wantErrorMsg:     "cbor: invalid map key type: cbor.Tag",
+			mapKeyByteString: MapKeyByteStringForbidden,
+		},
+		{
+			name:     "byte string map key with MapKeyByteStringAllowed",
 			cborData: hexDecode("a143abcdef187b"),
 			wantObj: map[interface{}]interface{}{
 				ByteString("\xab\xcd\xef"): uint64(123),
+			},
+			mapKeyByteString: MapKeyByteStringAllowed,
+		},
+		{
+			name:     "tagged byte string map key with MapKeyByteStringAllowed",
+			cborData: hexDecode("a1d86443abcdef187b"),
+			wantObj: map[interface{}]interface{}{
+				Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}: uint64(123),
+			},
+			mapKeyByteString: MapKeyByteStringAllowed,
+		},
+		{
+			name:     "nested tagged byte string map key with MapKeyByteStringAllowed",
+			cborData: hexDecode("a1d865d86443abcdef187b"),
+			wantObj: map[interface{}]interface{}{
+				Tag{Number: 101, Content: Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}}: uint64(123),
 			},
 			mapKeyByteString: MapKeyByteStringAllowed,
 		},

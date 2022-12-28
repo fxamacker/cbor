@@ -240,20 +240,20 @@ func (idm IntDecMode) valid() bool {
 }
 
 // MapKeyByteStringMode specifies how to decode CBOR byte string (major type 2)
-// as Go map key when decoding CBOR map with byte string keys into an empty
-// Go interface value. Since Go doesn't allow []byte as map key, this option
-// can be used to make CBOR byte string decodable as a Go map key.
+// as Go map key when decoding CBOR map into an empty Go interface value.
 type MapKeyByteStringMode int
 
 const (
-	// MapKeyByteStringForbidden forbids CBOR byte string being decoded as Go map key.
-	// This is the default setting because Go cannot use []byte as a map key.
-	MapKeyByteStringForbidden MapKeyByteStringMode = iota
-
-	// MapKeyByteStringAllowed allows CBOR byte string being decoded as Go map key.
+	// MapKeyByteStringAllowed allows CBOR byte string to be decoded as Go map key.
 	// Since Go doesn't allow []byte as map key, CBOR byte string is decoded to
-	// ByteString, which is an alias for Go string.
-	MapKeyByteStringAllowed
+	// ByteString which has underlying string type.
+	// This is the default setting.
+	MapKeyByteStringAllowed MapKeyByteStringMode = iota
+
+	// MapKeyByteStringForbidden forbids CBOR byte string being decoded as Go map key.
+	// Attempting to decode CBOR byte string as map key into empty interface value
+	// returns a decoding error.
+	MapKeyByteStringForbidden
 
 	maxMapKeyByteStringMode
 )
@@ -1255,10 +1255,11 @@ func (d *decoder) parseMap() (interface{}, error) {
 		// Detect if CBOR map key can be used as Go map key.
 		rv := reflect.ValueOf(k)
 		if !isHashableValue(rv) {
-			if b, ok := k.([]byte); ok && d.dm.mapKeyByteString == MapKeyByteStringAllowed {
-				// Use decoded []byte as a ByteString map key.
-				k = ByteString(b)
-			} else {
+			var converted bool
+			if d.dm.mapKeyByteString == MapKeyByteStringAllowed {
+				k, converted = convertByteSliceToByteString(k)
+			}
+			if !converted {
 				if err == nil {
 					err = errors.New("cbor: invalid map key type: " + rv.Type().String())
 				}
@@ -1974,6 +1975,25 @@ func isHashableValue(rv reflect.Value) bool {
 		}
 	}
 	return true
+}
+
+// convertByteSliceToByteString converts []byte to ByteString if
+// - v is []byte type, or
+// - v is Tag type and tag content type is []byte
+// This function also handles nested tags.
+// CBOR data is already verified to be well-formed before this function is used,
+// so the recursion won't exceed max nested levels.
+func convertByteSliceToByteString(v interface{}) (interface{}, bool) {
+	switch v := v.(type) {
+	case []byte:
+		return ByteString(v), true
+	case Tag:
+		content, converted := convertByteSliceToByteString(v.Content)
+		if converted {
+			return Tag{Number: v.Number, Content: content}, true
+		}
+	}
+	return v, false
 }
 
 // validBuiltinTag checks that supported built-in tag numbers are followed by expected content types.
