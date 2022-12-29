@@ -141,6 +141,16 @@ func (e *UnmarshalTypeError) Error() string {
 	return s
 }
 
+// InvalidMapKeyTypeError describes invalid Go map key type when decoding CBOR map.
+// For example, Go doesn't allow slice as map key.
+type InvalidMapKeyTypeError struct {
+	GoType string
+}
+
+func (e *InvalidMapKeyTypeError) Error() string {
+	return "cbor: invalid map key type: " + e.GoType
+}
+
 // DupMapKeyError describes detected duplicate map key in CBOR map.
 type DupMapKeyError struct {
 	Key   interface{}
@@ -1261,7 +1271,7 @@ func (d *decoder) parseMap() (interface{}, error) {
 			}
 			if !converted {
 				if err == nil {
-					err = errors.New("cbor: invalid map key type: " + rv.Type().String())
+					err = &InvalidMapKeyTypeError{rv.Type().String()}
 				}
 				d.skip()
 				continue
@@ -1348,7 +1358,7 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 		if keyIsInterfaceType && keyValue.Elem().IsValid() {
 			if !isHashableValue(keyValue.Elem()) {
 				if err == nil {
-					err = errors.New("cbor: invalid map key type: " + keyValue.Elem().Type().String())
+					err = &InvalidMapKeyTypeError{keyValue.Elem().Type().String()}
 				}
 				d.skip()
 				continue
