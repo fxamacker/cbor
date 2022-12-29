@@ -250,7 +250,14 @@ func (idm IntDecMode) valid() bool {
 }
 
 // MapKeyByteStringMode specifies how to decode CBOR byte string (major type 2)
-// as Go map key when decoding CBOR map into an empty Go interface value.
+// as Go map key when decoding CBOR map key into an empty Go interface value.
+// Specifically, this option applies when decoding CBOR map into
+// - Go empty interface, or
+// - Go map with empty interface as key type.
+// The CBOR map key types handled by this option are
+// - byte string
+// - tagged byte string
+// - nested tagged byte string
 type MapKeyByteStringMode int
 
 const (
@@ -1357,11 +1364,21 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 		// Detect if CBOR map key can be used as Go map key.
 		if keyIsInterfaceType && keyValue.Elem().IsValid() {
 			if !isHashableValue(keyValue.Elem()) {
-				if err == nil {
-					err = &InvalidMapKeyTypeError{keyValue.Elem().Type().String()}
+				var converted bool
+				if d.dm.mapKeyByteString == MapKeyByteStringAllowed {
+					var k interface{}
+					k, converted = convertByteSliceToByteString(keyValue.Elem().Interface())
+					if converted {
+						keyValue.Set(reflect.ValueOf(k))
+					}
 				}
-				d.skip()
-				continue
+				if !converted {
+					if err == nil {
+						err = &InvalidMapKeyTypeError{keyValue.Elem().Type().String()}
+					}
+					d.skip()
+					continue
+				}
 			}
 		}
 

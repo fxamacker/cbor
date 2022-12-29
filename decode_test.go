@@ -35,6 +35,7 @@ var (
 	typeByteArray       = reflect.TypeOf([5]byte{})
 	typeIntSlice        = reflect.TypeOf([]int{})
 	typeStringSlice     = reflect.TypeOf([]string{})
+	typeMapIntfIntf     = reflect.TypeOf(map[interface{}]interface{}{})
 	typeMapStringInt    = reflect.TypeOf(map[string]int{})
 	typeMapStringString = reflect.TypeOf(map[string]string{})
 	typeMapStringIntf   = reflect.TypeOf(map[string]interface{}{})
@@ -4669,30 +4670,40 @@ func TestDecModeInvalidMapKeyByteString(t *testing.T) {
 }
 
 func TestMapKeyByteString(t *testing.T) {
+	bsForbiddenMode, err := DecOptions{MapKeyByteString: MapKeyByteStringForbidden}.DecMode()
+	if err != nil {
+		t.Errorf("DecMode() returned an error %+v", err)
+	}
+
+	bsAllowedMode, err := DecOptions{MapKeyByteString: MapKeyByteStringAllowed}.DecMode()
+	if err != nil {
+		t.Errorf("DecMode() returned an error %+v", err)
+	}
+
 	testCases := []struct {
-		name             string
-		cborData         []byte
-		wantObj          interface{}
-		wantErrorMsg     string
-		mapKeyByteString MapKeyByteStringMode
+		name         string
+		cborData     []byte
+		wantObj      interface{}
+		wantErrorMsg string
+		dm           DecMode
 	}{
 		{
-			name:             "byte string map key with MapKeyByteStringForbidden",
-			cborData:         hexDecode("a143abcdef187b"),
-			wantErrorMsg:     "cbor: invalid map key type: []uint8",
-			mapKeyByteString: MapKeyByteStringForbidden,
+			name:         "byte string map key with MapKeyByteStringForbidden",
+			cborData:     hexDecode("a143abcdef187b"),
+			wantErrorMsg: "cbor: invalid map key type: []uint8",
+			dm:           bsForbiddenMode,
 		},
 		{
-			name:             "tagged byte string map key with MapKeyByteStringForbidden",
-			cborData:         hexDecode("a1d86443abcdef187b"),
-			wantErrorMsg:     "cbor: invalid map key type: cbor.Tag",
-			mapKeyByteString: MapKeyByteStringForbidden,
+			name:         "tagged byte string map key with MapKeyByteStringForbidden",
+			cborData:     hexDecode("a1d86443abcdef187b"),
+			wantErrorMsg: "cbor: invalid map key type: cbor.Tag",
+			dm:           bsForbiddenMode,
 		},
 		{
-			name:             "nested tagged byte string map key with MapKeyByteStringForbidden",
-			cborData:         hexDecode("a1d865d86443abcdef187b"),
-			wantErrorMsg:     "cbor: invalid map key type: cbor.Tag",
-			mapKeyByteString: MapKeyByteStringForbidden,
+			name:         "nested tagged byte string map key with MapKeyByteStringForbidden",
+			cborData:     hexDecode("a1d865d86443abcdef187b"),
+			wantErrorMsg: "cbor: invalid map key type: cbor.Tag",
+			dm:           bsForbiddenMode,
 		},
 		{
 			name:     "byte string map key with MapKeyByteStringAllowed",
@@ -4700,7 +4711,7 @@ func TestMapKeyByteString(t *testing.T) {
 			wantObj: map[interface{}]interface{}{
 				ByteString("\xab\xcd\xef"): uint64(123),
 			},
-			mapKeyByteString: MapKeyByteStringAllowed,
+			dm: bsAllowedMode,
 		},
 		{
 			name:     "tagged byte string map key with MapKeyByteStringAllowed",
@@ -4708,7 +4719,7 @@ func TestMapKeyByteString(t *testing.T) {
 			wantObj: map[interface{}]interface{}{
 				Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}: uint64(123),
 			},
-			mapKeyByteString: MapKeyByteStringAllowed,
+			dm: bsAllowedMode,
 		},
 		{
 			name:     "nested tagged byte string map key with MapKeyByteStringAllowed",
@@ -4716,28 +4727,27 @@ func TestMapKeyByteString(t *testing.T) {
 			wantObj: map[interface{}]interface{}{
 				Tag{Number: 101, Content: Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}}: uint64(123),
 			},
-			mapKeyByteString: MapKeyByteStringAllowed,
+			dm: bsAllowedMode,
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			dm, err := DecOptions{MapKeyByteString: tc.mapKeyByteString}.DecMode()
-			if err != nil {
-				t.Errorf("DecMode() returned an error %+v", err)
-			}
-			var v interface{}
-			err = dm.Unmarshal(tc.cborData, &v)
-			if err == nil {
-				if tc.wantErrorMsg != "" {
-					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.cborData, tc.wantErrorMsg)
-				} else if !reflect.DeepEqual(v, tc.wantObj) {
-					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantObj, tc.wantObj)
-				}
-			} else {
-				if tc.wantErrorMsg == "" {
-					t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
-				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+			for _, typ := range []reflect.Type{typeIntf, typeMapIntfIntf} {
+				v := reflect.New(typ)
+				vPtr := v.Interface()
+				err = tc.dm.Unmarshal(tc.cborData, vPtr)
+				if err == nil {
+					if tc.wantErrorMsg != "" {
+						t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.cborData, tc.wantErrorMsg)
+					} else if !reflect.DeepEqual(v.Elem().Interface(), tc.wantObj) {
+						t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), tc.wantObj, tc.wantObj)
+					}
+				} else {
+					if tc.wantErrorMsg == "" {
+						t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+					} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+						t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+					}
 				}
 			}
 		})
