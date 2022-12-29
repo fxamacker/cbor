@@ -1290,6 +1290,7 @@ var (
 	typeMarshaler       = reflect.TypeOf((*Marshaler)(nil)).Elem()
 	typeBinaryMarshaler = reflect.TypeOf((*encoding.BinaryMarshaler)(nil)).Elem()
 	typeRawMessage      = reflect.TypeOf(RawMessage(nil))
+	typeByteString      = reflect.TypeOf(ByteString(""))
 )
 
 func getEncodeFuncInternal(t reflect.Type) (encodeFunc, isEmptyFunc) {
@@ -1308,6 +1309,8 @@ func getEncodeFuncInternal(t reflect.Type) (encodeFunc, isEmptyFunc) {
 		return encodeBigInt, alwaysNotEmpty
 	case typeRawMessage:
 		return encodeMarshalerType, isEmptySlice
+	case typeByteString:
+		return encodeMarshalerType, isEmptyString
 	}
 	if reflect.PtrTo(t).Implements(typeMarshaler) {
 		return encodeMarshalerType, alwaysNotEmpty

@@ -141,6 +141,16 @@ func (e *UnmarshalTypeError) Error() string {
 	return s
 }
 
+// InvalidMapKeyTypeError describes invalid Go map key type when decoding CBOR map.
+// For example, Go doesn't allow slice as map key.
+type InvalidMapKeyTypeError struct {
+	GoType string
+}
+
+func (e *InvalidMapKeyTypeError) Error() string {
+	return "cbor: invalid map key type: " + e.GoType
+}
+
 // DupMapKeyError describes detected duplicate map key in CBOR map.
 type DupMapKeyError struct {
 	Key   interface{}
@@ -239,6 +249,36 @@ func (idm IntDecMode) valid() bool {
 	return idm < maxIntDec
 }
 
+// MapKeyByteStringMode specifies how to decode CBOR byte string (major type 2)
+// as Go map key when decoding CBOR map key into an empty Go interface value.
+// Specifically, this option applies when decoding CBOR map into
+// - Go empty interface, or
+// - Go map with empty interface as key type.
+// The CBOR map key types handled by this option are
+// - byte string
+// - tagged byte string
+// - nested tagged byte string
+type MapKeyByteStringMode int
+
+const (
+	// MapKeyByteStringAllowed allows CBOR byte string to be decoded as Go map key.
+	// Since Go doesn't allow []byte as map key, CBOR byte string is decoded to
+	// ByteString which has underlying string type.
+	// This is the default setting.
+	MapKeyByteStringAllowed MapKeyByteStringMode = iota
+
+	// MapKeyByteStringForbidden forbids CBOR byte string being decoded as Go map key.
+	// Attempting to decode CBOR byte string as map key into empty interface value
+	// returns a decoding error.
+	MapKeyByteStringForbidden
+
+	maxMapKeyByteStringMode
+)
+
+func (mkbsm MapKeyByteStringMode) valid() bool {
+	return mkbsm < maxMapKeyByteStringMode
+}
+
 // ExtraDecErrorCond specifies extra conditions that should be treated as errors.
 type ExtraDecErrorCond uint
 
@@ -308,6 +348,12 @@ type DecOptions struct {
 	// IntDec specifies which Go integer type (int64 or uint64) to use
 	// when decoding CBOR int (major type 0 and 1) to Go interface{}.
 	IntDec IntDecMode
+
+	// MapKeyByteString specifies how to decode CBOR byte string as map key
+	// when decoding CBOR map with byte string key into an empty interface value.
+	// By default, an error is returned when attempting to decode CBOR byte string
+	// as map key because Go doesn't allow []byte as map key.
+	MapKeyByteString MapKeyByteStringMode
 
 	// ExtraReturnErrors specifies extra conditions that should be treated as errors.
 	ExtraReturnErrors ExtraDecErrorCond
@@ -401,6 +447,9 @@ func (opts DecOptions) decMode() (*decMode, error) {
 	if !opts.IntDec.valid() {
 		return nil, errors.New("cbor: invalid IntDec " + strconv.Itoa(int(opts.IntDec)))
 	}
+	if !opts.MapKeyByteString.valid() {
+		return nil, errors.New("cbor: invalid MapKeyByteString " + strconv.Itoa(int(opts.MapKeyByteString)))
+	}
 	if opts.MaxNestedLevels == 0 {
 		opts.MaxNestedLevels = 32
 	} else if opts.MaxNestedLevels < 4 || opts.MaxNestedLevels > 65535 {
@@ -434,6 +483,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		indefLength:       opts.IndefLength,
 		tagsMd:            opts.TagsMd,
 		intDec:            opts.IntDec,
+		mapKeyByteString:  opts.MapKeyByteString,
 		extraReturnErrors: opts.ExtraReturnErrors,
 		defaultMapType:    opts.DefaultMapType,
 		utf8:              opts.UTF8,
@@ -467,6 +517,7 @@ type decMode struct {
 	indefLength       IndefLengthMode
 	tagsMd            TagsMode
 	intDec            IntDecMode
+	mapKeyByteString  MapKeyByteStringMode
 	extraReturnErrors ExtraDecErrorCond
 	defaultMapType    reflect.Type
 	utf8              UTF8Mode
@@ -485,6 +536,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		IndefLength:       dm.indefLength,
 		TagsMd:            dm.tagsMd,
 		IntDec:            dm.intDec,
+		MapKeyByteString:  dm.mapKeyByteString,
 		ExtraReturnErrors: dm.extraReturnErrors,
 		UTF8:              dm.utf8,
 	}
@@ -1220,11 +1272,17 @@ func (d *decoder) parseMap() (interface{}, error) {
 		// Detect if CBOR map key can be used as Go map key.
 		rv := reflect.ValueOf(k)
 		if !isHashableValue(rv) {
-			if err == nil {
-				err = errors.New("cbor: invalid map key type: " + rv.Type().String())
+			var converted bool
+			if d.dm.mapKeyByteString == MapKeyByteStringAllowed {
+				k, converted = convertByteSliceToByteString(k)
 			}
-			d.skip()
-			continue
+			if !converted {
+				if err == nil {
+					err = &InvalidMapKeyTypeError{rv.Type().String()}
+				}
+				d.skip()
+				continue
+			}
 		}
 
 		// Parse CBOR map value.
@@ -1306,11 +1364,21 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 		// Detect if CBOR map key can be used as Go map key.
 		if keyIsInterfaceType && keyValue.Elem().IsValid() {
 			if !isHashableValue(keyValue.Elem()) {
-				if err == nil {
-					err = errors.New("cbor: invalid map key type: " + keyValue.Elem().Type().String())
+				var converted bool
+				if d.dm.mapKeyByteString == MapKeyByteStringAllowed {
+					var k interface{}
+					k, converted = convertByteSliceToByteString(keyValue.Elem().Interface())
+					if converted {
+						keyValue.Set(reflect.ValueOf(k))
+					}
 				}
-				d.skip()
-				continue
+				if !converted {
+					if err == nil {
+						err = &InvalidMapKeyTypeError{keyValue.Elem().Type().String()}
+					}
+					d.skip()
+					continue
+				}
 			}
 		}
 
@@ -1934,6 +2002,25 @@ func isHashableValue(rv reflect.Value) bool {
 		}
 	}
 	return true
+}
+
+// convertByteSliceToByteString converts []byte to ByteString if
+// - v is []byte type, or
+// - v is Tag type and tag content type is []byte
+// This function also handles nested tags.
+// CBOR data is already verified to be well-formed before this function is used,
+// so the recursion won't exceed max nested levels.
+func convertByteSliceToByteString(v interface{}) (interface{}, bool) {
+	switch v := v.(type) {
+	case []byte:
+		return ByteString(v), true
+	case Tag:
+		content, converted := convertByteSliceToByteString(v.Content)
+		if converted {
+			return Tag{Number: v.Number, Content: content}, true
+		}
+	}
+	return v, false
 }
 
 // validBuiltinTag checks that supported built-in tag numbers are followed by expected content types.
