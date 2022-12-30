@@ -210,23 +210,6 @@ func (m IndefLengthMode) valid() bool {
 	return m < maxIndefLengthMode
 }
 
-// NilContainersMode specifies how to encode []Type(nil) and map[Key]Type(nil).
-type NilContainersMode int
-
-const (
-	// NullForNil enforces null for []Type(nil)/map[Key]Type(nil).
-	NullForNil NilContainersMode = iota
-
-	// EmptyForNil enforces empty map/list for []Type(nil)/map[Key]Type(nil).
-	EmptyForNil
-
-	maxNilContainersMode
-)
-
-func (m NilContainersMode) valid() bool {
-	return m < maxNilContainersMode
-}
-
 // TagsMode specifies whether to allow CBOR tags.
 type TagsMode int
 
