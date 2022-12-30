@@ -2858,22 +2858,23 @@ func TestInvalidInfConvert(t *testing.T) {
 }
 
 func TestNilContainers(t *testing.T) {
-	nilContainersNull := EncOptions{NilContainers: NullForNil}
-	nilContainersEmpty := EncOptions{NilContainers: EmptyForNil}
+	nilContainersNull := EncOptions{NilContainers: NilContainerAsNull}
+	nilContainersEmpty := EncOptions{NilContainers: NilContainerAsEmpty}
+
 	testCases := []struct {
 		name         string
 		v            interface{}
 		opts         EncOptions
 		wantCborData []byte
 	}{
-		{"map(nil) as null", map[string]string(nil), nilContainersNull, hexDecode("f6")},
-		{"map(nil) as empty map", map[string]string(nil), nilContainersEmpty, hexDecode("a0")},
+		{"map(nil) as CBOR null", map[string]string(nil), nilContainersNull, hexDecode("f6")},
+		{"map(nil) as CBOR empty map", map[string]string(nil), nilContainersEmpty, hexDecode("a0")},
 
-		{"slice(nil) as null", []int(nil), nilContainersNull, hexDecode("f6")},
-		{"slice(nil) as empty list", []int(nil), nilContainersEmpty, hexDecode("80")},
+		{"slice(nil) as CBOR null", []int(nil), nilContainersNull, hexDecode("f6")},
+		{"slice(nil) as CBOR empty array", []int(nil), nilContainersEmpty, hexDecode("80")},
 
-		{"[]byte(nil) as null", []byte(nil), nilContainersNull, hexDecode("f6")},
-		{"[]byte(nil) as empty bytestring", []byte(nil), nilContainersEmpty, hexDecode("40")},
+		{"[]byte(nil) as CBOR null", []byte(nil), nilContainersNull, hexDecode("f6")},
+		{"[]byte(nil) as CBOR empty bytestring", []byte(nil), nilContainersEmpty, hexDecode("40")},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -3355,7 +3356,7 @@ func TestEncOptions(t *testing.T) {
 		Time:          TimeRFC3339Nano,
 		TimeTag:       EncTagRequired,
 		IndefLength:   IndefLengthForbidden,
-		NilContainers: NullForNil,
+		NilContainers: NilContainerAsNull,
 		TagsMd:        TagsAllowed,
 	}
 	em, err := opts1.EncMode()

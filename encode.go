@@ -264,6 +264,25 @@ func (bim BigIntConvertMode) valid() bool {
 	return bim < maxBigIntConvert
 }
 
+// NilContainersMode specifies how to encode nil slices and maps.
+type NilContainersMode int
+
+const (
+	// NilContainerAsNull encodes nil slices and maps as CBOR null.
+	// This is the default.
+	NilContainerAsNull NilContainersMode = iota
+
+	// NilContainerAsEmpty encodes nil slices and maps as
+	// empty container (CBOR bytestring, array, or map).
+	NilContainerAsEmpty
+
+	maxNilContainersMode
+)
+
+func (m NilContainersMode) valid() bool {
+	return m < maxNilContainersMode
+}
+
 // EncOptions specifies encoding options.
 type EncOptions struct {
 	// Sort specifies sorting order.
@@ -292,7 +311,7 @@ type EncOptions struct {
 	// IndefLength specifies whether to allow indefinite length CBOR items.
 	IndefLength IndefLengthMode
 
-	// NilContainers specifies how to encode map[Key]Type(nil)/[]Type(nil)
+	// NilContainers specifies how to encode nil slices and maps.
 	NilContainers NilContainersMode
 
 	// TagsMd specifies whether to allow CBOR tags (major type 6).
@@ -795,7 +814,7 @@ func encodeFloat64(e *encoderBuffer, f64 float64) error {
 
 func encodeByteString(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	vk := v.Kind()
-	if vk == reflect.Slice && v.IsNil() && em.nilContainers == NullForNil {
+	if vk == reflect.Slice && v.IsNil() && em.nilContainers == NilContainerAsNull {
 		e.Write(cborNil)
 		return nil
 	}
@@ -832,7 +851,7 @@ type arrayEncodeFunc struct {
 }
 
 func (ae arrayEncodeFunc) encode(e *encoderBuffer, em *encMode, v reflect.Value) error {
-	if v.Kind() == reflect.Slice && v.IsNil() && em.nilContainers == NullForNil {
+	if v.Kind() == reflect.Slice && v.IsNil() && em.nilContainers == NilContainerAsNull {
 		e.Write(cborNil)
 		return nil
 	}
@@ -857,7 +876,7 @@ type mapEncodeFunc struct {
 }
 
 func (me mapEncodeFunc) encode(e *encoderBuffer, em *encMode, v reflect.Value) error {
-	if v.IsNil() && em.nilContainers == NullForNil {
+	if v.IsNil() && em.nilContainers == NilContainerAsNull {
 		e.Write(cborNil)
 		return nil
 	}
