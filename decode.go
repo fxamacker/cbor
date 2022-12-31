@@ -569,6 +569,10 @@ type decoder struct {
 	dm   *decMode
 }
 
+// value decodes CBOR data item into the value pointed to by v.
+// If CBOR data item is invalid, error is returned and offset isn't changed.
+// If CBOR data item is valid but fails to be decode into v for other reasons,
+// error is returned and offset is moved to the next CBOR data item.
 func (d *decoder) value(v interface{}) error {
 	// v can't be nil, non-pointer, or nil pointer value.
 	if v == nil {
