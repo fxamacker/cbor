@@ -5,6 +5,7 @@ package cbor
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -40,14 +41,16 @@ func TestDecoder(t *testing.T) {
 			}
 		}
 	}
-	// no more data
-	var v interface{}
-	err := decoder.Decode(&v)
-	if v != nil {
-		t.Errorf("Decode() = %v (%T), want nil (no more data)", v, v)
-	}
-	if err != io.EOF {
-		t.Errorf("Decode() returned error %v, want io.EOF (no more data)", err)
+	for i := 0; i < 2; i++ {
+		// no more data
+		var v interface{}
+		err := decoder.Decode(&v)
+		if v != nil {
+			t.Errorf("Decode() = %v (%T), want nil (no more data)", v, v)
+		}
+		if err != io.EOF {
+			t.Errorf("Decode() returned error %v, want io.EOF (no more data)", err)
+		}
 	}
 }
 
@@ -94,14 +97,98 @@ func TestDecoderUnmarshalTypeError(t *testing.T) {
 			}
 		}
 	}
-	// no more data
-	var v interface{}
-	err := decoder.Decode(&v)
-	if v != nil {
-		t.Errorf("Decode() = %v (%T), want nil (no more data)", v, v)
+	for i := 0; i < 2; i++ {
+		// no more data
+		var v interface{}
+		err := decoder.Decode(&v)
+		if v != nil {
+			t.Errorf("Decode() = %v (%T), want nil (no more data)", v, v)
+		}
+		if err != io.EOF {
+			t.Errorf("Decode() returned error %v, want io.EOF (no more data)", err)
+		}
 	}
-	if err != io.EOF {
-		t.Errorf("Decode() returned error %v, want io.EOF (no more data)", err)
+}
+
+func TestDecoderUnexpectedEOFError(t *testing.T) {
+	var buf bytes.Buffer
+	for _, tc := range unmarshalTests {
+		buf.Write(tc.cborData)
+	}
+	buf.Truncate(buf.Len() - 1)
+
+	decoder := NewDecoder(&buf)
+	bytesRead := 0
+	for i := 0; i < len(unmarshalTests)-1; i++ {
+		tc := unmarshalTests[i]
+		var v interface{}
+		if err := decoder.Decode(&v); err != nil {
+			t.Fatalf("Decode() returned error %v", err)
+		}
+		if tm, ok := tc.emptyInterfaceValue.(time.Time); ok {
+			if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
+				t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+			}
+		} else if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
+			t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+		}
+		bytesRead += len(tc.cborData)
+		if decoder.NumBytesRead() != bytesRead {
+			t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
+		}
+	}
+	for i := 0; i < 2; i++ {
+		// truncated data
+		var v interface{}
+		err := decoder.Decode(&v)
+		if v != nil {
+			t.Errorf("Decode() = %v (%T), want nil (no more data)", v, v)
+		}
+		if err != io.ErrUnexpectedEOF {
+			t.Errorf("Decode() returned error %v, want io.UnexpectedEOF (truncated data)", err)
+		}
+	}
+}
+
+func TestDecoderReadError(t *testing.T) {
+	var buf bytes.Buffer
+	for _, tc := range unmarshalTests {
+		buf.Write(tc.cborData)
+	}
+	buf.Truncate(buf.Len() - 1)
+
+	readerErr := errors.New("reader error")
+
+	decoder := NewDecoder(NewErrorReader(buf.Bytes(), readerErr))
+	bytesRead := 0
+	for i := 0; i < len(unmarshalTests)-1; i++ {
+		tc := unmarshalTests[i]
+		var v interface{}
+		if err := decoder.Decode(&v); err != nil {
+			t.Fatalf("Decode() returned error %v", err)
+		}
+		if tm, ok := tc.emptyInterfaceValue.(time.Time); ok {
+			if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
+				t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+			}
+		} else if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
+			t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+		}
+		bytesRead += len(tc.cborData)
+		if decoder.NumBytesRead() != bytesRead {
+			t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
+		}
+	}
+	for i := 0; i < 2; i++ {
+		// truncated data because Reader returned error
+		var v interface{}
+		err := decoder.Decode(&v)
+		if v != nil {
+			t.Errorf("Decode() = %v (%T), want nil (no more data)", v, v)
+		}
+		if err != readerErr {
+			t.Errorf("Decode() returned error %v, want reader error", err)
+		}
 	}
 }
 
@@ -437,4 +524,26 @@ func TestNilRawMessageUnmarshalCBORError(t *testing.T) {
 	} else if err.Error() != wantErrorMsg {
 		t.Errorf("UnmarshalCBOR() returned error %q, want %q", err.Error(), wantErrorMsg)
 	}
+}
+
+type ErrorReader struct {
+	data []byte
+	off  int
+	err  error
+}
+
+func NewErrorReader(data []byte, err error) *ErrorReader {
+	return &ErrorReader{data: data, err: err}
+}
+
+func (r *ErrorReader) Read(b []byte) (int, error) {
+	var n int
+	if r.off < len(r.data) {
+		n = copy(b, r.data[r.off:])
+		r.off += n
+	}
+	if n < len(b) {
+		return n, r.err
+	}
+	return n, nil
 }

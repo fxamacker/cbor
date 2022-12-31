@@ -16,6 +16,7 @@ type Decoder struct {
 	buf       []byte
 	off       int // next read offset in buf
 	bytesRead int
+	readError error
 }
 
 // NewDecoder returns a new decoder that reads and decodes from r using
@@ -31,22 +32,30 @@ func (dec *Decoder) Decode(v interface{}) error {
 			return err
 		}
 	}
-
-	dec.d.reset(dec.buf[dec.off:])
-	err := dec.d.value(v)
-	dec.off += dec.d.off
-	dec.bytesRead += dec.d.off
-	if err != nil {
+	for {
+		dec.d.reset(dec.buf[dec.off:])
+		err := dec.d.value(v)
+		// Increment dec.off even if err is not nil because
+		// dec.d.off points to the next CBOR data item if current
+		// CBOR data item is valid but failed to be decoded into v.
+		// This allows next CBOR data item to be decoded in next
+		// call to this function.
+		dec.off += dec.d.off
+		dec.bytesRead += dec.d.off
+		if err == nil {
+			return nil
+		}
 		if err != io.ErrUnexpectedEOF {
 			return err
 		}
 		// Need to read more data.
-		if n, e := dec.read(); n == 0 {
-			return e
+		if n, err := dec.read(); n == 0 {
+			if err == io.EOF {
+				err = io.ErrUnexpectedEOF
+			}
+			return err
 		}
-		return dec.Decode(v)
 	}
-	return nil
 }
 
 // NumBytesRead returns the number of bytes read.
@@ -55,6 +64,10 @@ func (dec *Decoder) NumBytesRead() int {
 }
 
 func (dec *Decoder) read() (int, error) {
+	if dec.readError != nil {
+		return 0, dec.readError
+	}
+
 	// Grow buf if needed.
 	const minRead = 512
 	if cap(dec.buf)-len(dec.buf)+dec.off < minRead {
@@ -71,6 +84,7 @@ func (dec *Decoder) read() (int, error) {
 	// Read from reader and reslice buf.
 	n, err := dec.r.Read(dec.buf[len(dec.buf):cap(dec.buf)])
 	dec.buf = dec.buf[0 : len(dec.buf)+n]
+	dec.readError = err
 	return n, err
 }
 
