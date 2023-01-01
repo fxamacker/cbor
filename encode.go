@@ -577,7 +577,7 @@ func (em *encMode) Marshal(v interface{}) ([]byte, error) {
 
 // NewEncoder returns a new encoder that writes to w using em EncMode.
 func (em *encMode) NewEncoder(w io.Writer) *Encoder {
-	return &Encoder{w: w, em: em, e: getEncoderBuffer()}
+	return &Encoder{w: w, em: em}
 }
 
 type encoderBuffer struct {

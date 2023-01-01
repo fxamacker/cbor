@@ -130,7 +130,6 @@ func (dec *Decoder) overwriteBuf(newBuf []byte) {
 type Encoder struct {
 	w          io.Writer
 	em         *encMode
-	e          *encoderBuffer
 	indefTypes []cborType
 }
 
@@ -157,11 +156,14 @@ func (enc *Encoder) Encode(v interface{}) error {
 		}
 	}
 
-	err := encode(enc.e, enc.em, reflect.ValueOf(v))
+	buf := getEncoderBuffer()
+
+	err := encode(buf, enc.em, reflect.ValueOf(v))
 	if err == nil {
-		_, err = enc.e.WriteTo(enc.w)
+		_, err = enc.w.Write(buf.Bytes())
 	}
-	enc.e.Reset()
+
+	putEncoderBuffer(buf)
 	return err
 }
 
