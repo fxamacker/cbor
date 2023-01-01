@@ -58,6 +58,38 @@ func (dec *Decoder) Decode(v interface{}) error {
 	}
 }
 
+// Skip skips to the next CBOR data item (if there is any),
+// otherwise it returns error such as io.EOF, io.UnexpectedEOF, etc.
+func (dec *Decoder) Skip() error {
+	if len(dec.buf) == dec.off {
+		if n, err := dec.read(); n == 0 {
+			return err
+		}
+	}
+	for {
+		dec.d.reset(dec.buf[dec.off:])
+		err := dec.d.valid(true)
+		if err == nil {
+			// Only increment dec.off if current CBOR data item is valid.
+			// If current data item is incomplete (io.ErrUnexpectedEOF),
+			// we want to try again after reading more data.
+			dec.off += dec.d.off
+			dec.bytesRead += dec.d.off
+			return nil
+		}
+		if err != io.ErrUnexpectedEOF {
+			return err
+		}
+		// Need to read more data.
+		if n, err := dec.read(); n == 0 {
+			if err == io.EOF {
+				err = io.ErrUnexpectedEOF
+			}
+			return err
+		}
+	}
+}
+
 // NumBytesRead returns the number of bytes read.
 func (dec *Decoder) NumBytesRead() int {
 	return dec.bytesRead
