@@ -68,12 +68,30 @@ func (e *TagsMdError) Error() string {
 	return "cbor: CBOR tag isn't allowed"
 }
 
+// ExtraneousDataError indicates found extraneous data following valid CBOR message.
+type ExtraneousDataError struct {
+	numOfBytes int // number of bytes of extraneous data
+	index      int // location of extraneous data
+}
+
+func (e *ExtraneousDataError) Error() string {
+	return "cbor: " + strconv.Itoa(e.numOfBytes) + " bytes of extraneous data starting at index " + strconv.Itoa(e.index)
+}
+
 // valid checks whether the CBOR data is complete and well-formed.
-func (d *decoder) valid() error {
+// allowExtraData indicates if extraneous data is allowed after the CBOR data item.
+// - use allowExtraData = true when using Decoder.Decode()
+// - use allowExtraData = false when using Unmarshal()
+func (d *decoder) valid(allowExtraData bool) error {
 	if len(d.data) == d.off {
 		return io.EOF
 	}
 	_, err := d.validInternal(0)
+	if err == nil {
+		if !allowExtraData && d.off != len(d.data) {
+			err = &ExtraneousDataError{len(d.data) - d.off, d.off}
+		}
+	}
 	return err
 }
 

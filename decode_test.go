@@ -1369,6 +1369,10 @@ var invalidCBORUnmarshalTests = []struct {
 	{"Major type 0 with additional information 31", hexDecode("1f"), "cbor: invalid additional information 31 for type positive integer", true},
 	{"Major type 1 with additional information 31", hexDecode("3f"), "cbor: invalid additional information 31 for type negative integer", true},
 	{"Major type 6 with additional information 31", hexDecode("df"), "cbor: invalid additional information 31 for type tag", true},
+	// Extraneous data
+	{"two ints", hexDecode("0001"), "cbor: 1 bytes of extraneous data starting at index 1", false},
+	{"two arrays", hexDecode("830102038104"), "cbor: 2 bytes of extraneous data starting at index 4", false},
+	{"int and partial array", hexDecode("00830102"), "cbor: 3 bytes of extraneous data starting at index 1", false},
 }
 
 func TestInvalidCBORUnmarshal(t *testing.T) {
