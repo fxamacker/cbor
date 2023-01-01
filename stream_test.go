@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -193,7 +194,7 @@ func TestDecoderReadError(t *testing.T) {
 }
 
 func TestDecoderInvalidData(t *testing.T) {
-	data := []byte{0x01, 0x83, 0x01, 0x02}
+	data := []byte{0x01, 0x3e}
 	decoder := NewDecoder(bytes.NewReader(data))
 
 	var v1 interface{}
@@ -206,8 +207,125 @@ func TestDecoderInvalidData(t *testing.T) {
 	err = decoder.Decode(&v2)
 	if err == nil {
 		t.Errorf("Decode() didn't return error when decoding invalid data item")
-	} else if err != io.ErrUnexpectedEOF {
-		t.Errorf("Decode() error %q, want %q", err, io.ErrUnexpectedEOF)
+	} else if !strings.Contains(err.Error(), "cbor: invalid additional information") {
+		t.Errorf("Decode() error %q, want \"cbor: invalid additional information\"", err)
+	}
+}
+
+func TestDecoderSkip(t *testing.T) {
+	var buf bytes.Buffer
+	for i := 0; i < 5; i++ {
+		for _, tc := range unmarshalTests {
+			buf.Write(tc.cborData)
+		}
+	}
+	decoder := NewDecoder(&buf)
+	bytesRead := 0
+	for i := 0; i < 5; i++ {
+		for _, tc := range unmarshalTests {
+			if err := decoder.Skip(); err != nil {
+				t.Fatalf("Skip() returned error %v", err)
+			}
+			bytesRead += len(tc.cborData)
+			if decoder.NumBytesRead() != bytesRead {
+				t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
+			}
+		}
+	}
+	for i := 0; i < 2; i++ {
+		// no more data
+		err := decoder.Skip()
+		if err != io.EOF {
+			t.Errorf("Skip() returned error %v, want io.EOF (no more data)", err)
+		}
+	}
+}
+
+func TestDecoderSkipInvalidDataError(t *testing.T) {
+	var buf bytes.Buffer
+	for _, tc := range unmarshalTests {
+		buf.Write(tc.cborData)
+	}
+	buf.WriteByte(0x3e)
+
+	decoder := NewDecoder(&buf)
+	bytesRead := 0
+	for i := 0; i < len(unmarshalTests); i++ {
+		tc := unmarshalTests[i]
+		if err := decoder.Skip(); err != nil {
+			t.Fatalf("Skip() returned error %v", err)
+		}
+		bytesRead += len(tc.cborData)
+		if decoder.NumBytesRead() != bytesRead {
+			t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
+		}
+	}
+	for i := 0; i < 2; i++ {
+		// last data item is invalid
+		err := decoder.Skip()
+		if err == nil {
+			t.Fatalf("Skip() didn't return error")
+		} else if !strings.Contains(err.Error(), "cbor: invalid additional information") {
+			t.Errorf("Skip() error %q, want \"cbor: invalid additional information\"", err)
+		}
+	}
+}
+
+func TestDecoderSkipUnexpectedEOFError(t *testing.T) {
+	var buf bytes.Buffer
+	for _, tc := range unmarshalTests {
+		buf.Write(tc.cborData)
+	}
+	buf.Truncate(buf.Len() - 1)
+
+	decoder := NewDecoder(&buf)
+	bytesRead := 0
+	for i := 0; i < len(unmarshalTests)-1; i++ {
+		tc := unmarshalTests[i]
+		if err := decoder.Skip(); err != nil {
+			t.Fatalf("Skip() returned error %v", err)
+		}
+		bytesRead += len(tc.cborData)
+		if decoder.NumBytesRead() != bytesRead {
+			t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
+		}
+	}
+	for i := 0; i < 2; i++ {
+		// last data item is invalid
+		err := decoder.Skip()
+		if err != io.ErrUnexpectedEOF {
+			t.Errorf("Skip() returned error %v, want io.ErrUnexpectedEOF (truncated data)", err)
+		}
+	}
+}
+
+func TestDecoderSkipReadError(t *testing.T) {
+	var buf bytes.Buffer
+	for _, tc := range unmarshalTests {
+		buf.Write(tc.cborData)
+	}
+	buf.Truncate(buf.Len() - 1)
+
+	readerErr := errors.New("reader error")
+
+	decoder := NewDecoder(NewErrorReader(buf.Bytes(), readerErr))
+	bytesRead := 0
+	for i := 0; i < len(unmarshalTests)-1; i++ {
+		tc := unmarshalTests[i]
+		if err := decoder.Skip(); err != nil {
+			t.Fatalf("Skip() returned error %v", err)
+		}
+		bytesRead += len(tc.cborData)
+		if decoder.NumBytesRead() != bytesRead {
+			t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
+		}
+	}
+	for i := 0; i < 2; i++ {
+		// truncated data because Reader returned error
+		err := decoder.Skip()
+		if err != readerErr {
+			t.Errorf("Skip() returned error %v, want reader error", err)
+		}
 	}
 }
 
