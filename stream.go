@@ -34,7 +34,7 @@ func (dec *Decoder) Decode(v interface{}) error {
 	}
 	for {
 		dec.d.reset(dec.buf[dec.off:])
-		err := dec.d.value(v)
+		err := dec.d.value(v, true)
 		// Increment dec.off even if err is not nil because
 		// dec.d.off points to the next CBOR data item if current
 		// CBOR data item is valid but failed to be decoded into v.

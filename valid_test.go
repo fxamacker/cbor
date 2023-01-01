@@ -25,6 +25,37 @@ func TestValid2(t *testing.T) {
 	}
 }
 
+func TestValidExtraneousData(t *testing.T) {
+	testCases := []struct {
+		name                     string
+		cborData                 []byte
+		extraneousDataNumOfBytes int
+		extraneousDataIndex      int
+	}{
+		{"two numbers", []byte{0x00, 0x01}, 1, 1},                                // 0, 1
+		{"bytestring and int", []byte{0x44, 0x01, 0x02, 0x03, 0x04, 0x00}, 1, 5}, // h'01020304', 0
+		{"int and partial array", []byte{0x00, 0x83, 0x01, 0x02}, 3, 1},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := Valid(tc.cborData)
+			if err == nil {
+				t.Errorf("Valid(0x%x) didn't return an error", tc.cborData)
+			} else {
+				ederr, ok := err.(*ExtraneousDataError)
+				if !ok {
+					t.Errorf("Valid(0x%x) error type %T, want *ExtraneousDataError", tc.cborData, err)
+				} else if ederr.numOfBytes != tc.extraneousDataNumOfBytes {
+					t.Errorf("Valid(0x%x) returned %d bytes of extraneous data, want %d", tc.cborData, ederr.numOfBytes, tc.extraneousDataNumOfBytes)
+				} else if ederr.index != tc.extraneousDataIndex {
+					t.Errorf("Valid(0x%x) returned extraneous data index %d, want %d", tc.cborData, ederr.index, tc.extraneousDataIndex)
+				}
+			}
+		})
+	}
+}
+
 func TestValidOnStreamingData(t *testing.T) {
 	var buf bytes.Buffer
 	for _, t := range marshalTests {
@@ -32,7 +63,7 @@ func TestValidOnStreamingData(t *testing.T) {
 	}
 	d := decoder{data: buf.Bytes(), dm: defaultDecMode}
 	for i := 0; i < len(marshalTests); i++ {
-		if err := d.valid(); err != nil {
+		if err := d.valid(true); err != nil {
 			t.Errorf("valid() returned error %v", err)
 		}
 	}

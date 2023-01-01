@@ -549,13 +549,13 @@ func (dm *decMode) DecOptions() DecOptions {
 // See the documentation for Unmarshal for details.
 func (dm *decMode) Unmarshal(data []byte, v interface{}) error {
 	d := decoder{data: data, dm: dm}
-	return d.value(v)
+	return d.value(v, false)
 }
 
 // Valid checks whether the CBOR data is complete and well-formed.
 func (dm *decMode) Valid(data []byte) error {
 	d := decoder{data: data, dm: dm}
-	return d.valid()
+	return d.valid(false)
 }
 
 // NewDecoder returns a new decoder that reads from r using dm DecMode.
@@ -573,7 +573,7 @@ type decoder struct {
 // If CBOR data item is invalid, error is returned and offset isn't changed.
 // If CBOR data item is valid but fails to be decode into v for other reasons,
 // error is returned and offset is moved to the next CBOR data item.
-func (d *decoder) value(v interface{}) error {
+func (d *decoder) value(v interface{}, allowExtraData bool) error {
 	// v can't be nil, non-pointer, or nil pointer value.
 	if v == nil {
 		return &InvalidUnmarshalError{"cbor: Unmarshal(nil)"}
@@ -586,7 +586,7 @@ func (d *decoder) value(v interface{}) error {
 	}
 
 	off := d.off // Save offset before data validation
-	err := d.valid()
+	err := d.valid(allowExtraData)
 	d.off = off // Restore offset
 	if err != nil {
 		return err

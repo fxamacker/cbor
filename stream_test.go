@@ -192,6 +192,25 @@ func TestDecoderReadError(t *testing.T) {
 	}
 }
 
+func TestDecoderInvalidData(t *testing.T) {
+	data := []byte{0x01, 0x83, 0x01, 0x02}
+	decoder := NewDecoder(bytes.NewReader(data))
+
+	var v1 interface{}
+	err := decoder.Decode(&v1)
+	if err != nil {
+		t.Errorf("Decode() returned error %v when decoding valid data item", err)
+	}
+
+	var v2 interface{}
+	err = decoder.Decode(&v2)
+	if err == nil {
+		t.Errorf("Decode() didn't return error when decoding invalid data item")
+	} else if err != io.ErrUnexpectedEOF {
+		t.Errorf("Decode() error %q, want %q", err, io.ErrUnexpectedEOF)
+	}
+}
+
 func TestDecoderStructTag(t *testing.T) {
 	type strc struct {
 		A string `json:"x" cbor:"a"`
