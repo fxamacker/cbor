@@ -5,7 +5,7 @@ package cbor
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"reflect"
 	"testing"
 )
@@ -415,6 +415,29 @@ func BenchmarkMarshalCanonical(b *testing.B) {
 	}
 }
 
+// BenchmarkNewEncoderEncode benchmarks NewEncoder() and Encode().
+func BenchmarkNewEncoderEncode(b *testing.B) {
+	for _, bm := range encodeBenchmarks {
+		for _, v := range bm.values {
+			name := "Go " + reflect.TypeOf(v).String() + " to CBOR " + bm.name
+			if reflect.TypeOf(v).Kind() == reflect.Struct {
+				name = "Go " + reflect.TypeOf(v).Kind().String() + " to CBOR " + bm.name
+			}
+			b.Run(name, func(b *testing.B) {
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					encoder := NewEncoder(io.Discard)
+					if err := encoder.Encode(v); err != nil {
+						b.Fatal("Encode:", err)
+					}
+				}
+			})
+		}
+	}
+}
+
+// BenchmarkEncode benchmarks Encode(). It reuses same Encoder to exclude NewEncoder()
+// from the benchmark.
 func BenchmarkEncode(b *testing.B) {
 	for _, bm := range encodeBenchmarks {
 		for _, v := range bm.values {
@@ -423,7 +446,7 @@ func BenchmarkEncode(b *testing.B) {
 				name = "Go " + reflect.TypeOf(v).Kind().String() + " to CBOR " + bm.name
 			}
 			b.Run(name, func(b *testing.B) {
-				encoder := NewEncoder(ioutil.Discard)
+				encoder := NewEncoder(io.Discard)
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
 					if err := encoder.Encode(v); err != nil {
@@ -437,7 +460,7 @@ func BenchmarkEncode(b *testing.B) {
 
 func BenchmarkEncodeStream(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		encoder := NewEncoder(ioutil.Discard)
+		encoder := NewEncoder(io.Discard)
 		for i := 0; i < rounds; i++ {
 			for _, bm := range encodeBenchmarks {
 				for _, v := range bm.values {
