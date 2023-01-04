@@ -1,6 +1,6 @@
 # CBOR Codec in Go
 
-[![](https://github.com/fxamacker/images/raw/master/cbor/v2.4.0/fxamacker_cbor_banner.png)](#cbor-library-in-go)
+[![](https://github.com/fxamacker/images/raw/master/cbor/v2.5.0/fxamacker_cbor_banner.png)](#cbor-library-in-go)
 
 [![](https://github.com/fxamacker/cbor/workflows/ci/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Aci)
 [![](https://github.com/fxamacker/cbor/workflows/cover%20%E2%89%A598%25/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3A%22cover+%E2%89%A598%25%22)
