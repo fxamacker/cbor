@@ -96,10 +96,10 @@ func (di *diagnose) diag() ([]byte, error) {
 	for {
 		switch err := di.valid(); err {
 		case nil:
-			if err := di.writeString(", "); err != nil {
+			if err = di.writeString(", "); err != nil {
 				return di.w.Bytes(), err
 			}
-			if err := di.value(); err != nil {
+			if err = di.value(); err != nil {
 				return di.w.Bytes(), err
 			}
 
@@ -119,10 +119,10 @@ func (di *diagnose) valid() error {
 	return err
 }
 
-func (di *diagnose) value() error {
+func (di *diagnose) value() error { //nolint:gocyclo
 	initialByte := di.d.data[di.d.off]
 	switch initialByte {
-	case 0x5f, 0x7f: // indefinite byte string or UTF-8 string
+	case 0x5f, 0x7f: // indefinite byte string or UTF-8 text
 		di.d.off++
 		if err := di.writeString("(_ "); err != nil {
 			return err
@@ -213,12 +213,11 @@ func (di *diagnose) value() error {
 			bi.SetUint64(val)
 			bi.Add(bi, big.NewInt(1))
 			bi.Neg(bi)
-
 			return di.writeString(bi.String())
-		} else {
-			nValue := int64(-1) ^ int64(val)
-			return di.writeString(strconv.FormatInt(nValue, 10))
 		}
+
+		nValue := int64(-1) ^ int64(val)
+		return di.writeString(strconv.FormatInt(nValue, 10))
 
 	case cborTypeByteString:
 		b := di.d.parseByteString()
@@ -229,7 +228,6 @@ func (di *diagnose) value() error {
 		if err != nil {
 			return err
 		}
-
 		return di.encodeTextString(string(b), '"')
 
 	case cborTypeArray:
@@ -245,15 +243,11 @@ func (di *diagnose) value() error {
 					return err
 				}
 			}
-
 			if err := di.value(); err != nil {
 				return err
 			}
 		}
-
-		if err := di.writeByte(']'); err != nil {
-			return err
-		}
+		return di.writeByte(']')
 
 	case cborTypeMap:
 		_, _, val := di.d.getHead()
@@ -268,25 +262,19 @@ func (di *diagnose) value() error {
 					return err
 				}
 			}
-
 			// key
 			if err := di.value(); err != nil {
 				return err
 			}
-
 			if err := di.writeString(": "); err != nil {
 				return err
 			}
-
 			// value
 			if err := di.value(); err != nil {
 				return err
 			}
 		}
-
-		if err := di.writeByte('}'); err != nil {
-			return err
-		}
+		return di.writeByte('}')
 
 	case cborTypeTag:
 		_, _, tagNum := di.d.getHead()
@@ -313,9 +301,7 @@ func (di *diagnose) value() error {
 			if err := di.value(); err != nil {
 				return err
 			}
-			if err := di.writeByte(')'); err != nil {
-				return err
-			}
+			return di.writeByte(')')
 		}
 
 	case cborTypePrimitives:
@@ -343,9 +329,7 @@ func (di *diagnose) value() error {
 			if err := di.writeString(strconv.FormatUint(val, 10)); err != nil {
 				return err
 			}
-			if err := di.writeByte(')'); err != nil {
-				return err
-			}
+			return di.writeByte(')')
 		}
 	}
 
@@ -376,7 +360,6 @@ var rawBase32Encoding = base32.StdEncoding.WithPadding(base32.NoPadding)
 var rawBase32HexEncoding = base32.HexEncoding.WithPadding(base32.NoPadding)
 
 func (di *diagnose) encodeByteString(val []byte) error {
-
 	if len(val) > 0 {
 		if di.opts.ByteStringText && utf8.Valid(val) {
 			return di.encodeTextString(string(val), '\'')
@@ -391,7 +374,6 @@ func (di *diagnose) encodeByteString(val []byte) error {
 					if err := di.writeString(string(data)); err != nil {
 						return err
 					}
-
 					return di.writeString(">>")
 				}
 			}
@@ -421,6 +403,7 @@ func (di *diagnose) encodeByteString(val []byte) error {
 				return err
 			}
 		}
+		return di.writeByte('\'')
 
 	case "base32":
 		if err := di.writeString("b32'"); err != nil {
@@ -431,6 +414,7 @@ func (di *diagnose) encodeByteString(val []byte) error {
 			return err
 		}
 		encoder.Close()
+		return di.writeByte('\'')
 
 	case "base32hex":
 		if err := di.writeString("h32'"); err != nil {
@@ -441,6 +425,7 @@ func (di *diagnose) encodeByteString(val []byte) error {
 			return err
 		}
 		encoder.Close()
+		return di.writeByte('\'')
 
 	case "base64":
 		if err := di.writeString("b64'"); err != nil {
@@ -451,12 +436,11 @@ func (di *diagnose) encodeByteString(val []byte) error {
 			return err
 		}
 		encoder.Close()
+		return di.writeByte('\'')
 
 	default:
 		return errors.New("cbor: invalid ByteStringEncoding option " + strconv.Quote(di.opts.ByteStringEncoding))
 	}
-
-	return di.writeByte('\'')
 }
 
 var utf16SurrSelf = rune(0x10000)

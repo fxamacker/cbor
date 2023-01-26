@@ -89,15 +89,15 @@ func TestDiagnoseExamples(t *testing.T) {
 		},
 		{
 			hexDecode("f90000"),
-			`0.0`, // SKIP 18
+			`0.0`,
 		},
 		{
 			hexDecode("f98000"),
-			`-0.0`, // SKIP 19
+			`-0.0`,
 		},
 		{
 			hexDecode("f93c00"),
-			`1.0`, // SKIP 20
+			`1.0`,
 		},
 		{
 			hexDecode("fb3ff199999999999a"),
@@ -109,31 +109,31 @@ func TestDiagnoseExamples(t *testing.T) {
 		},
 		{
 			hexDecode("f97bff"),
-			`65504.0`, // SKIP 23
+			`65504.0`,
 		},
 		{
 			hexDecode("fa47c35000"),
-			`100000.0`, // SKIP 24
+			`100000.0`,
 		},
 		{
 			hexDecode("fa7f7fffff"),
-			`3.4028234663852886e+38`, // SKIP 25
+			`3.4028234663852886e+38`,
 		},
 		{
 			hexDecode("fb7e37e43c8800759c"),
-			`1.0e+300`, // SKIP 26
+			`1.0e+300`,
 		},
 		{
 			hexDecode("f90001"),
-			`5.960464477539063e-8`, // SKIP 27
+			`5.960464477539063e-8`,
 		},
 		{
 			hexDecode("f90400"),
-			`0.00006103515625`, // SKIP 28
+			`0.00006103515625`,
 		},
 		{
 			hexDecode("f9c400"),
-			`-4.0`, // SKIP 29
+			`-4.0`,
 		},
 		{
 			hexDecode("fbc010666666666666"),
@@ -209,7 +209,7 @@ func TestDiagnoseExamples(t *testing.T) {
 		},
 		{
 			hexDecode("c1fb41d452d9ec200000"),
-			`1(1363896240.5)`, // SKIP 48
+			`1(1363896240.5)`,
 		},
 		{
 			hexDecode("d74401020304"),
