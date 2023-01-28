@@ -66,6 +66,7 @@ func Diag(data []byte, opts *DiagOptions) ([]byte, error) {
 	return di.diag()
 }
 
+// loosest decode options for diagnostic purpose.
 var diagnoseDecMode, _ = DecOptions{
 	MaxNestedLevels: 256,
 	UTF8:            UTF8DecodeInvalid,
@@ -446,43 +447,72 @@ func (di *diagnose) encodeByteString(val []byte) error {
 var utf16SurrSelf = rune(0x10000)
 
 // quote should be either `'` or `"`
-func (di *diagnose) encodeTextString(val string, quote rune) error {
-	if err := di.writeByte(byte(quote)); err != nil {
+func (di *diagnose) encodeTextString(val string, quote byte) error {
+	if err := di.writeByte(quote); err != nil {
 		return err
 	}
 
-	for _, r := range val {
+	for i := 0; i < len(val); {
+		if b := val[i]; b < utf8.RuneSelf {
+			switch {
+			case b == '\t', b == '\n', b == '\r', b == '\\', b == quote:
+				if err := di.writeByte('\\'); err != nil {
+					return err
+				}
+
+				switch b {
+				case '\t':
+					b = 't'
+				case '\n':
+					b = 'n'
+				case '\r':
+					b = 'r'
+				}
+				if err := di.writeByte(b); err != nil {
+					return err
+				}
+
+			case b >= ' ' && b <= '~':
+				if err := di.writeByte(b); err != nil {
+					return err
+				}
+
+			default:
+				if err := di.writeU16(rune(b)); err != nil {
+					return err
+				}
+			}
+
+			i++
+			continue
+		}
+
+		c, size := utf8.DecodeRuneInString(val[i:])
 		switch {
-		case r == '\t', r == '\n', r == '\r', r == '\\', r == quote:
-			if err := di.writeByte('\\'); err != nil {
-				return err
-			}
-			if err := di.writeByte(byte(r)); err != nil {
+		case c == utf8.RuneError:
+			if err := di.writeU16(rune(val[i])); err != nil {
 				return err
 			}
 
-		case r >= ' ' && r <= '~':
-			if err := di.writeByte(byte(r)); err != nil {
-				return err
-			}
-
-		case r < utf16SurrSelf:
-			if err := di.writeU16(r); err != nil {
+		case c < utf16SurrSelf:
+			if err := di.writeU16(c); err != nil {
 				return err
 			}
 
 		default:
-			r1, r2 := utf16.EncodeRune(r)
-			if err := di.writeU16(r1); err != nil {
+			c1, c2 := utf16.EncodeRune(c)
+			if err := di.writeU16(c1); err != nil {
 				return err
 			}
-			if err := di.writeU16(r2); err != nil {
+			if err := di.writeU16(c2); err != nil {
 				return err
 			}
 		}
+
+		i += size
 	}
 
-	return di.writeByte(byte(quote))
+	return di.writeByte(quote)
 }
 
 func (di *diagnose) encodeFloat(ai byte, val uint64) error {

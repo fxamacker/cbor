@@ -549,6 +549,92 @@ func TestDiagnoseByteString(t *testing.T) {
 	})
 }
 
+func TestDiagnoseTextString(t *testing.T) {
+	testCases := []struct {
+		title string
+		cbor  []byte
+		diag  string
+		opts  *DiagOptions
+	}{
+		{
+			"valid UTF-8 text in byte string",
+			hexDecode("4d68656c6c6f2c20e4bda0e5a5bd"),
+			`'hello, \u4f60\u597d'`,
+			&DiagOptions{
+				ByteStringText: true,
+			},
+		},
+		{
+			"valid UTF-8 text in text string",
+			hexDecode("6d68656c6c6f2c20e4bda0e5a5bd"),
+			`"hello, \u4f60\u597d"`, // "hello, 你好"
+			&DiagOptions{
+				ByteStringText: true,
+			},
+		},
+		{
+			"invalid UTF-8 text in byte string",
+			hexDecode("4d68656c6c6fffeee4bda0e5a5bd"),
+			`h'68656c6c6fffeee4bda0e5a5bd'`,
+			&DiagOptions{
+				ByteStringText: true,
+			},
+		},
+		{
+			"invalid UTF-8 text in text string",
+			hexDecode("6d68656c6c6fffeee4bda0e5a5bd"),
+			`"hello\u00ff\u00ee\u4f60\u597d"`,
+			&DiagOptions{
+				ByteStringText: true,
+			},
+		},
+		{
+			"valid grapheme cluster text in byte string",
+			hexDecode("583448656c6c6f2c2027e29da4efb88fe2808df09f94a5270ae4bda0e5a5bdefbc8c22f09fa791e2808df09fa49de2808df09fa79122"),
+			`'Hello, \'\u2764\ufe0f\u200d\ud83d\udd25\'\n\u4f60\u597d\uff0c"\ud83e\uddd1\u200d\ud83e\udd1d\u200d\ud83e\uddd1"'`,
+			&DiagOptions{
+				ByteStringText: true,
+			},
+		},
+		{
+			"valid grapheme cluster text in text string",
+			hexDecode("783448656c6c6f2c2027e29da4efb88fe2808df09f94a5270ae4bda0e5a5bdefbc8c22f09fa791e2808df09fa49de2808df09fa79122"),
+			`"Hello, '\u2764\ufe0f\u200d\ud83d\udd25'\n\u4f60\u597d\uff0c\"\ud83e\uddd1\u200d\ud83e\udd1d\u200d\ud83e\uddd1\""`, // "Hello, '❤️‍🔥'\n你好，\"🧑‍🤝‍🧑\""
+			&DiagOptions{
+				ByteStringText: true,
+			},
+		},
+		{
+			"invalid grapheme cluster text in byte string",
+			hexDecode("583448656c6c6feeff27e29da4efb88fe2808df09f94a5270de4bda0e5a5bdefbc8c22f09fa791e2808df09fa49de2808df09fa79122"),
+			`h'48656c6c6feeff27e29da4efb88fe2808df09f94a5270de4bda0e5a5bdefbc8c22f09fa791e2808df09fa49de2808df09fa79122'`,
+			&DiagOptions{
+				ByteStringText: true,
+			},
+		},
+		{
+			"invalid grapheme cluster text in text string",
+			hexDecode("783448656c6c6feeff27e29da4efb88fe2808df09f94a5270de4bda0e5a5bdefbc8c22f09fa791e2808df09fa49de2808df09fa79122"),
+			`"Hello\u00ee\u00ff'\u2764\ufe0f\u200d\ud83d\udd25'\r\u4f60\u597d\uff0c\"\ud83e\uddd1\u200d\ud83e\udd1d\u200d\ud83e\uddd1\""`,
+			&DiagOptions{
+				ByteStringText: true,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.title, func(t *testing.T) {
+
+			data, err := Diag(tc.cbor, tc.opts)
+			if err != nil {
+				t.Errorf("Diag(0x%x) returned error %q", tc.cbor, err)
+			} else if string(data) != tc.diag {
+				t.Errorf("Diag(0x%x) returned `%s`, want %s", tc.cbor, string(data), tc.diag)
+			}
+		})
+	}
+}
+
 func TestDiagnoseFloatingPointNumber(t *testing.T) {
 	testCases := []struct {
 		title string
