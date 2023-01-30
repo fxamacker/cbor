@@ -40,17 +40,17 @@ import (
 // To unmarshal CBOR into an empty interface value, Unmarshal uses the
 // following rules:
 //
-//     CBOR booleans decode to bool.
-//     CBOR positive integers decode to uint64.
-//     CBOR negative integers decode to int64 (big.Int if value overflows).
-//     CBOR floating points decode to float64.
-//     CBOR byte strings decode to []byte.
-//     CBOR text strings decode to string.
-//     CBOR arrays decode to []interface{}.
-//     CBOR maps decode to map[interface{}]interface{}.
-//     CBOR null and undefined values decode to nil.
-//     CBOR times (tag 0 and 1) decode to time.Time.
-//     CBOR bignums (tag 2 and 3) decode to big.Int.
+//	CBOR booleans decode to bool.
+//	CBOR positive integers decode to uint64.
+//	CBOR negative integers decode to int64 (big.Int if value overflows).
+//	CBOR floating points decode to float64.
+//	CBOR byte strings decode to []byte.
+//	CBOR text strings decode to string.
+//	CBOR arrays decode to []interface{}.
+//	CBOR maps decode to map[interface{}]interface{}.
+//	CBOR null and undefined values decode to nil.
+//	CBOR times (tag 0 and 1) decode to time.Time.
+//	CBOR bignums (tag 2 and 3) decode to big.Int.
 //
 // To unmarshal a CBOR array into a slice, Unmarshal allocates a new slice
 // if the CBOR array is empty or slice capacity is less than CBOR array length.
@@ -75,9 +75,9 @@ import (
 // To unmarshal a CBOR map into a struct, Unmarshal matches CBOR map keys to the
 // keys in the following priority:
 //
-//     1. "cbor" key in struct field tag,
-//     2. "json" key in struct field tag,
-//     3. struct field name.
+//  1. "cbor" key in struct field tag,
+//  2. "json" key in struct field tag,
+//  3. struct field name.
 //
 // Unmarshal tries an exact match for field name, then a case-insensitive match.
 // Map key-value pairs without corresponding struct fields are ignored.  See
@@ -549,7 +549,16 @@ func (dm *decMode) DecOptions() DecOptions {
 // See the documentation for Unmarshal for details.
 func (dm *decMode) Unmarshal(data []byte, v interface{}) error {
 	d := decoder{data: data, dm: dm}
-	return d.value(v, false)
+
+	// check valid
+	off := d.off          // Save offset before data validation
+	err := d.valid(false) // don't allow any extra data after valid data item.
+	d.off = off           // Restore offset
+	if err != nil {
+		return err
+	}
+
+	return d.value(v)
 }
 
 // Valid checks whether the CBOR data is complete and well-formed.
@@ -570,10 +579,10 @@ type decoder struct {
 }
 
 // value decodes CBOR data item into the value pointed to by v.
-// If CBOR data item is invalid, error is returned and offset isn't changed.
-// If CBOR data item is valid but fails to be decode into v for other reasons,
+// If CBOR data item fails to be decode into v,
 // error is returned and offset is moved to the next CBOR data item.
-func (d *decoder) value(v interface{}, allowExtraData bool) error {
+// Precondition: d.data contains at least one valid CBOR data item.
+func (d *decoder) value(v interface{}) error {
 	// v can't be nil, non-pointer, or nil pointer value.
 	if v == nil {
 		return &InvalidUnmarshalError{"cbor: Unmarshal(nil)"}
@@ -584,14 +593,6 @@ func (d *decoder) value(v interface{}, allowExtraData bool) error {
 	} else if rv.IsNil() {
 		return &InvalidUnmarshalError{"cbor: Unmarshal(nil " + rv.Type().String() + ")"}
 	}
-
-	off := d.off // Save offset before data validation
-	err := d.valid(allowExtraData)
-	d.off = off // Restore offset
-	if err != nil {
-		return err
-	}
-
 	rv = rv.Elem()
 	return d.parseToValue(rv, getTypeInfo(rv.Type()))
 }
