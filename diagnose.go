@@ -147,13 +147,14 @@ func (dm *diagMode) diagnose(data []byte) (*diagnose, error) {
 	}
 
 	di := &diagnose{
-		dm: dm, d: de, w: &bytes.Buffer{},
 		byteStringEncoding:      dm.opts.ByteStringEncoding,
 		byteStringHexWhitespace: dm.opts.ByteStringHexWhitespace,
 		byteStringText:          dm.opts.ByteStringText,
 		byteStringEmbeddedCBOR:  dm.opts.ByteStringEmbeddedCBOR,
 		cborSequence:            dm.opts.CBORSequence,
 		indicateFloatPrecision:  dm.opts.IndicateFloatPrecision,
+
+		dm: dm, d: de, w: &bytes.Buffer{},
 	}
 	return di, nil
 }
@@ -169,15 +170,15 @@ func Diagnose(data []byte) (string, error) {
 }
 
 type diagnose struct {
-	dm                      *diagMode
-	d                       *decoder
-	w                       *bytes.Buffer
 	byteStringEncoding      ByteStringEncoding
 	byteStringHexWhitespace bool
 	byteStringText          bool
 	byteStringEmbeddedCBOR  bool
 	cborSequence            bool
 	indicateFloatPrecision  bool
+	dm                      *diagMode
+	d                       *decoder
+	w                       *bytes.Buffer
 }
 
 func (di *diagnose) diag() (string, error) {
@@ -460,11 +461,11 @@ func (di *diagnose) encodeByteString(val []byte) error {
 
 		if di.byteStringEmbeddedCBOR {
 			if di2, err := di.dm.diagnose(val); err == nil {
-				if data, err := di2.diag(); err == nil {
+				if str, err := di2.diag(); err == nil {
 					if err := di.writeString("<<"); err != nil {
 						return err
 					}
-					if err := di.writeString(string(data)); err != nil {
+					if err := di.writeString(str); err != nil {
 						return err
 					}
 					return di.writeString(">>")

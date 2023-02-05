@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestDiagnoseExamples(t *testing.T) {
+func TestDiagnosticNotationExamples(t *testing.T) {
 	// https://www.rfc-editor.org/rfc/rfc8949.html#name-examples-of-encoded-cbor-da
 	testCases := []struct {
 		cbor []byte
@@ -717,6 +717,64 @@ func TestDiagnoseFloatingPointNumber(t *testing.T) {
 			if err != nil {
 				t.Errorf("Diagnose(0x%x) returned error %q", tc.cbor, err)
 			} else if str != tc.diag {
+				t.Errorf("Diagnose(0x%x) returned `%s`, want %s", tc.cbor, str, tc.diag)
+			}
+		})
+	}
+}
+
+func TestDiagnoseCBORSequences(t *testing.T) {
+	testCases := []struct {
+		title       string
+		cbor        []byte
+		diag        string
+		opts        *DiagOptions
+		returnError bool
+	}{
+		{
+			"CBOR Sequences without CBORSequence option",
+			hexDecode("f93e0064494554464401020304"),
+			``,
+			&DiagOptions{
+				CBORSequence: false,
+			},
+			true,
+		},
+		{
+			"CBOR Sequences with CBORSequence option",
+			hexDecode("f93e0064494554464401020304"),
+			`1.5, "IETF", h'01020304'`,
+			&DiagOptions{
+				CBORSequence: true,
+			},
+			false,
+		},
+		{
+			"partial/incomplete CBOR Sequences",
+			hexDecode("f93e00644945544644010203"),
+			`1.5, "IETF"`,
+			&DiagOptions{
+				CBORSequence: true,
+			},
+			true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.title, func(t *testing.T) {
+			dm, err := tc.opts.DiagMode()
+			if err != nil {
+				t.Errorf("DiagMode() for 0x%x returned error %q", tc.cbor, err)
+			}
+
+			str, err := dm.Diagnose(tc.cbor)
+			if tc.returnError && err == nil {
+				t.Errorf("Diagnose(0x%x) returned error %q", tc.cbor, err)
+			} else if !tc.returnError && err != nil {
+				t.Errorf("Diagnose(0x%x) returned error %q", tc.cbor, err)
+			}
+
+			if str != tc.diag {
 				t.Errorf("Diagnose(0x%x) returned `%s`, want %s", tc.cbor, str, tc.diag)
 			}
 		})
