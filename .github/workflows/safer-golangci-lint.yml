@@ -9,37 +9,30 @@
 # This workflow downloads, verifies, and runs golangci-lint in a
 # deterministic, reviewable, and safe manner.
 #
-# 100% of the script for downloading, installing, and running golangci-lint
-# is embedded in this file. The embedded SHA-256 digest is used to verify the
-# downloaded golangci-lint tarball (golangci-lint-1.49.0-linux-amd64.tar.gz).
-#
-# The embedded SHA-256 digest matches golangci-lint-1.49.0-checksums.txt at
-# https://github.com/golangci/golangci-lint/releases
-#
 # To use:
-#   Step 1. Copy this file into [github_repo]/.github/workflows/
+#   Step 1. Copy this file into [your_github_repo]/.github/workflows/
 #   Step 2. There's no step 2 if you like the default settings.
 #
-# Create and use a config file (.golangci.yml) as described in golangci-lint docs.
+# See golangci-lint docs for more info at
+# https://github.com/golangci/golangci-lint
+#
+# 100% of the script for downloading, installing, and running golangci-lint
+# is embedded in this file. The embedded SHA-256 digest is used to verify the
+# downloaded golangci-lint tarball (golangci-lint-1.xx.x-linux-amd64.tar.gz).
+#
+# The embedded SHA-256 digest matches golangci-lint-1.xx.x-checksums.txt at
+# https://github.com/golangci/golangci-lint/releases
 #
 # To use a newer version of golangci-lint, change these values:
 #   1. GOLINTERS_VERSION
 #   2. GOLINTERS_TGZ_DGST
 #
-# Release v1.49.0.1 (October 2, 2022) for github.com/fxamacker/cbor
-#   - Allow goimports/gofmt version to use different Go version
-#   - Add GOFMT_VERSION, GOTOOLS_VERSION, etc.
-#
-# Release v1.49.0 (September 18, 2022)
-#   - Bump golangci-lint to 1.49.0
-#   - Bump Go to 1.19 (latest version of 1.19.x because check-latest: true).
-#   - Put Go version in environment variable GO_VERSION.
-#   - Increase timeout to 15m for big projects enabling more linters.
-#   - Use SHA-256 to verify (instead of SHA-384) and mention checksums file.
-#   - Hash of golangci-lint-1.49.0-linux-amd64.tar.gz
-#     - SHA-384: df59267a11317d2763fb6cb454a9b3a6a6d428f4750fcbb8604fb0d289b18a1b3b6cd2bfbf2a2fe976979e97a71fcc36
-#     - SHA-256: 5badc6e9fee2003621efa07e385910d9a88c89b38f6c35aded153193c5125178
-#                This SHA-256 digest matches golangci-lint-1.49.0-checksums.txt at
+# Release v1.51.1 (February 5, 2023)
+#   - Bump golangci-lint to 1.51.1
+#   - Shuffle some comments
+#   - Hash of golangci-lint-1.50.1-linux-amd64.tar.gz
+#     - SHA-256: 17aeb26c76820c22efa0e1838b0ab93e90cfedef43fbfc9a2f33f27eb9e5e070
+#                This SHA-256 digest matches golangci-lint-1.51.1-checksums.txt at
 #                https://github.com/golangci/golangci-lint/releases
 #
 name: linters
@@ -56,70 +49,16 @@ on:
 
 env:
   GO_VERSION: 1.19
-  GOFMT_VERSION: 1.18.6        # version of Go for gofmt and for building goimports
-  GOLINTERS_VERSION: 1.49.0    # version of golangci-lint
-    
+  GOLINTERS_VERSION: 1.51.1
   GOLINTERS_ARCH: linux-amd64
-  GOLINTERS_TGZ_DGST: 5badc6e9fee2003621efa07e385910d9a88c89b38f6c35aded153193c5125178 # golangci-lint 1.49.0
+  GOLINTERS_TGZ_DGST: 17aeb26c76820c22efa0e1838b0ab93e90cfedef43fbfc9a2f33f27eb9e5e070
   GOLINTERS_TIMEOUT: 15m
-  
-  # go tools v0.1.12 (Jan 27, 2022) is commit b3b5c13b291f9653da6f31b95db100a2e26bd186
-  # https://github.com/golang/tools/releases/tag/v0.1.12
-  GOTOOLS_VERSION: b3b5c13b291f9653da6f31b95db100a2e26bd186 # v0.1.12  
-  GOIMPORTS_DGST: 82a00939e3555d5dd7ca7b53bd3e413c4d3de5c32698f05e17f1d62fdc81c07e # go 1.18.6 + go tools v0.1.12
-  GOIMPORTS_FLAGS: -l # -l (filenames) is recommended.  -d (diffs) can be useful.
-  
   OPENSSL_DGST_CMD: openssl dgst -sha256 -r
   CURL_CMD: curl --proto =https --tlsv1.2 --location --silent --show-error --fail
 
 jobs:
-  gofmt:
-    name: goimports
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-
-      - name: Setup Go
-        uses: actions/setup-go@v3
-        with:
-          # Use GOFMT_VERSION (not GO_VERSION) for job goimports
-          go-version: ${{ env.GOFMT_VERSION }}
-          check-latest: false  # false to prevent compiled goimports digest from changing
-          
-      # Run goimports and print file names that didn't pass
-      - name: Run goimports
-        run: |
-          go install golang.org/x/tools/cmd/goimports@${GOTOOLS_VERSION}
-          GOIMPORTS_FULLPATH=$(go env GOPATH)/bin/goimports
-          GOIMPORTS_EXPECTED_DGST="${GOIMPORTS_DGST} *${GOIMPORTS_FULLPATH}"
-          DGST_CMD="${OPENSSL_DGST_CMD} ${GOIMPORTS_FULLPATH}"
-          
-          GOIMPORTS_GOT_DGST=$(${DGST_CMD})
-          echo "${GOIMPORTS_GOT_DGST}"
-               
-          if [ "${GOIMPORTS_GOT_DGST}" != "${GOIMPORTS_EXPECTED_DGST}" ]
-          then
-            echo "Digest of goimports is not equal to expected digest."
-            echo "Expected digest: " "${GOIMPORTS_EXPECTED_DGST}"
-            echo "Got digest:      " "${GOIMPORTS_GOT_DGST}"
-            # exit 1
-          fi
-          
-          GOIMPORTS_OUTPUT=$(${GOIMPORTS_FULLPATH} ${GOIMPORTS_FLAGS} .)
-          if [[ "${GOIMPORTS_OUTPUT}" ]]; then
-            echo "${GOIMPORTS_OUTPUT}"
-            exit 1
-          fi
-
-        shell: bash
-        
-  linters:
-    name: linters
+  main:
+    name: Lint
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -156,11 +95,6 @@ jobs:
 
           tar --no-same-owner -xzf "${GOLINTERS_TGZ}" --strip-components 1
           install golangci-lint $(go env GOPATH)/bin
-          go version
-          golangci-lint --version
-          which go
-          which gofmt
-          which golangci-lint
         shell: bash
 
       # Run required linters enabled in .golangci.yml (or default linters if yml doesn't exist)     
