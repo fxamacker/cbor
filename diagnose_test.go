@@ -343,11 +343,11 @@ func TestDiagnoseExamples(t *testing.T) {
 
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("Diagnostic %d", i), func(t *testing.T) {
-			data, err := Diag(tc.cbor, nil)
+			str, err := Diagnose(tc.cbor)
 			if err != nil {
-				t.Errorf("Diag(0x%x) returned error %q", tc.cbor, err)
-			} else if string(data) != tc.diag {
-				t.Errorf("Diag(0x%x) returned `%s`, want `%s`", tc.cbor, string(data), tc.diag)
+				t.Errorf("Diagnostic(0x%x) returned error %q", tc.cbor, err)
+			} else if str != tc.diag {
+				t.Errorf("Diagnostic(0x%x) returned `%s`, want `%s`", tc.cbor, str, tc.diag)
 			}
 		})
 	}
@@ -365,7 +365,7 @@ func TestDiagnoseByteString(t *testing.T) {
 			hexDecode("4412345678"),
 			`h'12345678'`,
 			&DiagOptions{
-				ByteStringEncoding: "base16",
+				ByteStringEncoding: ByteStringBase16Encoding,
 			},
 		},
 		{
@@ -373,7 +373,7 @@ func TestDiagnoseByteString(t *testing.T) {
 			hexDecode("4412345678"),
 			`b32'CI2FM6A'`,
 			&DiagOptions{
-				ByteStringEncoding: "base32",
+				ByteStringEncoding: ByteStringBase32Encoding,
 			},
 		},
 		{
@@ -381,7 +381,7 @@ func TestDiagnoseByteString(t *testing.T) {
 			hexDecode("4412345678"),
 			`h32'28Q5CU0'`,
 			&DiagOptions{
-				ByteStringEncoding: "base32hex",
+				ByteStringEncoding: ByteStringBase32HexEncoding,
 			},
 		},
 		{
@@ -389,7 +389,7 @@ func TestDiagnoseByteString(t *testing.T) {
 			hexDecode("4412345678"),
 			`b64'EjRWeA'`,
 			&DiagOptions{
-				ByteStringEncoding: "base64",
+				ByteStringEncoding: ByteStringBase64Encoding,
 			},
 		},
 		{
@@ -516,35 +516,37 @@ func TestDiagnoseByteString(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.title, func(t *testing.T) {
-
-			data, err := Diag(tc.cbor, tc.opts)
+			dm, err := tc.opts.DiagMode()
 			if err != nil {
-				t.Errorf("Diag(0x%x) returned error %q", tc.cbor, err)
-			} else if string(data) != tc.diag {
-				t.Errorf("Diag(0x%x) returned `%s`, want %s", tc.cbor, string(data), tc.diag)
+				t.Errorf("DiagMode() for 0x%x returned error %q", tc.cbor, err)
+			}
+
+			str, err := dm.Diagnose(tc.cbor)
+			if err != nil {
+				t.Errorf("Diagnose(0x%x) returned error %q", tc.cbor, err)
+			} else if str != tc.diag {
+				t.Errorf("Diagnose(0x%x) returned `%s`, want %s", tc.cbor, str, tc.diag)
 			}
 		})
 	}
 
 	t.Run("invalid encoding", func(t *testing.T) {
-		cborData := hexDecode("4b48656c6c6f20776f726c64")
-		_, err := Diag(cborData, &DiagOptions{
-			ByteStringEncoding: "base58",
-		})
+		opts := &DiagOptions{
+			ByteStringEncoding: ByteStringBase64Encoding + 1,
+		}
+		_, err := opts.DiagMode()
 		if err == nil {
-			t.Errorf("Diag(0x%x) didn't return error", cborData)
-		} else if !strings.Contains(err.Error(), `base58`) {
-			t.Errorf("Diag(0x%x) returned error %q", cborData, err)
+			t.Errorf("DiagMode() with invalid ByteStringEncoding option didn't return error")
 		}
 	})
 
 	t.Run("without CBORSequence option", func(t *testing.T) {
 		cborData := hexDecode("63666F6FF6")
-		_, err := Diag(cborData, nil)
+		_, err := Diagnose(cborData)
 		if err == nil {
-			t.Errorf("Diag(0x%x) didn't return error", cborData)
+			t.Errorf("Diagnose(0x%x) didn't return error", cborData)
 		} else if !strings.Contains(err.Error(), `extraneous data`) {
-			t.Errorf("Diag(0x%x) returned error %q", cborData, err)
+			t.Errorf("Diagnose(0x%x) returned error %q", cborData, err)
 		}
 	})
 }
@@ -624,12 +626,16 @@ func TestDiagnoseTextString(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.title, func(t *testing.T) {
-
-			data, err := Diag(tc.cbor, tc.opts)
+			dm, err := tc.opts.DiagMode()
 			if err != nil {
-				t.Errorf("Diag(0x%x) returned error %q", tc.cbor, err)
-			} else if string(data) != tc.diag {
-				t.Errorf("Diag(0x%x) returned `%s`, want %s", tc.cbor, string(data), tc.diag)
+				t.Errorf("DiagMode() for 0x%x returned error %q", tc.cbor, err)
+			}
+
+			str, err := dm.Diagnose(tc.cbor)
+			if err != nil {
+				t.Errorf("Diagnose(0x%x) returned error %q", tc.cbor, err)
+			} else if str != tc.diag {
+				t.Errorf("Diagnose(0x%x) returned `%s`, want %s", tc.cbor, str, tc.diag)
 			}
 		})
 	}
@@ -702,12 +708,16 @@ func TestDiagnoseFloatingPointNumber(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.title, func(t *testing.T) {
-
-			data, err := Diag(tc.cbor, tc.opts)
+			dm, err := tc.opts.DiagMode()
 			if err != nil {
-				t.Errorf("Diag(0x%x) returned error %q", tc.cbor, err)
-			} else if string(data) != tc.diag {
-				t.Errorf("Diag(0x%x) returned `%s`, want %s", tc.cbor, string(data), tc.diag)
+				t.Errorf("DiagMode() for 0x%x returned error %q", tc.cbor, err)
+			}
+
+			str, err := dm.Diagnose(tc.cbor)
+			if err != nil {
+				t.Errorf("Diagnose(0x%x) returned error %q", tc.cbor, err)
+			} else if str != tc.diag {
+				t.Errorf("Diagnose(0x%x) returned `%s`, want %s", tc.cbor, str, tc.diag)
 			}
 		})
 	}

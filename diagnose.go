@@ -19,78 +19,170 @@ import (
 	"github.com/x448/float16"
 )
 
-type diagnose struct {
-	d    *decoder
-	w    *bytes.Buffer
-	opts *DiagOptions
+// DiagMode is the main interface for CBOR diagnostic notation.
+type DiagMode interface {
+	// Diagnose returns extended diagnostic notation (EDN) of CBOR data items using this DiagMode.
+	Diagnose([]byte) (string, error)
+	// DiagOptions returns user specified options used to create this DiagMode.
+	DiagOptions() DiagOptions
+}
+
+// ByteStringEncoding specifies the base encoding that byte strings are notated.
+type ByteStringEncoding uint8
+
+const (
+	// ByteStringBase16Encoding encodes byte strings in base16, without padding.
+	ByteStringBase16Encoding ByteStringEncoding = iota
+
+	// ByteStringBase32Encoding encodes byte strings in base32, without padding.
+	ByteStringBase32Encoding
+
+	// ByteStringBase32HexEncoding encodes byte strings in base32hex, without padding.
+	ByteStringBase32HexEncoding
+
+	// ByteStringBase64Encoding encodes byte strings in base64url, without padding.
+	ByteStringBase64Encoding
+
+	maxByteStringEncoding
+)
+
+func (bse ByteStringEncoding) valid() error {
+	if bse >= maxByteStringEncoding {
+		return errors.New("cbor: invalid ByteStringEncoding " + strconv.Itoa(int(bse)))
+	}
+	return nil
 }
 
 // DiagOptions specifies Diag options.
 type DiagOptions struct {
 	// ByteStringEncoding specifies the base encoding that byte strings are notated.
-	// It can be set to "base16", "base32", "base32hex", "base64", default is "base16".
-	ByteStringEncoding string
+	// Default is ByteStringBase16Encoding.
+	ByteStringEncoding ByteStringEncoding
+
 	// ByteStringHexWhitespace specifies notating with whitespace in byte string
-	// when ByteStringEncoding is "base16".
+	// when ByteStringEncoding is ByteStringBase16Encoding.
 	ByteStringHexWhitespace bool
+
 	// ByteStringText specifies notating with text in byte string
 	// if it is a valid UTF-8 text.
 	ByteStringText bool
+
 	// ByteStringEmbeddedCBOR specifies notating embedded CBOR in byte string
 	// if it is a valid CBOR bytes.
 	ByteStringEmbeddedCBOR bool
+
 	// CBORSequence specifies notating CBOR sequences.
 	// otherwise, it returns an error if there are more bytes after the first CBOR.
 	CBORSequence bool
+
 	// IndicateFloatPrecision specifies appending a suffix to indicate float precision.
 	// Refer to https://www.rfc-editor.org/rfc/rfc8949.html#name-encoding-indicators.
 	IndicateFloatPrecision bool
+
+	// MaxNestedLevels specifies the max nested levels allowed for any combination of CBOR array, maps, and tags.
+	// Default is 32 levels and it can be set to [4, 65535]. Note that higher maximum levels of nesting can
+	// require larger amounts of stack to deserialize. Don't increase this higher than you require.
+	MaxNestedLevels int
+
+	// MaxArrayElements specifies the max number of elements for CBOR arrays.
+	// Default is 128*1024=131072 and it can be set to [16, 2147483647]
+	MaxArrayElements int
+
+	// MaxMapPairs specifies the max number of key-value pairs for CBOR maps.
+	// Default is 128*1024=131072 and it can be set to [16, 2147483647]
+	MaxMapPairs int
 }
 
-// Diag returns a human-readable diagnostic notation bytes for the given CBOR data.
-//
-// Refer to https://www.rfc-editor.org/rfc/rfc8949.html#name-diagnostic-notation.
-func Diag(data []byte, opts *DiagOptions) ([]byte, error) {
-	if opts == nil {
-		opts = defaultDiagOptions
-	}
-	if opts.ByteStringEncoding == "" {
-		opts.ByteStringEncoding = "base16"
+// DiagMode returns a DiagMode with immutable options.
+func (opts DiagOptions) DiagMode() (DiagMode, error) {
+	return opts.diagMode()
+}
+
+func (opts DiagOptions) diagMode() (*diagMode, error) {
+	if err := opts.ByteStringEncoding.valid(); err != nil {
+		return nil, err
 	}
 
-	di, err := opts.new(data)
+	decMode, err := DecOptions{
+		MaxNestedLevels:  opts.MaxNestedLevels,
+		MaxArrayElements: opts.MaxArrayElements,
+		MaxMapPairs:      opts.MaxMapPairs,
+		// loosest decode options for diagnostic purpose.
+		UTF8: UTF8DecodeInvalid,
+	}.decMode()
 	if err != nil {
 		return nil, err
+	}
+
+	return &diagMode{&opts, decMode}, nil
+}
+
+type diagMode struct {
+	opts    *DiagOptions
+	decMode *decMode
+}
+
+// DiagOptions returns user specified options used to create this DiagMode.
+func (dm *diagMode) DiagOptions() DiagOptions {
+	return *dm.opts
+}
+
+// Diagnose returns extended diagnostic notation (EDN) of CBOR data items using the DiagMode.
+func (dm *diagMode) Diagnose(data []byte) (string, error) {
+	di, err := dm.diagnose(data)
+	if err != nil {
+		return "", err
 	}
 
 	return di.diag()
 }
 
-// loosest decode options for diagnostic purpose.
-var diagnoseDecMode, _ = DecOptions{
-	MaxNestedLevels: 256,
-	UTF8:            UTF8DecodeInvalid,
-}.decMode()
-
-var defaultDiagOptions = &DiagOptions{
-	ByteStringEncoding: "base16",
-}
-
-func (opts *DiagOptions) new(data []byte) (*diagnose, error) {
-	d := &decoder{data: data, dm: diagnoseDecMode}
-	off := d.off
-	err := d.valid(opts.CBORSequence)
-	d.off = off
+func (dm *diagMode) diagnose(data []byte) (*diagnose, error) {
+	de := &decoder{data: data, dm: dm.decMode}
+	off := de.off
+	err := de.valid(dm.opts.CBORSequence)
+	de.off = off
 	if err != nil {
 		return nil, err
 	}
-	di := &diagnose{d, &bytes.Buffer{}, opts}
+
+	di := &diagnose{
+		dm: dm, d: de, w: &bytes.Buffer{},
+		byteStringEncoding:      dm.opts.ByteStringEncoding,
+		byteStringHexWhitespace: dm.opts.ByteStringHexWhitespace,
+		byteStringText:          dm.opts.ByteStringText,
+		byteStringEmbeddedCBOR:  dm.opts.ByteStringEmbeddedCBOR,
+		cborSequence:            dm.opts.CBORSequence,
+		indicateFloatPrecision:  dm.opts.IndicateFloatPrecision,
+	}
 	return di, nil
 }
 
-func (di *diagnose) diag() ([]byte, error) {
+var defaultDiagMode, _ = DiagOptions{}.diagMode()
+
+// Diagnose returns extended diagnostic notation (EDN) of CBOR data items
+// using the default diagnostic mode.
+//
+// Refer to https://www.rfc-editor.org/rfc/rfc8949.html#name-diagnostic-notation.
+func Diagnose(data []byte) (string, error) {
+	return defaultDiagMode.Diagnose(data)
+}
+
+type diagnose struct {
+	dm                      *diagMode
+	d                       *decoder
+	w                       *bytes.Buffer
+	byteStringEncoding      ByteStringEncoding
+	byteStringHexWhitespace bool
+	byteStringText          bool
+	byteStringEmbeddedCBOR  bool
+	cborSequence            bool
+	indicateFloatPrecision  bool
+}
+
+func (di *diagnose) diag() (string, error) {
 	if err := di.value(); err != nil {
-		return nil, err
+		return "", err
 	}
 
 	// CBOR Sequence
@@ -98,24 +190,24 @@ func (di *diagnose) diag() ([]byte, error) {
 		switch err := di.valid(); err {
 		case nil:
 			if err = di.writeString(", "); err != nil {
-				return di.w.Bytes(), err
+				return di.w.String(), err
 			}
 			if err = di.value(); err != nil {
-				return di.w.Bytes(), err
+				return di.w.String(), err
 			}
 
 		case io.EOF:
-			return di.w.Bytes(), nil
+			return di.w.String(), nil
 
 		default:
-			return di.w.Bytes(), err
+			return di.w.String(), err
 		}
 	}
 }
 
 func (di *diagnose) valid() error {
 	off := di.d.off
-	err := di.d.valid(di.opts.CBORSequence)
+	err := di.d.valid(di.cborSequence)
 	di.d.off = off
 	return err
 }
@@ -362,12 +454,12 @@ var rawBase32HexEncoding = base32.HexEncoding.WithPadding(base32.NoPadding)
 
 func (di *diagnose) encodeByteString(val []byte) error {
 	if len(val) > 0 {
-		if di.opts.ByteStringText && utf8.Valid(val) {
+		if di.byteStringText && utf8.Valid(val) {
 			return di.encodeTextString(string(val), '\'')
 		}
 
-		if di.opts.ByteStringEmbeddedCBOR {
-			if di2, err := di.opts.new(val); err == nil {
+		if di.byteStringEmbeddedCBOR {
+			if di2, err := di.dm.diagnose(val); err == nil {
 				if data, err := di2.diag(); err == nil {
 					if err := di.writeString("<<"); err != nil {
 						return err
@@ -381,14 +473,14 @@ func (di *diagnose) encodeByteString(val []byte) error {
 		}
 	}
 
-	switch di.opts.ByteStringEncoding {
-	case "base16":
+	switch di.byteStringEncoding {
+	case ByteStringBase16Encoding:
 		if err := di.writeString("h'"); err != nil {
 			return err
 		}
 
 		encoder := hex.NewEncoder(di.w)
-		if di.opts.ByteStringHexWhitespace {
+		if di.byteStringHexWhitespace {
 			for i, b := range val {
 				if i > 0 {
 					if err := di.writeByte(' '); err != nil {
@@ -406,7 +498,7 @@ func (di *diagnose) encodeByteString(val []byte) error {
 		}
 		return di.writeByte('\'')
 
-	case "base32":
+	case ByteStringBase32Encoding:
 		if err := di.writeString("b32'"); err != nil {
 			return err
 		}
@@ -417,7 +509,7 @@ func (di *diagnose) encodeByteString(val []byte) error {
 		encoder.Close()
 		return di.writeByte('\'')
 
-	case "base32hex":
+	case ByteStringBase32HexEncoding:
 		if err := di.writeString("h32'"); err != nil {
 			return err
 		}
@@ -428,7 +520,7 @@ func (di *diagnose) encodeByteString(val []byte) error {
 		encoder.Close()
 		return di.writeByte('\'')
 
-	case "base64":
+	case ByteStringBase64Encoding:
 		if err := di.writeString("b64'"); err != nil {
 			return err
 		}
@@ -440,7 +532,7 @@ func (di *diagnose) encodeByteString(val []byte) error {
 		return di.writeByte('\'')
 
 	default:
-		return errors.New("cbor: invalid ByteStringEncoding option " + strconv.Quote(di.opts.ByteStringEncoding))
+		return di.byteStringEncoding.valid()
 	}
 }
 
@@ -588,7 +680,7 @@ func (di *diagnose) encodeFloat(ai byte, val uint64) error {
 		return err
 	}
 
-	if di.opts.IndicateFloatPrecision {
+	if di.indicateFloatPrecision {
 		switch ai {
 		case 25:
 			return di.writeString("_1")
