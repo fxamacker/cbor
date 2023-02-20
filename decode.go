@@ -579,7 +579,7 @@ type decoder struct {
 }
 
 // value decodes CBOR data item into the value pointed to by v.
-// If CBOR data item fails to be decode into v,
+// If CBOR data item fails to be decoded into v,
 // error is returned and offset is moved to the next CBOR data item.
 // Precondition: d.data contains at least one valid CBOR data item.
 func (d *decoder) value(v interface{}) error {
