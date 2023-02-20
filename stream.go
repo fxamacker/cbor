@@ -16,7 +16,6 @@ type Decoder struct {
 	buf       []byte
 	off       int // next read offset in buf
 	bytesRead int
-	readError error
 }
 
 // NewDecoder returns a new decoder that reads and decodes from r using
@@ -27,67 +26,38 @@ func NewDecoder(r io.Reader) *Decoder {
 
 // Decode reads CBOR value and decodes it into the value pointed to by v.
 func (dec *Decoder) Decode(v interface{}) error {
-	if len(dec.buf) == dec.off {
-		if n, err := dec.read(); n == 0 {
-			return err
-		}
+	_, err := dec.readNext()
+	if err != nil {
+		// Return validation error or read error.
+		return err
 	}
-	for {
-		dec.d.reset(dec.buf[dec.off:])
-		err := dec.d.value(v, true)
-		// Increment dec.off even if err is not nil because
-		// dec.d.off points to the next CBOR data item if current
-		// CBOR data item is valid but failed to be decoded into v.
-		// This allows next CBOR data item to be decoded in next
-		// call to this function.
-		dec.off += dec.d.off
-		dec.bytesRead += dec.d.off
-		if err == nil {
-			return nil
-		}
-		if err != io.ErrUnexpectedEOF {
-			return err
-		}
-		// Need to read more data.
-		if n, err := dec.read(); n == 0 {
-			if err == io.EOF {
-				err = io.ErrUnexpectedEOF
-			}
-			return err
-		}
-	}
+
+	dec.d.reset(dec.buf[dec.off:])
+	err = dec.d.value(v)
+
+	// Increment dec.off even if decoding err is not nil because
+	// dec.d.off points to the next CBOR data item if current
+	// CBOR data item is valid but failed to be decoded into v.
+	// This allows next CBOR data item to be decoded in next
+	// call to this function.
+	dec.off += dec.d.off
+	dec.bytesRead += dec.d.off
+
+	return err
 }
 
 // Skip skips to the next CBOR data item (if there is any),
 // otherwise it returns error such as io.EOF, io.UnexpectedEOF, etc.
 func (dec *Decoder) Skip() error {
-	if len(dec.buf) == dec.off {
-		if n, err := dec.read(); n == 0 {
-			return err
-		}
+	n, err := dec.readNext()
+	if err != nil {
+		// Return validation error or read error.
+		return err
 	}
-	for {
-		dec.d.reset(dec.buf[dec.off:])
-		err := dec.d.valid(true)
-		if err == nil {
-			// Only increment dec.off if current CBOR data item is valid.
-			// If current data item is incomplete (io.ErrUnexpectedEOF),
-			// we want to try again after reading more data.
-			dec.off += dec.d.off
-			dec.bytesRead += dec.d.off
-			return nil
-		}
-		if err != io.ErrUnexpectedEOF {
-			return err
-		}
-		// Need to read more data.
-		if n, err := dec.read(); n == 0 {
-			if err == io.EOF {
-				err = io.ErrUnexpectedEOF
-			}
-			return err
-		}
-	}
+
+	dec.off += n
+	dec.bytesRead += n
+	return nil
 }
 
 // NumBytesRead returns the number of bytes read.
@@ -95,11 +65,66 @@ func (dec *Decoder) NumBytesRead() int {
 	return dec.bytesRead
 }
 
-func (dec *Decoder) read() (int, error) {
-	if dec.readError != nil {
-		return 0, dec.readError
-	}
+// readNext() reads next CBOR data item from Reader to buffer.
+// It returns the size of next CBOR data item.
+// It also returns validation error or read error if any.
+func (dec *Decoder) readNext() (int, error) {
+	var readErr error
+	var validErr error
 
+	for {
+		// Process any unread data in dec.buf.
+		if dec.off < len(dec.buf) {
+			dec.d.reset(dec.buf[dec.off:])
+			off := dec.off // Save offset before data validation
+			validErr = dec.d.valid(true)
+			dec.off = off // Restore offset
+
+			if validErr == nil {
+				return dec.d.off, nil
+			}
+
+			if validErr != io.ErrUnexpectedEOF {
+				return 0, validErr
+			}
+
+			// Process last read error on io.ErrUnexpectedEOF.
+			if readErr != nil {
+				if readErr == io.EOF {
+					// current CBOR data item is incomplete.
+					return 0, io.ErrUnexpectedEOF
+				}
+				return 0, readErr
+			}
+		}
+
+		// More data is needed and there was no read error.
+		var n int
+		for n == 0 {
+			n, readErr = dec.read()
+			if n == 0 && readErr != nil {
+				// No more data can be read and read error is encountered.
+				// At this point, validErr is either nil or io.ErrUnexpectedEOF.
+				if readErr == io.EOF {
+					if validErr == io.ErrUnexpectedEOF {
+						// current CBOR data item is incomplete.
+						return 0, io.ErrUnexpectedEOF
+					}
+				}
+				return 0, readErr
+			}
+		}
+
+		// At this point, dec.buf contains new data from last read (n > 0).
+	}
+}
+
+// read() reads data from Reader to buffer.
+// It returns number of bytes read and any read error encountered.
+// Postconditions:
+// - dec.buf contains previously unread data and new data.
+// - dec.off is 0.
+func (dec *Decoder) read() (int, error) {
 	// Grow buf if needed.
 	const minRead = 512
 	if cap(dec.buf)-len(dec.buf)+dec.off < minRead {
@@ -116,7 +141,6 @@ func (dec *Decoder) read() (int, error) {
 	// Read from reader and reslice buf.
 	n, err := dec.r.Read(dec.buf[len(dec.buf):cap(dec.buf)])
 	dec.buf = dec.buf[0 : len(dec.buf)+n]
-	dec.readError = err
 	return n, err
 }
 
