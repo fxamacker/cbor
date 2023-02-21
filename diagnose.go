@@ -114,49 +114,45 @@ func (opts DiagOptions) diagMode() (*diagMode, error) {
 		return nil, err
 	}
 
-	return &diagMode{&opts, decMode}, nil
+	return &diagMode{
+		byteStringEncoding:      opts.ByteStringEncoding,
+		byteStringHexWhitespace: opts.ByteStringHexWhitespace,
+		byteStringText:          opts.ByteStringText,
+		byteStringEmbeddedCBOR:  opts.ByteStringEmbeddedCBOR,
+		cborSequence:            opts.CBORSequence,
+		indicateFloatPrecision:  opts.IndicateFloatPrecision,
+		decMode:                 decMode,
+	}, nil
 }
 
 type diagMode struct {
-	opts    *DiagOptions
-	decMode *decMode
+	byteStringEncoding      ByteStringEncoding
+	byteStringHexWhitespace bool
+	byteStringText          bool
+	byteStringEmbeddedCBOR  bool
+	cborSequence            bool
+	indicateFloatPrecision  bool
+	decMode                 *decMode
 }
 
 // DiagOptions returns user specified options used to create this DiagMode.
 func (dm *diagMode) DiagOptions() DiagOptions {
-	return *dm.opts
+	return DiagOptions{
+		ByteStringEncoding:      dm.byteStringEncoding,
+		ByteStringHexWhitespace: dm.byteStringHexWhitespace,
+		ByteStringText:          dm.byteStringText,
+		ByteStringEmbeddedCBOR:  dm.byteStringEmbeddedCBOR,
+		CBORSequence:            dm.cborSequence,
+		IndicateFloatPrecision:  dm.indicateFloatPrecision,
+		MaxNestedLevels:         dm.decMode.maxNestedLevels,
+		MaxArrayElements:        dm.decMode.maxArrayElements,
+		MaxMapPairs:             dm.decMode.maxMapPairs,
+	}
 }
 
 // Diagnose returns extended diagnostic notation (EDN) of CBOR data items using the DiagMode.
 func (dm *diagMode) Diagnose(data []byte) (string, error) {
-	di, err := dm.diagnose(data)
-	if err != nil {
-		return "", err
-	}
-
-	return di.diag()
-}
-
-func (dm *diagMode) diagnose(data []byte) (*diagnose, error) {
-	de := &decoder{data: data, dm: dm.decMode}
-	off := de.off
-	err := de.valid(dm.opts.CBORSequence)
-	de.off = off
-	if err != nil {
-		return nil, err
-	}
-
-	di := &diagnose{
-		byteStringEncoding:      dm.opts.ByteStringEncoding,
-		byteStringHexWhitespace: dm.opts.ByteStringHexWhitespace,
-		byteStringText:          dm.opts.ByteStringText,
-		byteStringEmbeddedCBOR:  dm.opts.ByteStringEmbeddedCBOR,
-		cborSequence:            dm.opts.CBORSequence,
-		indicateFloatPrecision:  dm.opts.IndicateFloatPrecision,
-
-		dm: dm, d: de, w: &bytes.Buffer{},
-	}
-	return di, nil
+	return newDiagnose(data, dm.decMode, dm).diag()
 }
 
 var defaultDiagMode, _ = DiagOptions{}.diagMode()
@@ -170,30 +166,32 @@ func Diagnose(data []byte) (string, error) {
 }
 
 type diagnose struct {
-	byteStringEncoding      ByteStringEncoding
-	byteStringHexWhitespace bool
-	byteStringText          bool
-	byteStringEmbeddedCBOR  bool
-	cborSequence            bool
-	indicateFloatPrecision  bool
-	dm                      *diagMode
-	d                       *decoder
-	w                       *bytes.Buffer
+	dm *diagMode
+	d  *decoder
+	w  *bytes.Buffer
+}
+
+func newDiagnose(data []byte, decm *decMode, diagm *diagMode) *diagnose {
+	return &diagnose{
+		dm: diagm,
+		d:  &decoder{data: data, dm: decm},
+		w:  &bytes.Buffer{},
+	}
 }
 
 func (di *diagnose) diag() (string, error) {
-	if err := di.value(); err != nil {
-		return "", err
-	}
-
 	// CBOR Sequence
+	firstItem := true
 	for {
 		switch err := di.valid(); err {
 		case nil:
-			if err = di.writeString(", "); err != nil {
-				return di.w.String(), err
+			if !firstItem {
+				if err = di.writeString(", "); err != nil {
+					return di.w.String(), err
+				}
 			}
-			if err = di.value(); err != nil {
+			firstItem = false
+			if err = di.item(); err != nil {
 				return di.w.String(), err
 			}
 
@@ -208,12 +206,12 @@ func (di *diagnose) diag() (string, error) {
 
 func (di *diagnose) valid() error {
 	off := di.d.off
-	err := di.d.valid(di.cborSequence)
+	err := di.d.valid(di.dm.cborSequence)
 	di.d.off = off
 	return err
 }
 
-func (di *diagnose) value() error { //nolint:gocyclo
+func (di *diagnose) item() error { //nolint:gocyclo
 	initialByte := di.d.data[di.d.off]
 	switch initialByte {
 	case 0x5f, 0x7f: // indefinite byte string or UTF-8 text
@@ -231,7 +229,7 @@ func (di *diagnose) value() error { //nolint:gocyclo
 			}
 
 			i++
-			if err := di.value(); err != nil {
+			if err := di.item(); err != nil {
 				return err
 			}
 		}
@@ -253,7 +251,7 @@ func (di *diagnose) value() error { //nolint:gocyclo
 			}
 
 			i++
-			if err := di.value(); err != nil {
+			if err := di.item(); err != nil {
 				return err
 			}
 		}
@@ -276,7 +274,7 @@ func (di *diagnose) value() error { //nolint:gocyclo
 
 			i++
 			// key
-			if err := di.value(); err != nil {
+			if err := di.item(); err != nil {
 				return err
 			}
 
@@ -285,7 +283,7 @@ func (di *diagnose) value() error { //nolint:gocyclo
 			}
 
 			// value
-			if err := di.value(); err != nil {
+			if err := di.item(); err != nil {
 				return err
 			}
 		}
@@ -337,7 +335,7 @@ func (di *diagnose) value() error { //nolint:gocyclo
 					return err
 				}
 			}
-			if err := di.value(); err != nil {
+			if err := di.item(); err != nil {
 				return err
 			}
 		}
@@ -357,14 +355,14 @@ func (di *diagnose) value() error { //nolint:gocyclo
 				}
 			}
 			// key
-			if err := di.value(); err != nil {
+			if err := di.item(); err != nil {
 				return err
 			}
 			if err := di.writeString(": "); err != nil {
 				return err
 			}
 			// value
-			if err := di.value(); err != nil {
+			if err := di.item(); err != nil {
 				return err
 			}
 		}
@@ -392,7 +390,7 @@ func (di *diagnose) value() error { //nolint:gocyclo
 			if err := di.writeByte('('); err != nil {
 				return err
 			}
-			if err := di.value(); err != nil {
+			if err := di.item(); err != nil {
 				return err
 			}
 			return di.writeByte(')')
@@ -455,33 +453,32 @@ var rawBase32HexEncoding = base32.HexEncoding.WithPadding(base32.NoPadding)
 
 func (di *diagnose) encodeByteString(val []byte) error {
 	if len(val) > 0 {
-		if di.byteStringText && utf8.Valid(val) {
+		if di.dm.byteStringText && utf8.Valid(val) {
 			return di.encodeTextString(string(val), '\'')
 		}
 
-		if di.byteStringEmbeddedCBOR {
-			if di2, err := di.dm.diagnose(val); err == nil {
-				if str, err := di2.diag(); err == nil {
-					if err := di.writeString("<<"); err != nil {
-						return err
-					}
-					if err := di.writeString(str); err != nil {
-						return err
-					}
-					return di.writeString(">>")
+		if di.dm.byteStringEmbeddedCBOR {
+			di2 := newDiagnose(val, di.dm.decMode, di.dm)
+			if str, err := di2.diag(); err == nil {
+				if err := di.writeString("<<"); err != nil {
+					return err
 				}
+				if err := di.writeString(str); err != nil {
+					return err
+				}
+				return di.writeString(">>")
 			}
 		}
 	}
 
-	switch di.byteStringEncoding {
+	switch di.dm.byteStringEncoding {
 	case ByteStringBase16Encoding:
 		if err := di.writeString("h'"); err != nil {
 			return err
 		}
 
 		encoder := hex.NewEncoder(di.w)
-		if di.byteStringHexWhitespace {
+		if di.dm.byteStringHexWhitespace {
 			for i, b := range val {
 				if i > 0 {
 					if err := di.writeByte(' '); err != nil {
@@ -533,7 +530,7 @@ func (di *diagnose) encodeByteString(val []byte) error {
 		return di.writeByte('\'')
 
 	default:
-		return di.byteStringEncoding.valid()
+		return di.dm.byteStringEncoding.valid()
 	}
 }
 
@@ -681,7 +678,7 @@ func (di *diagnose) encodeFloat(ai byte, val uint64) error {
 		return err
 	}
 
-	if di.indicateFloatPrecision {
+	if di.dm.indicateFloatPrecision {
 		switch ai {
 		case 25:
 			return di.writeString("_1")
