@@ -4,9 +4,14 @@
 package cbor
 
 import (
+	"errors"
 	"io"
 	"math/big"
 )
+
+// ErrStreamClosed is the error indicating operations on a closed stream.
+// E.g. any call to encode after a call to Close will return ErrStreamClosed.
+var ErrStreamClosed = errors.New("cbor: operation on closed stream")
 
 // StreamEncoder provides low-level API for sequential encoding.
 //
@@ -17,6 +22,7 @@ import (
 // complete and well-formed.
 type StreamEncoder struct {
 	*Encoder
+	closed bool
 }
 
 // NewStreamEncoder returns a new StreamEncoder for sequential encoding.
@@ -31,26 +37,49 @@ func NewStreamEncoder(w io.Writer) *StreamEncoder {
 	}
 }
 
+// Close closes StreamEncoder and subsequence operations (except for Close)
+// will return ErrStreamClosed.
+func (se *StreamEncoder) Close() {
+	if se.closed {
+		return
+	}
+	putEncoderBuffer(se.Encoder.e)
+	se.Encoder = nil
+	se.closed = true
+}
+
 // Flush writes streamed data to underlying io.Writer.
 func (se *StreamEncoder) Flush() error {
+	if se.closed {
+		return ErrStreamClosed
+	}
 	_, err := se.Encoder.e.WriteTo(se.Encoder.w)
 	return err
 }
 
 // EncodeMapHead encodes CBOR map head of specified size.
 func (se *StreamEncoder) EncodeMapHead(size uint64) error {
+	if se.closed {
+		return ErrStreamClosed
+	}
 	encodeHead(se.Encoder.e, byte(cborTypeMap), size)
 	return nil
 }
 
 // EncodeArrayHead encodes CBOR array head of specified size.
 func (se *StreamEncoder) EncodeArrayHead(size uint64) error {
+	if se.closed {
+		return ErrStreamClosed
+	}
 	encodeHead(se.Encoder.e, byte(cborTypeArray), size)
 	return nil
 }
 
 // EncodeTagHead encodes CBOR tag head with num as tag number.
 func (se *StreamEncoder) EncodeTagHead(num uint64) error {
+	if se.closed {
+		return ErrStreamClosed
+	}
 	encodeHead(se.Encoder.e, byte(cborTypeTag), num)
 	return nil
 }
@@ -58,6 +87,9 @@ func (se *StreamEncoder) EncodeTagHead(num uint64) error {
 // EncodeRawBytes writes b to the underlying writer.
 // If b is an empty or nil byte slice, it is a no-op.
 func (se *StreamEncoder) EncodeRawBytes(b []byte) error {
+	if se.closed {
+		return ErrStreamClosed
+	}
 	if len(b) == 0 {
 		return nil
 	}
@@ -67,12 +99,18 @@ func (se *StreamEncoder) EncodeRawBytes(b []byte) error {
 
 // EncodeNil encodes CBOR nil.
 func (se *StreamEncoder) EncodeNil() error {
+	if se.closed {
+		return ErrStreamClosed
+	}
 	se.e.Write(cborNil)
 	return nil
 }
 
 // EncodeBool encodes bool as CBOR bool.
 func (se *StreamEncoder) EncodeBool(b bool) error {
+	if se.closed {
+		return ErrStreamClosed
+	}
 	bytes := cborTrue
 	if !b {
 		bytes = cborFalse
@@ -83,30 +121,45 @@ func (se *StreamEncoder) EncodeBool(b bool) error {
 
 // EncodeUint encodes uint as CBOR positive integer.
 func (se *StreamEncoder) EncodeUint(i uint) error {
+	if se.closed {
+		return ErrStreamClosed
+	}
 	encodeHead(se.e, byte(cborTypePositiveInt), uint64(i))
 	return nil
 }
 
 // EncodeUint8 encodes uint8 as CBOR positive integer.
 func (se *StreamEncoder) EncodeUint8(i uint8) error {
+	if se.closed {
+		return ErrStreamClosed
+	}
 	encodeHead(se.e, byte(cborTypePositiveInt), uint64(i))
 	return nil
 }
 
 // EncodeUint16 encodes uint16 as CBOR positive integer.
 func (se *StreamEncoder) EncodeUint16(i uint16) error {
+	if se.closed {
+		return ErrStreamClosed
+	}
 	encodeHead(se.e, byte(cborTypePositiveInt), uint64(i))
 	return nil
 }
 
 // EncodeUint32 encodes uint32 as CBOR positive integer.
 func (se *StreamEncoder) EncodeUint32(i uint32) error {
+	if se.closed {
+		return ErrStreamClosed
+	}
 	encodeHead(se.e, byte(cborTypePositiveInt), uint64(i))
 	return nil
 }
 
 // EncodeUint64 encodes uint64 as CBOR positive integer.
 func (se *StreamEncoder) EncodeUint64(i uint64) error {
+	if se.closed {
+		return ErrStreamClosed
+	}
 	encodeHead(se.e, byte(cborTypePositiveInt), i)
 	return nil
 }
@@ -133,6 +186,9 @@ func (se *StreamEncoder) EncodeInt32(i int32) error {
 
 // EncodeInt64 encodes int64 as CBOR positive or negtive integer.
 func (se *StreamEncoder) EncodeInt64(i int64) error {
+	if se.closed {
+		return ErrStreamClosed
+	}
 	t := cborTypePositiveInt
 	if i < 0 {
 		t = cborTypeNegativeInt
@@ -144,6 +200,9 @@ func (se *StreamEncoder) EncodeInt64(i int64) error {
 
 // EncodeBytes encodes byte slice as CBOR byte string.
 func (se *StreamEncoder) EncodeBytes(b []byte) error {
+	if se.closed {
+		return ErrStreamClosed
+	}
 	if b == nil {
 		se.e.Write(cborNil)
 		return nil
@@ -156,6 +215,9 @@ func (se *StreamEncoder) EncodeBytes(b []byte) error {
 
 // EncodeString encodes string as CBOR string.
 func (se *StreamEncoder) EncodeString(s string) error {
+	if se.closed {
+		return ErrStreamClosed
+	}
 	encodeHead(se.e, byte(cborTypeTextString), uint64(len(s)))
 	se.e.WriteString(s)
 	return nil
@@ -165,6 +227,9 @@ var bigOne = big.NewInt(1)
 
 // EncodeBigInt encodes big.Int as CBOR bignum (tag number 2 and 3).
 func (se *StreamEncoder) EncodeBigInt(v *big.Int) error {
+	if se.closed {
+		return ErrStreamClosed
+	}
 	if se.em.bigIntConvert == BigIntConvertShortest {
 		if v.IsUint64() {
 			encodeHead(se.e, byte(cborTypePositiveInt), v.Uint64())

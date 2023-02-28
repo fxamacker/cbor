@@ -5,6 +5,7 @@ package cbor
 
 import (
 	"bytes"
+	"errors"
 	"math/big"
 	"testing"
 )
@@ -36,6 +37,7 @@ func TestStreamEncodeMap(t *testing.T) {
 
 		var buf bytes.Buffer
 		se := NewStreamEncoder(&buf)
+		defer se.Close()
 
 		err := se.EncodeMapHead(2)
 		if err != nil {
@@ -117,6 +119,7 @@ func TestStreamEncodeMap(t *testing.T) {
 
 		var buf bytes.Buffer
 		se := em.NewStreamEncoder(&buf)
+		defer se.Close()
 
 		err = se.EncodeMapHead(2)
 		if err != nil {
@@ -183,6 +186,7 @@ func TestStreamEncodeArray(t *testing.T) {
 
 		var buf bytes.Buffer
 		se := NewStreamEncoder(&buf)
+		defer se.Close()
 
 		err := se.EncodeArrayHead(2)
 		if err != nil {
@@ -239,6 +243,7 @@ func TestStreamEncodeArray(t *testing.T) {
 
 		var buf bytes.Buffer
 		se := em.NewStreamEncoder(&buf)
+		defer se.Close()
 
 		err = se.EncodeArrayHead(2)
 		if err != nil {
@@ -290,6 +295,7 @@ func TestStreamEncodeTag(t *testing.T) {
 
 		var buf bytes.Buffer
 		se := NewStreamEncoder(&buf)
+		defer se.Close()
 
 		err := se.EncodeTagHead(128)
 		if err != nil {
@@ -346,6 +352,7 @@ func TestStreamEncodeTag(t *testing.T) {
 
 		var buf bytes.Buffer
 		se := em.NewStreamEncoder(&buf)
+		defer se.Close()
 
 		err = se.EncodeTagHead(128)
 		if err != nil {
@@ -383,6 +390,7 @@ func TestStreamEncodeNil(t *testing.T) {
 
 	var buf bytes.Buffer
 	se := NewStreamEncoder(&buf)
+	defer se.Close()
 
 	err := se.EncodeNil()
 	if err != nil {
@@ -416,6 +424,7 @@ func TestStreamEncodeRawBytes(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			se := NewStreamEncoder(&buf)
+			defer se.Close()
 
 			err := se.EncodeRawBytes(tc.value)
 			if err != nil {
@@ -450,6 +459,7 @@ func TestStreamEncodeBool(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			se := NewStreamEncoder(&buf)
+			defer se.Close()
 
 			err := se.EncodeBool(tc.value)
 			if err != nil {
@@ -488,6 +498,7 @@ func TestStreamEncodeUint(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			se := NewStreamEncoder(&buf)
+			defer se.Close()
 
 			err := se.EncodeUint(tc.value)
 			if err != nil {
@@ -524,6 +535,7 @@ func TestStreamEncodeUint8(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			se := NewStreamEncoder(&buf)
+			defer se.Close()
 
 			err := se.EncodeUint8(tc.value)
 			if err != nil {
@@ -560,6 +572,7 @@ func TestStreamEncodeUint16(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			se := NewStreamEncoder(&buf)
+			defer se.Close()
 
 			err := se.EncodeUint16(tc.value)
 			if err != nil {
@@ -597,6 +610,7 @@ func TestStreamEncodeUint32(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			se := NewStreamEncoder(&buf)
+			defer se.Close()
 
 			err := se.EncodeUint32(tc.value)
 			if err != nil {
@@ -635,6 +649,7 @@ func TestStreamEncodeUint64(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			se := NewStreamEncoder(&buf)
+			defer se.Close()
 
 			err := se.EncodeUint64(tc.value)
 			if err != nil {
@@ -683,6 +698,7 @@ func TestStreamEncodeInt(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			se := NewStreamEncoder(&buf)
+			defer se.Close()
 
 			err := se.EncodeInt(tc.value)
 			if err != nil {
@@ -722,6 +738,7 @@ func TestStreamEncodeInt8(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			se := NewStreamEncoder(&buf)
+			defer se.Close()
 
 			err := se.EncodeInt8(tc.value)
 			if err != nil {
@@ -764,6 +781,7 @@ func TestStreamEncodeInt16(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			se := NewStreamEncoder(&buf)
+			defer se.Close()
 
 			err := se.EncodeInt16(tc.value)
 			if err != nil {
@@ -809,6 +827,7 @@ func TestStreamEncodeInt32(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			se := NewStreamEncoder(&buf)
+			defer se.Close()
 
 			err := se.EncodeInt32(tc.value)
 			if err != nil {
@@ -857,6 +876,7 @@ func TestStreamEncodeInt64(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			se := NewStreamEncoder(&buf)
+			defer se.Close()
 
 			err := se.EncodeInt64(tc.value)
 			if err != nil {
@@ -899,6 +919,7 @@ func TestStreamEncodeBigIntConvertNone(t *testing.T) {
 
 			var buf bytes.Buffer
 			se := dm.NewStreamEncoder(&buf)
+			defer se.Close()
 
 			err := se.EncodeBigInt(tc.value)
 			if err != nil {
@@ -941,6 +962,7 @@ func TestStreamEncodeBigIntConvertShortest(t *testing.T) {
 
 			var buf bytes.Buffer
 			se := dm.NewStreamEncoder(&buf)
+			defer se.Close()
 
 			err := se.EncodeBigInt(tc.value)
 			if err != nil {
@@ -976,6 +998,7 @@ func TestStreamEncodeBytes(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			se := NewStreamEncoder(&buf)
+			defer se.Close()
 
 			err := se.EncodeBytes(tc.value)
 			if err != nil {
@@ -1010,6 +1033,7 @@ func TestStreamEncodeString(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			se := NewStreamEncoder(&buf)
+			defer se.Close()
 
 			err := se.EncodeString(tc.value)
 			if err != nil {
@@ -1026,4 +1050,115 @@ func TestStreamEncodeString(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStreamEncodeCloseError(t *testing.T) {
+	var buf bytes.Buffer
+	se := NewStreamEncoder(&buf)
+
+	se.Close()
+
+	var err error
+
+	err = se.EncodeMapHead(0)
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("EncodeMapHead() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	err = se.EncodeArrayHead(0)
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("EncodeArrayHead() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	err = se.EncodeTagHead(0)
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("EncodeTagHead() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	err = se.EncodeRawBytes(nil)
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("EncodeRawBytes() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	err = se.EncodeNil()
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("EncodeNil() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	err = se.EncodeBool(true)
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("EncodeBool() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	err = se.EncodeUint(0)
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("EncodeUint() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	err = se.EncodeUint8(0)
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("EncodeUint8() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	err = se.EncodeUint16(0)
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("EncodeUint16() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	err = se.EncodeUint32(0)
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("EncodeUint32() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	err = se.EncodeUint64(0)
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("EncodeUint64() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	err = se.EncodeInt(0)
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("EncodeInt() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	err = se.EncodeInt8(0)
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("EncodeInt8() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	err = se.EncodeInt16(0)
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("EncodeInt16() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	err = se.EncodeInt32(0)
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("EncodeInt32() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	err = se.EncodeInt64(0)
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("EncodeInt64() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	err = se.EncodeBytes(nil)
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("EncodeBytes() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	err = se.EncodeString("")
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("EncodeString() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	err = se.EncodeBigInt(bigOne)
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("EncodeBigInt() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	err = se.Flush()
+	if !errors.Is(err, ErrStreamClosed) {
+		t.Errorf("Flush() returned error %v, want %v", err, ErrStreamClosed)
+	}
+
+	se.Close() // Close on closed stream is no-op.
 }
