@@ -16,12 +16,10 @@ on:
     paths:
       - '**.go'
       - '**.mod'
-      - '**.yml'
   push:
     paths:
       - '**.go'
       - '**.mod'
-      - '**.yml'
     branches:
       - 'main'
       - 'master'
