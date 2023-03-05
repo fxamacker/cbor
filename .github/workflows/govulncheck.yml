@@ -14,12 +14,12 @@ on:
     - cron: '30 15 * * *'
   pull_request:
     paths:
-      - '**.go'
-      - '**.mod'
+      - '**'
+      - '!**.md'
   push:
     paths:
-      - '**.go'
-      - '**.mod'
+      - '**'
+      - '!**.md'
     branches:
       - 'main'
       - 'master'
@@ -29,7 +29,7 @@ on:
       - 'v*'
 
 jobs:
-  vulncheck:
+  Check:
     runs-on: ubuntu-latest
     permissions:
       # Grant permission to read content.
