@@ -69,7 +69,7 @@ jobs:
           fetch-depth: 1
 
       - name: Setup Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
