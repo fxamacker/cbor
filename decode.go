@@ -4,6 +4,7 @@
 package cbor
 
 import (
+	"bytes"
 	"encoding"
 	"encoding/binary"
 	"errors"
@@ -1837,6 +1838,7 @@ var (
 	typeTime              = reflect.TypeOf(time.Time{})
 	typeBigInt            = reflect.TypeOf(big.Int{})
 	typeUnmarshaler       = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
+	typeReaderFrom        = reflect.TypeOf((*io.ReaderFrom)(nil)).Elem()
 	typeBinaryUnmarshaler = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
 )
 
@@ -1941,6 +1943,16 @@ func fillFloat(t cborType, val float64, v reflect.Value) error {
 }
 
 func fillByteString(t cborType, val []byte, v reflect.Value) error {
+	if reflect.PtrTo(v.Type()).Implements(typeReaderFrom) {
+		if v.CanAddr() {
+			v = v.Addr()
+			if u, ok := v.Interface().(io.ReaderFrom); ok {
+				_, err := u.ReadFrom(bytes.NewBuffer(val))
+				return err
+			}
+		}
+		return errors.New("cbor: cannot set new value for " + v.Type().String())
+	}
 	if reflect.PtrTo(v.Type()).Implements(typeBinaryUnmarshaler) {
 		if v.CanAddr() {
 			v = v.Addr()

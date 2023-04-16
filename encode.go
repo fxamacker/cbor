@@ -1235,6 +1235,28 @@ func encodeBinaryMarshalerType(e *encoderBuffer, em *encMode, v reflect.Value) e
 	return nil
 }
 
+func encodeWriterToType(e *encoderBuffer, em *encMode, v reflect.Value) error {
+	vt := v.Type()
+	m, ok := v.Interface().(io.WriterTo)
+	if !ok {
+		pv := reflect.New(vt)
+		pv.Elem().Set(v)
+		m = pv.Interface().(io.WriterTo)
+	}
+	if b := em.encTagBytes(vt); b != nil {
+		e.Write(b)
+	}
+
+	lenData, err := m.WriteTo(io.Discard)
+	if err != nil {
+		return err
+	}
+
+	encodeHead(e, byte(cborTypeByteString), uint64(lenData))
+	_, err = m.WriteTo(e)
+	return err
+}
+
 func encodeMarshalerType(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	if em.tagsMd == TagsForbidden && v.Type() == typeRawTag {
 		return errors.New("cbor: cannot encode cbor.RawTag when TagsMd is TagsForbidden")
@@ -1316,6 +1338,7 @@ func encodeHead(e *encoderBuffer, t byte, n uint64) {
 var (
 	typeMarshaler       = reflect.TypeOf((*Marshaler)(nil)).Elem()
 	typeBinaryMarshaler = reflect.TypeOf((*encoding.BinaryMarshaler)(nil)).Elem()
+	typeWriterTo        = reflect.TypeOf((*io.WriterTo)(nil)).Elem()
 	typeRawMessage      = reflect.TypeOf(RawMessage(nil))
 	typeByteString      = reflect.TypeOf(ByteString(""))
 )
@@ -1341,6 +1364,9 @@ func getEncodeFuncInternal(t reflect.Type) (encodeFunc, isEmptyFunc) {
 	}
 	if reflect.PtrTo(t).Implements(typeMarshaler) {
 		return encodeMarshalerType, alwaysNotEmpty
+	}
+	if reflect.PtrTo(t).Implements(typeWriterTo) {
+		return encodeWriterToType, isEmptyWriterTo
 	}
 	if reflect.PtrTo(t).Implements(typeBinaryMarshaler) {
 		return encodeBinaryMarshalerType, isEmptyBinaryMarshaler
@@ -1504,6 +1530,17 @@ func isEmptyBinaryMarshaler(v reflect.Value) (bool, error) {
 		return false, err
 	}
 	return len(data) == 0, nil
+}
+
+func isEmptyWriterTo(v reflect.Value) (bool, error) {
+	m, ok := v.Interface().(io.WriterTo)
+	if !ok {
+		pv := reflect.New(v.Type())
+		pv.Elem().Set(v)
+		m = pv.Interface().(io.WriterTo)
+	}
+	lenData, err := m.WriteTo(io.Discard)
+	return lenData == 0, err
 }
 
 func cannotFitFloat32(f64 float64) bool {

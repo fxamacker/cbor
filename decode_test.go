@@ -5981,3 +5981,46 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 		})
 	}
 }
+
+type streamReaderWriter struct {
+	data byte
+}
+
+func (rw *streamReaderWriter) WriteTo(w io.Writer) (n int64, err error) {
+	if rw.data == 0 {
+		return 0, nil
+	}
+	written, err := w.Write([]byte{rw.data})
+	return int64(written), err
+}
+
+func (rw *streamReaderWriter) ReadFrom(r io.Reader) (n int64, err error) {
+	buf := make([]byte, 1)
+	read, _ := r.Read(buf)
+	if read > 0 {
+		rw.data = buf[0]
+	}
+	return int64(read), nil
+}
+
+func (rw *streamReaderWriter) MarshalBinary() (data []byte, err error) {
+	return []byte{rw.data * 2}, nil
+}
+
+func (rw *streamReaderWriter) UnmarshalBinary(data []byte) (err error) {
+	rw.data = data[0] * 2
+	return nil
+}
+
+func TestReaderWriter(t *testing.T) {
+	testCases := []roundTripTest{
+		{
+			name:         "WriteTo/ReadFrom should take precedence over Marshal/UnmarshalBinary",
+			obj:          streamReaderWriter{44},
+			wantCborData: []byte{0x41, 44},
+		},
+	}
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, testCases, em, dm)
+}

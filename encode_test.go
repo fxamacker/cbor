@@ -3699,3 +3699,26 @@ func TestMapWithSimpleValueKey(t *testing.T) {
 		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, encodedData, data)
 	}
 }
+
+func TestOmitEmptyForReaderWriter(t *testing.T) {
+	type T struct {
+		rw streamReaderWriter `cbor:"rw,omitempty"`
+	}
+
+	testCases := []roundTripTest{
+		{
+			"empty ReaderWriter",
+			streamReaderWriter{},
+			[]byte{0x40},
+		},
+		{
+			"empty struct containing empty streamReaderWriter",
+			T{rw: streamReaderWriter{}},
+			[]byte{0xa0},
+		},
+	}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, testCases, em, dm)
+}
