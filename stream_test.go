@@ -992,3 +992,56 @@ func (r *recoverableReader) Read(b []byte) (int, error) {
 	}
 	return r.nBytesReader.Read(b)
 }
+
+func TestDecoderRemainingBytes(t *testing.T) {
+	var buf bytes.Buffer
+
+	// Prepare test cbor bytes
+	encoder := NewEncoder(&buf)
+	if err := encoder.Encode("Item1"); err != nil {
+		t.Fatalf("Encode returned error %v", err)
+	}
+	if err := encoder.Encode(2); err != nil {
+		t.Fatalf("Encode returned error %v", err)
+	}
+
+	// Now write some data that is not CBOR to the end of the buffer
+	trailer := []byte("customContent")
+	buf.Write(trailer)
+
+	// Now read off one object
+	var obj1 string
+	decoder1 := NewDecoder(&buf)
+	if err := decoder1.Decode(&obj1); err != nil {
+		t.Fatalf("Decode returned error %v", err)
+	}
+	if obj1 != "Item1" {
+		t.Fatalf("Decode gave %v, want 'Item1'", obj1)
+	}
+
+	// Obtain the "remaining reader" which should point to the start of the second object
+	remainingReader1 := decoder1.RemainingBytes()
+
+	// This reader should be valid to pass to another decoder to read the second cbor object
+	// (although this is not the common use case)
+	// This also tests that the invalid bytes after the object do not cause issues with
+	// decoding the first object
+	var obj2 int
+	decoder2 := NewDecoder(remainingReader1)
+	if err := decoder2.Decode(&obj2); err != nil {
+		t.Fatalf("Decode returned error %v", err)
+	}
+	if obj2 != 2 {
+		t.Fatalf("Decode gave %v, want int(2)", obj2)
+	}
+
+	// Obtain another remaining reader which should point to the start of the non-cbor trailing bytes
+	remainingReader2 := decoder2.RemainingBytes()
+	gotTrailer, err := io.ReadAll(remainingReader2)
+	if err != nil {
+		t.Fatalf("RemainingBytes().Read returned error %v", err)
+	}
+	if !bytes.Equal(gotTrailer, trailer) {
+		t.Fatalf("RemainingBytes got %v, expected %v", gotTrailer, trailer)
+	}
+}
