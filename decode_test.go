@@ -5981,3 +5981,60 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 		})
 	}
 }
+
+func TestUnmarshalFirstNoTrailing(t *testing.T) {
+	for _, tc := range unmarshalTests {
+		var v interface{}
+		if rest, err := UnmarshalFirst(tc.cborData, &v); err != nil {
+			t.Errorf("UnmarshalFirst(0x%x) returned error %v", tc.cborData, err)
+		} else {
+			if len(rest) != 0 {
+				t.Errorf("UnmarshalFirst(0x%x) returned rest %x (want [])", tc.cborData, rest)
+			}
+			// Check the value as well, although this is covered by other tests
+			if tm, ok := tc.emptyInterfaceValue.(time.Time); ok {
+				if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
+					t.Errorf("UnmarshalFirst(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+				}
+			} else if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
+				t.Errorf("UnmarshalFirst(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+			}
+		}
+	}
+}
+
+func TestUnmarshalfirstTrailing(t *testing.T) {
+	// Random trailing data
+	trailingData := hexDecode("4a6b0f4718c73f391091ea1c")
+	for _, tc := range unmarshalTests {
+		data := make([]byte, 0, len(tc.cborData)+len(trailingData))
+		data = append(data, tc.cborData...)
+		data = append(data, trailingData...)
+		var v interface{}
+		if rest, err := UnmarshalFirst(data, &v); err != nil {
+			t.Errorf("UnmarshalFirst(0x%x) returned error %v", data, err)
+		} else {
+			if !bytes.Equal(trailingData, rest) {
+				t.Errorf("UnmarshalFirst(0x%x) returned rest %x (want %x)", data, rest, trailingData)
+			}
+			// Check the value as well, although this is covered by other tests
+			if tm, ok := tc.emptyInterfaceValue.(time.Time); ok {
+				if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
+					t.Errorf("UnmarshalFirst(0x%x) = %v (%T), want %v (%T)", data, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+				}
+			} else if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
+				t.Errorf("UnmarshalFirst(0x%x) = %v (%T), want %v (%T)", data, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+			}
+		}
+	}
+}
+
+func TestUnmarshalFirstInvalidItem(t *testing.T) {
+	// UnmarshalFirst should not return "rest" if the item was not well-formed
+	invalidCBOR := hexDecode("83FF20030102")
+	var v interface{}
+	rest, err := UnmarshalFirst(invalidCBOR, &v)
+	if rest != nil {
+		t.Errorf("UnmarshalFirst(0x%x) = (%x, %v), want (nil, err)", invalidCBOR, rest, err)
+	}
+}

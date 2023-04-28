@@ -211,6 +211,54 @@ func BenchmarkUnmarshal(b *testing.B) {
 	}
 }
 
+func BenchmarkUnmarshalFirst(b *testing.B) {
+	// Random trailing data
+	trailingData := hexDecode("4a6b0f4718c73f391091ea1c")
+	for _, bm := range decodeBenchmarks {
+		for _, t := range bm.decodeToTypes {
+			name := "CBOR " + bm.name + " to Go " + t.String()
+			if t.Kind() == reflect.Struct {
+				name = "CBOR " + bm.name + " to Go " + t.Kind().String()
+			}
+			data := make([]byte, 0, len(bm.cborData)+len(trailingData))
+			data = append(data, bm.cborData...)
+			data = append(data, trailingData...)
+			b.Run(name, func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					vPtr := reflect.New(t).Interface()
+					if _, err := UnmarshalFirst(data, vPtr); err != nil {
+						b.Fatal("UnmarshalFirst:", err)
+					}
+				}
+			})
+		}
+	}
+}
+
+func BenchmarkUnmarshalFirstViaDecoder(b *testing.B) {
+	// Random trailing data
+	trailingData := hexDecode("4a6b0f4718c73f391091ea1c")
+	for _, bm := range decodeBenchmarks {
+		for _, t := range bm.decodeToTypes {
+			name := "CBOR " + bm.name + " to Go " + t.String()
+			if t.Kind() == reflect.Struct {
+				name = "CBOR " + bm.name + " to Go " + t.Kind().String()
+			}
+			data := make([]byte, 0, len(bm.cborData)+len(trailingData))
+			data = append(data, bm.cborData...)
+			data = append(data, trailingData...)
+			b.Run(name, func(b *testing.B) {
+				for i := 0; i < b.N; i++ {
+					vPtr := reflect.New(t).Interface()
+					if err := NewDecoder(bytes.NewReader(data)).Decode(vPtr); err != nil {
+						b.Fatal("UnmarshalDecoder:", err)
+					}
+				}
+			})
+		}
+	}
+}
+
 func BenchmarkDecode(b *testing.B) {
 	for _, bm := range decodeBenchmarks {
 		for _, t := range bm.decodeToTypes {
