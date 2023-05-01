@@ -99,9 +99,30 @@ func Unmarshal(data []byte, v interface{}) error {
 	return defaultDecMode.Unmarshal(data, v)
 }
 
-// Valid checks whether the CBOR data is complete and well-formed.
+// Valid checks whether data is a well-formed encoded CBOR data item and
+// that it complies with default restrictions such as MaxNestedLevels,
+// MaxArrayElements, MaxMapPairs, etc.
+//
+// If there are any remaining bytes after the CBOR data item,
+// an ExtraneousDataError is returned.
+//
+// WARNING: Valid doesn't check if encoded CBOR data item is valid (i.e. validity)
+// and RFC 8949 distinctly defines what is "Valid" and what is "Well-formed".
+//
+// Deprecated: Valid is kept for compatibility and should not be used.
+// Use Wellformed instead because it has a more appropriate name.
 func Valid(data []byte) error {
 	return defaultDecMode.Valid(data)
+}
+
+// Wellformed checks whether data is a well-formed encoded CBOR data item and
+// that it complies with default restrictions such as MaxNestedLevels,
+// MaxArrayElements, MaxMapPairs, etc.
+//
+// If there are any remaining bytes after the CBOR data item,
+// an ExtraneousDataError is returned.
+func Wellformed(data []byte) error {
+	return defaultDecMode.Wellformed(data)
 }
 
 // Unmarshaler is the interface implemented by types that wish to unmarshal
@@ -499,10 +520,32 @@ type DecMode interface {
 	//
 	// See the documentation for Unmarshal for details.
 	Unmarshal(data []byte, v interface{}) error
-	// Valid checks whether the CBOR data is complete and well-formed.
+
+	// Valid checks whether data is a well-formed encoded CBOR data item and
+	// that it complies with configurable restrictions such as MaxNestedLevels,
+	// MaxArrayElements, MaxMapPairs, etc.
+	//
+	// If there are any remaining bytes after the CBOR data item,
+	// an ExtraneousDataError is returned.
+	//
+	// WARNING: Valid doesn't check if encoded CBOR data item is valid (i.e. validity)
+	// and RFC 8949 distinctly defines what is "Valid" and what is "Well-formed".
+	//
+	// Deprecated: Valid is kept for compatibility and should not be used.
+	// Use Wellformed instead because it has a more appropriate name.
 	Valid(data []byte) error
+
+	// Wellformed checks whether data is a well-formed encoded CBOR data item and
+	// that it complies with configurable restrictions such as MaxNestedLevels,
+	// MaxArrayElements, MaxMapPairs, etc.
+	//
+	// If there are any remaining bytes after the CBOR data item,
+	// an ExtraneousDataError is returned.
+	Wellformed(data []byte) error
+
 	// NewDecoder returns a new decoder that reads from r using dm DecMode.
 	NewDecoder(r io.Reader) *Decoder
+
 	// DecOptions returns user specified options used to create this DecMode.
 	DecOptions() DecOptions
 }
@@ -550,10 +593,10 @@ func (dm *decMode) DecOptions() DecOptions {
 func (dm *decMode) Unmarshal(data []byte, v interface{}) error {
 	d := decoder{data: data, dm: dm}
 
-	// check valid
-	off := d.off          // Save offset before data validation
-	err := d.valid(false) // don't allow any extra data after valid data item.
-	d.off = off           // Restore offset
+	// Check well-formedness.
+	off := d.off               // Save offset before data validation
+	err := d.wellformed(false) // don't allow any extra data after valid data item.
+	d.off = off                // Restore offset
 	if err != nil {
 		return err
 	}
@@ -561,10 +604,31 @@ func (dm *decMode) Unmarshal(data []byte, v interface{}) error {
 	return d.value(v)
 }
 
-// Valid checks whether the CBOR data is complete and well-formed.
+// Valid checks whether data is a well-formed encoded CBOR data item and
+// that it complies with configurable restrictions such as MaxNestedLevels,
+// MaxArrayElements, MaxMapPairs, etc.
+//
+// If there are any remaining bytes after the CBOR data item,
+// an ExtraneousDataError is returned.
+//
+// WARNING: Valid doesn't check if encoded CBOR data item is valid (i.e. validity)
+// and RFC 8949 distinctly defines what is "Valid" and what is "Well-formed".
+//
+// Deprecated: Valid is kept for compatibility and should not be used.
+// Use Wellformed instead because it has a more appropriate name.
 func (dm *decMode) Valid(data []byte) error {
+	return dm.Wellformed(data)
+}
+
+// Wellformed checks whether data is a well-formed encoded CBOR data item and
+// that it complies with configurable restrictions such as MaxNestedLevels,
+// MaxArrayElements, MaxMapPairs, etc.
+//
+// If there are any remaining bytes after the CBOR data item,
+// an ExtraneousDataError is returned.
+func (dm *decMode) Wellformed(data []byte) error {
 	d := decoder{data: data, dm: dm}
-	return d.valid(false)
+	return d.wellformed(false)
 }
 
 // NewDecoder returns a new decoder that reads from r using dm DecMode.
@@ -581,7 +645,7 @@ type decoder struct {
 // value decodes CBOR data item into the value pointed to by v.
 // If CBOR data item fails to be decoded into v,
 // error is returned and offset is moved to the next CBOR data item.
-// Precondition: d.data contains at least one valid CBOR data item.
+// Precondition: d.data contains at least one well-formed CBOR data item.
 func (d *decoder) value(v interface{}) error {
 	// v can't be nil, non-pointer, or nil pointer value.
 	if v == nil {
