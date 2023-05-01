@@ -780,3 +780,76 @@ func TestDiagnoseCBORSequences(t *testing.T) {
 		})
 	}
 }
+
+func TestDiagnoseTag(t *testing.T) {
+	testCases := []struct {
+		title       string
+		cbor        []byte
+		diag        string
+		opts        *DiagOptions
+		returnError bool
+	}{
+		{
+			"CBOR tag number 2 with not well-formed encoded CBOR data item",
+			hexDecode("c201"),
+			``,
+			&DiagOptions{},
+			true,
+		},
+		{
+			"CBOR tag number 3 with not well-formed encoded CBOR data item",
+			hexDecode("c301"),
+			``,
+			&DiagOptions{},
+			true,
+		},
+		{
+			"CBOR tag number 2 with well-formed encoded CBOR data item",
+			hexDecode("c240"),
+			`0`,
+			&DiagOptions{},
+			false,
+		},
+		{
+			"CBOR tag number 3 with well-formed encoded CBOR data item",
+			hexDecode("c340"),
+			`-1`, // -1 - n
+			&DiagOptions{},
+			false,
+		},
+		{
+			"CBOR tag number 2 with well-formed encoded CBOR data item",
+			hexDecode("c249010000000000000000"),
+			`18446744073709551616`,
+			&DiagOptions{},
+			false,
+		},
+		{
+			"CBOR tag number 3 with well-formed encoded CBOR data item",
+			hexDecode("c349010000000000000000"),
+			`-18446744073709551617`, // -1 - n
+			&DiagOptions{},
+			false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.title, func(t *testing.T) {
+			dm, err := tc.opts.DiagMode()
+			if err != nil {
+				t.Errorf("DiagMode() for 0x%x returned error %q", tc.cbor, err)
+			}
+
+			str, err := dm.Diagnose(tc.cbor)
+			if tc.returnError && err == nil {
+				t.Errorf("Diagnose(0x%x) returned error %q", tc.cbor, err)
+			} else if !tc.returnError && err != nil {
+				t.Errorf("Diagnose(0x%x) returned error %q", tc.cbor, err)
+			}
+
+			if str != tc.diag {
+				t.Errorf("Diagnose(0x%x) returned `%s`, want %s", tc.cbor, str, tc.diag)
+			}
+		})
+	}
+}

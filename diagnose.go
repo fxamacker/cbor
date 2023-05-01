@@ -183,7 +183,7 @@ func (di *diagnose) diag() (string, error) {
 	// CBOR Sequence
 	firstItem := true
 	for {
-		switch err := di.valid(); err {
+		switch err := di.wellformed(); err {
 		case nil:
 			if !firstItem {
 				if err = di.writeString(", "); err != nil {
@@ -204,9 +204,9 @@ func (di *diagnose) diag() (string, error) {
 	}
 }
 
-func (di *diagnose) valid() error {
+func (di *diagnose) wellformed() error {
 	off := di.d.off
-	err := di.d.valid(di.dm.cborSequence)
+	err := di.d.wellformed(di.dm.cborSequence)
 	di.d.off = off
 	return err
 }
@@ -372,11 +372,19 @@ func (di *diagnose) item() error { //nolint:gocyclo
 		_, _, tagNum := di.d.getHead()
 		switch tagNum {
 		case 2:
+			if di.d.nextCBORType() != cborTypeByteString {
+				return errors.New("cbor: tag number 2 must be followed by byte string, got " + t.String())
+			}
+
 			b := di.d.parseByteString()
 			bi := new(big.Int).SetBytes(b)
 			return di.writeString(bi.String())
 
 		case 3:
+			if di.d.nextCBORType() != cborTypeByteString {
+				return errors.New("cbor: tag number 3 must be followed by byte string, got " + t.String())
+			}
+
 			b := di.d.parseByteString()
 			bi := new(big.Int).SetBytes(b)
 			bi.Add(bi, big.NewInt(1))
