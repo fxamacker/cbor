@@ -536,6 +536,14 @@ type DecMode interface {
 	// See the documentation for Unmarshal for details.
 	Unmarshal(data []byte, v interface{}) error
 
+	// UnmarshalFirst parses the first CBOR data item into the value pointed to by v
+	// using the decoding mode.  Any remaining bytes are returned in rest.
+	//
+	// If v is nil, not a pointer, or a nil pointer, UnmarshalFirst returns an error.
+	//
+	// See the documentation for Unmarshal for details.
+	UnmarshalFirst(data []byte, v interface{}) (rest []byte, err error)
+
 	// Valid checks whether data is a well-formed encoded CBOR data item and
 	// that it complies with configurable restrictions such as MaxNestedLevels,
 	// MaxArrayElements, MaxMapPairs, etc.
