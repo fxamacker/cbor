@@ -6034,7 +6034,7 @@ func TestUnmarshalFirstInvalidItem(t *testing.T) {
 	invalidCBOR := hexDecode("83FF20030102")
 	var v interface{}
 	rest, err := UnmarshalFirst(invalidCBOR, &v)
-	if rest != nil {
+	if rest != nil || err == nil {
 		t.Errorf("UnmarshalFirst(0x%x) = (%x, %v), want (nil, err)", invalidCBOR, rest, err)
 	}
 }
