@@ -95,8 +95,23 @@ import (
 //
 // Unmarshal supports CBOR tag 55799 (self-describe CBOR), tag 0 and 1 (time),
 // and tag 2 and 3 (bignum).
+//
+// Unmarshal returns ExtraneousDataError error (without decoding into v)
+// if there are any remaining bytes following the first valid CBOR data item.
+// See UnmarshalFirst, if you want to unmarshal only the first
+// CBOR data item without ExtraneousDataError caused by remaining bytes.
 func Unmarshal(data []byte, v interface{}) error {
 	return defaultDecMode.Unmarshal(data, v)
+}
+
+// UnmarshalFirst parses the first CBOR data item into the value pointed to by v
+// using default decoding options.  Any remaining bytes are returned in rest.
+//
+// If v is nil, not a pointer, or a nil pointer, UnmarshalFirst returns an error.
+//
+// See the documentation for Unmarshal for details.
+func UnmarshalFirst(data []byte, v interface{}) (rest []byte, err error) {
+	return defaultDecMode.UnmarshalFirst(data, v)
 }
 
 // Valid checks whether data is a well-formed encoded CBOR data item and
@@ -602,6 +617,35 @@ func (dm *decMode) Unmarshal(data []byte, v interface{}) error {
 	}
 
 	return d.value(v)
+}
+
+// UnmarshalFirst parses the first CBOR data item into the value pointed to by v
+// using dm decoding mode.  Any remaining bytes are returned in rest.
+//
+// If v is nil, not a pointer, or a nil pointer, UnmarshalFirst returns an error.
+//
+// See the documentation for Unmarshal for details.
+func (dm *decMode) UnmarshalFirst(data []byte, v interface{}) (rest []byte, err error) {
+	d := decoder{data: data, dm: dm}
+
+	// check well-formedness.
+	off := d.off             // Save offset before data validation
+	err = d.wellformed(true) // allow extra data after well-formed data item
+	d.off = off              // Restore offset
+
+	// If it is well-formed, parse the value. This is structured like this to allow
+	// better test coverage
+	if err == nil {
+		err = d.value(v)
+	}
+
+	// If either wellformed or value returned an error, do not return rest bytes
+	if err != nil {
+		return nil, err
+	}
+
+	// Return the rest of the data slice (which might be len 0)
+	return d.data[d.off:], nil
 }
 
 // Valid checks whether data is a well-formed encoded CBOR data item and
