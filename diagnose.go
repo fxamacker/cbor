@@ -665,22 +665,19 @@ func (di *diagnose) encodeFloat(ai byte, val uint64) error {
 			return di.writeString("-Infinity")
 		}
 	}
-
-	// See https://github.com/golang/go/blob/4df10fba1687a6d4f51d7238a403f8f2298f6a16/src/encoding/json/encode.go#L585
-	fmt := byte('f')
-	if abs := math.Abs(f64); abs != 0 {
-		if abs < 1e-6 || abs >= 1e21 {
-			fmt = 'e'
-		}
-	}
-	b := strconv.AppendFloat(nil, f64, fmt, -1, 64)
-	if fmt == 'e' {
+	// Use ES6 number to string conversion which should match most JSON generators.
+	// Inspired by https://github.com/golang/go/blob/4df10fba1687a6d4f51d7238a403f8f2298f6a16/src/encoding/json/encode.go#L585
+	b := make([]byte, 0, 32)
+	if abs := math.Abs(f64); abs != 0 && (abs < 1e-6 || abs >= 1e21) {
+		b = strconv.AppendFloat(b, f64, 'e', -1, 64)
 		// clean up e-09 to e-9
 		n := len(b)
-		if n >= 4 && b[n-4] == 'e' && b[n-3] == '-' && b[n-2] == '0' {
-			b[n-2] = b[n-1]
-			b = b[:n-1]
+		if n >= 4 && string(b[n-4:n-1]) == "e-0" {
+			b = append(b[:n-2], b[n-1])
 		}
+	} else {
+		b = strconv.AppendFloat(b, f64, 'f', -1, 64)
+	}
 	}
 
 	// add decimal point and trailing zero if needed
