@@ -512,6 +512,24 @@ func TestDiagnoseByteString(t *testing.T) {
 				CBORSequence: true,
 			},
 		},
+		{
+			"indefinite length byte string with no chunks",
+			hexDecode("5fff"),
+			`''_`,
+			&DiagOptions{},
+		},
+		{
+			"indefinite length byte string with a empty byte string",
+			hexDecode("5f40ff"),
+			`(_ h'')`, // RFC 8949, Section 8.1 says `(_ '')` but it looks wrong and conflicts with Appendix A.
+			&DiagOptions{},
+		},
+		{
+			"indefinite length byte string with two empty byte string",
+			hexDecode("5f4040ff"),
+			`(_ h'', h'')`,
+			&DiagOptions{},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -546,6 +564,16 @@ func TestDiagnoseByteString(t *testing.T) {
 		if err == nil {
 			t.Errorf("Diagnose(0x%x) didn't return error", cborData)
 		} else if !strings.Contains(err.Error(), `extraneous data`) {
+			t.Errorf("Diagnose(0x%x) returned error %q", cborData, err)
+		}
+	})
+
+	t.Run("invalid indefinite length byte string", func(t *testing.T) {
+		cborData := hexDecode("5f4060ff")
+		_, err := Diagnose(cborData)
+		if err == nil {
+			t.Errorf("Diagnose(0x%x) didn't return error", cborData)
+		} else if !strings.Contains(err.Error(), `wrong element type`) {
 			t.Errorf("Diagnose(0x%x) returned error %q", cborData, err)
 		}
 	})
@@ -622,6 +650,24 @@ func TestDiagnoseTextString(t *testing.T) {
 				ByteStringText: true,
 			},
 		},
+		{
+			"indefinite length text string with no chunks",
+			hexDecode("7fff"),
+			`""_`,
+			&DiagOptions{},
+		},
+		{
+			"indefinite length text string with a empty text string",
+			hexDecode("7f60ff"),
+			`(_ "")`,
+			&DiagOptions{},
+		},
+		{
+			"indefinite length text string with two empty text string",
+			hexDecode("7f6060ff"),
+			`(_ "", "")`,
+			&DiagOptions{},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -639,6 +685,16 @@ func TestDiagnoseTextString(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("invalid indefinite length text string", func(t *testing.T) {
+		cborData := hexDecode("7f6040ff")
+		_, err := Diagnose(cborData)
+		if err == nil {
+			t.Errorf("Diagnose(0x%x) didn't return error", cborData)
+		} else if !strings.Contains(err.Error(), `wrong element type`) {
+			t.Errorf("Diagnose(0x%x) returned error %q", cborData, err)
+		}
+	})
 }
 
 func TestDiagnoseFloatingPointNumber(t *testing.T) {

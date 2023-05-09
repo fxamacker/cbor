@@ -214,8 +214,18 @@ func (di *diagnose) wellformed() error {
 func (di *diagnose) item() error { //nolint:gocyclo
 	initialByte := di.d.data[di.d.off]
 	switch initialByte {
-	case 0x5f, 0x7f: // indefinite byte string or UTF-8 text
+	case 0x5f, 0x7f: // indefinite-length byte/text string
 		di.d.off++
+		if di.d.data[di.d.off] == 0xff {
+			di.d.off++
+			switch initialByte {
+			case 0x5f: // indefinite-length bytes
+				return di.writeString(`''_`)
+			case 0x7f: // indefinite-length UTF-8 text
+				return di.writeString(`""_`)
+			}
+		}
+
 		if err := di.writeString("(_ "); err != nil {
 			return err
 		}
@@ -229,6 +239,7 @@ func (di *diagnose) item() error { //nolint:gocyclo
 			}
 
 			i++
+			// wellformedIndefiniteString() already checked that the next item is a byte/text string.
 			if err := di.item(); err != nil {
 				return err
 			}
@@ -236,7 +247,7 @@ func (di *diagnose) item() error { //nolint:gocyclo
 
 		return di.writeByte(')')
 
-	case 0x9f: // indefinite array
+	case 0x9f: // indefinite-length array
 		di.d.off++
 		if err := di.writeString("[_ "); err != nil {
 			return err
@@ -258,7 +269,7 @@ func (di *diagnose) item() error { //nolint:gocyclo
 
 		return di.writeByte(']')
 
-	case 0xbf: // indefinite map
+	case 0xbf: // indefinite-length map
 		di.d.off++
 		if err := di.writeString("{_ "); err != nil {
 			return err
@@ -372,8 +383,8 @@ func (di *diagnose) item() error { //nolint:gocyclo
 		_, _, tagNum := di.d.getHead()
 		switch tagNum {
 		case 2:
-			if di.d.nextCBORType() != cborTypeByteString {
-				return errors.New("cbor: tag number 2 must be followed by byte string, got " + t.String())
+			if nt := di.d.nextCBORType(); nt != cborTypeByteString {
+				return errors.New("cbor: tag number 2 must be followed by byte string, got " + nt.String())
 			}
 
 			b := di.d.parseByteString()
@@ -381,8 +392,8 @@ func (di *diagnose) item() error { //nolint:gocyclo
 			return di.writeString(bi.String())
 
 		case 3:
-			if di.d.nextCBORType() != cborTypeByteString {
-				return errors.New("cbor: tag number 3 must be followed by byte string, got " + t.String())
+			if nt := di.d.nextCBORType(); nt != cborTypeByteString {
+				return errors.New("cbor: tag number 3 must be followed by byte string, got " + nt.String())
 			}
 
 			b := di.d.parseByteString()
