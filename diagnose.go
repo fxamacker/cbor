@@ -75,9 +75,9 @@ type DiagOptions struct {
 	// otherwise, it returns an error if there are more bytes after the first CBOR.
 	CBORSequence bool
 
-	// IndicateFloatPrecision specifies appending a suffix to indicate float precision.
+	// FloatPrecisionIndicator specifies appending a suffix to indicate float precision.
 	// Refer to https://www.rfc-editor.org/rfc/rfc8949.html#name-encoding-indicators.
-	IndicateFloatPrecision bool
+	FloatPrecisionIndicator bool
 
 	// MaxNestedLevels specifies the max nested levels allowed for any combination of CBOR array, maps, and tags.
 	// Default is 32 levels and it can be set to [4, 65535]. Note that higher maximum levels of nesting can
@@ -120,7 +120,7 @@ func (opts DiagOptions) diagMode() (*diagMode, error) {
 		byteStringText:          opts.ByteStringText,
 		byteStringEmbeddedCBOR:  opts.ByteStringEmbeddedCBOR,
 		cborSequence:            opts.CBORSequence,
-		indicateFloatPrecision:  opts.IndicateFloatPrecision,
+		floatPrecisionIndicator: opts.FloatPrecisionIndicator,
 		decMode:                 decMode,
 	}, nil
 }
@@ -131,7 +131,7 @@ type diagMode struct {
 	byteStringText          bool
 	byteStringEmbeddedCBOR  bool
 	cborSequence            bool
-	indicateFloatPrecision  bool
+	floatPrecisionIndicator bool
 	decMode                 *decMode
 }
 
@@ -143,7 +143,7 @@ func (dm *diagMode) DiagOptions() DiagOptions {
 		ByteStringText:          dm.byteStringText,
 		ByteStringEmbeddedCBOR:  dm.byteStringEmbeddedCBOR,
 		CBORSequence:            dm.cborSequence,
-		IndicateFloatPrecision:  dm.indicateFloatPrecision,
+		FloatPrecisionIndicator: dm.floatPrecisionIndicator,
 		MaxNestedLevels:         dm.decMode.maxNestedLevels,
 		MaxArrayElements:        dm.decMode.maxArrayElements,
 		MaxMapPairs:             dm.decMode.maxMapPairs,
@@ -694,7 +694,7 @@ func (di *diagnose) encodeFloat(ai byte, val uint64) error {
 		return err
 	}
 
-	if di.dm.indicateFloatPrecision {
+	if di.dm.floatPrecisionIndicator {
 		switch ai {
 		case 25:
 			return di.writeString("_1")

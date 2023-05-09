@@ -745,59 +745,59 @@ func TestDiagnoseFloatingPointNumber(t *testing.T) {
 		opts  *DiagOptions
 	}{
 		{
-			"float16 without IndicateFloatPrecision option",
+			"float16 without FloatPrecisionIndicator option",
 			hexDecode("f93e00"),
 			`1.5`,
 			&DiagOptions{
-				IndicateFloatPrecision: false,
+				FloatPrecisionIndicator: false,
 			},
 		},
 		{
-			"float16 with IndicateFloatPrecision option",
+			"float16 with FloatPrecisionIndicator option",
 			hexDecode("f93e00"),
 			`1.5_1`,
 			&DiagOptions{
-				IndicateFloatPrecision: true,
+				FloatPrecisionIndicator: true,
 			},
 		},
 		{
-			"float32 without IndicateFloatPrecision option",
+			"float32 without FloatPrecisionIndicator option",
 			hexDecode("fa47c35000"),
 			`100000.0`,
 			&DiagOptions{
-				IndicateFloatPrecision: false,
+				FloatPrecisionIndicator: false,
 			},
 		},
 		{
-			"float32 with IndicateFloatPrecision option",
+			"float32 with FloatPrecisionIndicator option",
 			hexDecode("fa47c35000"),
 			`100000.0_2`,
 			&DiagOptions{
-				IndicateFloatPrecision: true,
+				FloatPrecisionIndicator: true,
 			},
 		},
 		{
-			"float64 without IndicateFloatPrecision option",
+			"float64 without FloatPrecisionIndicator option",
 			hexDecode("fbc010666666666666"),
 			`-4.1`,
 			&DiagOptions{
-				IndicateFloatPrecision: false,
+				FloatPrecisionIndicator: false,
 			},
 		},
 		{
-			"float64 with IndicateFloatPrecision option",
+			"float64 with FloatPrecisionIndicator option",
 			hexDecode("fbc010666666666666"),
 			`-4.1_3`,
 			&DiagOptions{
-				IndicateFloatPrecision: true,
+				FloatPrecisionIndicator: true,
 			},
 		},
 		{
-			"with IndicateFloatPrecision option",
+			"with FloatPrecisionIndicator option",
 			hexDecode("c1fb41d452d9ec200000"),
 			`1(1363896240.5_3)`,
 			&DiagOptions{
-				IndicateFloatPrecision: true,
+				FloatPrecisionIndicator: true,
 			},
 		},
 	}
