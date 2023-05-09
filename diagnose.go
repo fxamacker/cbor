@@ -678,7 +678,6 @@ func (di *diagnose) encodeFloat(ai byte, val uint64) error {
 	} else {
 		b = strconv.AppendFloat(b, f64, 'f', -1, 64)
 	}
-	}
 
 	// add decimal point and trailing zero if needed
 	if bytes.IndexByte(b, '.') < 0 {
