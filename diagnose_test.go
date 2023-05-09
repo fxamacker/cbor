@@ -610,14 +610,14 @@ func TestDiagnoseTextString(t *testing.T) {
 				ByteStringText: true,
 			},
 		},
-		{
-			"invalid UTF-8 text in text string",
-			hexDecode("6d68656c6c6fffeee4bda0e5a5bd"),
-			`"hello\u00ff\u00ee\u4f60\u597d"`,
-			&DiagOptions{
-				ByteStringText: true,
-			},
-		},
+		// {
+		// 	"invalid UTF-8 text in text string",
+		// 	hexDecode("6d68656c6c6fffeee4bda0e5a5bd"),
+		// 	`"hello\u00ff\u00ee\u4f60\u597d"`,
+		// 	&DiagOptions{
+		// 		ByteStringText: true,
+		// 	},
+		// },
 		{
 			"valid grapheme cluster text in byte string",
 			hexDecode("583448656c6c6f2c2027e29da4efb88fe2808df09f94a5270ae4bda0e5a5bdefbc8c22f09fa791e2808df09fa49de2808df09fa79122"),
@@ -642,14 +642,14 @@ func TestDiagnoseTextString(t *testing.T) {
 				ByteStringText: true,
 			},
 		},
-		{
-			"invalid grapheme cluster text in text string",
-			hexDecode("783448656c6c6feeff27e29da4efb88fe2808df09f94a5270de4bda0e5a5bdefbc8c22f09fa791e2808df09fa49de2808df09fa79122"),
-			`"Hello\u00ee\u00ff'\u2764\ufe0f\u200d\ud83d\udd25'\r\u4f60\u597d\uff0c\"\ud83e\uddd1\u200d\ud83e\udd1d\u200d\ud83e\uddd1\""`,
-			&DiagOptions{
-				ByteStringText: true,
-			},
-		},
+		// {
+		// 	"invalid grapheme cluster text in text string",
+		// 	hexDecode("783448656c6c6feeff27e29da4efb88fe2808df09f94a5270de4bda0e5a5bdefbc8c22f09fa791e2808df09fa49de2808df09fa79122"),
+		// 	`"Hello\u00ee\u00ff'\u2764\ufe0f\u200d\ud83d\udd25'\r\u4f60\u597d\uff0c\"\ud83e\uddd1\u200d\ud83e\udd1d\u200d\ud83e\uddd1\""`,
+		// 	&DiagOptions{
+		// 		ByteStringText: true,
+		// 	},
+		// },
 		{
 			"indefinite length text string with no chunks",
 			hexDecode("7fff"),
@@ -685,16 +685,56 @@ func TestDiagnoseTextString(t *testing.T) {
 			}
 		})
 	}
+}
 
-	t.Run("invalid indefinite length text string", func(t *testing.T) {
-		cborData := hexDecode("7f6040ff")
-		_, err := Diagnose(cborData)
-		if err == nil {
-			t.Errorf("Diagnose(0x%x) didn't return error", cborData)
-		} else if !strings.Contains(err.Error(), `wrong element type`) {
-			t.Errorf("Diagnose(0x%x) returned error %q", cborData, err)
-		}
-	})
+func TestDiagnoseInvalidTextString(t *testing.T) {
+	testCases := []struct {
+		title        string
+		cbor         []byte
+		wantErrorMsg string
+		opts         *DiagOptions
+	}{
+		{
+			"invalid UTF-8 text in text string",
+			hexDecode("6d68656c6c6fffeee4bda0e5a5bd"),
+			"invalid UTF-8 string",
+			&DiagOptions{
+				ByteStringText: true,
+			},
+		},
+		{
+			"invalid grapheme cluster text in text string",
+			hexDecode("783448656c6c6feeff27e29da4efb88fe2808df09f94a5270de4bda0e5a5bdefbc8c22f09fa791e2808df09fa49de2808df09fa79122"),
+			"invalid UTF-8 string",
+			&DiagOptions{
+				ByteStringText: true,
+			},
+		},
+		{
+			"invalid indefinite length text string",
+			hexDecode("7f6040ff"),
+			`wrong element type`,
+			&DiagOptions{
+				ByteStringText: true,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.title, func(t *testing.T) {
+			dm, err := tc.opts.DiagMode()
+			if err != nil {
+				t.Errorf("DiagMode() for 0x%x returned error %q", tc.cbor, err)
+			}
+
+			_, err = dm.Diagnose(tc.cbor)
+			if err == nil {
+				t.Errorf("Diagnose(0x%x) didn't return error", tc.cbor)
+			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+				t.Errorf("Diagnose(0x%x) returned error %q", tc.cbor, err)
+			}
+		})
+	}
 }
 
 func TestDiagnoseFloatingPointNumber(t *testing.T) {

@@ -599,9 +599,10 @@ func (di *diagnose) encodeTextString(val string, quote byte) error {
 		c, size := utf8.DecodeRuneInString(val[i:])
 		switch {
 		case c == utf8.RuneError:
-			if err := di.writeU16(rune(val[i])); err != nil {
-				return err
-			}
+			// if err := di.writeU16(rune(val[i])); err != nil {
+			// 	return err
+			// }
+			return &SemanticError{"cbor: invalid UTF-8 string"}
 
 		case c < utf16SurrSelf:
 			if err := di.writeU16(c); err != nil {
