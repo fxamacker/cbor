@@ -4,6 +4,7 @@
 package cbor
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 	"testing"
@@ -349,6 +350,19 @@ func TestDiagnosticNotationExamples(t *testing.T) {
 			} else if str != tc.diag {
 				t.Errorf("Diagnostic(0x%x) returned `%s`, want `%s`", tc.cbor, str, tc.diag)
 			}
+
+			str, rest, err := DiagnoseFirst(tc.cbor)
+			if err != nil {
+				t.Errorf("Diagnostic(0x%x) returned error %q", tc.cbor, err)
+			} else if str != tc.diag {
+				t.Errorf("Diagnostic(0x%x) returned `%s`, want `%s`", tc.cbor, str, tc.diag)
+			}
+
+			if rest == nil {
+				t.Errorf("Diagnostic(0x%x) returned nil rest", tc.cbor)
+			} else if len(rest) != 0 {
+				t.Errorf("Diagnostic(0x%x) returned non-empty rest '%x'", tc.cbor, rest)
+			}
 		})
 	}
 }
@@ -498,7 +512,7 @@ func TestDiagnoseByteString(t *testing.T) {
 		{
 			"with ByteStringEmbeddedCBOR and without CBORSequence option",
 			hexDecode("4563666F6FF6"),
-			`h'63666f6ff6'`,
+			`<<"foo", null>>`,
 			&DiagOptions{
 				ByteStringEmbeddedCBOR: true,
 				CBORSequence:           false,
@@ -814,6 +828,69 @@ func TestDiagnoseFloatingPointNumber(t *testing.T) {
 				t.Errorf("Diagnose(0x%x) returned error %q", tc.cbor, err)
 			} else if str != tc.diag {
 				t.Errorf("Diagnose(0x%x) returned `%s`, want %s", tc.cbor, str, tc.diag)
+			}
+		})
+	}
+}
+
+func TestDiagnoseFirst(t *testing.T) {
+	testCases := []struct {
+		title        string
+		cbor         []byte
+		diag         string
+		wantRest     []byte
+		wantErrorMsg string
+	}{
+		{
+			"with no trailing data",
+			hexDecode("f93e00"),
+			`1.5`,
+			[]byte{},
+			"",
+		},
+		{
+			"with CBOR Sequences",
+			hexDecode("f93e0064494554464401020304"),
+			`1.5`,
+			hexDecode("64494554464401020304"),
+			"",
+		},
+		{
+			"with invalid CBOR trailing data",
+			hexDecode("f93e00ff494554464401020304"),
+			`1.5`,
+			hexDecode("ff494554464401020304"),
+			"",
+		},
+		{
+			"with invalid CBOR data",
+			hexDecode("f93e"),
+			``,
+			nil,
+			"unexpected EOF",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.title, func(t *testing.T) {
+			str, rest, err := DiagnoseFirst(tc.cbor)
+			if str != tc.diag {
+				t.Errorf("DiagnoseFirst(0x%x) returned `%s`, want %s", tc.cbor, str, tc.diag)
+			}
+
+			if bytes.Equal(rest, tc.wantRest) == false {
+				if str != tc.diag {
+					t.Errorf("DiagnoseFirst(0x%x) returned rest `%x`, want rest %x", tc.cbor, rest, tc.wantRest)
+				}
+			}
+
+			switch {
+			case tc.wantErrorMsg == "" && err != nil:
+				t.Errorf("DiagnoseFirst(0x%x) returned error %q", tc.cbor, err)
+			case tc.wantErrorMsg != "" && err == nil:
+				t.Errorf("DiagnoseFirst(0x%x) returned nil error, want error %q", tc.cbor, err)
+			case tc.wantErrorMsg != "" && !strings.Contains(err.Error(), tc.wantErrorMsg):
+				t.Errorf("DiagnoseFirst(0x%x) returned error %q, want error %q", tc.cbor, err, tc.wantErrorMsg)
 			}
 		})
 	}

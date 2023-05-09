@@ -152,7 +152,12 @@ func (dm *diagMode) DiagOptions() DiagOptions {
 
 // Diagnose returns extended diagnostic notation (EDN) of CBOR data items using the DiagMode.
 func (dm *diagMode) Diagnose(data []byte) (string, error) {
-	return newDiagnose(data, dm.decMode, dm).diag()
+	return newDiagnose(data, dm.decMode, dm).diag(dm.cborSequence)
+}
+
+// Diagnose returns extended diagnostic notation (EDN) of the first CBOR data item using the DiagMode. Any remaining bytes are returned in rest.
+func (dm *diagMode) DiagnoseFirst(data []byte) (string, []byte, error) {
+	return newDiagnose(data, dm.decMode, dm).diagFirst()
 }
 
 var defaultDiagMode, _ = DiagOptions{}.diagMode()
@@ -163,6 +168,11 @@ var defaultDiagMode, _ = DiagOptions{}.diagMode()
 // Refer to https://www.rfc-editor.org/rfc/rfc8949.html#name-diagnostic-notation.
 func Diagnose(data []byte) (string, error) {
 	return defaultDiagMode.Diagnose(data)
+}
+
+// Diagnose returns extended diagnostic notation (EDN) of the first CBOR data item using the DiagMode. Any remaining bytes are returned in rest.
+func DiagnoseFirst(data []byte) (string, []byte, error) {
+	return defaultDiagMode.DiagnoseFirst(data)
 }
 
 type diagnose struct {
@@ -179,11 +189,11 @@ func newDiagnose(data []byte, decm *decMode, diagm *diagMode) *diagnose {
 	}
 }
 
-func (di *diagnose) diag() (string, error) {
+func (di *diagnose) diag(cborSequence bool) (string, error) {
 	// CBOR Sequence
 	firstItem := true
 	for {
-		switch err := di.wellformed(); err {
+		switch err := di.wellformed(cborSequence); err {
 		case nil:
 			if !firstItem {
 				if err = di.writeString(", "); err != nil {
@@ -204,9 +214,23 @@ func (di *diagnose) diag() (string, error) {
 	}
 }
 
-func (di *diagnose) wellformed() error {
+func (di *diagnose) diagFirst() (string, []byte, error) {
+	err := di.wellformed(true)
+	if err == nil {
+		err = di.item()
+	}
+
+	if err == nil {
+		// Return EDN and the rest of the data slice (which might be len 0)
+		return di.w.String(), di.d.data[di.d.off:], nil
+	}
+
+	return di.w.String(), nil, err
+}
+
+func (di *diagnose) wellformed(allowExtraData bool) error {
 	off := di.d.off
-	err := di.d.wellformed(di.dm.cborSequence)
+	err := di.d.wellformed(allowExtraData)
 	di.d.off = off
 	return err
 }
@@ -219,9 +243,11 @@ func (di *diagnose) item() error { //nolint:gocyclo
 		if di.d.data[di.d.off] == 0xff {
 			di.d.off++
 			switch initialByte {
-			case 0x5f: // indefinite-length bytes
+			case 0x5f:
+				// indefinite-length bytes with no chunks.
 				return di.writeString(`''_`)
-			case 0x7f: // indefinite-length UTF-8 text
+			case 0x7f:
+				// indefinite-length text with no chunks.
 				return di.writeString(`""_`)
 			}
 		}
@@ -478,7 +504,8 @@ func (di *diagnose) encodeByteString(val []byte) error {
 
 		if di.dm.byteStringEmbeddedCBOR {
 			di2 := newDiagnose(val, di.dm.decMode, di.dm)
-			if str, err := di2.diag(); err == nil {
+			// should always notating embedded CBOR sequence.
+			if str, err := di2.diag(true); err == nil {
 				if err := di.writeString("<<"); err != nil {
 					return err
 				}
