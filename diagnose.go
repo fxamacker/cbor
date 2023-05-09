@@ -23,6 +23,10 @@ import (
 type DiagMode interface {
 	// Diagnose returns extended diagnostic notation (EDN) of CBOR data items using this DiagMode.
 	Diagnose([]byte) (string, error)
+
+	// DiagnoseFirst returns extended diagnostic notation (EDN) of the first CBOR data item using the DiagMode. Any remaining bytes are returned in rest.
+	DiagnoseFirst([]byte) (string, []byte, error)
+
 	// DiagOptions returns user specified options used to create this DiagMode.
 	DiagOptions() DiagOptions
 }
@@ -155,7 +159,7 @@ func (dm *diagMode) Diagnose(data []byte) (string, error) {
 	return newDiagnose(data, dm.decMode, dm).diag(dm.cborSequence)
 }
 
-// Diagnose returns extended diagnostic notation (EDN) of the first CBOR data item using the DiagMode. Any remaining bytes are returned in rest.
+// DiagnoseFirst returns extended diagnostic notation (EDN) of the first CBOR data item using the DiagMode. Any remaining bytes are returned in rest.
 func (dm *diagMode) DiagnoseFirst(data []byte) (string, []byte, error) {
 	return newDiagnose(data, dm.decMode, dm).diagFirst()
 }
