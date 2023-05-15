@@ -10,24 +10,26 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor)
 [![](https://img.shields.io/badge/go-%3E%3D%201.12-blue)](#cbor-library-installation)
 
-[__fxamacker/cbor__](https://github.com/fxamacker/cbor) is a modern [CBOR](https://tools.ietf.org/html/rfc8949) codec in [Go](https://golang.org).  CBOR is an [Internet Standard](https://en.wikipedia.org/wiki/Internet_Standard) data format designed to be relevant for decades.  This is a compact, fast, and secure alternative to `encoding/json` and `encoding/gob`.
+[__fxamacker/cbor__](https://github.com/fxamacker/cbor) is a [CBOR](https://tools.ietf.org/html/rfc8949) codec in full compliance with [IETF RFC 8949 (STD 94)](https://www.rfc-editor.org/info/std94). This codec also supports [CBOR Sequences](https://www.rfc-editor.org/rfc/rfc8742.html) (IETF RFC 8742).
+
+This codec is a compact, deterministic, and secure alternative to [Go's](https://golang.org) `encoding/json`, `encoding/gob`, and others.  It's fast despite avoiding use of Go's `unsafe` package.  It's very fast and memory efficient at rejecting malformed CBOR data.
+
+API is designed to be safe, efficient, and easy for concurrent use.  API is mostly same as `encoding/json` plus extra functions for immutable encoding and decoding modes (with custom settings) which simplify concurrent use.
 
 Features include `keyasint` and `toarray` struct tags for more compact CBOR encoding with less programming effort.
 
-API is designed to be safe, fast, and easy for concurrent use.  Immutable encoding and decoding modes can be reused concurrently after being created at startup from CBOR options.
-
-This CBOR codec supports CBOR tags, duplicate map key detection, float64→32→16, and Go struct tags (`toarray`, `keyasint`, `omitempty`).  API is close to `encoding/json` plus predefined CBOR options like Core Deterministic Encoding, Preferred Serialization, CTAP2, etc.
+Other features include: CBOR tags, duplicate map key detection, float64→32→16, and Go struct tags (`toarray`, `keyasint`, `omitempty`).  Predefined CBOR options include Core Deterministic Encoding, Preferred Serialization, CTAP2, Canonical CBOR, etc.
 
 Install with `go get github.com/fxamacker/cbor/v2` and `import "github.com/fxamacker/cbor/v2"`.  
-See [Quick Start](#quick-start) to save time.
+See [Quick Start 🔖](#quick-start) to save time.
 
 ## Who uses fxamacker/cbor
 
 `fxamacker/cbor` is used by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, ConsenSys, Dapper Labs, Duo Labs (cisco), EdgeX Foundry, F5, Fraunhofer-AISEC, Mozilla, National Cybersecurity Agency of France (govt), Netherlands (govt), Oasis Labs, Smallstep, Tailscale, Taurus SA, Teleport, TIBCO, and others.
 
-Github reports [1750+ repositories](https://github.com/fxamacker/cbor/network/dependents?package_id=UGFja2FnZS0yMjcwNDY1OTQ4) depend on fxamacker/cbor/v2. Additional 150+ repos are using version 1.x (please upgrade to v2).
+Github reports [2000+ repositories](https://github.com/fxamacker/cbor/network/dependents?package_id=UGFja2FnZS0yMjcwNDY1OTQ4) depend on fxamacker/cbor/v2. Additional 190+ repos are using version 1.x (please upgrade to v2).
 
-A security assessment [viewable online](https://github.com/veraison/go-cose/blob/v1.0.0-rc.1/reports/NCC_Microsoft-go-cose-Report_2022-05-26_v1.0.pdf) (prepared by NCC Group for Microsoft) includes a subset of fxamacker/cbor in its scope.
+fxamacker/cbor passed multiple confidential security assessments.  A [nonconfidential security assessment](https://github.com/veraison/go-cose/blob/v1.0.0-rc.1/reports/NCC_Microsoft-go-cose-Report_2022-05-26_v1.0.pdf) (prepared by NCC Group for Microsoft Corporation) includes a subset of fxamacker/cbor v2.4.0 in its scope.
 
 <!--
 ## What is CBOR?
@@ -49,7 +51,7 @@ fxamacker/cbor balances competing factors such as speed, size, safety, usability
 
 - Security features include the option to detect duplicate map keys and options to set various max limits. And it's designed to make concurrent use of CBOR options easy and free from side-effects.  
 
-- To prevent crashes, it has been fuzz-tested since before release 1.0 and code coverage is kept above 98%.
+- To prevent crashes, it has been fuzz-tested since before release 1.0 and code coverage is kept above 96%.
 
 - For portability and safety, it avoids using `unsafe`, which makes it portable and protected by Go1's compatibility guidelines.  
 
@@ -1044,7 +1046,7 @@ See [Benchmarks for fxamacker/cbor](CBOR_BENCHMARKS.md).
 
 __Over 375 tests__ must pass on 4 architectures before tagging a release.  They include all RFC 7049 and RFC 8949 examples, bugs found by fuzzing, maliciously crafted CBOR data, and over 87 tests with malformed data.  There's some overlap in the tests but it isn't a high priority to trim tests.
 
-__Code coverage__ must not fall below 95% when tagging a release.  Code coverage is above 98% (`go test -cover`) for cbor v2.3 which is among the highest for libraries (in Go) of this type.
+__Code coverage__ must not fall below 95% when tagging a release.  Code coverage is above 96% (`go test -cover`) for cbor v2.5 which is among the highest for codecs written in Go.
 
 __Coverage-guided fuzzing__ must pass 1+ billion execs using a large corpus before tagging a release.  Fuzzing is usually continued after the release is tagged and is manually stopped after reaching 1-3 billion execs.  Fuzzing uses a customized version of [dvyukov/go-fuzz](https://github.com/dvyukov/go-fuzz).
 
@@ -1103,7 +1105,7 @@ __Words of encouragement and support__
 
 
 ## License 
-Copyright © 2019-2022 [Faye Amacker](https://github.com/fxamacker).  
+Copyright © 2019-2023 [Faye Amacker](https://github.com/fxamacker).  
 
 fxamacker/cbor is licensed under the MIT License.  See [LICENSE](LICENSE) for the full license text.  
 
