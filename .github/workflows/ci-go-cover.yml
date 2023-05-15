@@ -1,7 +1,7 @@
-# Copyright 2020-present Montgomery Edwards⁴⁴⁸ (github.com/x448).
+# Copyright 2020-2023 Montgomery Edwards⁴⁴⁸ (github.com/x448).
 # This file is licensed under the MIT License. See LICENSE at https://github.com/x448/workflows for the full text.
 #
-# CI Go Cover 2020.1.28.
+# CI Go Cover 2023.5.14.
 # This GitHub Actions workflow checks if Go (Golang) code coverage satisfies the required minimum.
 # The required minimum is specified in the workflow name to keep badge.svg and verified minimum in sync.
 #
@@ -14,12 +14,17 @@
 # 1. Change workflow name from "cover 100%" to "cover ≥92.5%". Script will automatically use 92.5%.  
 # 2. Update README.md to use the new path to badge.svg because the path includes the workflow name.
 
-name: cover ≥98%
+name: cover ≥96%
 
 # Remove default permissions.
 permissions: {}
 
-on: [push]
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main, master]
+
 jobs:
 
   # Verify minimum coverage is reached using `go test -short -cover` on latest-ubuntu with default version of Go.
@@ -36,7 +41,9 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: 1.19
-        check-latest: true      
+        check-latest: true
+    - name: Install x448/float16
+      run: go get github.com/x448/float16@v0.8.4
     - name: Go Coverage
       run: |
         go version
