@@ -6,6 +6,7 @@ package cbor
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -448,82 +449,51 @@ func TestDiagnoseByteString(t *testing.T) {
 			},
 		},
 		{
-			"without ByteStringEmbeddedCBOR and CBORSequence option",
+			"without ByteStringEmbeddedCBOR",
 			hexDecode("4101"),
 			`h'01'`,
 			&DiagOptions{
 				ByteStringEmbeddedCBOR: false,
-				CBORSequence:           false,
 			},
 		},
 		{
-			"with ByteStringEmbeddedCBOR and CBORSequence option",
+			"with ByteStringEmbeddedCBOR",
 			hexDecode("4101"),
 			`<<1>>`,
 			&DiagOptions{
 				ByteStringEmbeddedCBOR: true,
-				CBORSequence:           true,
 			},
 		},
 		{
-			"without ByteStringEmbeddedCBOR and CBORSequence option",
+			"multi CBOR items without ByteStringEmbeddedCBOR",
 			hexDecode("420102"),
 			`h'0102'`,
 			&DiagOptions{
 				ByteStringEmbeddedCBOR: false,
-				CBORSequence:           false,
 			},
 		},
 		{
-			"with ByteStringEmbeddedCBOR and CBORSequence option",
+			"multi CBOR items with ByteStringEmbeddedCBOR",
 			hexDecode("420102"),
 			`<<1, 2>>`,
 			&DiagOptions{
 				ByteStringEmbeddedCBOR: true,
-				CBORSequence:           true,
 			},
 		},
 		{
-			"with CBORSequence option",
-			hexDecode("0102"),
-			`1, 2`,
-			&DiagOptions{
-				CBORSequence: true,
-			},
-		},
-		{
-			"with ByteStringEmbeddedCBOR and CBORSequence option",
+			"multi CBOR items with ByteStringEmbeddedCBOR",
 			hexDecode("4563666F6FF6"),
 			`h'63666f6ff6'`,
 			&DiagOptions{
 				ByteStringEmbeddedCBOR: false,
-				CBORSequence:           false,
 			},
 		},
 		{
-			"with ByteStringEmbeddedCBOR and CBORSequence option",
+			"multi CBOR items with ByteStringEmbeddedCBOR",
 			hexDecode("4563666F6FF6"),
 			`<<"foo", null>>`,
 			&DiagOptions{
 				ByteStringEmbeddedCBOR: true,
-				CBORSequence:           true,
-			},
-		},
-		{
-			"with ByteStringEmbeddedCBOR and without CBORSequence option",
-			hexDecode("4563666F6FF6"),
-			`<<"foo", null>>`,
-			&DiagOptions{
-				ByteStringEmbeddedCBOR: true,
-				CBORSequence:           false,
-			},
-		},
-		{
-			"with CBORSequence option",
-			hexDecode("63666F6FF6"),
-			`"foo", null`,
-			&DiagOptions{
-				CBORSequence: true,
 			},
 		},
 		{
@@ -561,36 +531,6 @@ func TestDiagnoseByteString(t *testing.T) {
 			}
 		})
 	}
-
-	t.Run("invalid encoding", func(t *testing.T) {
-		opts := &DiagOptions{
-			ByteStringEncoding: ByteStringBase64Encoding + 1,
-		}
-		_, err := opts.DiagMode()
-		if err == nil {
-			t.Errorf("DiagMode() with invalid ByteStringEncoding option didn't return error")
-		}
-	})
-
-	t.Run("without CBORSequence option", func(t *testing.T) {
-		cborData := hexDecode("63666F6FF6")
-		_, err := Diagnose(cborData)
-		if err == nil {
-			t.Errorf("Diagnose(0x%x) didn't return error", cborData)
-		} else if !strings.Contains(err.Error(), `extraneous data`) {
-			t.Errorf("Diagnose(0x%x) returned error %q", cborData, err)
-		}
-	})
-
-	t.Run("invalid indefinite length byte string", func(t *testing.T) {
-		cborData := hexDecode("5f4060ff")
-		_, err := Diagnose(cborData)
-		if err == nil {
-			t.Errorf("Diagnose(0x%x) didn't return error", cborData)
-		} else if !strings.Contains(err.Error(), `wrong element type`) {
-			t.Errorf("Diagnose(0x%x) returned error %q", cborData, err)
-		}
-	})
 }
 
 func TestDiagnoseTextString(t *testing.T) {
@@ -600,6 +540,24 @@ func TestDiagnoseTextString(t *testing.T) {
 		diag  string
 		opts  *DiagOptions
 	}{
+		{
+			"\t",
+			hexDecode("6109"),
+			`"\t"`,
+			&DiagOptions{},
+		},
+		{
+			"\r",
+			hexDecode("610d"),
+			`"\r"`,
+			&DiagOptions{},
+		},
+		{
+			"other ascii",
+			hexDecode("611b"),
+			`"\u001b"`,
+			&DiagOptions{},
+		},
 		{
 			"valid UTF-8 text in byte string",
 			hexDecode("4d68656c6c6f2c20e4bda0e5a5bd"),
@@ -923,6 +881,24 @@ func TestDiagnoseCBORSequences(t *testing.T) {
 			false,
 		},
 		{
+			"CBOR Sequences with CBORSequence option",
+			hexDecode("0102"),
+			`1, 2`,
+			&DiagOptions{
+				CBORSequence: true,
+			},
+			false,
+		},
+		{
+			"CBOR Sequences with CBORSequence option",
+			hexDecode("63666F6FF6"),
+			`"foo", null`,
+			&DiagOptions{
+				CBORSequence: true,
+			},
+			false,
+		},
+		{
 			"partial/incomplete CBOR Sequences",
 			hexDecode("f93e00644945544644010203"),
 			`1.5, "IETF"`,
@@ -1024,5 +1000,82 @@ func TestDiagnoseTag(t *testing.T) {
 				t.Errorf("Diagnose(0x%x) returned `%s`, want %s", tc.cbor, str, tc.diag)
 			}
 		})
+	}
+}
+
+func TestDiagnoseOptions(t *testing.T) {
+	opts := DiagOptions{
+		ByteStringEncoding:      ByteStringBase32Encoding,
+		ByteStringHexWhitespace: true,
+		ByteStringText:          false,
+		ByteStringEmbeddedCBOR:  true,
+		CBORSequence:            false,
+		FloatPrecisionIndicator: true,
+		MaxNestedLevels:         100,
+		MaxArrayElements:        101,
+		MaxMapPairs:             102,
+	}
+	dm, err := opts.DiagMode()
+	if err != nil {
+		t.Errorf("DiagMode() returned an error %v", err)
+	}
+	opts2 := dm.DiagOptions()
+	if !reflect.DeepEqual(opts, opts2) {
+		t.Errorf("DiagOptions() returned wrong options %v, want %v", opts2, opts)
+	}
+
+	opts = DiagOptions{
+		ByteStringEncoding:      ByteStringBase64Encoding,
+		ByteStringHexWhitespace: false,
+		ByteStringText:          true,
+		ByteStringEmbeddedCBOR:  false,
+		CBORSequence:            true,
+		FloatPrecisionIndicator: false,
+		MaxNestedLevels:         100,
+		MaxArrayElements:        101,
+		MaxMapPairs:             102,
+	}
+	dm, err = opts.DiagMode()
+	if err != nil {
+		t.Errorf("DiagMode() returned an error %v", err)
+	}
+	opts2 = dm.DiagOptions()
+	if !reflect.DeepEqual(opts, opts2) {
+		t.Errorf("DiagOptions() returned wrong options %v, want %v", opts2, opts)
+	}
+}
+
+func TestInvalidDiagnoseOptions(t *testing.T) {
+	opts := &DiagOptions{
+		ByteStringEncoding: ByteStringBase64Encoding + 1,
+	}
+	_, err := opts.DiagMode()
+	if err == nil {
+		t.Errorf("DiagMode() with invalid ByteStringEncoding option didn't return error")
+	}
+}
+
+func TestDiagnoseExtraneousData(t *testing.T) {
+	cborData := hexDecode("63666F6FF6")
+	_, err := Diagnose(cborData)
+	if err == nil {
+		t.Errorf("Diagnose(0x%x) didn't return error", cborData)
+	} else if !strings.Contains(err.Error(), `extraneous data`) {
+		t.Errorf("Diagnose(0x%x) returned error %q", cborData, err)
+	}
+
+	_, _, err = DiagnoseFirst(cborData)
+	if err != nil {
+		t.Errorf("DiagnoseFirst(0x%x) returned error %v", cborData, err)
+	}
+}
+
+func TestDiagnoseNotwellformedData(t *testing.T) {
+	cborData := hexDecode("5f4060ff")
+	_, err := Diagnose(cborData)
+	if err == nil {
+		t.Errorf("Diagnose(0x%x) didn't return error", cborData)
+	} else if !strings.Contains(err.Error(), `wrong element type`) {
+		t.Errorf("Diagnose(0x%x) returned error %q", cborData, err)
 	}
 }
