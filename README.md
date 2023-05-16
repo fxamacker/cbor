@@ -10,15 +10,15 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor)
 [![](https://img.shields.io/badge/go-%3E%3D%201.12-blue)](#cbor-library-installation)
 
-[__fxamacker/cbor__](https://github.com/fxamacker/cbor) is a [CBOR](https://tools.ietf.org/html/rfc8949) codec in full compliance with [IETF RFC 8949 (STD 94)](https://www.rfc-editor.org/info/std94). This codec also supports [CBOR Sequences](https://www.rfc-editor.org/rfc/rfc8742.html) (IETF RFC 8742).
+[__fxamacker/cbor__](https://github.com/fxamacker/cbor) is a [CBOR](https://tools.ietf.org/html/rfc8949) codec in full conformance with [IETF STD 94 (RFC 8949)](https://www.rfc-editor.org/info/std94). This CBOR codec also supports [CBOR Sequences](https://www.rfc-editor.org/rfc/rfc8742.html) (IETF RFC 8742) and human-readable [Extended Diagnostic Notation](https://www.rfc-editor.org/rfc/rfc8610.html#appendix-G).
 
-This codec is a compact, deterministic, and secure alternative to [Go's](https://golang.org) `encoding/json`, `encoding/gob`, and others.  It's fast despite avoiding use of Go's `unsafe` package.  It's very fast and memory efficient at rejecting malformed CBOR data.
+fxamacker/cbor is a deterministic, efficient, and secure alternative to [Go's](https://golang.org) `encoding/json`, `encoding/gob`, and other codecs.  It's fast despite avoiding use of Go's `unsafe` package.  It's very fast and memory efficient at rejecting malformed CBOR data.
 
 API is designed to be safe, efficient, and easy for concurrent use.  API is mostly same as `encoding/json` plus extra functions for immutable encoding and decoding modes (with custom settings) which simplify concurrent use.
 
-Features include `keyasint` and `toarray` struct tags for more compact CBOR encoding with less programming effort.
+Features include Go struct tags (`toarray`, `keyasint`, `omitempty`), which automatically make CBOR encodings more compact.
 
-Other features include: CBOR tags, duplicate map key detection, float64→32→16, and Go struct tags (`toarray`, `keyasint`, `omitempty`).  Predefined CBOR options include Core Deterministic Encoding, Preferred Serialization, CTAP2, Canonical CBOR, etc.
+Other features include: CBOR tags for extensibility, duplicate map key detection, and float64→32→16.  Preset CBOR options include Core Deterministic Encoding, Preferred Serialization, CTAP2, Canonical CBOR, etc.
 
 Install with `go get github.com/fxamacker/cbor/v2` and `import "github.com/fxamacker/cbor/v2"`.  
 See [Quick Start 🔖](#quick-start) to save time.
@@ -155,6 +155,11 @@ __Standard API__.  Function signatures identical to [`encoding/json`](https://go
 __Standard Interfaces__.  Custom encoding and decoding is handled by implementing:  
 `BinaryMarshaler`, `BinaryUnmarshaler`, `Marshaler`, and `Unmarshaler`.
 
+__Other__.  `UnmarshalFirst` decodes first CBOR data item and returns any remaining bytes.
+
+__Diagnostic API__.  These functions produce human-readable [Extended Diagnostic Notation](https://www.rfc-editor.org/rfc/rfc8610.html#appendix-G):  
+`Diagnose`, `DiagnoseFirst`.
+
 __Predefined Encoding Options__.  Encoding options are easy to use and are customizable.
 
 ```go
@@ -203,13 +208,19 @@ import "github.com/fxamacker/cbor/v2"  // imports as cbor
 ```
 
 ## Quick Start
-🛡️ Use Go's `io.LimitReader` to limit size when decoding very large or indefinite size data.
+🛡️ Use Go's `io.LimitReader` to limit size when decoding very large or indefinite size data.  `DecOptions` can be used to modify default limits with `MaxArrayElements`, `MaxMapPairs`, and `MaxNestedLevels`.
 
 Import using "/v2" like this: `import "github.com/fxamacker/cbor/v2"`, and  
 it will import version 2.x as package "cbor" (when using Go modules).
 
 Functions with identical signatures to encoding/json include:  
 `Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `(*Encoder).Encode`, `(*Decoder).Decode`.
+
+NOTE: `Unmarshal` will return `ExtraneousDataError` if there are remaining bytes.  
+Use `UnmarshalFirst` to decode the first CBOR data item and return any remaining bytes.
+
+These functions produce human-readable [Extended Diagnostic Notation](https://www.rfc-editor.org/rfc/rfc8610.html#appendix-G):  
+`Diagnose`, `DiagnoseFirst`.
 
 __Default Mode__  
 
