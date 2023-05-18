@@ -41,7 +41,6 @@ linters-settings:
 linters:
   disable-all: true
   enable:
-    - deadcode
     - errcheck
     - goconst
     - gocyclo
@@ -51,13 +50,11 @@ linters:
     - govet
     - ineffassign
     - misspell
-    - revive
+    # - revive      # temporarily disabled to reduce noise in golangci-lint 1.52.2
     - staticcheck
-    - structcheck
     - typecheck
     - unconvert
     - unused
-    - varcheck
 
 issues:
   # max-issues-per-linter default is 50.  Set to 0 to disable limit.
