@@ -72,8 +72,8 @@ Decoding 10 bytes of malicious data into `[]byte` shouldn't exhaust memory. E.g.
 | ugorji/go 1.1.0 - 1.2.6 | 💥 runtime: | out of memory: | cannot allocate |
 
 ```
-go1.19.6, linux/amd64, i5-13600K
-GOMAXPROCS=6 go test -bench=. -benchmem -count=20
+go1.19.6, linux/amd64, i5-13600K (DDR4)
+go test -bench=. -benchmem -count=20
 ```
 
 fxamacker/cbor CBOR safety settings include: MaxNestedLevels, MaxArrayElements, MaxMapPairs, and IndefLength.
