@@ -1,4 +1,4 @@
-# Copyright © 2021 Montgomery Edwards⁴⁴⁸ (github.com/x448).
+# Copyright © 2021-2023 Montgomery Edwards⁴⁴⁸ (github.com/x448).
 # This file is licensed under MIT License.
 #
 # Safer GitHub Actions Workflow for golangci-lint.
@@ -27,12 +27,13 @@
 #   1. GOLINTERS_VERSION
 #   2. GOLINTERS_TGZ_DGST
 #
-# Release v1.51.1 (February 5, 2023)
-#   - Bump golangci-lint to 1.51.1
-#   - Shuffle some comments
-#   - Hash of golangci-lint-1.50.1-linux-amd64.tar.gz
-#     - SHA-256: 17aeb26c76820c22efa0e1838b0ab93e90cfedef43fbfc9a2f33f27eb9e5e070
-#                This SHA-256 digest matches golangci-lint-1.51.1-checksums.txt at
+# Release v1.52.2 (May 14, 2023)
+#   - Bump Go to 1.20
+#   - Bump actions/setup-go to v4
+#   - Bump golangci-lint to 1.52.2
+#   - Hash of golangci-lint-1.52.2-linux-amd64.tar.gz
+#     - SHA-256: c9cf72d12058a131746edd409ed94ccd578fbd178899d1ed41ceae3ce5f54501
+#                This SHA-256 digest matches golangci-lint-1.52.2-checksums.txt at
 #                https://github.com/golangci/golangci-lint/releases
 #
 name: linters
@@ -43,15 +44,14 @@ permissions: {}
 on:
   workflow_dispatch:
   pull_request:
-    types: [opened, synchronize, closed]
   push:
     branches: [main, master]
 
 env:
-  GO_VERSION: 1.19
-  GOLINTERS_VERSION: 1.51.1
+  GO_VERSION: '1.20'
+  GOLINTERS_VERSION: 1.52.2
   GOLINTERS_ARCH: linux-amd64
-  GOLINTERS_TGZ_DGST: 17aeb26c76820c22efa0e1838b0ab93e90cfedef43fbfc9a2f33f27eb9e5e070
+  GOLINTERS_TGZ_DGST: c9cf72d12058a131746edd409ed94ccd578fbd178899d1ed41ceae3ce5f54501
   GOLINTERS_TIMEOUT: 15m
   OPENSSL_DGST_CMD: openssl dgst -sha256 -r
   CURL_CMD: curl --proto =https --tlsv1.2 --location --silent --show-error --fail
