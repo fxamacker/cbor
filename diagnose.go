@@ -210,6 +210,9 @@ func (di *diagnose) diag(cborSequence bool) (string, error) {
 			}
 
 		case io.EOF:
+			if firstItem {
+				return di.w.String(), err
+			}
 			return di.w.String(), nil
 
 		default:

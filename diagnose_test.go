@@ -6,6 +6,7 @@ package cbor
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"reflect"
 	"strings"
 	"testing"
@@ -1077,5 +1078,43 @@ func TestDiagnoseNotwellformedData(t *testing.T) {
 		t.Errorf("Diagnose(0x%x) didn't return error", cborData)
 	} else if !strings.Contains(err.Error(), `wrong element type`) {
 		t.Errorf("Diagnose(0x%x) returned error %q", cborData, err)
+	}
+}
+
+func TestDiagnoseEmptyData(t *testing.T) {
+	var emptyData []byte
+
+	defaultMode, _ := DiagOptions{}.DiagMode()
+	sequenceMode, _ := DiagOptions{CBORSequence: true}.DiagMode()
+
+	testCases := []struct {
+		name string
+		dm   DiagMode
+	}{
+		{"default", defaultMode},
+		{"sequence", sequenceMode},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			s, err := tc.dm.Diagnose(emptyData)
+			if len(s) != 0 {
+				t.Errorf("Diagnose() didn't return empty notation for empty data")
+			}
+			if err != io.EOF {
+				t.Errorf("Diagnose() didn't return io.EOF for empty data")
+			}
+
+			s, rest, err := tc.dm.DiagnoseFirst(emptyData)
+			if len(s) != 0 {
+				t.Errorf("DiagnoseFirst() didn't return empty notation for empty data")
+			}
+			if len(rest) != 0 {
+				t.Errorf("DiagnoseFirst() didn't return empty rest for empty data")
+			}
+			if err != io.EOF {
+				t.Errorf("DiagnoseFirst() didn't return io.EOF for empty data")
+			}
+		})
 	}
 }
