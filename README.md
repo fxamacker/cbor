@@ -14,7 +14,7 @@
 
 fxamacker/cbor is a deterministic, efficient, and secure alternative to [Go's](https://golang.org) `encoding/json`, `encoding/gob`, and other codecs.  It's fast despite avoiding use of Go's `unsafe` package.  It's very fast and memory efficient at rejecting malformed CBOR data.
 
-API is designed to be safe, efficient, and easy for concurrent use.  API is mostly same as `encoding/json` plus extra functions for immutable encoding and decoding modes (with custom settings) which simplify concurrent use.
+API is designed to be safe, efficient, and easy for concurrent use.  API is mostly same as `encoding/json` plus extensions that simplify concurrency for CBOR options and presets.
 
 Features include Go struct tags (`toarray`, `keyasint`, `omitempty`), which automatically make CBOR encodings more compact.
 
@@ -25,11 +25,22 @@ See [Quick Start 🔖](#quick-start) to save time.
 
 ## Who uses fxamacker/cbor
 
-`fxamacker/cbor` is used by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, ConsenSys, Dapper Labs, Duo Labs (cisco), EdgeX Foundry, F5, Fraunhofer-AISEC, Mozilla, National Cybersecurity Agency of France (govt), Netherlands (govt), Oasis Labs, Smallstep, Tailscale, Taurus SA, Teleport, TIBCO, and others.
+`fxamacker/cbor` is used by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, ConsenSys, Dapper Labs, Duo Labs (Cisco), EdgeX Foundry, F5, Fraunhofer-AISEC, Mozilla, National Cybersecurity Agency of France (govt), Netherlands (govt), Oasis Labs, Smallstep, Tailscale, Taurus SA, Teleport, TIBCO, and others.
 
 Github reports [2000+ repositories](https://github.com/fxamacker/cbor/network/dependents?package_id=UGFja2FnZS0yMjcwNDY1OTQ4) depend on fxamacker/cbor/v2. Additional 190+ repos are using version 1.x (please upgrade to v2).
 
 fxamacker/cbor passed multiple confidential security assessments.  A [nonconfidential security assessment](https://github.com/veraison/go-cose/blob/v1.0.0-rc.1/reports/NCC_Microsoft-go-cose-Report_2022-05-26_v1.0.pdf) (prepared by NCC Group for Microsoft Corporation) includes a subset of fxamacker/cbor v2.4.0 in its scope.
+
+## What's new in v2.5.0-beta4
+
+Features already present in v2.4.0 are release quality.  New functions added since v2.4 require more fuzzing and documentation.
+- There may be a v2.5.0-beta5 to add `Buffered()` like `encoding/json`.  See comments in PR https://github.com/fxamacker/cbor/pull/397.
+- [v2.5.0-beta4](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta4) - Bugfix for `Diagnose()` to return `io.EOF` on empty data like the others.
+- [v2.5.0-beta3](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta3) - Add `Diagnose()`, `DiagnoseFirst()`, `UnmarshalFirst()`, `Wellformed()`.
+- [v2.5.0-beta2](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta2) - Bugfix and release notes include benchmark comparison of v2.5.0-beta2 vs v2.4.0.
+- [v2.5.0-beta](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta) - Notable improvements, optimizations, bugfixes, and 8 new contributors!
+
+Changes in [v2.5.0-beta](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta) should be reviewed before upgrading from v2.4 to v2.5.
 
 <!--
 ## What is CBOR?
