@@ -15,7 +15,7 @@
 # 2. Update README.md to use the new path to badge.svg because the path includes the workflow name.
 
 name: cover ≥98%
-on: [push]
+on: [ workflow_dispatch, push ]
 jobs:
 
   # Verify minimum coverage is reached using `go test -short -cover` on latest-ubuntu with default version of Go.
