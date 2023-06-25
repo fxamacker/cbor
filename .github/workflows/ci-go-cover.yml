@@ -14,7 +14,7 @@
 # 1. Change workflow name from "cover 100%" to "cover ≥92.5%". Script will automatically use 92.5%.  
 # 2. Update README.md to use the new path to badge.svg because the path includes the workflow name.
 
-name: cover ≥98%
+name: cover ≥96%
 
 # Remove default permissions.
 permissions: {}
@@ -47,5 +47,5 @@ jobs:
     - name: Go Coverage
       run: |
         go version
-        # go test -short -cover | grep "^.*coverage:.*of statements$" | python -c "import os,re,sys; cover_rpt = sys.stdin.read(); print(cover_rpt) if len(cover_rpt) != 0 and len(cover_rpt.splitlines()) == 1 else sys.exit(1); min_cover = float(re.findall(r'\d*\.\d+|\d+', os.environ['GITHUB_WORKFLOW'])[0]); cover = float(re.findall(r'\d*\.\d+|\d+', cover_rpt)[0]); sys.exit(1) if (cover > 100) or (cover < min_cover) else sys.exit(0)"
+        go test -short -cover | grep "^.*coverage:.*of statements$" | python -c "import os,re,sys; cover_rpt = sys.stdin.read(); print(cover_rpt) if len(cover_rpt) != 0 and len(cover_rpt.splitlines()) == 1 else sys.exit(1); min_cover = float(re.findall(r'\d*\.\d+|\d+', os.environ['GITHUB_WORKFLOW'])[0]); cover = float(re.findall(r'\d*\.\d+|\d+', cover_rpt)[0]); sys.exit(1) if (cover > 100) or (cover < min_cover) else sys.exit(0)"
       shell: bash
