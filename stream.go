@@ -4,6 +4,7 @@
 package cbor
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"reflect"
@@ -63,6 +64,12 @@ func (dec *Decoder) Skip() error {
 // NumBytesRead returns the number of bytes read.
 func (dec *Decoder) NumBytesRead() int {
 	return dec.bytesRead
+}
+
+// Buffered returns a reader for data remaining in Decoder's buffer.
+// Returned reader is valid until the next call to Decode or Skip.
+func (dec *Decoder) Buffered() io.Reader {
+	return bytes.NewReader(dec.buf[dec.off:])
 }
 
 // readNext() reads next CBOR data item from Reader to buffer.
