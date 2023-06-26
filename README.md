@@ -2,6 +2,10 @@
 
 [![](https://github.com/fxamacker/images/raw/master/cbor/v2.5.0/fxamacker_cbor_banner.png)](#cbor-library-in-go)
 
+[__fxamacker/cbor__](https://github.com/fxamacker/cbor) is a [Go](https://golang.org) library for encoding and decoding [CBOR](https://www.rfc-editor.org/info/std94) data format.
+
+CBOR is a [good alternative](https://www.rfc-editor.org/rfc/rfc8949.html#name-comparison-of-other-binary-) to earlier data formats like JSON, GOB, MessagePack, etc.
+
 [![](https://github.com/fxamacker/cbor/workflows/ci/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Aci)
 [![](https://github.com/fxamacker/cbor/workflows/cover%20%E2%89%A596%25/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3A%22cover+%E2%89%A596%25%22)
 [![](https://github.com/fxamacker/cbor/workflows/linters/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Alinters)
@@ -10,37 +14,97 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor)
 [![](https://img.shields.io/badge/go-%3E%3D%201.12-blue)](#cbor-library-installation)
 
-[__fxamacker/cbor__](https://github.com/fxamacker/cbor) is a [CBOR](https://tools.ietf.org/html/rfc8949) codec in full conformance with [IETF STD 94 (RFC 8949)](https://www.rfc-editor.org/info/std94). This CBOR codec also supports [CBOR Sequences](https://www.rfc-editor.org/rfc/rfc8742.html) (IETF RFC 8742) and human-readable [Extended Diagnostic Notation](https://www.rfc-editor.org/rfc/rfc8610.html#appendix-G).
+fxamacker/cbor is a CBOR codec in full conformance with [IETF STD 94 (RFC 8949)](https://www.rfc-editor.org/info/std94). It also supports [CBOR Sequences](https://www.rfc-editor.org/rfc/rfc8742.html) (RFC 8742) and human-readable [Extended Diagnostic Notation](https://www.rfc-editor.org/rfc/rfc8610.html#appendix-G).  CBOR is an [Internet Standard](https://en.wikipedia.org/wiki/Internet_Standard) designed to be relevant for decades.
 
-fxamacker/cbor is a deterministic, efficient, and secure alternative to [Go's](https://golang.org) `encoding/json`, `encoding/gob`, and other codecs.  It's fast despite avoiding use of Go's `unsafe` package.  It's very fast and memory efficient at rejecting malformed CBOR data.
+fxamacker/cbor is a deterministic, efficient, extensible, and secure alternative to `encoding/json`, `encoding/gob`, and other codecs.  It's fast without using Go's `unsafe` package.  Optional presets include [Core Deterministic Encoding Requirements](https://www.rfc-editor.org/rfc/rfc8949.html#name-core-deterministic-encoding) from IETF STD 94.
 
-API is designed to be safe, efficient, and easy for concurrent use.  API is mostly same as `encoding/json` plus extensions that simplify concurrency for CBOR options and presets.
+:shield: Decoder has configurable limits that defend against malicious inputs.  Default limits allow very fast and memory efficient rejection of malformed CBOR data.  By contrast, `encoding/gob` is [not designed to be hardened against adversarial inputs](https://pkg.go.dev/encoding/gob#hdr-Security).
+
+API is designed to be safe, efficient, and easy for concurrent use.  API is mostly same as `encoding/json` plus extensions that simplify concurrency for CBOR options and presets.  Encoding and decoding modes are designed to be created at startup and reused.
 
 Features include Go struct tags (`toarray`, `keyasint`, `omitempty`), which automatically make CBOR encodings more compact.
 
-Other features include: CBOR tags for extensibility, duplicate map key detection, and float64→32→16.  Preset CBOR options include Core Deterministic Encoding, Preferred Serialization, CTAP2, Canonical CBOR, etc.
+Other features include: CBOR tags for extensibility without version negotiation, duplicate map key detection, and float64→32→16.  Preset CBOR options include Core Deterministic Encoding, Preferred Serialization, CTAP2, Canonical CBOR, etc.
 
 Install with `go get github.com/fxamacker/cbor/v2` and `import "github.com/fxamacker/cbor/v2"`.  
 See [Quick Start 🔖](#quick-start) to save time.
 
 ## Who uses fxamacker/cbor
 
-`fxamacker/cbor` is used by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, ConsenSys, Dapper Labs, Duo Labs (Cisco), EdgeX Foundry, F5, Fraunhofer-AISEC, Mozilla, National Cybersecurity Agency of France (govt), Netherlands (govt), Oasis Labs, Smallstep, Tailscale, Taurus SA, Teleport, TIBCO, and others.
+`fxamacker/cbor` is used in projects by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, ConsenSys, Dapper Labs, Duo Labs (Cisco), EdgeX Foundry, F5, Fraunhofer-AISEC, Mozilla, National Cybersecurity Agency of France (govt), Netherlands (govt), Oasis Labs, Smallstep, Tailscale, Taurus SA, Teleport, TIBCO, and others.
 
 Github reports [2000+ repositories](https://github.com/fxamacker/cbor/network/dependents?package_id=UGFja2FnZS0yMjcwNDY1OTQ4) depend on fxamacker/cbor/v2. Additional 190+ repos are using version 1.x (please upgrade to v2).
 
 fxamacker/cbor passed multiple confidential security assessments.  A [nonconfidential security assessment](https://github.com/veraison/go-cose/blob/v1.0.0-rc.1/reports/NCC_Microsoft-go-cose-Report_2022-05-26_v1.0.pdf) (prepared by NCC Group for Microsoft Corporation) includes a subset of fxamacker/cbor v2.4.0 in its scope.
 
-## What's new in v2.5.0-beta4
+## What's new in v2.5.0-beta5
 
-Features already present in v2.4.0 are release quality.  New functions added since v2.4 require more fuzzing and documentation.
-- There may be a v2.5.0-beta5 to add `Buffered()` like `encoding/json`.  See comments in PR https://github.com/fxamacker/cbor/pull/397.
-- [v2.5.0-beta4](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta4) - Bugfix for `Diagnose()` to return `io.EOF` on empty data like the others.
-- [v2.5.0-beta3](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta3) - Add `Diagnose()`, `DiagnoseFirst()`, `UnmarshalFirst()`, `Wellformed()`.
-- [v2.5.0-beta2](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta2) - Bugfix and release notes include benchmark comparison of v2.5.0-beta2 vs v2.4.0.
+v2.5.0-beta5 is fuzz tested and production quality.  However, docs need to be updated before v2.5.0 release.
+
+IMPORTANT: Changes in [v2.5.0-beta](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta) should be reviewed before upgrading because of bugfixes to error handling of extraneous data and other edge cases.
+
+- TODO for v2.5.0: update docs and prepare release notes.  No more features planned for v2.5.0.
+- [v2.5.0-beta5](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta5) - Add `Decoder.Buffered` function which is same as `encoding/json`.
+- [v2.5.0-beta4](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta4) - Bugfix for `Diagnose` to return `io.EOF` on empty data like the others.
+- [v2.5.0-beta3](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta3) - Add functions: `Diagnose`, `DiagnoseFirst`, `UnmarshalFirst`, `Wellformed`.
+- [v2.5.0-beta2](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta2) - Bugfix to retry in `Decoder` if `io.Reader`'s `Read()` returns 0 bytes read with nil error.
 - [v2.5.0-beta](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta) - Notable improvements, optimizations, bugfixes, and 8 new contributors!
 
-Changes in [v2.5.0-beta](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta) should be reviewed before upgrading from v2.4 to v2.5.
+
+<details><summary>👉 Benchmark Comparison: v2.4.0 vs v2.5.0-beta2</summary><p/>
+
+Comparison of v2.4.0 vs v2.5.0-beta2 provided by @448 (edited to fit width).
+
+PR [#382](https://github.com/fxamacker/cbor/pull/382) returns buffer to pool in `Encode()`. It adds a bit of overhead to `Encode()` but `NewEncoder().Encode()` is a lot faster and uses less memory as shown here:
+
+```
+$ benchstat bench-v2.4.0.log bench-f9e6291.log 
+goos: linux
+goarch: amd64
+pkg: github.com/fxamacker/cbor/v2
+cpu: 12th Gen Intel(R) Core(TM) i7-12700H
+                                                     │ bench-v2.4.0.log │  bench-f9e6291.log                  │
+                                                     │      sec/op      │   sec/op     vs base                │
+NewEncoderEncode/Go_bool_to_CBOR_bool-20                   236.70n ± 2%   58.04n ± 1%  -75.48% (p=0.000 n=10)
+NewEncoderEncode/Go_uint64_to_CBOR_positive_int-20         238.00n ± 2%   63.93n ± 1%  -73.14% (p=0.000 n=10)
+NewEncoderEncode/Go_int64_to_CBOR_negative_int-20          238.65n ± 2%   64.88n ± 1%  -72.81% (p=0.000 n=10)
+NewEncoderEncode/Go_float64_to_CBOR_float-20               242.00n ± 2%   63.00n ± 1%  -73.97% (p=0.000 n=10)
+NewEncoderEncode/Go_[]uint8_to_CBOR_bytes-20               245.60n ± 1%   68.55n ± 1%  -72.09% (p=0.000 n=10)
+NewEncoderEncode/Go_string_to_CBOR_text-20                 243.20n ± 3%   68.39n ± 1%  -71.88% (p=0.000 n=10)
+NewEncoderEncode/Go_[]int_to_CBOR_array-20                 563.0n ± 2%    378.3n ± 0%  -32.81% (p=0.000 n=10)
+NewEncoderEncode/Go_map[string]string_to_CBOR_map-20       2.043µ ± 2%    1.906µ ± 2%   -6.75% (p=0.000 n=10)
+geomean                                                    349.7n         122.7n       -64.92%
+
+                                                     │ bench-v2.4.0.log │    bench-f9e6291.log                │
+                                                     │       B/op       │    B/op     vs base                 │
+NewEncoderEncode/Go_bool_to_CBOR_bool-20                     128.0 ± 0%     0.0 ± 0%  -100.00% (p=0.000 n=10)
+NewEncoderEncode/Go_uint64_to_CBOR_positive_int-20           128.0 ± 0%     0.0 ± 0%  -100.00% (p=0.000 n=10)
+NewEncoderEncode/Go_int64_to_CBOR_negative_int-20            128.0 ± 0%     0.0 ± 0%  -100.00% (p=0.000 n=10)
+NewEncoderEncode/Go_float64_to_CBOR_float-20                 128.0 ± 0%     0.0 ± 0%  -100.00% (p=0.000 n=10)
+NewEncoderEncode/Go_[]uint8_to_CBOR_bytes-20                 128.0 ± 0%     0.0 ± 0%  -100.00% (p=0.000 n=10)
+NewEncoderEncode/Go_string_to_CBOR_text-20                   128.0 ± 0%     0.0 ± 0%  -100.00% (p=0.000 n=10)
+NewEncoderEncode/Go_[]int_to_CBOR_array-20                   128.0 ± 0%     0.0 ± 0%  -100.00% (p=0.000 n=10)
+NewEncoderEncode/Go_map[string]string_to_CBOR_map-20         544.0 ± 0%   416.0 ± 0%   -23.53% (p=0.000 n=10)
+geomean                                                      153.4                    ?                       ¹ ²
+¹ summaries must be >0 to compute geomean
+² ratios must be >0 to compute geomean
+
+                                                     │ bench-v2.4.0.log │    bench-f9e6291.log                │
+                                                     │    allocs/op     │ allocs/op   vs base                 │
+NewEncoderEncode/Go_bool_to_CBOR_bool-20                     2.000 ± 0%   0.000 ± 0%  -100.00% (p=0.000 n=10)
+NewEncoderEncode/Go_uint64_to_CBOR_positive_int-20           2.000 ± 0%   0.000 ± 0%  -100.00% (p=0.000 n=10)
+NewEncoderEncode/Go_int64_to_CBOR_negative_int-20            2.000 ± 0%   0.000 ± 0%  -100.00% (p=0.000 n=10)
+NewEncoderEncode/Go_float64_to_CBOR_float-20                 2.000 ± 0%   0.000 ± 0%  -100.00% (p=0.000 n=10)
+NewEncoderEncode/Go_[]uint8_to_CBOR_bytes-20                 2.000 ± 0%   0.000 ± 0%  -100.00% (p=0.000 n=10)
+NewEncoderEncode/Go_string_to_CBOR_text-20                   2.000 ± 0%   0.000 ± 0%  -100.00% (p=0.000 n=10)
+NewEncoderEncode/Go_[]int_to_CBOR_array-20                   2.000 ± 0%   0.000 ± 0%  -100.00% (p=0.000 n=10)
+NewEncoderEncode/Go_map[string]string_to_CBOR_map-20         28.00 ± 0%   26.00 ± 0%    -7.14% (p=0.000 n=10)
+geomean                                                      2.782                    ?                       ¹ ²
+¹ summaries must be >0 to compute geomean
+² ratios must be >0 to compute geomean
+```
+
+</details>
 
 <!--
 ## What is CBOR?
