@@ -577,6 +577,92 @@ func TestDecoderStructTag(t *testing.T) {
 	}
 }
 
+func TestDecoderBuffered(t *testing.T) {
+	testCases := []struct {
+		name      string
+		cborData  []byte
+		buffered  []byte
+		decodeErr error
+	}{
+		{
+			name:      "empty",
+			cborData:  []byte{},
+			buffered:  []byte{},
+			decodeErr: io.EOF,
+		},
+		{
+			name:      "malformed CBOR data item",
+			cborData:  []byte{0xc0},
+			buffered:  []byte{0xc0},
+			decodeErr: io.ErrUnexpectedEOF,
+		},
+		{
+			name:     "1 CBOR data item",
+			cborData: []byte{0xc2, 0x49, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+			buffered: []byte{},
+		},
+		{
+			name: "2 CBOR data items",
+			cborData: []byte{
+				// First CBOR data item
+				0xc2, 0x49, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				// Second CBOR data item
+				0xc3, 0x49, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			buffered: []byte{
+				// Second CBOR data item
+				0xc3, 0x49, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+		},
+		{
+			name: "1 CBOR data item followed by non-CBOR data",
+			cborData: []byte{
+				// CBOR data item
+				0xc2, 0x49, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				// Extraneous non-CBOR data ("abc")
+				0x61, 0x62, 0x63,
+			},
+			buffered: []byte{
+				// non-CBOR data ("abc")
+				0x61, 0x62, 0x63,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := bytes.NewReader(tc.cborData)
+
+			decoder := NewDecoder(r)
+
+			// Decoder's buffer has no data yet.
+			br := decoder.Buffered()
+			buffered, err := io.ReadAll(br)
+			if err != nil {
+				t.Errorf("failed to read from reader returned by Buffered(): %v", err)
+			}
+			if len(buffered) > 0 {
+				t.Errorf("Buffered() = 0x%x (%d bytes), want 0 bytes", buffered, len(buffered))
+			}
+
+			var v interface{}
+			err = decoder.Decode(&v)
+			if err != tc.decodeErr {
+				t.Errorf("Decode() returned error %v, want %v", err, tc.decodeErr)
+			}
+
+			br = decoder.Buffered()
+			buffered, err = io.ReadAll(br)
+			if err != nil {
+				t.Errorf("failed to read from reader returned by Buffered(): %v", err)
+			}
+			if !bytes.Equal(tc.buffered, buffered) {
+				t.Errorf("Buffered() = 0x%x (%d bytes), want 0x%x (%d bytes)", buffered, len(buffered), tc.buffered, len(tc.buffered))
+			}
+		})
+	}
+}
+
 func TestEncoder(t *testing.T) {
 	var want bytes.Buffer
 	var w bytes.Buffer
