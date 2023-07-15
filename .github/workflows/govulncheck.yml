@@ -9,9 +9,6 @@ permissions: {}
 
 on:
   workflow_dispatch:
-  schedule:
-    # Run at least once daily because vulnerability database might be updated.
-    - cron: '30 15 * * *'
   pull_request:
     paths:
       - '**'
@@ -45,7 +42,6 @@ jobs:
         go-version: 1.20.x
         check-latest: true
     - name: Install latest from golang.org
-      run: go install golang.org/x/vuln/cmd/govulncheck@b43f5afc876383b2adc0ec0d3ff1998fe58eeda0 # v0.1.0
-    - name: Run govulncheck
-      # Use -v flag to print a full call stack for each vulnerability found.
-      run: govulncheck -v ./...
+      run: go install golang.org/x/vuln/cmd/govulncheck@f69de671333b611ab6b6f21f8ff0ab53f6d96c61 # v1.0.0
+    - name: Run govulncheck      
+      run: govulncheck -show=traces ./...
