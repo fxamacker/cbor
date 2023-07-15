@@ -9,9 +9,6 @@ permissions: {}
 
 on:
   workflow_dispatch:
-  schedule:
-    # Run at least once daily because vulnerability database might be updated.
-    - cron: '30 15 * * *'
   pull_request:
     paths:
       - '**'
