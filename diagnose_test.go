@@ -1118,3 +1118,25 @@ func TestDiagnoseEmptyData(t *testing.T) {
 		})
 	}
 }
+
+func FuzzDiagnose(f *testing.F) {
+
+	f.Add(hexDecode("d82076687474703a2f2f7777772e6578616d706c652e636f6d"))
+	f.Add(hexDecode("c074323031332d30332d32315432303a30343a30305a"))
+	f.Add(hexDecode("9f0102030405060708090a0b0c0d0e0f101112131415161718181819ff"))
+
+	f.Fuzz(func(t *testing.T, input_data []byte) {
+		_, _ = Diagnose(input_data)
+	})
+}
+
+func FuzzFirstDiagnose(f *testing.F) {
+
+	f.Add(hexDecode("d82076687474703a2f2f7777772e6578616d706c652e636f6d"))
+	f.Add(hexDecode("c074323031332d30332d32315432303a30343a30305a"))
+	f.Add(hexDecode("9f0102030405060708090a0b0c0d0e0f101112131415161718181819ff"))
+
+	f.Fuzz(func(t *testing.T, input_data []byte) {
+		_, _, _ = DiagnoseFirst(input_data)
+	})
+}

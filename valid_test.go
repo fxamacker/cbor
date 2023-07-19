@@ -186,3 +186,19 @@ func TestDepthError(t *testing.T) {
 		})
 	}
 }
+
+func FuzzValid(f *testing.F) {
+
+	f.Add([]byte{0x00, 0x01})
+	f.Add([]byte{0x44, 0x01, 0x02, 0x03, 0x04, 0x00})
+	f.Add(hexDecode("bf018181818181818181818181818181818181818181818181818181818181818101ff"))
+	f.Add(hexDecode("d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d86474323031332d30332d32315432303a30343a30305a"))
+
+	f.Fuzz(func(t *testing.T, input_data []byte) {
+		Wellformed(input_data)
+
+		d := decoder{data: input_data, dm: defaultDecMode}
+		d.wellformed(true)
+		d.wellformedInternal(0)
+	})
+}

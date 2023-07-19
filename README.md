@@ -1138,6 +1138,18 @@ __Coverage-guided fuzzing__ must pass 1+ billion execs using a large corpus befo
 
 To prevent delays to release schedules, fuzzing is not restarted for a release if changes are limited to ci, docs, and comments.
 
+### Run golang Native Go fuzz
+
+```bash
+go test -fuzz=FuzzUnmarshal -fuzztime=600s .
+go test -fuzz=FuzzFirstUnmarshal -fuzztime=600s .
+go test -fuzz=FuzzDecode -fuzztime=600s .
+go test -fuzz=FuzzDiagnose -fuzztime=600s .
+go test -fuzz=FuzzFirstDiagnose -fuzztime=600s .
+go test -fuzz=FuzzStream -fuzztime=600s .
+go test -fuzz=FuzzValid -fuzztime=600s .
+```
+
 <hr>
 
 ⚓  [Quick Start](#quick-start) • [Features](#features) • [Standards](#standards) • [API](#api) • [Options](#options) • [Usage](#usage) • [Fuzzing](#fuzzing-and-code-coverage) • [License](#license)

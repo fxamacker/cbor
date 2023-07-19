@@ -6038,3 +6038,41 @@ func TestUnmarshalFirstInvalidItem(t *testing.T) {
 		t.Errorf("UnmarshalFirst(0x%x) = (%x, %v), want (nil, err)", invalidCBOR, rest, err)
 	}
 }
+
+func FuzzUnmarshal(f *testing.F) {
+
+	f.Add(hexDecode("3bffffffffffffffff"))
+	f.Add(hexDecode("7f657374726561646d696e67ff"))
+	f.Add(hexDecode("c074323031332d30332d32315432303a30343a30305a"))
+	f.Add(hexDecode("98190102030405060708090a0b0c0d0e0f101112131415161718181819"))
+
+	f.Fuzz(func(t *testing.T, input_data []byte) {
+		var v interface{}
+		_ = Unmarshal(input_data, &v)
+	})
+}
+
+func FuzzFirstUnmarshal(f *testing.F) {
+
+	f.Add(hexDecode("83FF20030102"))
+	f.Add(hexDecode("4a6b0f4718c73f391091ea1c"))
+
+	f.Fuzz(func(t *testing.T, input_data []byte) {
+		var v interface{}
+		_, _ = UnmarshalFirst(input_data, &v)
+	})
+}
+
+func FuzzDecode(f *testing.F) {
+
+	f.Add(hexDecode("7f62e6b061b4ff7f657374726561646d696e67ff"))
+	f.Add(hexDecode("c074323031332d30332d32315432303a30343a30305a"))
+	f.Add(hexDecode("c174323031332d30332d32315432303a30343a30305a"))
+	f.Add(hexDecode("a6616161416162614261636143616161466164614461656145"))
+
+	f.Fuzz(func(t *testing.T, input_data []byte) {
+		dec := NewDecoder(bytes.NewReader(input_data))
+		var v interface{}
+		dec.Decode(&v)
+	})
+}
