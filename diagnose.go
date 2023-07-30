@@ -111,8 +111,6 @@ func (opts DiagOptions) diagMode() (*diagMode, error) {
 		MaxNestedLevels:  opts.MaxNestedLevels,
 		MaxArrayElements: opts.MaxArrayElements,
 		MaxMapPairs:      opts.MaxMapPairs,
-		// loosest decode options for diagnostic purpose.
-		UTF8: UTF8DecodeInvalid,
 	}.decMode()
 	if err != nil {
 		return nil, err

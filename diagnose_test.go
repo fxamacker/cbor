@@ -583,14 +583,6 @@ func TestDiagnoseTextString(t *testing.T) {
 				ByteStringText: true,
 			},
 		},
-		// {
-		// 	"invalid UTF-8 text in text string",
-		// 	hexDecode("6d68656c6c6fffeee4bda0e5a5bd"),
-		// 	`"hello\u00ff\u00ee\u4f60\u597d"`,
-		// 	&DiagOptions{
-		// 		ByteStringText: true,
-		// 	},
-		// },
 		{
 			"valid grapheme cluster text in byte string",
 			hexDecode("583448656c6c6f2c2027e29da4efb88fe2808df09f94a5270ae4bda0e5a5bdefbc8c22f09fa791e2808df09fa49de2808df09fa79122"),
@@ -615,14 +607,6 @@ func TestDiagnoseTextString(t *testing.T) {
 				ByteStringText: true,
 			},
 		},
-		// {
-		// 	"invalid grapheme cluster text in text string",
-		// 	hexDecode("783448656c6c6feeff27e29da4efb88fe2808df09f94a5270de4bda0e5a5bdefbc8c22f09fa791e2808df09fa49de2808df09fa79122"),
-		// 	`"Hello\u00ee\u00ff'\u2764\ufe0f\u200d\ud83d\udd25'\r\u4f60\u597d\uff0c\"\ud83e\uddd1\u200d\ud83e\udd1d\u200d\ud83e\uddd1\""`,
-		// 	&DiagOptions{
-		// 		ByteStringText: true,
-		// 	},
-		// },
 		{
 			"indefinite length text string with no chunks",
 			hexDecode("7fff"),
