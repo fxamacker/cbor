@@ -1,10 +1,10 @@
 [![](https://github.com/fxamacker/images/raw/master/cbor/v2.5.0/fxamacker_cbor_banner.png)](#cbor-library-in-go)
 
-`fxamacker/cbor` is a library for encoding and decoding [CBOR](https://www.rfc-editor.org/info/std94) data format.
+`fxamacker/cbor` is a library for encoding and decoding [CBOR](https://www.rfc-editor.org/info/std94) and [CBOR Sequences](https://www.rfc-editor.org/rfc/rfc8742.html).
 
 CBOR is a [trusted alternative](https://www.rfc-editor.org/rfc/rfc8949.html#name-comparison-of-other-binary-) to JSON, MessagePack, Protocol Buffers, and etc.&nbsp; CBOR is an Internet&nbsp;Standard defined by [IETF&nbsp;STD&nbsp;94 (RFC&nbsp;8949)](https://www.rfc-editor.org/info/std94) and is designed to be relevant for decades.
 
-`fxamacker/cbor` is used in projects by Arm Ltd., Cisco, Dapper Labs, EdgeX Foundry, Fraunhofer&#8209;AISEC, Linux Foundation, Microsoft, Mozilla, Oasis Protocol, Tailscale, [and&nbsp;others](https://github.com/fxamacker/cbor#who-uses-fxamackercbor).
+`fxamacker/cbor` is used in projects by Arm Ltd., Cisco, Dapper Labs, EdgeX&nbsp;Foundry, Fraunhofer&#8209;AISEC, Linux&nbsp;Foundation, Microsoft, Mozilla, Oasis&nbsp;Protocol, Tailscale, [and&nbsp;others](https://github.com/fxamacker/cbor#who-uses-fxamackercbor).
 
 Install with `go get github.com/fxamacker/cbor/v2` and `import "github.com/fxamacker/cbor/v2"`.  See [Quick&nbsp;Start](#quick-start).
 
@@ -18,17 +18,18 @@ Install with `go get github.com/fxamacker/cbor/v2` and `import "github.com/fxama
 [![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor)
 [![](https://img.shields.io/badge/go-%3E%3D%201.12-blue)](#cbor-library-installation)
 
-`fxamacker/cbor` is a CBOR codec in full conformance with [IETF STD 94 (RFC 8949)](https://www.rfc-editor.org/info/std94). It also supports [CBOR Sequences](https://www.rfc-editor.org/rfc/rfc8742.html) (RFC 8742) and human-readable [Extended Diagnostic Notation](https://www.rfc-editor.org/rfc/rfc8610.html#appendix-G).
+`fxamacker/cbor` is a CBOR codec in full conformance with [IETF STD 94 (RFC 8949)](https://www.rfc-editor.org/info/std94). It also supports CBOR Sequences ([RFC 8742](https://www.rfc-editor.org/rfc/rfc8742.html)) and human-readable [Extended Diagnostic Notation](https://www.rfc-editor.org/rfc/rfc8610.html#appendix-G).
 
-`fxamacker/cbor` is a deterministic, efficient, extensible, and secure alternative to `encoding/json`, `encoding/gob`, and other codecs.  It's fast without using Go's `unsafe` package.  Options include [Core Deterministic Encoding Requirements](https://www.rfc-editor.org/rfc/rfc8949.html#name-core-deterministic-encoding).
+`fxamacker/cbor` is a deterministic, efficient, extensible, and secure alternative to `encoding/json`, `encoding/gob`, and other codecs.  It's fast without using Go's `unsafe` package.  [Core Deterministic Encoding](https://www.rfc-editor.org/rfc/rfc8949.html#name-core-deterministic-encoding) is opt-in.  Default limits allow very fast and memory efficient rejection of malformed CBOR data.
 
-:shield: Decoder has configurable limits that defend against malicious inputs.  Default limits allow very fast and memory efficient rejection of malformed CBOR data.  By contrast, `encoding/gob` is [not designed to be hardened against adversarial inputs](https://pkg.go.dev/encoding/gob#hdr-Security).
+:lock: Decoder has configurable limits that defend against malicious inputs.  By contrast, `encoding/gob` is [not designed to be hardened against adversarial inputs](https://pkg.go.dev/encoding/gob#hdr-Security).
+- No vulnerabilities were found in subset of `fxamacker/cbor` v2.4 listed in the [nonconfidential security assessment](https://github.com/veraison/go-cose/blob/v1.0.0-rc.1/reports/NCC_Microsoft-go-cose-Report_2022-05-26_v1.0.pdf) (prepared by NCC Group for Microsoft Corporation).
 
-API is designed to be safe, efficient, and easy for concurrent use.  API is mostly same as `encoding/json` plus extensions that simplify concurrency for CBOR options and presets.  Encoding and decoding modes are designed to be created at startup and reused.
+API is mostly same as `encoding/json` plus extensions that simplify concurrency for CBOR options and CBOR tags.  Encoding and decoding modes are designed to be created at startup and reused by multiple goroutines.
 
-Features include Go struct tags (`toarray`, `keyasint`, `omitempty`), which automatically make CBOR encodings more compact.
+Go struct tags (`toarray`, `keyasint`, `omitempty`) automatically make CBOR encoded data more compact.
 
-Other features include: CBOR tags for extensibility without version negotiation, duplicate map key detection, and float64→32→16.  Preset CBOR options include Core Deterministic Encoding, Preferred Serialization, CTAP2, Canonical CBOR, etc.
+Features include: CBOR extension points (e.g. CBOR tags), duplicate map key detection, and lossless float64→32→16.  Presets include Core Deterministic Encoding, Preferred Serialization, CTAP2, Canonical CBOR, etc.
 
 ## Quick Start
 
