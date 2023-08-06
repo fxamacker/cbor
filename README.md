@@ -316,47 +316,6 @@ Github reports [2000+ repositories](https://github.com/fxamacker/cbor/network/de
 
 `fxamacker/cbor` passed multiple confidential security assessments.  A [nonconfidential security assessment](https://github.com/veraison/go-cose/blob/v1.0.0-rc.1/reports/NCC_Microsoft-go-cose-Report_2022-05-26_v1.0.pdf) (prepared by NCC Group for Microsoft Corporation) includes a subset of fxamacker/cbor v2.4.0 in its scope.
 
-## Why fxamacker/cbor
-
-fxamacker/cbor balances competing factors such as speed, size, safety, usability, maintainability, etc.
-
-- Productivity features include Go struct tags like `toarray`, `keyasint`, etc.  They reduce encoded data size, improve speed, and reduce programming effort. For example, `toarray` automatically translates a Go struct to/from a CBOR array.
-
-- Modern CBOR features include Core Deterministic Encoding and Preferred Serialization. Other features include CBOR tags, big.Int, float64→32→16, an API like `encoding/json`, and more.
-
-- Security features include the option to detect duplicate map keys and options to set various max limits. And it's designed to make concurrent use of CBOR options easy and free from side-effects.  
-
-- To prevent crashes, it has been fuzz-tested since before release 1.0 and code coverage is kept above 96%.
-
-- For portability and safety, it avoids using `unsafe`, which makes it portable and protected by Go1's compatibility guidelines.  
-
-- For performance, it uses safe optimizations.  When used properly, fxamacker/cbor can be faster than CBOR codecs that rely on `unsafe`.  However, speed is only one factor and should be considered together with other competing factors.
-
-## CBOR Security
-
-__fxamacker/cbor__ is secure.  It rejects malformed CBOR data and has an option to detect duplicate map keys.  It doesn't crash when decoding bad CBOR data. It has extensive tests, coverage-guided fuzzing, data validation, and avoids Go's `unsafe` package.
-
-Decoding 10 bytes of malicious data into `[]byte` shouldn't exhaust memory. E.g.  
-`[]byte{0x9B, 0x00, 0x00, 0x42, 0xFA, 0x42, 0xFA, 0x42, 0xFA, 0x42}`.
-
-| Codec | Speed (ns/op) | Memory | Allocs |
-| :---- | ------------: | -----: | -----: |
-| fxamacker/cbor 2.5.0-beta2 | 44.33 ± 2% | 32 B/op | 2 allocs/op |
-| fxamacker/cbor 0.1.0 - 2.4.0 | ~44.68 ± 6% | 32 B/op |  2 allocs/op |
-| ugorji/go 1.2.10 | 5524792.50 ± 3% | 67110491 B/op |  12 allocs/op |
-| ugorji/go 1.1.0 - 1.2.6 | 💥 runtime: | out of memory: | cannot allocate |
-
-```
-go1.19.6, linux/amd64, i5-13600K (DDR4 not overclocked)
-go test -bench=. -benchmem -count=20
-```
-
-fxamacker/cbor CBOR safety settings include: MaxNestedLevels, MaxArrayElements, MaxMapPairs, and IndefLength.
-
-For more info, see:
- - [RFC 8949 Section 10 (Security Considerations)](https://tools.ietf.org/html/rfc8949#section-10) or [RFC 7049 Section 8](https://tools.ietf.org/html/rfc7049#section-8).
- - [Go warning](https://golang.org/pkg/unsafe/), "Packages that import unsafe may be non-portable and are not protected by the Go 1 compatibility guidelines."
-
 ## CBOR Options
 
 ### Encoding Options
