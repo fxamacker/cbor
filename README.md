@@ -316,44 +316,6 @@ Github reports [2000+ repositories](https://github.com/fxamacker/cbor/network/de
 
 `fxamacker/cbor` passed multiple confidential security assessments.  A [nonconfidential security assessment](https://github.com/veraison/go-cose/blob/v1.0.0-rc.1/reports/NCC_Microsoft-go-cose-Report_2022-05-26_v1.0.pdf) (prepared by NCC Group for Microsoft Corporation) includes a subset of fxamacker/cbor v2.4.0 in its scope.
 
-## CBOR Options
-
-### Encoding Options
-
-Integers always encode to the shortest form that preserves value.  By default, time values are encoded without tags.
-
-Encoding of other data types and map key sort order are determined by encoder options.
-
-| EncOptions | Available Settings (defaults listed first)
-| :--- | :--- |
-| Sort | **SortNone**, SortLengthFirst, SortBytewiseLexical <br/> Aliases: SortCanonical, SortCTAP2, SortCoreDeterministic |
-| Time | **TimeUnix**, TimeUnixMicro, TimeUnixDynamic, TimeRFC3339, TimeRFC3339Nano |
-| TimeTag | **EncTagNone**, EncTagRequired |
-| ShortestFloat | **ShortestFloatNone**, ShortestFloat16  |
-| BigIntConvert | **BigIntConvertShortest**, BigIntConvertNone |
-| InfConvert | **InfConvertFloat16**, InfConvertNone |
-| NaNConvert | **NaNConvert7e00**, NaNConvertNone, NaNConvertQuiet, NaNConvertPreserveSignal |
-| IndefLength | **IndefLengthAllowed**, IndefLengthForbidden  |
-| TagsMd | **TagsAllowed**, TagsForbidden |
-
-See [Options](#options) section for details about each setting.
-
-### Decoding Options
-
-| DecOptions | Available Settings (defaults listed first)  |
-| :--- | :--- |
-| TimeTag | **DecTagIgnored**, DecTagOptional, DecTagRequired |
-| DupMapKey | **DupMapKeyQuiet**, DupMapKeyEnforcedAPF |
-| IntDec | **IntDecConvertNone**, IntDecConvertSigned |
-| IndefLength | **IndefLengthAllowed**, IndefLengthForbidden |
-| TagsMd | **TagsAllowed**, TagsForbidden |
-| ExtraReturnErrors | **ExtraDecErrorNone**, ExtraDecErrorUnknownField |
-| MaxNestedLevels | **32**, can be set to [4, 65535] |
-| MaxArrayElements | **131072**, can be set to [16, 2147483647] |
-| MaxMapPairs | **131072**, can be set to [16, 2147483647] |
-
-See [Options](#options) section for details about each setting.
-
 ## Standards
 This library is a full-featured generic CBOR [(RFC 8949)](https://tools.ietf.org/html/rfc8949) encoder and decoder.  Notable CBOR features include:
 
@@ -367,8 +329,6 @@ This library is a full-featured generic CBOR [(RFC 8949)](https://tools.ietf.org
 | Well-formedness | Always checked and enforced. |
 | Basic validity checks | Check UTF-8 validity and optionally check duplicate map keys. |
 | Security considerations | Prevent integer overflow and resource exhaustion (RFC 8949 Section 10). |
-
-See the Features section for list of [Encoding Options](#encoding-options) and [Decoding Options](#decoding-options).
 
 Known limitations are noted in the [Limitations section](#limitations). 
 
@@ -384,8 +344,6 @@ After well-formedness is verified, basic validity errors are handled as follows:
 When decoding well-formed CBOR arrays and maps, decoder saves the first error it encounters and continues with the next item.  Options to handle this differently may be added in the future.
 
 By default, decoder treats time values of floating-point NaN and Infinity as if they are CBOR Null or CBOR Undefined.
-
-See [Options](#options) section for detailed settings or [Features](#features) section for a summary of options.
 
 __Click to expand topic:__
 
