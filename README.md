@@ -17,7 +17,7 @@ See [Quick&nbsp;Start](#quick-start).
 [![CodeQL](https://github.com/fxamacker/cbor/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/fxamacker/cbor/actions/workflows/codeql-analysis.yml)
 [![](https://img.shields.io/badge/fuzzing-passing-44c010)](#fuzzing-and-code-coverage)
 [![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor)
-[![](https://img.shields.io/ossf-scorecard/github.com/fxamacker/cbor?label=openssf%20scorecard)](https://securityscorecards.dev/) <!-- Do not open PR for this. For now, go to homepage of openssf score instead of listing score details. -->
+[![](https://img.shields.io/ossf-scorecard/github.com/fxamacker/cbor?label=openssf%20scorecard)](#) <!-- Do not open PR for this. For now, don't go to detailed report. -->
 
 <!-- [![](https://github.com/fxamacker/cbor/workflows/linters/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Alinters) -->
 
