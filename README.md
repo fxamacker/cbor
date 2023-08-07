@@ -411,7 +411,7 @@ Newly added API documented as "subject to change" are excluded from SemVer.
 
 Newly added API in the master branch that has never been release tagged are excluded from SemVer.
 
-Bug fixes like detecting an error that was missed in prior version are excluded from SemVer as long as function parameters, etc. are unchanged.
+Bug fixes that change behavior (like returning error that was missed in prior versions) are excluded from SemVer as long as function parameters are unchanged.
 
 ## Code of Conduct 
 This project has adopted the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).  Contact [faye.github@gmail.com](mailto:faye.github@gmail.com) with any questions or comments.
