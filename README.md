@@ -19,8 +19,6 @@ See [Quick&nbsp;Start](#quick-start).
 [![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor)
 [![](https://img.shields.io/ossf-scorecard/github.com/fxamacker/cbor?label=openssf%20scorecard)](#) <!-- Do not open PR for this. For now, don't go to detailed report. -->
 
-<!-- [![](https://github.com/fxamacker/cbor/workflows/linters/badge.svg)](https://github.com/fxamacker/cbor/actions?query=workflow%3Alinters) -->
-
 `fxamacker/cbor` is a CBOR codec in full conformance with [IETF STD&nbsp;94 (RFC&nbsp;8949)](https://www.rfc-editor.org/info/std94). It also supports CBOR Sequences ([RFC&nbsp;8742](https://www.rfc-editor.org/rfc/rfc8742.html)) and Extended Diagnostic Notation ([Appendix G of RFC&nbsp;8610](https://www.rfc-editor.org/rfc/rfc8610.html#appendix-G)).
 
 Features include full support for CBOR tags, [Core Deterministic Encoding](https://www.rfc-editor.org/rfc/rfc8949.html#name-core-deterministic-encoding), duplicate map key detection, etc.
@@ -31,9 +29,42 @@ Struct tags (`toarray`, `keyasint`, `omitempty`) reduce encoded size of structs.
 
 API is mostly same as `encoding/json`, plus interfaces that simplify concurrency for CBOR options.
 
+#### CBOR Security
+
+Decoding 10 bytes of malicious data directly into `[]byte`:
+
+| Codec | Speed (ns/op) | Memory | Allocs |
+| :---- | ------------: | -----: | -----: |
+| fxamacker/cbor 2.5.0 | 43.95n ± 5% | 32 B/op | 2 allocs/op |
+| ugorji/go 1.2.11 | 5353261.00n ± 4% | 67111321 B/op |  13 allocs/op |
+
+<details><summary>More Details and Prior Comparions</summary><p/>
+
+Latest comparison used:
+- Input: `[]byte{0x9B, 0x00, 0x00, 0x42, 0xFA, 0x42, 0xFA, 0x42, 0xFA, 0x42}`
+- go1.19.10, linux/amd64, i5-13600K (disabled all e-cores, DDR4 @2933)
+- go test -bench=. -benchmem -count=20
+
+#### Prior comparisons
+
+| Codec | Speed (ns/op) | Memory | Allocs |
+| :---- | ------------: | -----: | -----: |
+| fxamacker/cbor 2.5.0-beta2 | 44.33 ± 2% | 32 B/op | 2 allocs/op |
+| fxamacker/cbor 0.1.0 - 2.4.0 | ~44.68 ± 6% | 32 B/op |  2 allocs/op |
+| ugorji/go 1.2.10 | 5524792.50 ± 3% | 67110491 B/op |  12 allocs/op |
+| ugorji/go 1.1.0 - 1.2.6 | 💥 runtime: | out of memory: | cannot allocate |
+
+- Input: `[]byte{0x9B, 0x00, 0x00, 0x42, 0xFA, 0x42, 0xFA, 0x42, 0xFA, 0x42}`
+- go1.19.6, linux/amd64, i5-13600K (DDR4 not overclocked)
+- go test -bench=. -benchmem -count=20
+
+</details>
+
+#### Design and Feature Highlights
+
 Design balances tradeoffs between speed, security, memory, encoded data size, usability, etc.
 
-<details><summary>Design and Feature Highlights</summary><p/>
+<details><summary>Highlights</summary><p/>
 
 __🚀&nbsp; Speed__
 
@@ -58,24 +89,6 @@ Presets include Core Deterministic Encoding, Preferred Serialization, CTAP2 Cano
 __📆&nbsp;  Extensibility__
 
 Features include CBOR [extension points](https://www.rfc-editor.org/rfc/rfc8949.html#section-7.1) (e.g. CBOR tags) and extensive settings.  API has interfaces that allow users to create custom encoding and decoding without modifying this library.
-
-</details>
-
-<details><summary>Efficient Rejection of Malicious CBOR Data</summary><p/>
-
-Decoding 10 bytes of malicious data into `[]byte` doesn't exhaust memory. E.g.  
-`[]byte{0x9B, 0x00, 0x00, 0x42, 0xFA, 0x42, 0xFA, 0x42, 0xFA, 0x42}`.
-
-| Codec | Speed (ns/op) | Memory | Allocs |
-| :---- | ------------: | -----: | -----: |
-| fxamacker/cbor 2.5.0-beta2 | 44.33 ± 2% | 32 B/op | 2 allocs/op |
-| fxamacker/cbor 0.1.0 - 2.4.0 | ~44.68 ± 6% | 32 B/op |  2 allocs/op |
-| ugorji/go 1.2.10 | 5524792.50 ± 3% | 67110491 B/op |  12 allocs/op |
-| ugorji/go 1.1.0 - 1.2.6 | 💥 runtime: | out of memory: | cannot allocate |
-
-- go1.19.6, linux/amd64, i5-13600K (DDR4 not overclocked)
-- go test -bench=. -benchmem -count=20
-
 
 </details>
 
