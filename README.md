@@ -429,27 +429,9 @@ Phrases like "no crashes", "doesn't crash", and "is secure" mean there are no kn
 
 Please read the license for additional disclaimers and terms.
 
-## Special Thanks
+## Acknowledgements
 
-__Making this library better__  
-
-* Stefan Tatschner for using this library in [sep](https://rumpelsepp.org/projects/sep), being the 1st to discover my CBOR library, requesting time.Time in issue #1, and submitting this library in a [PR to cbor.io](https://github.com/cbor/cbor.github.io/pull/56) on Aug 12, 2019.
-* Yawning Angel for using this library to [oasis-core](https://github.com/oasislabs/oasis-core), and requesting BinaryMarshaler in issue #5.
-* Jernej Kos for requesting RawMessage in issue #11 and offering feedback on v2.1 API for CBOR tags.
-* ZenGround0 for using this library in [go-filecoin](https://github.com/filecoin-project/go-filecoin), filing "toarray" bug in issue #129, and requesting  
-CBOR BSTR <--> Go array in #133.
-* Keith Randall for [fixing Go bugs and providing workarounds](https://github.com/golang/go/issues/36400) so we don't have to wait for new versions of Go.
-
-__Help clarifying CBOR RFC 7049 or 7049bis (7049bis is the draft of RFC 8949)__
-
-* Carsten Bormann for RFC 7049 (CBOR), adding this library to cbor.io, his fast confirmation to my RFC 7049 errata, approving my pull request to 7049bis, and his patience when I misread a line in 7049bis.
-* Laurence Lundblade for his help on the IETF mailing list for 7049bis and for pointing out on a CBORbis issue that CBOR Undefined might be problematic translating to JSON.
-* Jeffrey Yasskin for his help on the IETF mailing list for 7049bis.
-
-__Words of encouragement and support__
-
-* Jakob Borg for his words of encouragement about this library at Go Forum.  This is especially appreciated in the early stages when there's a lot of rough edges.
-
+The acknowledgements need to be rewritten.  This section wasn't updated in years and newer contributors were unintentionally not listed here.
 
 ## License 
 Copyright © 2019-2023 [Faye Amacker](https://github.com/fxamacker).  
