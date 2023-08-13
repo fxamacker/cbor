@@ -6,7 +6,7 @@
 
 CBOR is a [trusted alternative](https://www.rfc-editor.org/rfc/rfc8949.html#name-comparison-of-other-binary-) to JSON, MessagePack, Protocol Buffers, etc.&nbsp; CBOR is an Internet&nbsp;Standard defined by [IETF&nbsp;STD&nbsp;94 (RFC&nbsp;8949)](https://www.rfc-editor.org/info/std94) and is designed to be relevant for decades.
 
-`fxamacker/cbor` is used in projects by Arm Ltd., Cisco, Dapper Labs, EdgeX&nbsp;Foundry, Fraunhofer&#8209;AISEC, Linux&nbsp;Foundation, Microsoft, Mozilla, Oasis&nbsp;Protocol, Tailscale, Teleport, [and&nbsp;others](https://github.com/fxamacker/cbor#who-uses-fxamackercbor).
+`fxamacker/cbor` is used in projects by Arm Ltd., Cisco, Dapper Labs, EdgeX&nbsp;Foundry, Elastic, Fraunhofer&#8209;AISEC, Linux&nbsp;Foundation, Microsoft, Mozilla, Oasis&nbsp;Protocol, Tailscale, Teleport, [and&nbsp;others](https://github.com/fxamacker/cbor#who-uses-fxamackercbor).
 
 See [Quick&nbsp;Start](#quick-start).
 
@@ -17,7 +17,7 @@ See [Quick&nbsp;Start](#quick-start).
 [![CodeQL](https://github.com/fxamacker/cbor/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/fxamacker/cbor/actions/workflows/codeql-analysis.yml)
 [![](https://img.shields.io/badge/fuzzing-passing-44c010)](#fuzzing-and-code-coverage)
 [![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor)
-[![](https://img.shields.io/ossf-scorecard/github.com/fxamacker/cbor?label=openssf%20scorecard)](#) <!-- Do not open PR for this. For now, don't go to detailed report. -->
+[![](https://img.shields.io/ossf-scorecard/github.com/fxamacker/cbor?label=openssf%20scorecard)](https://github.com/fxamacker/cbor#fuzzing-and-code-coverage) 
 
 `fxamacker/cbor` is a CBOR codec in full conformance with [IETF STD&nbsp;94 (RFC&nbsp;8949)](https://www.rfc-editor.org/info/std94). It also supports CBOR Sequences ([RFC&nbsp;8742](https://www.rfc-editor.org/rfc/rfc8742.html)) and Extended Diagnostic Notation ([Appendix G of RFC&nbsp;8610](https://www.rfc-editor.org/rfc/rfc8610.html#appendix-G)).
 
@@ -31,7 +31,9 @@ API is mostly same as `encoding/json`, plus interfaces that simplify concurrency
 
 #### CBOR Security
 
-Decoding 10 bytes of malicious data directly into `[]byte`:
+Configurable limits help defend against malicious inputs.
+
+Decoding 10 bytes of malicious data directly into `[]byte` is efficiently rejected.
 
 | Codec | Speed (ns/op) | Memory | Allocs |
 | :---- | ------------: | -----: | -----: |
@@ -104,7 +106,8 @@ __Install__: `go get github.com/fxamacker/cbor/v2` and `import "github.com/fxama
 
 ### Default Mode
 
-Package level functions (default mode) use default settings.
+Package level functions only use default settings.  
+They provide the "default mode" of encoding and decoding.
 
 ```go
 // API matches encoding/json.
@@ -151,6 +154,8 @@ b, err := em.Marshal(v)            // encode v to []byte b
 encoder := em.NewEncoder(w)        // create encoder with io.Writer w
 err := encoder.Encode(v)           // encode v to io.Writer w
 ```
+
+Default mode and custom modes automatically apply struct tags.
 
 ### Struct Tags
 
@@ -256,7 +261,6 @@ IMPORTANT: Changes in [v2.5.0-beta](https://github.com/fxamacker/cbor/releases/t
 - [v2.5.0-beta2](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta2) - Bugfix to retry in `Decoder` if `io.Reader`'s `Read()` returns 0 bytes read with nil error.
 - [v2.5.0-beta](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta) - Notable improvements, optimizations, bugfixes, and 8 new contributors!
 
-
 <details><summary>👉 Benchmark Comparison: v2.4.0 vs v2.5.0-beta2</summary><p/>
 
 Comparison of v2.4.0 vs v2.5.0-beta2 provided by @448 (edited to fit width).
@@ -341,7 +345,7 @@ This library is a full-featured generic CBOR [(RFC 8949)](https://tools.ietf.org
 | Duplicate map keys | Always forbid for encoding and option to allow/forbid for decoding.   |
 | Indefinite length data | Option to allow/forbid for encoding and decoding. |
 | Well-formedness | Always checked and enforced. |
-| Basic validity checks | Check UTF-8 validity and optionally check duplicate map keys. |
+| Basic validity checks | Optionally check UTF-8 validity and duplicate map keys. |
 | Security considerations | Prevent integer overflow and resource exhaustion (RFC 8949 Section 10). |
 
 Known limitations are noted in the [Limitations section](#limitations). 
@@ -352,7 +356,7 @@ Decoder checks for all required well-formedness errors, including all "subkinds"
 
 After well-formedness is verified, basic validity errors are handled as follows:
 
-* Invalid UTF-8 string: Decoder always checks and returns invalid UTF-8 string error.
+* Invalid UTF-8 string: Decoder checks and returns invalid UTF-8 string error by default.
 * Duplicate keys in a map: Decoder has options to ignore or enforce rejection of duplicate map keys.
 
 When decoding well-formed CBOR arrays and maps, decoder saves the first error it encounters and continues with the next item.  Options to handle this differently may be added in the future.
@@ -400,18 +404,13 @@ If any of these limitations prevent you from using this library, please open an 
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  CBOR `Null` (0xf6) more closely matches Go's `nil`.
 * CBOR `simple values` that are unassigned/reserved by IANA are not fully supported until v2.5.0.
 * CBOR map keys with data types not supported by Go for map keys are ignored and an error is returned after continuing to decode remaining items.  
-* When using io.Reader interface to read very large or indefinite length CBOR data, Go's `io.LimitReader` should be used to limit size.
 * When decoding registered CBOR tag data to interface type, decoder creates a pointer to registered Go type matching CBOR tag number.  Requiring a pointer for this is a Go limitation. 
 
 ## Fuzzing and Code Coverage
 
-__Over 375 tests__ must pass on 4 architectures before tagging a release.  They include all RFC 7049 and RFC 8949 examples, bugs found by fuzzing, maliciously crafted CBOR data, and over 87 tests with malformed data.  There's some overlap in the tests but it isn't a high priority to trim tests.
+__Code coverage__ must not fall below 95% when tagging a release.  Code coverage is above 96% (`go test -cover`) for fxamacker/cbor v2.5.
 
-__Code coverage__ must not fall below 95% when tagging a release.  Code coverage is above 96% (`go test -cover`) for cbor v2.5 which is among the highest for codecs written in Go.
-
-__Coverage-guided fuzzing__ must pass billions of execs using a previously generated corpus before tagging a release.  Fuzzing is usually continued after the release is tagged and is manually stopped after reaching several billion execs.  Fuzzing is done using nonpublic code which may eventually get merged into this project.
-
-To prevent delays to release schedules, fuzzing is not restarted for a release if changes are limited to ci, docs, and comments.
+__Coverage-guided fuzzing__ must pass billions of execs using before tagging a release.  Fuzzing is done using nonpublic code which may eventually get merged into this project.  Until then, reports like OpenSSF Scorecard cannot detect that this project uses extensive fuzz tests.
 
 <hr>
 
@@ -421,11 +420,10 @@ This project uses [Semantic Versioning](https://semver.org), so the API is alway
 These functions have signatures identical to encoding/json and they will likely never change even after major new releases:  
 `Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `(*Encoder).Encode`, and `(*Decoder).Decode`.
 
-Newly added API documented as "subject to change" are excluded from SemVer.
-
-Newly added API in the master branch that has never been release tagged are excluded from SemVer.
-
-Bug fixes that change behavior (like returning error that was missed in prior versions) are excluded from SemVer as long as function parameters are unchanged.
+Exclusions from SemVer:
+- Newly added API documented as "subject to change".
+- Newly added API in the master branch that has never been release tagged.
+- Bug fixes that change behavior (e.g. return error that was missed in prior version) as long as function parameters are unchanged.
 
 ## Code of Conduct 
 This project has adopted the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).  Contact [faye.github@gmail.com](mailto:faye.github@gmail.com) with any questions or comments.
@@ -438,16 +436,18 @@ Security fixes are provided for the latest released version of fxamacker/cbor.
 
 For the full text of the Security Policy, see [SECURITY.md](SECURITY.md).
 
-## Disclaimers
-Phrases like "no crashes", "doesn't crash", and "is secure" mean there are no known crash bugs in the latest version based on results of unit tests and coverage-guided fuzzing.  They don't imply the software is 100% bug-free or 100% invulnerable to all known and unknown attacks.
-
-Please read the license for additional disclaimers and terms.
-
 ## Acknowledgements
 
-The acknowledgements need to be rewritten.
+Many thanks to all the contributors on this project!
 
-This wasn't updated in years and newer contributors were missing.
+I'm extremely grateful for people who were supportive or contributed in the very early days:
+- Stefan Tatschner, Yawning Angel, Jernej Kos, ZenGround0, Montgomery Edwards⁴⁴⁸, Jakob Borg
+
+I'm also grateful for Bastian Müller and Dieter Shirley suggesting stream mode.
+
+This library wouldn't be possible without Carsten Bormann authoring CBOR (RFC 7049 and RFC 8949).
+
+Special thanks to Laurence Lundblade and Jeffrey Yasskin for their help on IETF mailing list for 7049bis.
 
 ## License 
 Copyright © 2019-2023 [Faye Amacker](https://github.com/fxamacker).  
