@@ -232,6 +232,7 @@ because RFC 8949 treats CBOR data item with remaining bytes as malformed.
 Other useful functions: 
 - `Diagnose`, `DiagnoseFirst` produce human-readable [Extended Diagnostic Notation](https://www.rfc-editor.org/rfc/rfc8610.html#appendix-G) from CBOR data.
 - `UnmarshalFirst` decodes first CBOR data item and return any remaining bytes.
+- `Wellformed` returns true if the the CBOR data item is well-formed.
 
 Interfaces identical or comparable to Go `encoding` packages include:  
 `Marshaler`, `Unmarshaler`, `BinaryMarshaler`, and `BinaryUnmarshaler`.
@@ -250,16 +251,13 @@ Default limits may need to be increased for systems handling very large data (e.
 
 ## Status
 
-v2.5.0 is fuzz tested and production quality.
+v2.5.0 was released on Sunday, August 13, 2023.  It is fuzz tested and production quality.
 
-IMPORTANT: These changes in [v2.5.0-beta](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta) should be reviewed before upgrading from prior versions:
-- PR 370: Add SimpleValue type to more fully support CBOR Simple Values, including values not assigned by IANA and...
-- PR 376: Add ByteString type to support CBOR maps with byte string keys because Go doesn't allow []byte as map keys and...
-- PR 379: Make Decoder.Decode() return io.ErrUnexpectedEOF instead of io.EOF on EOF if current CBOR data item is incomplete.
-- PR 380: Make Unmarshal() and Valid() return cbor.ExtraneousDataError (instead of ignoring extraneous data if any remain)
+__IMPORTANT__:  Before upgrading from prior release, please read the notable changes highlighted in the release notes.
 
 See latest [releases](https://github.com/fxamacker/cbor/releases) and [v2.5.0 release notes](https://github.com/fxamacker/cbor/releases/tag/v2.5.0) for list of new features and improvements.
 
+<!--
 <details><summary>👉 Benchmark Comparison: v2.4.0 vs v2.5.0</summary><p/>
 
 TODO: Update to v2.4.0 vs 2.5.0 (not beta2).
@@ -316,15 +314,6 @@ geomean                                                      2.782              
 ```
 
 </details>
-
-<!--
-## What is CBOR?
-
-[CBOR](https://tools.ietf.org/html/rfc8949) is a concise binary data format inspired by [JSON](https://www.json.org) and [MessagePack](https://msgpack.org).  CBOR is defined in [RFC 8949](https://tools.ietf.org/html/rfc8949) (December 2020) which obsoletes [RFC 7049](https://tools.ietf.org/html/rfc7049) (October 2013).  
-
-CBOR is an [Internet Standard](https://en.wikipedia.org/wiki/Internet_Standard) by [IETF](https://www.ietf.org).  It's used in other standards like [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn) by [W3C](https://www.w3.org), [COSE (RFC 8152)](https://tools.ietf.org/html/rfc8152), [CWT (RFC 8392)](https://tools.ietf.org/html/rfc8392), [CDDL (RFC 8610)](https://datatracker.ietf.org/doc/html/rfc8610) and [more](CBOR_GOLANG.md).
-
-[Reasons for choosing CBOR](https://github.com/fxamacker/cbor/wiki/Why-CBOR) vary by project.  Some projects replaced protobuf, encoding/json, encoding/gob, etc. with CBOR.  For example, by replacing protobuf with CBOR in gRPC.
 -->
 
 ## Who uses fxamacker/cbor
@@ -424,7 +413,7 @@ These functions have signatures identical to encoding/json and they will likely 
 Exclusions from SemVer:
 - Newly added API documented as "subject to change".
 - Newly added API in the master branch that has never been release tagged.
-- Bug fixes that change behavior (e.g. return error that was missed in prior version) if function parameters are unchanged.
+- Bug fixes that change behavior (e.g. return error that was missed in prior version) if function parameters are unchanged.  We try to highlight these in the release notes.
 
 ## Code of Conduct 
 
@@ -446,16 +435,15 @@ For the full text of the Security Policy, see [SECURITY.md](SECURITY.md).
 
 Many thanks to all the contributors on this project!
 
-I'm extremely grateful for people who were supportive or contributed in the very early days:
-- Stefan Tatschner, Yawning Angel, Jernej Kos, x448, ZenGround0, Jakob Borg
+I'm especially grateful to Bastian Müller and Dieter Shirley for suggesting and collaborating on CBOR stream mode, and much more.
 
-I'm also grateful for Bastian Müller and Dieter Shirley suggesting and collaborating on CBOR stream mode.
+I'm very grateful to Stefan Tatschner, Yawning Angel, Jernej Kos, x448, ZenGround0, and Jakob Borg for their contributions or support in the very early days.
 
-This library wouldn't be possible without Carsten Bormann authoring CBOR (RFC 7049 and RFC 8949).
+This library clearly wouldn't be possible without Carsten Bormann authoring CBOR RFCs.
 
-Special thanks to Laurence Lundblade and Jeffrey Yasskin for their help on IETF mailing list for [7049bis](https://github.com/cbor-wg/CBORbis).
+Special thanks to Laurence Lundblade and Jeffrey Yasskin for their help on IETF mailing list or at [7049bis](https://github.com/cbor-wg/CBORbis).
 
-This library uses `x448/float16` which used to be part of this library.  As a standalone package, it is now used by various projects.
+This library uses `x448/float16` which used to be included.  Now as a standalone package, `x448/float16` is useful to other projects as well.
 
 ## License 
 Copyright © 2019-2023 [Faye Amacker](https://github.com/fxamacker).  
