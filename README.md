@@ -392,7 +392,6 @@ For more information, see [decoding options](#decoding-options-1) and [tag optio
 If any of these limitations prevent you from using this library, please open an issue along with a link to your project.
 
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  CBOR `Null` (0xf6) more closely matches Go's `nil`.
-* CBOR `simple values` that are unassigned/reserved by IANA are not fully supported until `fxamacker/cbor` v2.5.0.
 * CBOR map keys with data types not supported by Go for map keys are ignored and an error is returned after continuing to decode remaining items.  
 * When decoding registered CBOR tag data to interface type, decoder creates a pointer to registered Go type matching CBOR tag number.  Requiring a pointer for this is a Go limitation. 
 
