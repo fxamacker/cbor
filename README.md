@@ -8,7 +8,7 @@ CBOR is a [trusted alternative](https://www.rfc-editor.org/rfc/rfc8949.html#name
 
 `fxamacker/cbor` is used in projects by Arm Ltd., Cisco, Dapper Labs, EdgeX&nbsp;Foundry, Fraunhofer&#8209;AISEC, Linux&nbsp;Foundation, Microsoft, Mozilla, Oasis&nbsp;Protocol, Tailscale, Teleport, [and&nbsp;others](https://github.com/fxamacker/cbor#who-uses-fxamackercbor).
 
-See [Quick&nbsp;Start](#quick-start).
+See [Quick&nbsp;Start](#quick-start) if you have not yet used v2.5.0.
 
 ## fxamacker/cbor
 
@@ -31,16 +31,18 @@ API is mostly same as `encoding/json`, plus interfaces that simplify concurrency
 
 #### CBOR Security
 
-Configurable limits help defend against malicious inputs.
+Decoder has configurable limits that defend against malicious inputs.  Duplicate map key detection is supported.
 
-Decoding 10 bytes of malicious data directly into `[]byte` is efficiently rejected.
+By contrast, `encoding/gob` is [not designed to be hardened against adversarial inputs](https://pkg.go.dev/encoding/gob#hdr-Security).
+
+Decoding 10 bytes of malicious CBOR data directly into `[]byte` with default settings:
 
 | Codec | Speed (ns/op) | Memory | Allocs |
 | :---- | ------------: | -----: | -----: |
 | fxamacker/cbor 2.5.0 | 43.95n ± 5% | 32 B/op | 2 allocs/op |
 | ugorji/go 1.2.11 | 5353261.00n ± 4% | 67111321 B/op |  13 allocs/op |
 
-<details><summary>More Details and Prior Comparions</summary><p/>
+<details><summary>Benchmark details</summary><p/>
 
 Latest comparison used:
 - Input: `[]byte{0x9B, 0x00, 0x00, 0x42, 0xFA, 0x42, 0xFA, 0x42, 0xFA, 0x42}`
@@ -106,20 +108,34 @@ __Install__: `go get github.com/fxamacker/cbor/v2` and `import "github.com/fxama
 
 ### Default Mode
 
-Package level functions only use default settings.  
+Package level functions only use this library's default settings.  
 They provide the "default mode" of encoding and decoding.
 
 ```go
 // API matches encoding/json.
-b, err := cbor.Marshal(v)        // encode v to []byte b
-err := cbor.Unmarshal(b, &v)     // decode []byte b to v
-encoder := cbor.NewEncoder(w)    // create encoder with io.Writer w
-decoder := cbor.NewDecoder(r)    // create decoder with io.Reader r
+b, err = cbor.Marshal(v)        // encode v to []byte b
+err = cbor.Unmarshal(b, &v)     // decode []byte b to v
+encoder = cbor.NewEncoder(w)    // create encoder with io.Writer w
+decoder = cbor.NewDecoder(r)    // create decoder with io.Reader r
+err = encoder.Encode(v)         // encode v to a CBOR data item
+err = decoder.Decode(&v)        // decode a CBOR data item to v
+
+// v2.5.0 added new functions that can return remaining bytes.
+
+// UnmarshalFirst decodes first CBOR data item and returns remaining bytes.
+// Unlike Unmarshal, extraneous data is not treated as an error by UnmarshalFirst.
+rest, err = cbor.UnmarshalFirst(b, &v)   // decode []byte b to v
+
+// DiagnoseFirst translates first CBOR data item to text and returns remaining bytes.
+text, rest, err = cbor.DiagnoseFirst(b)  // decode []byte b to Diagnostic Notation text
 ```
 
-Some CBOR-based formats or protocols may require non-default settings.
+__IMPORTANT__: 👉  CBOR settings allow trade-offs between speed, security, encoding size, etc.
 
-For example, WebAuthn uses "CTAP2 Canonical CBOR" settings.  It is available as a preset.
+- Different CBOR libraries may use different default settings.
+- CBOR-based formats or protocols usually require specific settings.
+
+For example, WebAuthn uses "CTAP2 Canonical CBOR" which is available as a preset.
 
 ### Presets
 
@@ -251,11 +267,11 @@ Default limits may need to be increased for systems handling very large data (e.
 
 ## Status
 
-v2.5.0 was released on Sunday, August 13, 2023.  It is fuzz tested and production quality.
+v2.5.0 was released on Sunday, August 13, 2023 with new features and important bug fixes.  It is fuzz tested and production quality.
 
-__IMPORTANT__:  Before upgrading from prior release, please read the notable changes highlighted in the release notes.
+__IMPORTANT__:  👉 Before upgrading from v2.4 or older release, please read the notable changes highlighted in the release notes.  v2.5.0 is a large release with bug fixes to error handling for extraneous data in `Unmarshal`, etc. that should be reviewed before upgrading.
 
-See latest [releases](https://github.com/fxamacker/cbor/releases) and [v2.5.0 release notes](https://github.com/fxamacker/cbor/releases/tag/v2.5.0) for list of new features and improvements.
+See [v2.5.0 release notes](https://github.com/fxamacker/cbor/releases/tag/v2.5.0) for list of new features, improvements, and bug fixes.
 
 <!--
 <details><summary>👉 Benchmark Comparison: v2.4.0 vs v2.5.0</summary><p/>
