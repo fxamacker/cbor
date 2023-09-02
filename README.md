@@ -31,16 +31,18 @@ API is mostly same as `encoding/json`, plus interfaces that simplify concurrency
 
 #### CBOR Security
 
-Configurable limits help defend against malicious inputs.
+Decoder has configurable limits that defend against malicious inputs.  Duplicate map key detection is supported.
 
-Decoding 10 bytes of malicious data directly into `[]byte` is efficiently rejected.
+By contrast, `encoding/gob` is [not designed to be hardened against adversarial inputs](https://pkg.go.dev/encoding/gob#hdr-Security).
+
+Decoding 10 bytes of malicious CBOR data directly into `[]byte` with default settings:
 
 | Codec | Speed (ns/op) | Memory | Allocs |
 | :---- | ------------: | -----: | -----: |
 | fxamacker/cbor 2.5.0 | 43.95n ± 5% | 32 B/op | 2 allocs/op |
 | ugorji/go 1.2.11 | 5353261.00n ± 4% | 67111321 B/op |  13 allocs/op |
 
-<details><summary>More Details and Prior Comparions</summary><p/>
+<details><summary>Benchmark details</summary><p/>
 
 Latest comparison used:
 - Input: `[]byte{0x9B, 0x00, 0x00, 0x42, 0xFA, 0x42, 0xFA, 0x42, 0xFA, 0x42}`
