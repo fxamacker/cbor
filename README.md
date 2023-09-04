@@ -207,6 +207,8 @@ JSON: {"Foo":{"Qux":{}}}
 
 </details>
 
+Example using different struct tags together:
+
 ![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.3.0/cbor_struct_tags_api.svg?sanitize=1 "CBOR API and Go Struct Tags")
 
 API is mostly same as `encoding/json`, plus interfaces that simplify concurrency for CBOR options.
