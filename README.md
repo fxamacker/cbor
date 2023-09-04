@@ -103,8 +103,8 @@ func main() {
 
 </details>
 
-Default settings quickly reject malformed CBOR data.  E.g. attempts to decode  
-10 bytes of malicious CBOR data to `[]byte` are efficiently denied:
+`fxamacker/cbor` is fast at rejecting malformed CBOR data.  E.g. attempts to  
+decode 10 bytes of malicious CBOR data to `[]byte` (with default settings):
 
 | Codec | Speed (ns/op) | Memory | Allocs |
 | :---- | ------------: | -----: | -----: |
@@ -141,7 +141,7 @@ Struct tags (`toarray`, `keyasint`, `omitempty`) reduce encoded size of structs.
 
 <details><summary>Example encoding 3-level nested Go struct to 1 byte CBOR</summary><p/>
 
-https://go.dev/play/p/NzuGAWNyJlx
+https://go.dev/play/p/YxwvfPdFQG2
 
 ```Go
 // Example encoding nested struct (with omitempty tag)
@@ -189,9 +189,18 @@ func js() {
 
 func main() {
 	cb()
-	fmt.Println("-------------------------------")
+	fmt.Println("-------------")
 	js()
 }
+```
+
+Output (DN is Diagnostic Notation):
+```
+hex(CBOR): a0
+DN: {}
+-------------
+hex(JSON): 7b22466f6f223a7b22517578223a7b7d7d7d
+JSON: {"Foo":{"Qux":{}}}
 ```
 
 <hr/>
@@ -218,15 +227,13 @@ Package level functions only use this library's default settings.
 They provide the "default mode" of encoding and decoding.
 
 ```go
-// API matches encoding/json.
+// API matches encoding/json for Marshal, Unmarshal, Encode, Decode, etc.
 b, err = cbor.Marshal(v)        // encode v to []byte b
 err = cbor.Unmarshal(b, &v)     // decode []byte b to v
-encoder = cbor.NewEncoder(w)    // create encoder with io.Writer w
 decoder = cbor.NewDecoder(r)    // create decoder with io.Reader r
-err = encoder.Encode(v)         // encode v to a CBOR data item
 err = decoder.Decode(&v)        // decode a CBOR data item to v
 
-// v2.5.0 added new functions that can return remaining bytes.
+// v2.5.0 added new functions that return remaining bytes.
 
 // UnmarshalFirst decodes first CBOR data item and returns remaining bytes.
 rest, err = cbor.UnmarshalFirst(b, &v)   // decode []byte b to v
@@ -285,7 +292,75 @@ Default mode and custom modes automatically apply struct tags.
 
 Struct tags (`toarray`, `keyasint`, `omitempty`) reduce encoded size of structs.
 
-<details><summary>Example using struct tags</summary><p/>
+<details><summary>Example encoding 3-level nested Go struct to 1 byte CBOR</summary><p/>
+
+https://go.dev/play/p/YxwvfPdFQG2
+
+```Go
+// Example encoding nested struct (with omitempty tag)
+// - encoding/json:  18 byte JSON
+// - fxamacker/cbor:  1 byte CBOR
+package main
+
+import (
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+
+	"github.com/fxamacker/cbor/v2"
+)
+
+type GrandChild struct {
+	Quux int `json:",omitempty"`
+}
+
+type Child struct {
+	Baz int        `json:",omitempty"`
+	Qux GrandChild `json:",omitempty"`
+}
+
+type Parent struct {
+	Foo Child `json:",omitempty"`
+	Bar int   `json:",omitempty"`
+}
+
+func cb() {
+	results, _ := cbor.Marshal(Parent{})
+	fmt.Println("hex(CBOR): " + hex.EncodeToString(results))
+
+	text, _ := cbor.Diagnose(results) // Diagnostic Notation
+	fmt.Println("DN: " + text)
+}
+
+func js() {
+	results, _ := json.Marshal(Parent{})
+	fmt.Println("hex(JSON): " + hex.EncodeToString(results))
+
+	text := string(results) // JSON
+	fmt.Println("JSON: " + text)
+}
+
+func main() {
+	cb()
+	fmt.Println("-------------")
+	js()
+}
+```
+
+Output (DN is Diagnostic Notation):
+```
+hex(CBOR): a0
+DN: {}
+-------------
+hex(JSON): 7b22466f6f223a7b22517578223a7b7d7d7d
+JSON: {"Foo":{"Qux":{}}}
+```
+
+<hr/>
+
+</details>
+
+<details><summary>Example using several struct tags</summary><p/>
 	
 ![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.3.0/cbor_struct_tags_api.svg?sanitize=1 "CBOR API and Go Struct Tags")
 
@@ -446,12 +521,17 @@ geomean                                                      2.782              
 
 `fxamacker/cbor` is used in projects by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, Cisco, Confidential Computing Consortium, ConsenSys, Dapper&nbsp;Labs, EdgeX&nbsp;Foundry, F5, Fraunhofer&#8209;AISEC, Linux&nbsp;Foundation, Microsoft, Mozilla, National&nbsp;Cybersecurity&nbsp;Agency&nbsp;of&nbsp;France (govt), Netherlands (govt), Oasis Protocol, Smallstep, Tailscale, Taurus SA, Teleport, TIBCO, and others.
 
-Although GitHub only reports around 200 repos depend on this library, that is for v1 (old version). For v2 (current version), GitHub has harder-to-find report that shows [2000+ repositories](https://github.com/fxamacker/cbor/network/dependents?package_id=UGFja2FnZS0yMjcwNDY1OTQ4) depend on fxamacker/cbor/v2.
+GitHub reports `fxamacker/cbor` is "Used by":
+- &nbsp;&nbsp; 220+ [repositories that depend on v1.x](https://github.com/fxamacker/cbor/network/dependents) (old version). Shown by default.
+- 2,450+ [repositories that depend on v2.x](https://github.com/fxamacker/cbor/network/dependents?package_id=UGFja2FnZS0yMjcwNDY1OTQ4) (current version).
 
 `fxamacker/cbor` passed multiple confidential security assessments.  A [nonconfidential security assessment](https://github.com/veraison/go-cose/blob/v1.0.0-rc.1/reports/NCC_Microsoft-go-cose-Report_2022-05-26_v1.0.pdf) (prepared by NCC Group for Microsoft Corporation) includes a subset of fxamacker/cbor v2.4.0 in its scope.
 
 ## Standards
-This library is a full-featured generic CBOR [(RFC 8949)](https://tools.ietf.org/html/rfc8949) encoder and decoder.  Notable CBOR features include:
+
+`fxamacker/cbor` is a CBOR codec in full conformance with [IETF STD&nbsp;94 (RFC&nbsp;8949)](https://www.rfc-editor.org/info/std94). It also supports CBOR Sequences ([RFC&nbsp;8742](https://www.rfc-editor.org/rfc/rfc8742.html)) and Extended Diagnostic Notation ([Appendix G of RFC&nbsp;8610](https://www.rfc-editor.org/rfc/rfc8610.html#appendix-G)).
+
+Notable CBOR features include:
 
 | CBOR Feature  | Description  |
 | :--- | :--- |
@@ -523,7 +603,7 @@ If any of these limitations prevent you from using this library, please open an 
 
 ## Fuzzing and Code Coverage
 
-__Code coverage__ must not fall below 95% when tagging a release.  Code coverage is above 96% (`go test -cover`) for fxamacker/cbor v2.5.
+__Code coverage__ is always 95% or higher (with `go test -cover`) when tagging a release.
 
 __Coverage-guided fuzzing__ must pass billions of execs using before tagging a release.  Fuzzing is done using nonpublic code which may eventually get merged into this project.  Until then, reports like OpenSSF&nbsp;Scorecard can't detect fuzz tests being used by this project.
 
@@ -570,11 +650,14 @@ This library clearly wouldn't be possible without Carsten Bormann authoring CBOR
 
 Special thanks to Laurence Lundblade and Jeffrey Yasskin for their help on IETF mailing list or at [7049bis](https://github.com/cbor-wg/CBORbis).
 
-This library uses `x448/float16` which used to be included.  Now as a standalone package, `x448/float16` is useful to other projects as well.
+Huge thanks to The Go Authors for creating a fun and practical programming language with batteries included!
 
-## License 
-Copyright © 2019-2023 [Faye Amacker](https://github.com/fxamacker).  
+This library uses `x448/float16` which used to be included.  As a standalone package, `x448/float16` is useful to other projects as well.
 
-fxamacker/cbor is licensed under the MIT License.  See [LICENSE](LICENSE) for the full license text.  
+## License
+
+Copyright © 2019-2023 [Faye Amacker](https://github.com/fxamacker).
+
+fxamacker/cbor is licensed under the MIT License.  See [LICENSE](LICENSE) for the full license text.
 
 <hr>
