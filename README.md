@@ -523,10 +523,6 @@ geomean                                                      2.782              
 
 `fxamacker/cbor` is used in projects by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, Cisco, Confidential Computing Consortium, ConsenSys, Dapper&nbsp;Labs, EdgeX&nbsp;Foundry, F5, Fraunhofer&#8209;AISEC, Linux&nbsp;Foundation, Microsoft, Mozilla, National&nbsp;Cybersecurity&nbsp;Agency&nbsp;of&nbsp;France (govt), Netherlands (govt), Oasis Protocol, Smallstep, Tailscale, Taurus SA, Teleport, TIBCO, and others.
 
-GitHub reports `fxamacker/cbor` is "Used by":
-- &nbsp;&nbsp; 220+ [repositories that depend on v1.x](https://github.com/fxamacker/cbor/network/dependents) (old version). Shown by default.
-- 2,450+ [repositories that depend on v2.x](https://github.com/fxamacker/cbor/network/dependents?package_id=UGFja2FnZS0yMjcwNDY1OTQ4) (current version).
-
 `fxamacker/cbor` passed multiple confidential security assessments.  A [nonconfidential security assessment](https://github.com/veraison/go-cose/blob/v1.0.0-rc.1/reports/NCC_Microsoft-go-cose-Report_2022-05-26_v1.0.pdf) (prepared by NCC Group for Microsoft Corporation) includes a subset of fxamacker/cbor v2.4.0 in its scope.
 
 ## Standards
