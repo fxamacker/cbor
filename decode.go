@@ -353,6 +353,26 @@ func (um UTF8Mode) valid() bool {
 	return um < maxUTF8Mode
 }
 
+// FieldNameMatchingMode specifies how string keys in CBOR maps are matched to Go struct field names.
+type FieldNameMatchingMode int
+
+const (
+	// FieldNameMatchingPreferCaseSensitive prefers to decode map items into struct fields whose names (or tag
+	// names) exactly match the item's key. If there is no such field, a map item will be decoded into a field whose
+	// name is a case-insensitive match for the item's key.
+	FieldNameMatchingPreferCaseSensitive = iota
+
+	// FieldNameMatchingCaseSensitive decodes map items only into a struct field whose name (or tag name) is an
+	// exact match for the item's key.
+	FieldNameMatchingCaseSensitive
+
+	maxFieldNameMatchingMode
+)
+
+func (fnmm FieldNameMatchingMode) valid() bool {
+	return fnmm >= 0 && fnmm < maxFieldNameMatchingMode
+}
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -402,6 +422,9 @@ type DecOptions struct {
 	// UTF8 specifies if decoder should decode CBOR Text containing invalid UTF-8.
 	// By default, unmarshal rejects CBOR text containing invalid UTF-8.
 	UTF8 UTF8Mode
+
+	// FieldNameMatching specifies how string keys in CBOR maps are matched to Go struct field names.
+	FieldNameMatching FieldNameMatchingMode
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -510,6 +533,9 @@ func (opts DecOptions) decMode() (*decMode, error) {
 	if !opts.UTF8.valid() {
 		return nil, errors.New("cbor: invalid UTF8 " + strconv.Itoa(int(opts.UTF8)))
 	}
+	if !opts.FieldNameMatching.valid() {
+		return nil, errors.New("cbor: invalid FieldNameMatching " + strconv.Itoa(int(opts.FieldNameMatching)))
+	}
 	dm := decMode{
 		dupMapKey:         opts.DupMapKey,
 		timeTag:           opts.TimeTag,
@@ -523,6 +549,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		extraReturnErrors: opts.ExtraReturnErrors,
 		defaultMapType:    opts.DefaultMapType,
 		utf8:              opts.UTF8,
+		fieldNameMatching: opts.FieldNameMatching,
 	}
 	return &dm, nil
 }
@@ -587,6 +614,7 @@ type decMode struct {
 	extraReturnErrors ExtraDecErrorCond
 	defaultMapType    reflect.Type
 	utf8              UTF8Mode
+	fieldNameMatching FieldNameMatchingMode
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -605,6 +633,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		MapKeyByteString:  dm.mapKeyByteString,
 		ExtraReturnErrors: dm.extraReturnErrors,
 		UTF8:              dm.utf8,
+		FieldNameMatching: dm.fieldNameMatching,
 	}
 }
 
@@ -1681,7 +1710,7 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 				}
 			}
 			// Find field with case-insensitive match
-			if f == nil {
+			if f == nil && d.dm.fieldNameMatching == FieldNameMatchingPreferCaseSensitive {
 				keyString := string(keyBytes)
 				for i := 0; i < len(structType.fields); i++ {
 					fld := structType.fields[i]

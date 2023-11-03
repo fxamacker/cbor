@@ -6038,3 +6038,102 @@ func TestUnmarshalFirstInvalidItem(t *testing.T) {
 		t.Errorf("UnmarshalFirst(0x%x) = (%x, %v), want (nil, err)", invalidCBOR, rest, err)
 	}
 }
+
+func TestDecModeInvalidFieldNameMatchingMode(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{FieldNameMatching: -1},
+			wantErrorMsg: "cbor: invalid FieldNameMatching -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{FieldNameMatching: 101},
+			wantErrorMsg: "cbor: invalid FieldNameMatching 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestDecodeFieldNameMatching(t *testing.T) {
+	type s struct {
+		LowerA int `cbor:"a"`
+		UpperB int `cbor:"B"`
+		LowerB int `cbor:"b"`
+	}
+
+	testCases := []struct {
+		name      string
+		opts      DecOptions
+		cborData  []byte
+		wantValue s
+	}{
+		{
+			name:      "case-insensitive match",
+			cborData:  hexDecode("a1614101"), // {"A": 1}
+			wantValue: s{LowerA: 1},
+		},
+		{
+			name:      "ignore case-insensitive match",
+			opts:      DecOptions{FieldNameMatching: FieldNameMatchingCaseSensitive},
+			cborData:  hexDecode("a1614101"), // {"A": 1}
+			wantValue: s{},
+		},
+		{
+			name:      "exact match before case-insensitive match",
+			cborData:  hexDecode("a2616101614102"), // {"a": 1, "A": 2}
+			wantValue: s{LowerA: 1},
+		},
+		{
+			name:      "case-insensitive match before exact match",
+			cborData:  hexDecode("a2614101616102"), // {"A": 1, "a": 2}
+			wantValue: s{LowerA: 1},
+		},
+		{
+			name:      "ignore case-insensitive match before exact match",
+			opts:      DecOptions{FieldNameMatching: FieldNameMatchingCaseSensitive},
+			cborData:  hexDecode("a2614101616102"), // {"A": 1, "a": 2}
+			wantValue: s{LowerA: 2},
+		},
+		{
+			name:      "earliest exact match wins",
+			opts:      DecOptions{FieldNameMatching: FieldNameMatchingCaseSensitive},
+			cborData:  hexDecode("a2616101616102"), // {"a": 1, "a": 2} (invalid)
+			wantValue: s{LowerA: 1},
+		},
+		{
+			// the field tags themselves are case-insensitive matches for each other
+			name:      "duplicate keys decode to different fields",
+			cborData:  hexDecode("a2614201614202"), // {"B": 1, "B": 2} (invalid)
+			wantValue: s{UpperB: 1, LowerB: 2},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			decMode, _ := tc.opts.DecMode()
+
+			var dst s
+			err := decMode.Unmarshal(tc.cborData, &dst)
+			if err != nil {
+				t.Fatalf("Unmarshal(0x%x) returned unexpected error %v", tc.cborData, err)
+			}
+
+			if !reflect.DeepEqual(dst, tc.wantValue) {
+				t.Errorf("Unmarshal(0x%x) = %#v, want %#v", tc.cborData, dst, tc.wantValue)
+			}
+		})
+	}
+}
