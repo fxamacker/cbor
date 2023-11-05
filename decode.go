@@ -226,7 +226,7 @@ const (
 )
 
 func (dmkm DupMapKeyMode) valid() bool {
-	return dmkm < maxDupMapKeyMode
+	return dmkm >= 0 && dmkm < maxDupMapKeyMode
 }
 
 // IndefLengthMode specifies whether to allow indefinite length items.
@@ -243,7 +243,7 @@ const (
 )
 
 func (m IndefLengthMode) valid() bool {
-	return m < maxIndefLengthMode
+	return m >= 0 && m < maxIndefLengthMode
 }
 
 // TagsMode specifies whether to allow CBOR tags.
@@ -260,7 +260,7 @@ const (
 )
 
 func (tm TagsMode) valid() bool {
-	return tm < maxTagsMode
+	return tm >= 0 && tm < maxTagsMode
 }
 
 // IntDecMode specifies which Go int type (int64 or uint64) should
@@ -282,7 +282,7 @@ const (
 )
 
 func (idm IntDecMode) valid() bool {
-	return idm < maxIntDec
+	return idm >= 0 && idm < maxIntDec
 }
 
 // MapKeyByteStringMode specifies how to decode CBOR byte string (major type 2)
@@ -312,7 +312,7 @@ const (
 )
 
 func (mkbsm MapKeyByteStringMode) valid() bool {
-	return mkbsm < maxMapKeyByteStringMode
+	return mkbsm >= 0 && mkbsm < maxMapKeyByteStringMode
 }
 
 // ExtraDecErrorCond specifies extra conditions that should be treated as errors.
@@ -350,7 +350,7 @@ const (
 )
 
 func (um UTF8Mode) valid() bool {
-	return um < maxUTF8Mode
+	return um >= 0 && um < maxUTF8Mode
 }
 
 // FieldNameMatchingMode specifies how string keys in CBOR maps are matched to Go struct field names.
@@ -1985,7 +1985,7 @@ var (
 	typeBinaryUnmarshaler = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
 )
 
-func fillNil(t cborType, v reflect.Value) error {
+func fillNil(_ cborType, v reflect.Value) error {
 	switch v.Kind() {
 	case reflect.Slice, reflect.Map, reflect.Interface, reflect.Ptr:
 		v.Set(reflect.Zero(v.Type()))

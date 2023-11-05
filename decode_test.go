@@ -3294,22 +3294,58 @@ func testRoundTrip(t *testing.T, testCases []roundTripTest, em EncMode, dm DecMo
 }
 
 func TestDecModeInvalidTimeTag(t *testing.T) {
-	wantErrorMsg := "cbor: invalid TimeTag 101"
-	_, err := DecOptions{TimeTag: 101}.DecMode()
-	if err == nil {
-		t.Errorf("DecMode() didn't return an error")
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("DecMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{TimeTag: -1},
+			wantErrorMsg: "cbor: invalid TimeTag -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{TimeTag: 101},
+			wantErrorMsg: "cbor: invalid TimeTag 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
 	}
 }
 
 func TestDecModeInvalidDuplicateMapKey(t *testing.T) {
-	wantErrorMsg := "cbor: invalid DupMapKey 101"
-	_, err := DecOptions{DupMapKey: 101}.DecMode()
-	if err == nil {
-		t.Errorf("DecMode() didn't return an error")
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("DecMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{DupMapKey: -1},
+			wantErrorMsg: "cbor: invalid DupMapKey -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{DupMapKey: 101},
+			wantErrorMsg: "cbor: invalid DupMapKey 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
 	}
 }
 
@@ -3437,22 +3473,58 @@ func TestDecModeInvalidMaxArrayElements(t *testing.T) {
 }
 
 func TestDecModeInvalidIndefiniteLengthMode(t *testing.T) {
-	wantErrorMsg := "cbor: invalid IndefLength 101"
-	_, err := DecOptions{IndefLength: 101}.DecMode()
-	if err == nil {
-		t.Errorf("DecMode() didn't return an error")
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("DecMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{IndefLength: -1},
+			wantErrorMsg: "cbor: invalid IndefLength -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{IndefLength: 101},
+			wantErrorMsg: "cbor: invalid IndefLength 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
 	}
 }
 
 func TestDecModeInvalidTagsMode(t *testing.T) {
-	wantErrorMsg := "cbor: invalid TagsMd 101"
-	_, err := DecOptions{TagsMd: 101}.DecMode()
-	if err == nil {
-		t.Errorf("DecMode() didn't return an error")
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("DecMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{TagsMd: -1},
+			wantErrorMsg: "cbor: invalid TagsMd -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{TagsMd: 101},
+			wantErrorMsg: "cbor: invalid TagsMd 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
 	}
 }
 
@@ -4605,12 +4677,30 @@ func TestDecTagsMdOption(t *testing.T) {
 }
 
 func TestDecModeInvalidIntDec(t *testing.T) {
-	wantErrorMsg := "cbor: invalid IntDec 101"
-	_, err := DecOptions{IntDec: 101}.DecMode()
-	if err == nil {
-		t.Errorf("DecMode() didn't return an error")
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("DecMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{IntDec: -1},
+			wantErrorMsg: "cbor: invalid IntDec -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{IntDec: 101},
+			wantErrorMsg: "cbor: invalid IntDec 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
 	}
 }
 
@@ -4664,12 +4754,30 @@ func TestIntDec(t *testing.T) {
 }
 
 func TestDecModeInvalidMapKeyByteString(t *testing.T) {
-	wantErrorMsg := "cbor: invalid MapKeyByteString 101"
-	_, err := DecOptions{MapKeyByteString: 101}.DecMode()
-	if err == nil {
-		t.Errorf("DecMode() didn't return an error")
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("DecMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{MapKeyByteString: -1},
+			wantErrorMsg: "cbor: invalid MapKeyByteString -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{MapKeyByteString: 101},
+			wantErrorMsg: "cbor: invalid MapKeyByteString 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
 	}
 }
 
@@ -4844,12 +4952,30 @@ func TestExtraErrorCondUnknownField(t *testing.T) {
 }
 
 func TestInvalidUTF8Mode(t *testing.T) {
-	wantErrorMsg := "cbor: invalid UTF8 2"
-	_, err := DecOptions{UTF8: 2}.DecMode()
-	if err == nil {
-		t.Errorf("DecMode() didn't return an error")
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("DecMode() returned error %q, want %q", err.Error(), wantErrorMsg)
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{UTF8: -1},
+			wantErrorMsg: "cbor: invalid UTF8 -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{UTF8: 101},
+			wantErrorMsg: "cbor: invalid UTF8 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
 	}
 }
 
