@@ -4,36 +4,6 @@
 # Safer GitHub Actions Workflow for golangci-lint.
 # https://github.com/x448/safer-golangci-lint 
 #
-# safer-golangci-lint.yml
-#
-# This workflow downloads, verifies, and runs golangci-lint in a
-# deterministic, reviewable, and safe manner.
-#
-# To use:
-#   Step 1. Copy this file into [your_github_repo]/.github/workflows/
-#   Step 2. There's no step 2 if you like the default settings.
-#
-# See golangci-lint docs for more info at
-# https://github.com/golangci/golangci-lint
-#
-# 100% of the script for downloading, installing, and running golangci-lint
-# is embedded in this file. The embedded SHA-256 digest is used to verify the
-# downloaded golangci-lint tarball (golangci-lint-1.xx.x-linux-amd64.tar.gz).
-#
-# The embedded SHA-256 digest matches golangci-lint-1.xx.x-checksums.txt at
-# https://github.com/golangci/golangci-lint/releases
-#
-# To use a newer version of golangci-lint, change these values:
-#   1. GOLINTERS_VERSION
-#   2. GOLINTERS_TGZ_DGST
-#
-# Release v1.53.3 (June 25, 2023)
-#   - Bump golangci-lint to 1.53.3
-#   - Hash of golangci-lint-1.53.3-linux-amd64.tar.gz
-#     - SHA-256: 4f62007ca96372ccba54760e2ed39c2446b40ec24d9a90c21aad9f2fdf6cf0da
-#                This SHA-256 digest matches golangci-lint-1.53.3-checksums.txt at
-#                https://github.com/golangci/golangci-lint/releases
-#
 name: linters
 
 # Remove default permissions and grant only what is required in each job.
@@ -62,12 +32,12 @@ jobs:
       contents: read
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           fetch-depth: 1
 
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
