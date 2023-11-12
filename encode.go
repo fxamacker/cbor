@@ -1266,11 +1266,7 @@ func encodeTag(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	encodeHead(e, byte(cborTypeTag), t.Number)
 
 	// Marshal tag content
-	if err := encode(e, em, reflect.ValueOf(t.Content)); err != nil {
-		return err
-	}
-
-	return nil
+	return encode(e, em, reflect.ValueOf(t.Content))
 }
 
 func encodeSimpleValue(e *encoderBuffer, em *encMode, v reflect.Value) error {

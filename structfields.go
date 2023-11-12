@@ -129,7 +129,7 @@ func getFields(t reflect.Type) (flds fields, structOptions string) {
 		}
 
 		// Skip fields with the same field name.
-		for i++; i < len(flds) && name == flds[i].name; i++ {
+		for i++; i < len(flds) && name == flds[i].name; i++ { //nolint:revive
 		}
 	}
 	if j != len(flds) {
