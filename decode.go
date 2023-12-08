@@ -51,6 +51,7 @@ import (
 //	CBOR null and undefined values decode to nil.
 //	CBOR times (tag 0 and 1) decode to time.Time.
 //	CBOR bignums (tag 2 and 3) decode to big.Int.
+//	CBOR tags with an unrecognized number decode to cbor.Tag
 //
 // To unmarshal a CBOR array into a slice, Unmarshal allocates a new slice
 // if the CBOR array is empty or slice capacity is less than CBOR array length.
