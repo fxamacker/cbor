@@ -156,6 +156,27 @@ func (sm SortMode) valid() bool {
 	return sm >= 0 && sm < maxSortMode
 }
 
+// StringMode specifies how to encode Go string values.
+type StringMode int
+
+const (
+	// StringToTextString encodes Go string to CBOR text string (major type 3).
+	StringToTextString StringMode = iota
+
+	// StringToByteString encodes Go string to CBOR byte string (major type 2).
+	StringToByteString
+)
+
+func (st StringMode) cborType() (cborType, error) {
+	switch st {
+	case StringToTextString:
+		return cborTypeTextString, nil
+	case StringToByteString:
+		return cborTypeByteString, nil
+	}
+	return 0, errors.New("cbor: invalid StringType " + strconv.Itoa(int(st)))
+}
+
 // ShortestFloatMode specifies which floating-point format should
 // be used as the shortest possible format for CBOR encoding.
 // It is not used for encoding Infinity and NaN values.
@@ -355,6 +376,11 @@ type EncOptions struct {
 
 	// OmitEmptyMode specifies how to encode struct fields with omitempty tag.
 	OmitEmpty OmitEmptyMode
+
+	// String specifies which CBOR type to use when encoding Go strings.
+	// - CBOR text string (major type 3) is default
+	// - CBOR byte string (major type 2)
+	String StringMode
 }
 
 // CanonicalEncOptions returns EncOptions for "Canonical CBOR" encoding,
@@ -533,18 +559,24 @@ func (opts EncOptions) encMode() (*encMode, error) {
 	if !opts.OmitEmpty.valid() {
 		return nil, errors.New("cbor: invalid OmitEmpty " + strconv.Itoa(int(opts.OmitEmpty)))
 	}
+	stringMajorType, err := opts.String.cborType()
+	if err != nil {
+		return nil, err
+	}
 	em := encMode{
-		sort:          opts.Sort,
-		shortestFloat: opts.ShortestFloat,
-		nanConvert:    opts.NaNConvert,
-		infConvert:    opts.InfConvert,
-		bigIntConvert: opts.BigIntConvert,
-		time:          opts.Time,
-		timeTag:       opts.TimeTag,
-		indefLength:   opts.IndefLength,
-		nilContainers: opts.NilContainers,
-		tagsMd:        opts.TagsMd,
-		omitEmpty:     opts.OmitEmpty,
+		sort:            opts.Sort,
+		shortestFloat:   opts.ShortestFloat,
+		nanConvert:      opts.NaNConvert,
+		infConvert:      opts.InfConvert,
+		bigIntConvert:   opts.BigIntConvert,
+		time:            opts.Time,
+		timeTag:         opts.TimeTag,
+		indefLength:     opts.IndefLength,
+		nilContainers:   opts.NilContainers,
+		tagsMd:          opts.TagsMd,
+		omitEmpty:       opts.OmitEmpty,
+		stringType:      opts.String,
+		stringMajorType: stringMajorType,
 	}
 	return &em, nil
 }
@@ -557,21 +589,23 @@ type EncMode interface {
 }
 
 type encMode struct {
-	tags          tagProvider
-	sort          SortMode
-	shortestFloat ShortestFloatMode
-	nanConvert    NaNConvertMode
-	infConvert    InfConvertMode
-	bigIntConvert BigIntConvertMode
-	time          TimeMode
-	timeTag       EncTagMode
-	indefLength   IndefLengthMode
-	nilContainers NilContainersMode
-	tagsMd        TagsMode
-	omitEmpty     OmitEmptyMode
+	tags            tagProvider
+	sort            SortMode
+	shortestFloat   ShortestFloatMode
+	nanConvert      NaNConvertMode
+	infConvert      InfConvertMode
+	bigIntConvert   BigIntConvertMode
+	time            TimeMode
+	timeTag         EncTagMode
+	indefLength     IndefLengthMode
+	nilContainers   NilContainersMode
+	tagsMd          TagsMode
+	omitEmpty       OmitEmptyMode
+	stringType      StringMode
+	stringMajorType cborType
 }
 
-var defaultEncMode = &encMode{}
+var defaultEncMode, _ = EncOptions{}.encMode()
 
 // EncOptions returns user specified options used to create this EncMode.
 func (em *encMode) EncOptions() EncOptions {
@@ -586,6 +620,7 @@ func (em *encMode) EncOptions() EncOptions {
 		IndefLength:   em.indefLength,
 		TagsMd:        em.tagsMd,
 		OmitEmpty:     em.omitEmpty,
+		String:        em.stringType,
 	}
 }
 
@@ -882,7 +917,7 @@ func encodeString(e *encoderBuffer, em *encMode, v reflect.Value) error {
 		e.Write(b)
 	}
 	s := v.String()
-	encodeHead(e, byte(cborTypeTextString), uint64(len(s)))
+	encodeHead(e, byte(em.stringMajorType), uint64(len(s)))
 	e.WriteString(s)
 	return nil
 }
