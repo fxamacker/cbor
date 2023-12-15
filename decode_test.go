@@ -30,8 +30,6 @@ var (
 	typeInt64           = reflect.TypeOf(int64(0))
 	typeFloat32         = reflect.TypeOf(float32(0))
 	typeFloat64         = reflect.TypeOf(float64(0))
-	typeString          = reflect.TypeOf("")
-	typeByteSlice       = reflect.TypeOf([]byte(nil))
 	typeByteArray       = reflect.TypeOf([5]byte{})
 	typeIntSlice        = reflect.TypeOf([]int{})
 	typeStringSlice     = reflect.TypeOf([]string{})
@@ -8145,6 +8143,102 @@ func TestDecodeBignumToEmptyInterface(t *testing.T) {
 				if !reflect.DeepEqual(v, tc.wantValue) {
 					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.wantValue, tc.wantValue)
 				}
+			}
+		})
+	}
+}
+
+func TestDecModeInvalidDefaultByteStringType(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "neither slice nor string",
+			opts:         DecOptions{DefaultByteStringType: reflect.TypeOf(int(42))},
+			wantErrorMsg: "cbor: invalid DefaultByteStringType: int is not of kind string or []uint8",
+		},
+		{
+			name:         "slice of non-byte",
+			opts:         DecOptions{DefaultByteStringType: reflect.TypeOf([]int{})},
+			wantErrorMsg: "cbor: invalid DefaultByteStringType: []int is not of kind string or []uint8",
+		},
+		{
+			name:         "pointer to byte array",
+			opts:         DecOptions{DefaultByteStringType: reflect.TypeOf(&[42]byte{})},
+			wantErrorMsg: "cbor: invalid DefaultByteStringType: *[42]uint8 is not of kind string or []uint8",
+		},
+		{
+			name:         "byte array",
+			opts:         DecOptions{DefaultByteStringType: reflect.TypeOf([42]byte{})},
+			wantErrorMsg: "cbor: invalid DefaultByteStringType: [42]uint8 is not of kind string or []uint8",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestUnmarshalDefaultByteStringType(t *testing.T) {
+	type namedByteSliceType []byte
+
+	for _, tc := range []struct {
+		name string
+		opts DecOptions
+		in   []byte
+		want interface{}
+	}{
+		{
+			name: "default to []byte",
+			opts: DecOptions{},
+			in:   hexDecode("43414243"),
+			want: []byte("ABC"),
+		},
+		{
+			name: "explicitly []byte",
+			opts: DecOptions{DefaultByteStringType: reflect.TypeOf([]byte(nil))},
+			in:   hexDecode("43414243"),
+			want: []byte("ABC"),
+		},
+		{
+			name: "string",
+			opts: DecOptions{DefaultByteStringType: reflect.TypeOf("")},
+			in:   hexDecode("43414243"),
+			want: "ABC",
+		},
+		{
+			name: "ByteString",
+			opts: DecOptions{DefaultByteStringType: reflect.TypeOf(ByteString(""))},
+			in:   hexDecode("43414243"),
+			want: ByteString("ABC"),
+		},
+		{
+			name: "named []byte type",
+			opts: DecOptions{DefaultByteStringType: reflect.TypeOf(namedByteSliceType(nil))},
+			in:   hexDecode("43414243"),
+			want: namedByteSliceType("ABC"),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, err := tc.opts.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var got interface{}
+			if err := dm.Unmarshal(tc.in, &got); err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			if !reflect.DeepEqual(tc.want, got) {
+				t.Errorf("got %#v, want %#v", got, tc.want)
 			}
 		})
 	}

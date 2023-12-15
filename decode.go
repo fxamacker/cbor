@@ -467,6 +467,12 @@ type DecOptions struct {
 
 	// BigIntDec specifies how to decode CBOR bignum to Go interface{}.
 	BigIntDec BigIntDecMode
+
+	// DefaultByteStringType is the Go type that should be produced when decoding a CBOR byte
+	// string into an empty interface value. Types to which a []byte is convertible are valid
+	// for this option, except for array and pointer-to-array types. If nil, the default is
+	// []byte.
+	DefaultByteStringType reflect.Type
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -581,21 +587,25 @@ func (opts DecOptions) decMode() (*decMode, error) {
 	if !opts.BigIntDec.valid() {
 		return nil, errors.New("cbor: invalid BigIntDec " + strconv.Itoa(int(opts.BigIntDec)))
 	}
+	if opts.DefaultByteStringType != nil && opts.DefaultByteStringType.Kind() != reflect.String && (opts.DefaultByteStringType.Kind() != reflect.Slice || opts.DefaultByteStringType.Elem().Kind() != reflect.Uint8) {
+		return nil, fmt.Errorf("cbor: invalid DefaultByteStringType: %s is not of kind string or []uint8", opts.DefaultByteStringType)
+	}
 	dm := decMode{
-		dupMapKey:         opts.DupMapKey,
-		timeTag:           opts.TimeTag,
-		maxNestedLevels:   opts.MaxNestedLevels,
-		maxArrayElements:  opts.MaxArrayElements,
-		maxMapPairs:       opts.MaxMapPairs,
-		indefLength:       opts.IndefLength,
-		tagsMd:            opts.TagsMd,
-		intDec:            opts.IntDec,
-		mapKeyByteString:  opts.MapKeyByteString,
-		extraReturnErrors: opts.ExtraReturnErrors,
-		defaultMapType:    opts.DefaultMapType,
-		utf8:              opts.UTF8,
-		fieldNameMatching: opts.FieldNameMatching,
-		bigIntDec:         opts.BigIntDec,
+		dupMapKey:             opts.DupMapKey,
+		timeTag:               opts.TimeTag,
+		maxNestedLevels:       opts.MaxNestedLevels,
+		maxArrayElements:      opts.MaxArrayElements,
+		maxMapPairs:           opts.MaxMapPairs,
+		indefLength:           opts.IndefLength,
+		tagsMd:                opts.TagsMd,
+		intDec:                opts.IntDec,
+		mapKeyByteString:      opts.MapKeyByteString,
+		extraReturnErrors:     opts.ExtraReturnErrors,
+		defaultMapType:        opts.DefaultMapType,
+		utf8:                  opts.UTF8,
+		fieldNameMatching:     opts.FieldNameMatching,
+		bigIntDec:             opts.BigIntDec,
+		defaultByteStringType: opts.DefaultByteStringType,
 	}
 	return &dm, nil
 }
@@ -647,21 +657,22 @@ type DecMode interface {
 }
 
 type decMode struct {
-	tags              tagProvider
-	dupMapKey         DupMapKeyMode
-	timeTag           DecTagMode
-	maxNestedLevels   int
-	maxArrayElements  int
-	maxMapPairs       int
-	indefLength       IndefLengthMode
-	tagsMd            TagsMode
-	intDec            IntDecMode
-	mapKeyByteString  MapKeyByteStringMode
-	extraReturnErrors ExtraDecErrorCond
-	defaultMapType    reflect.Type
-	utf8              UTF8Mode
-	fieldNameMatching FieldNameMatchingMode
-	bigIntDec         BigIntDecMode
+	tags                  tagProvider
+	dupMapKey             DupMapKeyMode
+	timeTag               DecTagMode
+	maxNestedLevels       int
+	maxArrayElements      int
+	maxMapPairs           int
+	indefLength           IndefLengthMode
+	tagsMd                TagsMode
+	intDec                IntDecMode
+	mapKeyByteString      MapKeyByteStringMode
+	extraReturnErrors     ExtraDecErrorCond
+	defaultMapType        reflect.Type
+	utf8                  UTF8Mode
+	fieldNameMatching     FieldNameMatchingMode
+	bigIntDec             BigIntDecMode
+	defaultByteStringType reflect.Type
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -669,19 +680,20 @@ var defaultDecMode, _ = DecOptions{}.decMode()
 // DecOptions returns user specified options used to create this DecMode.
 func (dm *decMode) DecOptions() DecOptions {
 	return DecOptions{
-		DupMapKey:         dm.dupMapKey,
-		TimeTag:           dm.timeTag,
-		MaxNestedLevels:   dm.maxNestedLevels,
-		MaxArrayElements:  dm.maxArrayElements,
-		MaxMapPairs:       dm.maxMapPairs,
-		IndefLength:       dm.indefLength,
-		TagsMd:            dm.tagsMd,
-		IntDec:            dm.intDec,
-		MapKeyByteString:  dm.mapKeyByteString,
-		ExtraReturnErrors: dm.extraReturnErrors,
-		UTF8:              dm.utf8,
-		FieldNameMatching: dm.fieldNameMatching,
-		BigIntDec:         dm.bigIntDec,
+		DupMapKey:             dm.dupMapKey,
+		TimeTag:               dm.timeTag,
+		MaxNestedLevels:       dm.maxNestedLevels,
+		MaxArrayElements:      dm.maxArrayElements,
+		MaxMapPairs:           dm.maxMapPairs,
+		IndefLength:           dm.indefLength,
+		TagsMd:                dm.tagsMd,
+		IntDec:                dm.intDec,
+		MapKeyByteString:      dm.mapKeyByteString,
+		ExtraReturnErrors:     dm.extraReturnErrors,
+		UTF8:                  dm.utf8,
+		FieldNameMatching:     dm.fieldNameMatching,
+		BigIntDec:             dm.bigIntDec,
+		DefaultByteStringType: dm.defaultByteStringType,
 	}
 }
 
@@ -979,8 +991,8 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		return fillNegativeInt(t, nValue, v)
 
 	case cborTypeByteString:
-		b := d.parseByteString()
-		return fillByteString(t, b, v)
+		b, copied := d.parseByteString()
+		return fillByteString(t, b, !copied, v)
 
 	case cborTypeTextString:
 		b, err := d.parseTextString()
@@ -1017,7 +1029,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		switch tagNum {
 		case 2:
 			// Bignum (tag 2) can be decoded to uint, int, float, slice, array, or big.Int.
-			b := d.parseByteString()
+			b, copied := d.parseByteString()
 			bi := new(big.Int).SetBytes(b)
 
 			if tInfo.nonPtrType == typeBigInt {
@@ -1025,7 +1037,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				return nil
 			}
 			if tInfo.nonPtrKind == reflect.Slice || tInfo.nonPtrKind == reflect.Array {
-				return fillByteString(t, b, v)
+				return fillByteString(t, b, !copied, v)
 			}
 			if bi.IsUint64() {
 				return fillPositiveInt(t, bi.Uint64(), v)
@@ -1037,7 +1049,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 			}
 		case 3:
 			// Bignum (tag 3) can be decoded to int, float, slice, array, or big.Int.
-			b := d.parseByteString()
+			b, copied := d.parseByteString()
 			bi := new(big.Int).SetBytes(b)
 			bi.Add(bi, big.NewInt(1))
 			bi.Neg(bi)
@@ -1047,7 +1059,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				return nil
 			}
 			if tInfo.nonPtrKind == reflect.Slice || tInfo.nonPtrKind == reflect.Array {
-				return fillByteString(t, b, v)
+				return fillByteString(t, b, !copied, v)
 			}
 			if bi.IsInt64() {
 				return fillNegativeInt(t, bi.Int64(), v)
@@ -1279,7 +1291,29 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 		return nValue, nil
 
 	case cborTypeByteString:
-		return d.parseByteString(), nil
+		switch d.dm.defaultByteStringType {
+		case nil, typeByteSlice:
+			b, copied := d.parseByteString()
+			if copied {
+				return b, nil
+			}
+			clone := make([]byte, len(b))
+			copy(clone, b)
+			return clone, nil
+		case typeString:
+			b, _ := d.parseByteString()
+			return string(b), nil
+		default:
+			b, copied := d.parseByteString()
+			if copied || d.dm.defaultByteStringType.Kind() == reflect.String {
+				// Avoid an unnecessary copy since the conversion to string must
+				// copy the underlying bytes.
+				return reflect.ValueOf(b).Convert(d.dm.defaultByteStringType).Interface(), nil
+			}
+			clone := make([]byte, len(b))
+			copy(clone, b)
+			return reflect.ValueOf(clone).Convert(d.dm.defaultByteStringType).Interface(), nil
+		}
 	case cborTypeTextString:
 		b, err := d.parseTextString()
 		if err != nil {
@@ -1296,7 +1330,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 			d.off = tagOff
 			return d.parseToTime()
 		case 2:
-			b := d.parseByteString()
+			b, _ := d.parseByteString()
 			bi := new(big.Int).SetBytes(b)
 
 			if d.dm.bigIntDec == BigIntDecodePointer {
@@ -1304,7 +1338,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 			}
 			return *bi, nil
 		case 3:
-			b := d.parseByteString()
+			b, _ := d.parseByteString()
 			bi := new(big.Int).SetBytes(b)
 			bi.Add(bi, big.NewInt(1))
 			bi.Neg(bi)
@@ -1376,15 +1410,16 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 	return nil, nil
 }
 
-// parseByteString parses CBOR encoded byte string.  It returns a byte slice
-// pointing to a copy of parsed data.
-func (d *decoder) parseByteString() []byte {
+// parseByteString parses a CBOR encoded byte string. The returned byte slice
+// may be backed directly by the input. The second return value will be true if
+// and only if the slice is backed by a copy of the input. Callers are
+// responsible for making a copy if necessary.
+func (d *decoder) parseByteString() ([]byte, bool) {
 	_, ai, val := d.getHead()
 	if ai != 31 {
-		b := make([]byte, int(val))
-		copy(b, d.data[d.off:d.off+int(val)])
+		b := d.data[d.off : d.off+int(val)]
 		d.off += int(val)
-		return b
+		return b, false
 	}
 	// Process indefinite length string chunks.
 	b := []byte{}
@@ -1393,7 +1428,7 @@ func (d *decoder) parseByteString() []byte {
 		b = append(b, d.data[d.off:d.off+int(val)]...)
 		d.off += int(val)
 	}
-	return b
+	return b, true
 }
 
 // parseTextString parses CBOR encoded text string.  It returns a byte slice
@@ -2082,6 +2117,8 @@ var (
 	typeBigInt            = reflect.TypeOf(big.Int{})
 	typeUnmarshaler       = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
 	typeBinaryUnmarshaler = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
+	typeString            = reflect.TypeOf("")
+	typeByteSlice         = reflect.TypeOf([]byte(nil))
 )
 
 func fillNil(_ cborType, v reflect.Value) error {
@@ -2184,18 +2221,27 @@ func fillFloat(t cborType, val float64, v reflect.Value) error {
 	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
 }
 
-func fillByteString(t cborType, val []byte, v reflect.Value) error {
+func fillByteString(t cborType, val []byte, shared bool, v reflect.Value) error {
 	if reflect.PtrTo(v.Type()).Implements(typeBinaryUnmarshaler) {
 		if v.CanAddr() {
 			v = v.Addr()
 			if u, ok := v.Interface().(encoding.BinaryUnmarshaler); ok {
+				// The contract of BinaryUnmarshaler forbids
+				// retaining the input bytes, so no copying is
+				// required even if val is shared.
 				return u.UnmarshalBinary(val)
 			}
 		}
 		return errors.New("cbor: cannot set new value for " + v.Type().String())
 	}
 	if v.Kind() == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8 {
-		v.SetBytes(val)
+		src := val
+		if shared {
+			// SetBytes shares the underlying bytes of the source slice.
+			src = make([]byte, len(val))
+			copy(src, val)
+		}
+		v.SetBytes(src)
 		return nil
 	}
 	if v.Kind() == reflect.Array && v.Type().Elem().Kind() == reflect.Uint8 {
