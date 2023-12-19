@@ -1105,6 +1105,53 @@ func TestOmitEmptyForStruct2(t *testing.T) {
 	testRoundTrip(t, []roundTripTest{{"non-default values", v, want}}, em, dm)
 }
 
+func TestOmitEmptyMode(t *testing.T) {
+	type T1 struct{}
+	type T struct {
+		B     bool           `cbor:"b"`
+		Bo    bool           `cbor:"bo,omitempty"`
+		UI    uint           `cbor:"ui"`
+		UIo   uint           `cbor:"uio,omitempty"`
+		I     int            `cbor:"i"`
+		Io    int            `cbor:"io,omitempty"`
+		F     float64        `cbor:"f"`
+		Fo    float64        `cbor:"fo,omitempty"`
+		S     string         `cbor:"s"`
+		So    string         `cbor:"so,omitempty"`
+		Slc   []string       `cbor:"slc"`
+		Slco  []string       `cbor:"slco,omitempty"`
+		M     map[int]string `cbor:"m"`
+		Mo    map[int]string `cbor:"mo,omitempty"`
+		P     *int           `cbor:"p"`
+		Po    *int           `cbor:"po,omitempty"`
+		Intf  interface{}    `cbor:"intf"`
+		Intfo interface{}    `cbor:"intfo,omitempty"`
+		Str   T1             `cbor:"str"`
+		Stro  T1             `cbor:"stro,omitempty"`
+	}
+
+	v := T{}
+	// {"b": false, "ui": 0, "i":0, "f": 0, "s": "", "slc": null, "m": {}, "p": nil, "intf": nil, "str": {}, "stro": {}}
+	want := []byte{
+		0xaa,
+		0x61, 0x62, 0xf4,
+		0x62, 0x75, 0x69, 0x00,
+		0x61, 0x69, 0x00,
+		0x61, 0x66, 0xfb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x61, 0x73, 0x60,
+		0x63, 0x73, 0x6c, 0x63, 0xf6,
+		0x61, 0x6d, 0xf6,
+		0x61, 0x70, 0xf6,
+		0x64, 0x69, 0x6e, 0x74, 0x66, 0xf6,
+		0x63, 0x73, 0x74, 0x72,
+		0xa0,
+	}
+
+	em, _ := EncOptions{OmitEmpty: OmitEmptyV1}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+}
+
 func TestOmitEmptyForNestedStruct(t *testing.T) {
 	type T1 struct {
 		Bo    bool           `cbor:"bo,omitempty"`

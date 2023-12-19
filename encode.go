@@ -283,6 +283,24 @@ func (m NilContainersMode) valid() bool {
 	return m >= 0 && m < maxNilContainersMode
 }
 
+// OmitEmptyMode specifies how to encode the fields with omitempty tag
+// The default behavior omits if field value would encode as empty JSON value
+type OmitEmptyMode int
+
+const (
+	// OmitEmptyV1 specifies that the field should be omitted from the encoding
+	// if the field has an empty value, defined as false, 0, a nil pointer, a nil
+	// interface value, and any empty array, slice, map, or string.
+	// This behavior is the same with the current "v1" encoding/json library in go.
+	OmitEmptyV1 OmitEmptyMode = 1
+
+	maxOmitEmptyMode = 2
+)
+
+func (om OmitEmptyMode) valid() bool {
+	return om >= 0 && om < maxOmitEmptyMode
+}
+
 // EncOptions specifies encoding options.
 type EncOptions struct {
 	// Sort specifies sorting order.
@@ -316,6 +334,9 @@ type EncOptions struct {
 
 	// TagsMd specifies whether to allow CBOR tags (major type 6).
 	TagsMd TagsMode
+
+	// OmitEmptyMode specifies how to encode the fields with omitempty tag
+	OmitEmpty OmitEmptyMode
 }
 
 // CanonicalEncOptions returns EncOptions for "Canonical CBOR" encoding,
@@ -491,6 +512,9 @@ func (opts EncOptions) encMode() (*encMode, error) {
 	if opts.TagsMd == TagsForbidden && opts.TimeTag == EncTagRequired {
 		return nil, errors.New("cbor: cannot set TagsMd to TagsForbidden when TimeTag is EncTagRequired")
 	}
+	if !opts.OmitEmpty.valid() {
+		return nil, errors.New("cbor: invalid OmitEmpty " + strconv.Itoa(int(opts.OmitEmpty)))
+	}
 	em := encMode{
 		sort:          opts.Sort,
 		shortestFloat: opts.ShortestFloat,
@@ -525,6 +549,7 @@ type encMode struct {
 	indefLength   IndefLengthMode
 	nilContainers NilContainersMode
 	tagsMd        TagsMode
+	omitEmpty     OmitEmptyMode
 }
 
 var defaultEncMode = &encMode{}
@@ -541,6 +566,7 @@ func (em *encMode) EncOptions() EncOptions {
 		TimeTag:       em.timeTag,
 		IndefLength:   em.indefLength,
 		TagsMd:        em.tagsMd,
+		OmitEmpty:     em.omitEmpty,
 	}
 }
 
@@ -1098,7 +1124,6 @@ func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 				continue
 			}
 		}
-
 		if f.omitEmpty {
 			empty, err := f.ief(fv)
 			if err != nil {
@@ -1106,7 +1131,10 @@ func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 				return err
 			}
 			if empty {
-				continue
+				// If the emptyMode is set to 1 and the field is a struct, preserve the field name
+				if !(em.omitEmpty == OmitEmptyV1 && f.typ.Kind() != reflect.Struct) {
+					continue
+				}
 			}
 		}
 
