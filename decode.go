@@ -412,6 +412,23 @@ func (bidm BigIntDecMode) valid() bool {
 	return bidm >= 0 && bidm < maxBigIntDecMode
 }
 
+// ByteStringToStringMode specifies the behavior when decoding a CBOR byte string into a Go string.
+type ByteStringToStringMode int
+
+const (
+	// ByteStringToStringForbidden generates an error on an attempt to decode a CBOR byte string into a Go string.
+	ByteStringToStringForbidden ByteStringToStringMode = iota
+
+	// ByteStringToStringAllowed permits decoding a CBOR byte string into a Go string.
+	ByteStringToStringAllowed
+
+	maxByteStringToStringMode
+)
+
+func (bstsm ByteStringToStringMode) valid() bool {
+	return bstsm >= 0 && bstsm < maxByteStringToStringMode
+}
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -473,6 +490,9 @@ type DecOptions struct {
 	// for this option, except for array and pointer-to-array types. If nil, the default is
 	// []byte.
 	DefaultByteStringType reflect.Type
+
+	// ByteStringToString specifies the behavior when decoding a CBOR byte string into a Go string.
+	ByteStringToString ByteStringToStringMode
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -590,6 +610,9 @@ func (opts DecOptions) decMode() (*decMode, error) {
 	if opts.DefaultByteStringType != nil && opts.DefaultByteStringType.Kind() != reflect.String && (opts.DefaultByteStringType.Kind() != reflect.Slice || opts.DefaultByteStringType.Elem().Kind() != reflect.Uint8) {
 		return nil, fmt.Errorf("cbor: invalid DefaultByteStringType: %s is not of kind string or []uint8", opts.DefaultByteStringType)
 	}
+	if !opts.ByteStringToString.valid() {
+		return nil, errors.New("cbor: invalid ByteStringToString " + strconv.Itoa(int(opts.ByteStringToString)))
+	}
 	dm := decMode{
 		dupMapKey:             opts.DupMapKey,
 		timeTag:               opts.TimeTag,
@@ -606,6 +629,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		fieldNameMatching:     opts.FieldNameMatching,
 		bigIntDec:             opts.BigIntDec,
 		defaultByteStringType: opts.DefaultByteStringType,
+		byteStringToString:    opts.ByteStringToString,
 	}
 	return &dm, nil
 }
@@ -673,6 +697,7 @@ type decMode struct {
 	fieldNameMatching     FieldNameMatchingMode
 	bigIntDec             BigIntDecMode
 	defaultByteStringType reflect.Type
+	byteStringToString    ByteStringToStringMode
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -694,6 +719,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		FieldNameMatching:     dm.fieldNameMatching,
 		BigIntDec:             dm.bigIntDec,
 		DefaultByteStringType: dm.defaultByteStringType,
+		ByteStringToString:    dm.byteStringToString,
 	}
 }
 
@@ -992,7 +1018,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 
 	case cborTypeByteString:
 		b, copied := d.parseByteString()
-		return fillByteString(t, b, !copied, v)
+		return fillByteString(t, b, !copied, v, d.dm.byteStringToString)
 
 	case cborTypeTextString:
 		b, err := d.parseTextString()
@@ -1037,7 +1063,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				return nil
 			}
 			if tInfo.nonPtrKind == reflect.Slice || tInfo.nonPtrKind == reflect.Array {
-				return fillByteString(t, b, !copied, v)
+				return fillByteString(t, b, !copied, v, ByteStringToStringForbidden)
 			}
 			if bi.IsUint64() {
 				return fillPositiveInt(t, bi.Uint64(), v)
@@ -1059,7 +1085,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				return nil
 			}
 			if tInfo.nonPtrKind == reflect.Slice || tInfo.nonPtrKind == reflect.Array {
-				return fillByteString(t, b, !copied, v)
+				return fillByteString(t, b, !copied, v, ByteStringToStringForbidden)
 			}
 			if bi.IsInt64() {
 				return fillNegativeInt(t, bi.Int64(), v)
@@ -2221,7 +2247,7 @@ func fillFloat(t cborType, val float64, v reflect.Value) error {
 	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
 }
 
-func fillByteString(t cborType, val []byte, shared bool, v reflect.Value) error {
+func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, bsts ByteStringToStringMode) error {
 	if reflect.PtrTo(v.Type()).Implements(typeBinaryUnmarshaler) {
 		if v.CanAddr() {
 			v = v.Addr()
@@ -2233,6 +2259,10 @@ func fillByteString(t cborType, val []byte, shared bool, v reflect.Value) error 
 			}
 		}
 		return errors.New("cbor: cannot set new value for " + v.Type().String())
+	}
+	if bsts == ByteStringToStringAllowed && v.Kind() == reflect.String {
+		v.SetString(string(val))
+		return nil
 	}
 	if v.Kind() == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8 {
 		src := val

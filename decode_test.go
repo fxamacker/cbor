@@ -8244,6 +8244,64 @@ func TestUnmarshalDefaultByteStringType(t *testing.T) {
 	}
 }
 
+func TestDecModeInvalidByteStringToStringMode(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{ByteStringToString: -1},
+			wantErrorMsg: "cbor: invalid ByteStringToString -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{ByteStringToString: 101},
+			wantErrorMsg: "cbor: invalid ByteStringToString 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestUnmarshalByteStringToString(t *testing.T) {
+	var s string
+
+	derror, err := DecOptions{ByteStringToString: ByteStringToStringForbidden}.DecMode()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = derror.Unmarshal(hexDecode("43414243"), &s); err == nil {
+		t.Error("expected non-nil error from Unmarshal")
+	}
+
+	if s != "" {
+		t.Errorf("expected destination string to be empty, got %q", s)
+	}
+
+	dallow, err := DecOptions{ByteStringToString: ByteStringToStringAllowed}.DecMode()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = dallow.Unmarshal(hexDecode("43414243"), &s); err != nil {
+		t.Errorf("expected nil error from Unmarshal, got: %v", err)
+	}
+
+	if s != "ABC" {
+		t.Errorf("expected destination string to be \"ABC\", got %q", s)
+	}
+}
+
 func isCBORNil(data []byte) bool {
 	return len(data) > 0 && (data[0] == 0xf6 || data[0] == 0xf7)
 }
