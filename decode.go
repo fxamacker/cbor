@@ -361,7 +361,7 @@ const (
 	// FieldNameMatchingPreferCaseSensitive prefers to decode map items into struct fields whose names (or tag
 	// names) exactly match the item's key. If there is no such field, a map item will be decoded into a field whose
 	// name is a case-insensitive match for the item's key.
-	FieldNameMatchingPreferCaseSensitive = iota
+	FieldNameMatchingPreferCaseSensitive FieldNameMatchingMode = iota
 
 	// FieldNameMatchingCaseSensitive decodes map items only into a struct field whose name (or tag name) is an
 	// exact match for the item's key.
@@ -372,6 +372,25 @@ const (
 
 func (fnmm FieldNameMatchingMode) valid() bool {
 	return fnmm >= 0 && fnmm < maxFieldNameMatchingMode
+}
+
+// BigIntDecMode specifies how to decode CBOR bignum to Go interface{}.
+type BigIntDecMode int
+
+const (
+	// BigIntDecodeValue makes CBOR bignum decode to big.Int (instead of *big.Int)
+	// when unmarshalling into a Go interface{}.
+	BigIntDecodeValue BigIntDecMode = iota
+
+	// BigIntDecodePointer makes CBOR bignum decode to *big.Int when
+	// unmarshalling into a Go interface{}.
+	BigIntDecodePointer
+
+	maxBigIntDecMode
+)
+
+func (bidm BigIntDecMode) valid() bool {
+	return bidm >= 0 && bidm < maxBigIntDecMode
 }
 
 // DecOptions specifies decoding options.
@@ -426,6 +445,9 @@ type DecOptions struct {
 
 	// FieldNameMatching specifies how string keys in CBOR maps are matched to Go struct field names.
 	FieldNameMatching FieldNameMatchingMode
+
+	// BigIntDec specifies how to decode CBOR bignum to Go interface{}.
+	BigIntDec BigIntDecMode
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -537,6 +559,9 @@ func (opts DecOptions) decMode() (*decMode, error) {
 	if !opts.FieldNameMatching.valid() {
 		return nil, errors.New("cbor: invalid FieldNameMatching " + strconv.Itoa(int(opts.FieldNameMatching)))
 	}
+	if !opts.BigIntDec.valid() {
+		return nil, errors.New("cbor: invalid BigIntDec " + strconv.Itoa(int(opts.BigIntDec)))
+	}
 	dm := decMode{
 		dupMapKey:         opts.DupMapKey,
 		timeTag:           opts.TimeTag,
@@ -551,6 +576,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		defaultMapType:    opts.DefaultMapType,
 		utf8:              opts.UTF8,
 		fieldNameMatching: opts.FieldNameMatching,
+		bigIntDec:         opts.BigIntDec,
 	}
 	return &dm, nil
 }
@@ -616,6 +642,7 @@ type decMode struct {
 	defaultMapType    reflect.Type
 	utf8              UTF8Mode
 	fieldNameMatching FieldNameMatchingMode
+	bigIntDec         BigIntDecMode
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -635,6 +662,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		ExtraReturnErrors: dm.extraReturnErrors,
 		UTF8:              dm.utf8,
 		FieldNameMatching: dm.fieldNameMatching,
+		BigIntDec:         dm.bigIntDec,
 	}
 }
 
@@ -1184,6 +1212,10 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 			bi := new(big.Int).SetUint64(val)
 			bi.Add(bi, big.NewInt(1))
 			bi.Neg(bi)
+
+			if d.dm.bigIntDec == BigIntDecodePointer {
+				return bi, nil
+			}
 			return *bi, nil
 		}
 		nValue := int64(-1) ^ int64(val)
@@ -1208,12 +1240,20 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 		case 2:
 			b := d.parseByteString()
 			bi := new(big.Int).SetBytes(b)
+
+			if d.dm.bigIntDec == BigIntDecodePointer {
+				return bi, nil
+			}
 			return *bi, nil
 		case 3:
 			b := d.parseByteString()
 			bi := new(big.Int).SetBytes(b)
 			bi.Add(bi, big.NewInt(1))
 			bi.Neg(bi)
+
+			if d.dm.bigIntDec == BigIntDecodePointer {
+				return bi, nil
+			}
 			return *bi, nil
 		}
 
