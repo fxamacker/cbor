@@ -264,20 +264,39 @@ func (tm TagsMode) valid() bool {
 	return tm >= 0 && tm < maxTagsMode
 }
 
-// IntDecMode specifies which Go int type (int64 or uint64) should
-// be used when decoding CBOR int (major type 0 and 1) to Go interface{}.
+// IntDecMode specifies which Go type (int64, uint64, or big.Int) should
+// be used when decoding CBOR integers (major type 0 and 1) to Go interface{}.
 type IntDecMode int
 
 const (
-	// IntDecConvertNone affects how CBOR int (major type 0 and 1) decodes to Go interface{}.
-	// It makes CBOR positive int (major type 0) decode to uint64 value, and
-	// CBOR negative int (major type 1) decode to int64 value.
+	// IntDecConvertNone affects how CBOR integers (major type 0 and 1) decode to Go interface{}.
+	// It decodes CBOR unsigned integer (major type 0) to:
+	// - uint64
+	// It decodes CBOR negative integer (major type 1) to:
+	// - int64 if value fits
+	// - big.Int or *big.Int (see BigIntDecMode) if value doesn't fit into int64
 	IntDecConvertNone IntDecMode = iota
 
-	// IntDecConvertSigned affects how CBOR int (major type 0 and 1) decodes to Go interface{}.
-	// It makes CBOR positive/negative int (major type 0 and 1) decode to int64 value.
-	// If value overflows int64, UnmarshalTypeError is returned.
+	// IntDecConvertSigned affects how CBOR integers (major type 0 and 1) decode to Go interface{}.
+	// It decodes CBOR integers (major type 0 and 1) to:
+	// - int64 if value fits
+	// - big.Int or *big.Int (see BigIntDecMode) if value < math.MinInt64
+	// - return UnmarshalTypeError if value > math.MaxInt64
+	// Deprecated: IntDecConvertSigned should not be used.
+	// Please use other options, such as IntDecConvertSignedOrError, IntDecConvertSignedOrBigInt, IntDecConvertNone.
 	IntDecConvertSigned
+
+	// IntDecConvertSignedOrFail affects how CBOR integers (major type 0 and 1) decode to Go interface{}.
+	// It decodes CBOR integers (major type 0 and 1) to:
+	// - int64 if value fits
+	// - return UnmarshalTypeError if value doesn't fit into int64
+	IntDecConvertSignedOrFail
+
+	// IntDecConvertSigned affects how CBOR integers (major type 0 and 1) decode to Go interface{}.
+	// It makes CBOR integers (major type 0 and 1) decode to:
+	// - int64 if value fits
+	// - big.Int or *big.Int (see BigIntDecMode) if value doesn't fit into int64
+	IntDecConvertSignedOrBigInt
 
 	maxIntDec
 )
@@ -1194,32 +1213,63 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 	switch t {
 	case cborTypePositiveInt:
 		_, _, val := d.getHead()
-		if d.dm.intDec == IntDecConvertNone {
+
+		switch d.dm.intDec {
+		case IntDecConvertNone:
 			return val, nil
-		}
-		if val > math.MaxInt64 {
-			return nil, &UnmarshalTypeError{
-				CBORType: t.String(),
-				GoType:   reflect.TypeOf(int64(0)).String(),
-				errorMsg: strconv.FormatUint(val, 10) + " overflows Go's int64",
+
+		case IntDecConvertSigned, IntDecConvertSignedOrFail:
+			if val > math.MaxInt64 {
+				return nil, &UnmarshalTypeError{
+					CBORType: t.String(),
+					GoType:   reflect.TypeOf(int64(0)).String(),
+					errorMsg: strconv.FormatUint(val, 10) + " overflows Go's int64",
+				}
 			}
+
+			return int64(val), nil
+
+		case IntDecConvertSignedOrBigInt:
+			if val > math.MaxInt64 {
+				bi := new(big.Int).SetUint64(val)
+				if d.dm.bigIntDec == BigIntDecodePointer {
+					return bi, nil
+				}
+				return *bi, nil
+			}
+
+			return int64(val), nil
+
+		default:
+			// not reachable
 		}
-		return int64(val), nil
+
 	case cborTypeNegativeInt:
 		_, _, val := d.getHead()
+
 		if val > math.MaxInt64 {
 			// CBOR negative integer value overflows Go int64, use big.Int instead.
 			bi := new(big.Int).SetUint64(val)
 			bi.Add(bi, big.NewInt(1))
 			bi.Neg(bi)
 
+			if d.dm.intDec == IntDecConvertSignedOrFail {
+				return nil, &UnmarshalTypeError{
+					CBORType: t.String(),
+					GoType:   reflect.TypeOf(int64(0)).String(),
+					errorMsg: bi.String() + " overflows Go's int64",
+				}
+			}
+
 			if d.dm.bigIntDec == BigIntDecodePointer {
 				return bi, nil
 			}
 			return *bi, nil
 		}
+
 		nValue := int64(-1) ^ int64(val)
 		return nValue, nil
+
 	case cborTypeByteString:
 		return d.parseByteString(), nil
 	case cborTypeTextString:
