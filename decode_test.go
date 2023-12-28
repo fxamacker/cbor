@@ -4704,8 +4704,61 @@ func TestDecModeInvalidIntDec(t *testing.T) {
 	}
 }
 
-func TestIntDec(t *testing.T) {
-	dm, err := DecOptions{IntDec: IntDecConvertSigned}.DecMode()
+func TestIntDecConvertNone(t *testing.T) {
+	dm, err := DecOptions{
+		IntDec:    IntDecConvertNone,
+		BigIntDec: BigIntDecodePointer,
+	}.DecMode()
+	if err != nil {
+		t.Errorf("DecMode() returned an error %+v", err)
+	}
+
+	testCases := []struct {
+		name     string
+		cborData []byte
+		wantObj  interface{}
+	}{
+		{
+			name:     "CBOR pos int",
+			cborData: hexDecode("1a000f4240"),
+			wantObj:  uint64(1000000),
+		},
+		{
+			name:     "CBOR pos int overflows int64",
+			cborData: hexDecode("1b8000000000000000"), // math.MaxInt64+1
+			wantObj:  uint64(math.MaxInt64 + 1),
+		},
+		{
+			name:     "CBOR neg int",
+			cborData: hexDecode("3903e7"),
+			wantObj:  int64(-1000),
+		},
+		{
+			name:     "CBOR neg int overflows int64",
+			cborData: hexDecode("3b8000000000000000"), // math.MinInt64-1
+			wantObj:  new(big.Int).Sub(big.NewInt(math.MinInt64), big.NewInt(1)),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var v interface{}
+			err := dm.Unmarshal(tc.cborData, &v)
+			if err == nil {
+				if !reflect.DeepEqual(v, tc.wantObj) {
+					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantObj, tc.wantObj)
+				}
+			} else {
+				t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+			}
+		})
+	}
+}
+
+func TestIntDecConvertSigned(t *testing.T) {
+	dm, err := DecOptions{
+		IntDec:    IntDecConvertSigned,
+		BigIntDec: BigIntDecodePointer,
+	}.DecMode()
 	if err != nil {
 		t.Errorf("DecMode() returned an error %+v", err)
 	}
@@ -4723,13 +4776,125 @@ func TestIntDec(t *testing.T) {
 		},
 		{
 			name:         "CBOR pos int overflows int64",
-			cborData:     hexDecode("1bffffffffffffffff"),
-			wantErrorMsg: "18446744073709551615 overflows Go's int64",
+			cborData:     hexDecode("1b8000000000000000"), // math.MaxInt64+1
+			wantErrorMsg: "9223372036854775808 overflows Go's int64",
 		},
 		{
 			name:     "CBOR neg int",
 			cborData: hexDecode("3903e7"),
 			wantObj:  int64(-1000),
+		},
+		{
+			name:     "CBOR neg int overflows int64",
+			cborData: hexDecode("3b8000000000000000"), // math.MinInt64-1
+			wantObj:  new(big.Int).Sub(big.NewInt(math.MinInt64), big.NewInt(1)),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var v interface{}
+			err := dm.Unmarshal(tc.cborData, &v)
+			if err == nil {
+				if tc.wantErrorMsg != "" {
+					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.cborData, tc.wantErrorMsg)
+				} else if !reflect.DeepEqual(v, tc.wantObj) {
+					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantObj, tc.wantObj)
+				}
+			} else {
+				if tc.wantErrorMsg == "" {
+					t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+				}
+			}
+		})
+	}
+}
+
+func TestIntDecConvertSignedOrBigInt(t *testing.T) {
+	dm, err := DecOptions{
+		IntDec:    IntDecConvertSignedOrBigInt,
+		BigIntDec: BigIntDecodePointer,
+	}.DecMode()
+	if err != nil {
+		t.Errorf("DecMode() returned an error %+v", err)
+	}
+
+	testCases := []struct {
+		name     string
+		cborData []byte
+		wantObj  interface{}
+	}{
+		{
+			name:     "CBOR pos int",
+			cborData: hexDecode("1a000f4240"),
+			wantObj:  int64(1000000),
+		},
+		{
+			name:     "CBOR pos int overflows int64",
+			cborData: hexDecode("1b8000000000000000"),
+			wantObj:  new(big.Int).Add(big.NewInt(math.MaxInt64), big.NewInt(1)),
+		},
+		{
+			name:     "CBOR neg int",
+			cborData: hexDecode("3903e7"),
+			wantObj:  int64(-1000),
+		},
+		{
+			name:     "CBOR neg int overflows int64",
+			cborData: hexDecode("3b8000000000000000"),
+			wantObj:  new(big.Int).Sub(big.NewInt(math.MinInt64), big.NewInt(1)),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var v interface{}
+			err := dm.Unmarshal(tc.cborData, &v)
+			if err == nil {
+				if !reflect.DeepEqual(v, tc.wantObj) {
+					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantObj, tc.wantObj)
+				}
+			} else {
+				t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+			}
+		})
+	}
+}
+
+func TestIntDecConvertSignedOrError(t *testing.T) {
+	dm, err := DecOptions{
+		IntDec:    IntDecConvertSignedOrFail,
+		BigIntDec: BigIntDecodePointer,
+	}.DecMode()
+	if err != nil {
+		t.Errorf("DecMode() returned an error %+v", err)
+	}
+
+	testCases := []struct {
+		name         string
+		cborData     []byte
+		wantObj      interface{}
+		wantErrorMsg string
+	}{
+		{
+			name:     "CBOR pos int",
+			cborData: hexDecode("1a000f4240"),
+			wantObj:  int64(1000000),
+		},
+		{
+			name:         "CBOR pos int overflows int64",
+			cborData:     hexDecode("1b8000000000000000"), // math.MaxInt64+1
+			wantErrorMsg: "9223372036854775808 overflows Go's int64",
+		},
+		{
+			name:     "CBOR neg int",
+			cborData: hexDecode("3903e7"),
+			wantObj:  int64(-1000),
+		},
+		{
+			name:         "CBOR neg int overflows int64",
+			cborData:     hexDecode("3b8000000000000000"), // math.MinInt64-1
+			wantErrorMsg: "-9223372036854775809 overflows Go's int64",
 		},
 	}
 	for _, tc := range testCases {
