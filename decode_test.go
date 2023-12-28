@@ -6263,3 +6263,105 @@ func TestDecodeFieldNameMatching(t *testing.T) {
 		})
 	}
 }
+
+func TestInvalidBigIntDecMode(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{BigIntDec: -1},
+			wantErrorMsg: "cbor: invalid BigIntDec -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{BigIntDec: 101},
+			wantErrorMsg: "cbor: invalid BigIntDec 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestDecodeBignumToEmptyInterface(t *testing.T) {
+	decOptionsDecodeToBigIntValue := DecOptions{BigIntDec: BigIntDecodeValue}
+	decOptionsDecodeToBigIntPointer := DecOptions{BigIntDec: BigIntDecodePointer}
+
+	cborDataPositiveBignum := hexDecode("c249010000000000000000") // positive bignum: 18446744073709551616
+	pbn, _ := new(big.Int).SetString("18446744073709551616", 10)
+
+	cborDataNegativeBignum := hexDecode("c349010000000000000000") // negative bignum: -18446744073709551617
+	nbn, _ := new(big.Int).SetString("-18446744073709551617", 10)
+
+	cborDataLargeNegativeInt := hexDecode("3bffffffffffffffff") // -18446744073709551616
+	ni, _ := new(big.Int).SetString("-18446744073709551616", 10)
+
+	testCases := []struct {
+		name      string
+		opts      DecOptions
+		cborData  []byte
+		wantValue interface{}
+	}{
+		{
+			name:      "decode positive bignum to big.Int",
+			opts:      decOptionsDecodeToBigIntValue,
+			cborData:  cborDataPositiveBignum,
+			wantValue: *pbn,
+		},
+		{
+			name:      "decode negative bignum to big.Int",
+			opts:      decOptionsDecodeToBigIntValue,
+			cborData:  cborDataNegativeBignum,
+			wantValue: *nbn,
+		},
+		{
+			name:      "decode large negative int to big.Int",
+			opts:      decOptionsDecodeToBigIntValue,
+			cborData:  cborDataLargeNegativeInt,
+			wantValue: *ni,
+		},
+		{
+			name:      "decode positive bignum to *big.Int",
+			opts:      decOptionsDecodeToBigIntPointer,
+			cborData:  cborDataPositiveBignum,
+			wantValue: pbn,
+		},
+		{
+			name:      "decode negative bignum to *big.Int",
+			opts:      decOptionsDecodeToBigIntPointer,
+			cborData:  cborDataNegativeBignum,
+			wantValue: nbn,
+		},
+		{
+			name:      "decode large negative int to *big.Int",
+			opts:      decOptionsDecodeToBigIntPointer,
+			cborData:  cborDataLargeNegativeInt,
+			wantValue: ni,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			decMode, _ := tc.opts.DecMode()
+
+			var v interface{}
+			err := decMode.Unmarshal(tc.cborData, &v)
+			if err != nil {
+				t.Errorf("Unmarshal(0x%x) to empty interface returned error %v", tc.cborData, err)
+			} else {
+				if !reflect.DeepEqual(v, tc.wantValue) {
+					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantValue, tc.wantValue)
+				}
+			}
+		})
+	}
+}
