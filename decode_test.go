@@ -2241,51 +2241,53 @@ func bigIntOrPanic(s string) big.Int {
 	return *bi
 }
 
-func TestUnmarshal(t *testing.T) {
+func TestUnmarshalToEmptyInterface(t *testing.T) {
 	for _, tc := range unmarshalTests {
-		// Test unmarshalling CBOR into empty interface.
 		var v interface{}
 		if err := Unmarshal(tc.data, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-		} else {
-			if tm, ok := tc.wantInterfaceValue.(time.Time); ok {
-				if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
-				}
-			} else if !reflect.DeepEqual(v, tc.wantInterfaceValue) {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
-			}
+			continue
 		}
-		// Test unmarshalling CBOR into RawMessage.
+		compareNonFloats(t, tc.data, v, tc.wantInterfaceValue)
+	}
+}
+
+func TestUnmarshalToRawMessage(t *testing.T) {
+	for _, tc := range unmarshalTests {
 		var r RawMessage
 		if err := Unmarshal(tc.data, &r); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-		} else if !bytes.Equal(r, tc.data) {
+			continue
+		}
+		if !bytes.Equal(r, tc.data) {
 			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", tc.data, r, tc.data)
 		}
-		// Test unmarshalling CBOR into compatible data types.
-		for _, value := range tc.wantValues {
-			v := reflect.New(reflect.TypeOf(value))
-			vPtr := v.Interface()
-			if err := Unmarshal(tc.data, vPtr); err != nil {
+	}
+}
+
+func TestUnmarshalToCompatibleTypes(t *testing.T) {
+	for _, tc := range unmarshalTests {
+		for _, wantValue := range tc.wantValues {
+			rv := reflect.New(reflect.TypeOf(wantValue))
+			if err := Unmarshal(tc.data, rv.Interface()); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-			} else {
-				if tm, ok := value.(time.Time); ok {
-					if vt, ok := v.Elem().Interface().(time.Time); !ok || !tm.Equal(vt) {
-						t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v.Elem().Interface(), v.Elem().Interface(), value, value)
-					}
-				} else if !reflect.DeepEqual(v.Elem().Interface(), value) {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v.Elem().Interface(), v.Elem().Interface(), value, value)
-				}
+				continue
 			}
+			compareNonFloats(t, tc.data, rv.Elem().Interface(), wantValue)
 		}
-		// Test unmarshalling CBOR into incompatible data types.
-		for _, typ := range tc.wrongTypes {
-			v := reflect.New(typ)
-			vPtr := v.Interface()
-			if err := Unmarshal(tc.data, vPtr); err == nil {
-				t.Errorf("Unmarshal(0x%x, %s) didn't return an error", tc.data, typ.String())
-			} else if _, ok := err.(*UnmarshalTypeError); !ok {
+	}
+}
+
+func TestUnmarshalToIncompatibleTypes(t *testing.T) {
+	for _, tc := range unmarshalTests {
+		for _, wrongType := range tc.wrongTypes {
+			rv := reflect.New(wrongType)
+			err := Unmarshal(tc.data, rv.Interface())
+			if err == nil {
+				t.Errorf("Unmarshal(0x%x, %s) didn't return an error", tc.data, wrongType.String())
+				continue
+			}
+			if _, ok := err.(*UnmarshalTypeError); !ok {
 				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.data, err)
 			} else if !strings.Contains(err.Error(), "cannot unmarshal") {
 				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.data, err.Error(), "cannot unmarshal")
@@ -2294,40 +2296,67 @@ func TestUnmarshal(t *testing.T) {
 	}
 }
 
-func TestUnmarshalFloat(t *testing.T) {
+func compareNonFloats(t *testing.T, data []byte, got interface{}, want interface{}) {
+	switch tm := want.(type) {
+	case time.Time:
+		if vt, ok := got.(time.Time); !ok || !tm.Equal(vt) {
+			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, got, got, want, want)
+		}
 
+	default:
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, got, got, want, want)
+		}
+	}
+}
+
+func TestUnmarshalFloatToEmptyInterface(t *testing.T) {
 	for _, tc := range unmarshalFloatTests {
-		// Test unmarshalling CBOR into empty interface.
 		var v interface{}
 		if err := Unmarshal(tc.data, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-		} else {
-			testFloat(t, tc.data, v, tc.wantInterfaceValue, tc.equalityThreshold)
+			continue
 		}
-		// Test unmarshalling CBOR into RawMessage.
+		compareFloats(t, tc.data, v, tc.wantInterfaceValue, tc.equalityThreshold)
+	}
+}
+
+func TestUnmarshalFloatToRawMessage(t *testing.T) {
+	for _, tc := range unmarshalFloatTests {
 		var r RawMessage
 		if err := Unmarshal(tc.data, &r); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-		} else if !bytes.Equal(r, tc.data) {
+			continue
+		}
+		if !bytes.Equal(r, tc.data) {
 			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", tc.data, r, tc.data)
 		}
-		// Test unmarshalling CBOR into compatible data types.
-		for _, value := range tc.wantValues {
-			v := reflect.New(reflect.TypeOf(value))
-			vPtr := v.Interface()
-			if err := Unmarshal(tc.data, vPtr); err != nil {
+	}
+}
+
+func TestUnmarshalFloatToCompatibleTypes(t *testing.T) {
+	for _, tc := range unmarshalFloatTests {
+		for _, wantValue := range tc.wantValues {
+			rv := reflect.New(reflect.TypeOf(wantValue))
+			if err := Unmarshal(tc.data, rv.Interface()); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-			} else {
-				testFloat(t, tc.data, v.Elem().Interface(), value, tc.equalityThreshold)
+				continue
 			}
+			compareFloats(t, tc.data, rv.Elem().Interface(), wantValue, tc.equalityThreshold)
 		}
-		// Test unmarshalling CBOR into incompatible data types.
-		for _, typ := range unmarshalFloatWrongTypes {
-			v := reflect.New(typ)
-			vPtr := v.Interface()
-			if err := Unmarshal(tc.data, vPtr); err == nil {
+	}
+}
+
+func TestUnmarshalFloatToIncompatibleTypes(t *testing.T) {
+	for _, tc := range unmarshalFloatTests {
+		for _, wrongType := range unmarshalFloatWrongTypes {
+			rv := reflect.New(wrongType)
+			err := Unmarshal(tc.data, rv.Interface())
+			if err == nil {
 				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
-			} else if _, ok := err.(*UnmarshalTypeError); !ok {
+				continue
+			}
+			if _, ok := err.(*UnmarshalTypeError); !ok {
 				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.data, err)
 			} else if !strings.Contains(err.Error(), "cannot unmarshal") {
 				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.data, err.Error(), "cannot unmarshal")
@@ -2336,41 +2365,41 @@ func TestUnmarshalFloat(t *testing.T) {
 	}
 }
 
-func testFloat(t *testing.T, data []byte, f interface{}, wantf interface{}, equalityThreshold float64) {
-	switch wantf := wantf.(type) {
+func compareFloats(t *testing.T, data []byte, got interface{}, want interface{}, equalityThreshold float64) {
+	switch want := want.(type) {
 	case float32:
-		f, ok := f.(float32)
+		f, ok := got.(float32)
 		if !ok {
 			t.Errorf("Unmarshal(0x%x) returned value of type %T, want float32", data, f)
 			return
 		}
-		if math.IsNaN(float64(wantf)) {
+		if math.IsNaN(float64(want)) {
 			if !math.IsNaN(float64(f)) {
 				t.Errorf("Unmarshal(0x%x) = %f, want NaN", data, f)
 			}
-		} else if math.IsInf(float64(wantf), 0) {
-			if f != wantf {
-				t.Errorf("Unmarshal(0x%x) = %f, want %f", data, f, wantf)
+		} else if math.IsInf(float64(want), 0) {
+			if f != want {
+				t.Errorf("Unmarshal(0x%x) = %f, want %f", data, f, want)
 			}
-		} else if math.Abs(float64(f-wantf)) > equalityThreshold {
-			t.Errorf("Unmarshal(0x%x) = %.18f, want %.18f, diff %.18f > threshold %.18f", data, f, wantf, math.Abs(float64(f-wantf)), equalityThreshold)
+		} else if math.Abs(float64(f-want)) > equalityThreshold {
+			t.Errorf("Unmarshal(0x%x) = %.18f, want %.18f, diff %.18f > threshold %.18f", data, f, want, math.Abs(float64(f-want)), equalityThreshold)
 		}
 	case float64:
-		f, ok := f.(float64)
+		f, ok := got.(float64)
 		if !ok {
 			t.Errorf("Unmarshal(0x%x) returned value of type %T, want float64", data, f)
 			return
 		}
-		if math.IsNaN(wantf) {
+		if math.IsNaN(want) {
 			if !math.IsNaN(f) {
 				t.Errorf("Unmarshal(0x%x) = %f, want NaN", data, f)
 			}
-		} else if math.IsInf(wantf, 0) {
-			if f != wantf {
-				t.Errorf("Unmarshal(0x%x) = %f, want %f", data, f, wantf)
+		} else if math.IsInf(want, 0) {
+			if f != want {
+				t.Errorf("Unmarshal(0x%x) = %f, want %f", data, f, want)
 			}
-		} else if math.Abs(f-wantf) > equalityThreshold {
-			t.Errorf("Unmarshal(0x%x) = %.18f, want %.18f, diff %.18f > threshold %.18f", data, f, wantf, math.Abs(f-wantf), equalityThreshold)
+		} else if math.Abs(f-want) > equalityThreshold {
+			t.Errorf("Unmarshal(0x%x) = %.18f, want %.18f, diff %.18f > threshold %.18f", data, f, want, math.Abs(f-want), equalityThreshold)
 		}
 	}
 }
@@ -6692,7 +6721,7 @@ func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
 		if err := Unmarshal(tc.data, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 		} else {
-			testFloat(t, tc.data, v, tc.wantInterfaceValue, tc.equalityThreshold)
+			compareFloats(t, tc.data, v, tc.wantInterfaceValue, tc.equalityThreshold)
 		}
 
 		// Test unmarshalling CBOR into RawMessage.
@@ -6710,7 +6739,7 @@ func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
 			if err := Unmarshal(tc.data, vPtr); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 			} else {
-				testFloat(t, tc.data, v.Elem().Interface(), value, tc.equalityThreshold)
+				compareFloats(t, tc.data, v.Elem().Interface(), value, tc.equalityThreshold)
 			}
 		}
 
