@@ -1082,7 +1082,7 @@ func TestDiagnoseEmptyData(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			s, err := tc.dm.Diagnose(emptyData)
-			if len(s) != 0 {
+			if s != "" {
 				t.Errorf("Diagnose() didn't return empty notation for empty data")
 			}
 			if err != io.EOF {
@@ -1090,7 +1090,7 @@ func TestDiagnoseEmptyData(t *testing.T) {
 			}
 
 			s, rest, err := tc.dm.DiagnoseFirst(emptyData)
-			if len(s) != 0 {
+			if s != "" {
 				t.Errorf("DiagnoseFirst() didn't return empty notation for empty data")
 			}
 			if len(rest) != 0 {

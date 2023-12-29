@@ -18,7 +18,7 @@ func TestDecoder(t *testing.T) {
 	var buf bytes.Buffer
 	for i := 0; i < 5; i++ {
 		for _, tc := range unmarshalTests {
-			buf.Write(tc.cborData)
+			buf.Write(tc.data)
 		}
 	}
 
@@ -41,14 +41,14 @@ func TestDecoder(t *testing.T) {
 					if err := decoder.Decode(&v); err != nil {
 						t.Fatalf("Decode() returned error %v", err)
 					}
-					if tm, ok := tc.emptyInterfaceValue.(time.Time); ok {
+					if tm, ok := tc.wantInterfaceValue.(time.Time); ok {
 						if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
-							t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+							t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
 						}
-					} else if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
-						t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+					} else if !reflect.DeepEqual(v, tc.wantInterfaceValue) {
+						t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
 					}
-					bytesRead += len(tc.cborData)
+					bytesRead += len(tc.data)
 					if decoder.NumBytesRead() != bytesRead {
 						t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
 					}
@@ -74,7 +74,7 @@ func TestDecoderUnmarshalTypeError(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		for _, tc := range unmarshalTests {
 			for j := 0; j < len(tc.wrongTypes)*2; j++ {
-				buf.Write(tc.cborData)
+				buf.Write(tc.data)
 			}
 		}
 	}
@@ -97,11 +97,11 @@ func TestDecoderUnmarshalTypeError(t *testing.T) {
 					for _, typ := range tc.wrongTypes {
 						v := reflect.New(typ)
 						if err := decoder.Decode(v.Interface()); err == nil {
-							t.Errorf("Decode(0x%x) didn't return an error, want UnmarshalTypeError", tc.cborData)
+							t.Errorf("Decode(0x%x) didn't return an error, want UnmarshalTypeError", tc.data)
 						} else if _, ok := err.(*UnmarshalTypeError); !ok {
-							t.Errorf("Decode(0x%x) returned wrong error type %T, want UnmarshalTypeError", tc.cborData, err)
+							t.Errorf("Decode(0x%x) returned wrong error type %T, want UnmarshalTypeError", tc.data, err)
 						}
-						bytesRead += len(tc.cborData)
+						bytesRead += len(tc.data)
 						if decoder.NumBytesRead() != bytesRead {
 							t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
 						}
@@ -110,14 +110,14 @@ func TestDecoderUnmarshalTypeError(t *testing.T) {
 						if err := decoder.Decode(&vi); err != nil {
 							t.Errorf("Decode() returned error %v", err)
 						}
-						if tm, ok := tc.emptyInterfaceValue.(time.Time); ok {
+						if tm, ok := tc.wantInterfaceValue.(time.Time); ok {
 							if vt, ok := vi.(time.Time); !ok || !tm.Equal(vt) {
-								t.Errorf("Decode() = %v (%T), want %v (%T)", vi, vi, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+								t.Errorf("Decode() = %v (%T), want %v (%T)", vi, vi, tc.wantInterfaceValue, tc.wantInterfaceValue)
 							}
-						} else if !reflect.DeepEqual(vi, tc.emptyInterfaceValue) {
-							t.Errorf("Decode() = %v (%T), want %v (%T)", vi, vi, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+						} else if !reflect.DeepEqual(vi, tc.wantInterfaceValue) {
+							t.Errorf("Decode() = %v (%T), want %v (%T)", vi, vi, tc.wantInterfaceValue, tc.wantInterfaceValue)
 						}
-						bytesRead += len(tc.cborData)
+						bytesRead += len(tc.data)
 						if decoder.NumBytesRead() != bytesRead {
 							t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
 						}
@@ -142,7 +142,7 @@ func TestDecoderUnmarshalTypeError(t *testing.T) {
 func TestDecoderUnexpectedEOFError(t *testing.T) {
 	var buf bytes.Buffer
 	for _, tc := range unmarshalTests {
-		buf.Write(tc.cborData)
+		buf.Write(tc.data)
 	}
 	buf.Truncate(buf.Len() - 1)
 
@@ -166,14 +166,14 @@ func TestDecoderUnexpectedEOFError(t *testing.T) {
 				if err := decoder.Decode(&v); err != nil {
 					t.Fatalf("Decode() returned error %v", err)
 				}
-				if tm, ok := tc.emptyInterfaceValue.(time.Time); ok {
+				if tm, ok := tc.wantInterfaceValue.(time.Time); ok {
 					if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
-						t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+						t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
 					}
-				} else if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
-					t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+				} else if !reflect.DeepEqual(v, tc.wantInterfaceValue) {
+					t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
 				}
-				bytesRead += len(tc.cborData)
+				bytesRead += len(tc.data)
 				if decoder.NumBytesRead() != bytesRead {
 					t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
 				}
@@ -196,7 +196,7 @@ func TestDecoderUnexpectedEOFError(t *testing.T) {
 func TestDecoderReadError(t *testing.T) {
 	var buf bytes.Buffer
 	for _, tc := range unmarshalTests {
-		buf.Write(tc.cborData)
+		buf.Write(tc.data)
 	}
 	buf.Truncate(buf.Len() - 1)
 
@@ -221,14 +221,14 @@ func TestDecoderReadError(t *testing.T) {
 				if err := decoder.Decode(&v); err != nil {
 					t.Fatalf("Decode() returned error %v", err)
 				}
-				if tm, ok := tc.emptyInterfaceValue.(time.Time); ok {
+				if tm, ok := tc.wantInterfaceValue.(time.Time); ok {
 					if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
-						t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+						t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
 					}
-				} else if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
-					t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+				} else if !reflect.DeepEqual(v, tc.wantInterfaceValue) {
+					t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
 				}
-				bytesRead += len(tc.cborData)
+				bytesRead += len(tc.data)
 				if decoder.NumBytesRead() != bytesRead {
 					t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
 				}
@@ -336,7 +336,7 @@ func TestDecoderSkip(t *testing.T) {
 	var buf bytes.Buffer
 	for i := 0; i < 5; i++ {
 		for _, tc := range unmarshalTests {
-			buf.Write(tc.cborData)
+			buf.Write(tc.data)
 		}
 	}
 
@@ -358,7 +358,7 @@ func TestDecoderSkip(t *testing.T) {
 					if err := decoder.Skip(); err != nil {
 						t.Fatalf("Skip() returned error %v", err)
 					}
-					bytesRead += len(tc.cborData)
+					bytesRead += len(tc.data)
 					if decoder.NumBytesRead() != bytesRead {
 						t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
 					}
@@ -378,7 +378,7 @@ func TestDecoderSkip(t *testing.T) {
 func TestDecoderSkipInvalidDataError(t *testing.T) {
 	var buf bytes.Buffer
 	for _, tc := range unmarshalTests {
-		buf.Write(tc.cborData)
+		buf.Write(tc.data)
 	}
 	buf.WriteByte(0x3e)
 
@@ -400,7 +400,7 @@ func TestDecoderSkipInvalidDataError(t *testing.T) {
 				if err := decoder.Skip(); err != nil {
 					t.Fatalf("Skip() returned error %v", err)
 				}
-				bytesRead += len(tc.cborData)
+				bytesRead += len(tc.data)
 				if decoder.NumBytesRead() != bytesRead {
 					t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
 				}
@@ -421,7 +421,7 @@ func TestDecoderSkipInvalidDataError(t *testing.T) {
 func TestDecoderSkipUnexpectedEOFError(t *testing.T) {
 	var buf bytes.Buffer
 	for _, tc := range unmarshalTests {
-		buf.Write(tc.cborData)
+		buf.Write(tc.data)
 	}
 	buf.Truncate(buf.Len() - 1)
 
@@ -443,7 +443,7 @@ func TestDecoderSkipUnexpectedEOFError(t *testing.T) {
 				if err := decoder.Skip(); err != nil {
 					t.Fatalf("Skip() returned error %v", err)
 				}
-				bytesRead += len(tc.cborData)
+				bytesRead += len(tc.data)
 				if decoder.NumBytesRead() != bytesRead {
 					t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
 				}
@@ -462,7 +462,7 @@ func TestDecoderSkipUnexpectedEOFError(t *testing.T) {
 func TestDecoderSkipReadError(t *testing.T) {
 	var buf bytes.Buffer
 	for _, tc := range unmarshalTests {
-		buf.Write(tc.cborData)
+		buf.Write(tc.data)
 	}
 	buf.Truncate(buf.Len() - 1)
 
@@ -486,7 +486,7 @@ func TestDecoderSkipReadError(t *testing.T) {
 				if err := decoder.Skip(); err != nil {
 					t.Fatalf("Skip() returned error %v", err)
 				}
-				bytesRead += len(tc.cborData)
+				bytesRead += len(tc.data)
 				if decoder.NumBytesRead() != bytesRead {
 					t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
 				}
