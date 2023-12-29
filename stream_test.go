@@ -279,11 +279,11 @@ func TestDecoderNoData(t *testing.T) {
 }
 
 func TestDecoderRecoverableReadError(t *testing.T) {
-	cborData := hexDecode("83010203") // [1,2,3]
+	data := hexDecode("83010203") // [1,2,3]
 	wantValue := []interface{}{uint64(1), uint64(2), uint64(3)}
 	recoverableReaderErr := errors.New("recoverable reader error")
 
-	decoder := NewDecoder(newRecoverableReader(cborData, 1, recoverableReaderErr))
+	decoder := NewDecoder(newRecoverableReader(data, 1, recoverableReaderErr))
 
 	var v interface{}
 	err := decoder.Decode(&v)
@@ -298,8 +298,8 @@ func TestDecoderRecoverableReadError(t *testing.T) {
 	if !reflect.DeepEqual(v, wantValue) {
 		t.Errorf("Decode() = %v (%T), want %v (%T)", v, v, wantValue, wantValue)
 	}
-	if decoder.NumBytesRead() != len(cborData) {
-		t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), len(cborData))
+	if decoder.NumBytesRead() != len(data) {
+		t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), len(data))
 	}
 
 	// no more data
@@ -529,10 +529,10 @@ func TestDecoderSkipNoData(t *testing.T) {
 }
 
 func TestDecoderSkipRecoverableReadError(t *testing.T) {
-	cborData := hexDecode("83010203") // [1,2,3]
+	data := hexDecode("83010203") // [1,2,3]
 	recoverableReaderErr := errors.New("recoverable reader error")
 
-	decoder := NewDecoder(newRecoverableReader(cborData, 1, recoverableReaderErr))
+	decoder := NewDecoder(newRecoverableReader(data, 1, recoverableReaderErr))
 
 	err := decoder.Skip()
 	if err != recoverableReaderErr {
@@ -543,8 +543,8 @@ func TestDecoderSkipRecoverableReadError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Skip() returned error %v", err)
 	}
-	if decoder.NumBytesRead() != len(cborData) {
-		t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), len(cborData))
+	if decoder.NumBytesRead() != len(data) {
+		t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), len(data))
 	}
 
 	// no more data
@@ -565,10 +565,10 @@ func TestDecoderStructTag(t *testing.T) {
 		B: "B",
 		C: "C",
 	}
-	cborData := hexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
+	data := hexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
 
 	var v strc
-	dec := NewDecoder(bytes.NewReader(cborData))
+	dec := NewDecoder(bytes.NewReader(data))
 	if err := dec.Decode(&v); err != nil {
 		t.Errorf("Decode() returned error %v", err)
 	}
@@ -580,30 +580,30 @@ func TestDecoderStructTag(t *testing.T) {
 func TestDecoderBuffered(t *testing.T) {
 	testCases := []struct {
 		name      string
-		cborData  []byte
+		data      []byte
 		buffered  []byte
 		decodeErr error
 	}{
 		{
 			name:      "empty",
-			cborData:  []byte{},
+			data:      []byte{},
 			buffered:  []byte{},
 			decodeErr: io.EOF,
 		},
 		{
 			name:      "malformed CBOR data item",
-			cborData:  []byte{0xc0},
+			data:      []byte{0xc0},
 			buffered:  []byte{0xc0},
 			decodeErr: io.ErrUnexpectedEOF,
 		},
 		{
 			name:     "1 CBOR data item",
-			cborData: []byte{0xc2, 0x49, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+			data:     []byte{0xc2, 0x49, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 			buffered: []byte{},
 		},
 		{
 			name: "2 CBOR data items",
-			cborData: []byte{
+			data: []byte{
 				// First CBOR data item
 				0xc2, 0x49, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				// Second CBOR data item
@@ -616,7 +616,7 @@ func TestDecoderBuffered(t *testing.T) {
 		},
 		{
 			name: "1 CBOR data item followed by non-CBOR data",
-			cborData: []byte{
+			data: []byte{
 				// CBOR data item
 				0xc2, 0x49, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				// Extraneous non-CBOR data ("abc")
@@ -631,7 +631,7 @@ func TestDecoderBuffered(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := bytes.NewReader(tc.cborData)
+			r := bytes.NewReader(tc.data)
 
 			decoder := NewDecoder(r)
 
@@ -673,7 +673,7 @@ func TestEncoder(t *testing.T) {
 	encoder := em.NewEncoder(&w)
 	for _, tc := range marshalTests {
 		for _, value := range tc.values {
-			want.Write(tc.cborData)
+			want.Write(tc.data)
 
 			if err := encoder.Encode(value); err != nil {
 				t.Fatalf("Encode() returned error %v", err)
@@ -903,25 +903,25 @@ func TestRawMessage(t *testing.T) {
 		B *RawMessage `cbor:"b"`
 		C *RawMessage `cbor:"c"`
 	}
-	cborData := hexDecode("a361610161628202036163f6") // {"a": 1, "b": [2, 3], "c": nil},
+	data := hexDecode("a361610161628202036163f6") // {"a": 1, "b": [2, 3], "c": nil},
 	r := RawMessage(hexDecode("820203"))
 	want := strc{
 		A: RawMessage([]byte{0x01}),
 		B: &r,
 	}
 	var v strc
-	if err := Unmarshal(cborData, &v); err != nil {
-		t.Fatalf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &v); err != nil {
+		t.Fatalf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) returned v %v, want %v", cborData, v, want)
+		t.Errorf("Unmarshal(0x%x) returned v %v, want %v", data, v, want)
 	}
 	b, err := Marshal(v)
 	if err != nil {
 		t.Fatalf("Marshal(%+v) returned error %v", v, err)
 	}
-	if !bytes.Equal(b, cborData) {
-		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, cborData)
+	if !bytes.Equal(b, data) {
+		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, data)
 	}
 
 	address := fmt.Sprintf("%p", *v.B)
@@ -931,8 +931,8 @@ func TestRawMessage(t *testing.T) {
 	if address != fmt.Sprintf("%p", *v.B) {
 		t.Fatalf("Unmarshal RawMessage should reuse underlying array if it has sufficient capacity")
 	}
-	if err := Unmarshal(cborData, v.B); err != nil {
-		t.Fatalf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, v.B); err != nil {
+		t.Fatalf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if address == fmt.Sprintf("%p", *v.B) {
 		t.Fatalf("Unmarshal RawMessage should allocate a new underlying array if it does not have sufficient capacity")
@@ -966,8 +966,8 @@ func TestEmptyRawMessage(t *testing.T) {
 func TestNilRawMessageUnmarshalCBORError(t *testing.T) {
 	wantErrorMsg := "cbor.RawMessage: UnmarshalCBOR on nil pointer"
 	var r *RawMessage
-	cborData := hexDecode("01")
-	if err := r.UnmarshalCBOR(cborData); err == nil {
+	data := hexDecode("01")
+	if err := r.UnmarshalCBOR(data); err == nil {
 		t.Errorf("UnmarshalCBOR() didn't return error")
 	} else if err.Error() != wantErrorMsg {
 		t.Errorf("UnmarshalCBOR() returned error %q, want %q", err.Error(), wantErrorMsg)

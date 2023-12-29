@@ -10,7 +10,7 @@ import (
 
 func TestValid1(t *testing.T) {
 	for _, mt := range marshalTests {
-		if err := Wellformed(mt.cborData); err != nil {
+		if err := Wellformed(mt.data); err != nil {
 			t.Errorf("Wellformed() returned error %v", err)
 		}
 	}
@@ -19,7 +19,7 @@ func TestValid1(t *testing.T) {
 func TestValid2(t *testing.T) {
 	for _, mt := range marshalTests {
 		dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
-		if err := dm.Wellformed(mt.cborData); err != nil {
+		if err := dm.Wellformed(mt.data); err != nil {
 			t.Errorf("Wellformed() returned error %v", err)
 		}
 	}
@@ -28,7 +28,7 @@ func TestValid2(t *testing.T) {
 func TestValidExtraneousData(t *testing.T) {
 	testCases := []struct {
 		name                     string
-		cborData                 []byte
+		data                     []byte
 		extraneousDataNumOfBytes int
 		extraneousDataIndex      int
 	}{
@@ -39,17 +39,17 @@ func TestValidExtraneousData(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := Wellformed(tc.cborData)
+			err := Wellformed(tc.data)
 			if err == nil {
-				t.Errorf("Wellformed(0x%x) didn't return an error", tc.cborData)
+				t.Errorf("Wellformed(0x%x) didn't return an error", tc.data)
 			} else {
 				ederr, ok := err.(*ExtraneousDataError)
 				if !ok {
-					t.Errorf("Wellformed(0x%x) error type %T, want *ExtraneousDataError", tc.cborData, err)
+					t.Errorf("Wellformed(0x%x) error type %T, want *ExtraneousDataError", tc.data, err)
 				} else if ederr.numOfBytes != tc.extraneousDataNumOfBytes {
-					t.Errorf("Wellformed(0x%x) returned %d bytes of extraneous data, want %d", tc.cborData, ederr.numOfBytes, tc.extraneousDataNumOfBytes)
+					t.Errorf("Wellformed(0x%x) returned %d bytes of extraneous data, want %d", tc.data, ederr.numOfBytes, tc.extraneousDataNumOfBytes)
 				} else if ederr.index != tc.extraneousDataIndex {
-					t.Errorf("Wellformed(0x%x) returned extraneous data index %d, want %d", tc.cborData, ederr.index, tc.extraneousDataIndex)
+					t.Errorf("Wellformed(0x%x) returned extraneous data index %d, want %d", tc.data, ederr.index, tc.extraneousDataIndex)
 				}
 			}
 		})
@@ -59,7 +59,7 @@ func TestValidExtraneousData(t *testing.T) {
 func TestValidOnStreamingData(t *testing.T) {
 	var buf bytes.Buffer
 	for _, t := range marshalTests {
-		buf.Write(t.cborData)
+		buf.Write(t.data)
 	}
 	d := decoder{data: buf.Bytes(), dm: defaultDecMode}
 	for i := 0; i < len(marshalTests); i++ {
@@ -72,7 +72,7 @@ func TestValidOnStreamingData(t *testing.T) {
 func TestDepth(t *testing.T) {
 	testCases := []struct {
 		name      string
-		cborData  []byte
+		data      []byte
 		wantDepth int
 	}{
 		{"uint", hexDecode("00"), 0},                                                          // 0
@@ -110,13 +110,13 @@ func TestDepth(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			d := decoder{data: tc.cborData, dm: defaultDecMode}
+			d := decoder{data: tc.data, dm: defaultDecMode}
 			depth, err := d.wellformedInternal(0)
 			if err != nil {
-				t.Errorf("wellformed(0x%x) returned error %v", tc.cborData, err)
+				t.Errorf("wellformed(0x%x) returned error %v", tc.data, err)
 			}
 			if depth != tc.wantDepth {
-				t.Errorf("wellformed(0x%x) returned depth %d, want %d", tc.cborData, depth, tc.wantDepth)
+				t.Errorf("wellformed(0x%x) returned depth %d, want %d", tc.data, depth, tc.wantDepth)
 			}
 		})
 	}
@@ -125,49 +125,49 @@ func TestDepth(t *testing.T) {
 func TestDepthError(t *testing.T) {
 	testCases := []struct {
 		name         string
-		cborData     []byte
+		data         []byte
 		opts         DecOptions
 		wantErrorMsg string
 	}{
 		{
 			name:         "33-level array",
-			cborData:     hexDecode("82018181818181818181818181818181818181818181818181818181818181818101"),
+			data:         hexDecode("82018181818181818181818181818181818181818181818181818181818181818101"),
 			opts:         DecOptions{MaxNestedLevels: 4},
 			wantErrorMsg: "cbor: exceeded max nested level 4",
 		},
 		{
 			name:         "33-level array",
-			cborData:     hexDecode("82018181818181818181818181818181818181818181818181818181818181818101"),
+			data:         hexDecode("82018181818181818181818181818181818181818181818181818181818181818101"),
 			opts:         DecOptions{MaxNestedLevels: 10},
 			wantErrorMsg: "cbor: exceeded max nested level 10",
 		},
 		{
 			name:         "33-level array",
-			cborData:     hexDecode("8201818181818181818181818181818181818181818181818181818181818181818101"),
+			data:         hexDecode("8201818181818181818181818181818181818181818181818181818181818181818101"),
 			opts:         DecOptions{},
 			wantErrorMsg: "cbor: exceeded max nested level 32",
 		},
 		{
 			name:         "33-level indefinite length array",
-			cborData:     hexDecode("9f01818181818181818181818181818181818181818181818181818181818181818101ff"),
+			data:         hexDecode("9f01818181818181818181818181818181818181818181818181818181818181818101ff"),
 			opts:         DecOptions{},
 			wantErrorMsg: "cbor: exceeded max nested level 32",
 		},
 		{
 			name:         "33-level map",
-			cborData:     hexDecode("a101818181818181818181818181818181818181818181818181818181818181818101"),
+			data:         hexDecode("a101818181818181818181818181818181818181818181818181818181818181818101"),
 			opts:         DecOptions{},
 			wantErrorMsg: "cbor: exceeded max nested level 32",
 		},
 		{
 			name:         "33-level indefinite length map",
-			cborData:     hexDecode("bf01818181818181818181818181818181818181818181818181818181818181818101ff"),
+			data:         hexDecode("bf01818181818181818181818181818181818181818181818181818181818181818101ff"),
 			opts:         DecOptions{},
 			wantErrorMsg: "cbor: exceeded max nested level 32",
 		},
 		{
 			name:         "33-level tag",
-			cborData:     hexDecode("d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d86474323031332d30332d32315432303a30343a30305a"),
+			data:         hexDecode("d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d86474323031332d30332d32315432303a30343a30305a"),
 			opts:         DecOptions{},
 			wantErrorMsg: "cbor: exceeded max nested level 32",
 		},
@@ -175,13 +175,13 @@ func TestDepthError(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, _ := tc.opts.decMode()
-			d := decoder{data: tc.cborData, dm: dm}
+			d := decoder{data: tc.data, dm: dm}
 			if _, err := d.wellformedInternal(0); err == nil {
-				t.Errorf("wellformed(0x%x) didn't return an error", tc.cborData)
+				t.Errorf("wellformed(0x%x) didn't return an error", tc.data)
 			} else if _, ok := err.(*MaxNestedLevelError); !ok {
-				t.Errorf("wellformed(0x%x) returned wrong error type %T, want (*MaxNestedLevelError)", tc.cborData, err)
+				t.Errorf("wellformed(0x%x) returned wrong error type %T, want (*MaxNestedLevelError)", tc.data, err)
 			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("wellformed(0x%x) returned error %q, want error %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+				t.Errorf("wellformed(0x%x) returned error %q, want error %q", tc.data, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}

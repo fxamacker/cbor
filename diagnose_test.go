@@ -1041,27 +1041,27 @@ func TestInvalidDiagnoseOptions(t *testing.T) {
 }
 
 func TestDiagnoseExtraneousData(t *testing.T) {
-	cborData := hexDecode("63666F6FF6")
-	_, err := Diagnose(cborData)
+	data := hexDecode("63666F6FF6")
+	_, err := Diagnose(data)
 	if err == nil {
-		t.Errorf("Diagnose(0x%x) didn't return error", cborData)
+		t.Errorf("Diagnose(0x%x) didn't return error", data)
 	} else if !strings.Contains(err.Error(), `extraneous data`) {
-		t.Errorf("Diagnose(0x%x) returned error %q", cborData, err)
+		t.Errorf("Diagnose(0x%x) returned error %q", data, err)
 	}
 
-	_, _, err = DiagnoseFirst(cborData)
+	_, _, err = DiagnoseFirst(data)
 	if err != nil {
-		t.Errorf("DiagnoseFirst(0x%x) returned error %v", cborData, err)
+		t.Errorf("DiagnoseFirst(0x%x) returned error %v", data, err)
 	}
 }
 
 func TestDiagnoseNotwellformedData(t *testing.T) {
-	cborData := hexDecode("5f4060ff")
-	_, err := Diagnose(cborData)
+	data := hexDecode("5f4060ff")
+	_, err := Diagnose(data)
 	if err == nil {
-		t.Errorf("Diagnose(0x%x) didn't return error", cborData)
+		t.Errorf("Diagnose(0x%x) didn't return error", data)
 	} else if !strings.Contains(err.Error(), `wrong element type`) {
-		t.Errorf("Diagnose(0x%x) returned error %q", cborData, err)
+		t.Errorf("Diagnose(0x%x) returned error %q", data, err)
 	}
 }
 
