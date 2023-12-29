@@ -673,7 +673,7 @@ func TestEncoder(t *testing.T) {
 	encoder := em.NewEncoder(&w)
 	for _, tc := range marshalTests {
 		for _, value := range tc.values {
-			want.Write(tc.data)
+			want.Write(tc.wantData)
 
 			if err := encoder.Encode(value); err != nil {
 				t.Fatalf("Encode() returned error %v", err)

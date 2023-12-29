@@ -10,7 +10,7 @@ import (
 
 func TestValid1(t *testing.T) {
 	for _, mt := range marshalTests {
-		if err := Wellformed(mt.data); err != nil {
+		if err := Wellformed(mt.wantData); err != nil {
 			t.Errorf("Wellformed() returned error %v", err)
 		}
 	}
@@ -19,7 +19,7 @@ func TestValid1(t *testing.T) {
 func TestValid2(t *testing.T) {
 	for _, mt := range marshalTests {
 		dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
-		if err := dm.Wellformed(mt.data); err != nil {
+		if err := dm.Wellformed(mt.wantData); err != nil {
 			t.Errorf("Wellformed() returned error %v", err)
 		}
 	}
@@ -59,7 +59,7 @@ func TestValidExtraneousData(t *testing.T) {
 func TestValidOnStreamingData(t *testing.T) {
 	var buf bytes.Buffer
 	for _, t := range marshalTests {
-		buf.Write(t.data)
+		buf.Write(t.wantData)
 	}
 	d := decoder{data: buf.Bytes(), dm: defaultDecMode}
 	for i := 0; i < len(marshalTests); i++ {
