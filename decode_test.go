@@ -2114,7 +2114,6 @@ var unmarshalFloatTests = []unmarshalFloatTest{
 		data:               hexDecode("fb3ff199999999999a"),
 		wantInterfaceValue: float64(1.1),
 		wantValues:         []interface{}{float32(1.1), float64(1.1)},
-		equalityThreshold:  1e-9,
 	},
 	{
 		data:               hexDecode("fb7e37e43c8800759c"),
@@ -2126,7 +2125,6 @@ var unmarshalFloatTests = []unmarshalFloatTest{
 		data:               hexDecode("fbc010666666666666"),
 		wantInterfaceValue: float64(-4.1),
 		wantValues:         []interface{}{float32(-4.1), float64(-4.1)},
-		equalityThreshold:  1e-9,
 	},
 	{
 		data:               hexDecode("fb7ff0000000000000"),
@@ -2366,6 +2364,8 @@ func TestUnmarshalFloatToIncompatibleTypes(t *testing.T) {
 }
 
 func compareFloats(t *testing.T, data []byte, got interface{}, want interface{}, equalityThreshold float64) {
+	var gotFloat64, wantFloat64 float64
+
 	switch want := want.(type) {
 	case float32:
 		f, ok := got.(float32)
@@ -2373,33 +2373,31 @@ func compareFloats(t *testing.T, data []byte, got interface{}, want interface{},
 			t.Errorf("Unmarshal(0x%x) returned value of type %T, want float32", data, f)
 			return
 		}
-		if math.IsNaN(float64(want)) {
-			if !math.IsNaN(float64(f)) {
-				t.Errorf("Unmarshal(0x%x) = %f, want NaN", data, f)
-			}
-		} else if math.IsInf(float64(want), 0) {
-			if f != want {
-				t.Errorf("Unmarshal(0x%x) = %f, want %f", data, f, want)
-			}
-		} else if math.Abs(float64(f-want)) > equalityThreshold {
-			t.Errorf("Unmarshal(0x%x) = %.18f, want %.18f, diff %.18f > threshold %.18f", data, f, want, math.Abs(float64(f-want)), equalityThreshold)
-		}
+		gotFloat64, wantFloat64 = float64(f), float64(want)
+
 	case float64:
 		f, ok := got.(float64)
 		if !ok {
 			t.Errorf("Unmarshal(0x%x) returned value of type %T, want float64", data, f)
 			return
 		}
-		if math.IsNaN(want) {
-			if !math.IsNaN(f) {
-				t.Errorf("Unmarshal(0x%x) = %f, want NaN", data, f)
-			}
-		} else if math.IsInf(want, 0) {
-			if f != want {
-				t.Errorf("Unmarshal(0x%x) = %f, want %f", data, f, want)
-			}
-		} else if math.Abs(f-want) > equalityThreshold {
-			t.Errorf("Unmarshal(0x%x) = %.18f, want %.18f, diff %.18f > threshold %.18f", data, f, want, math.Abs(f-want), equalityThreshold)
+		gotFloat64, wantFloat64 = f, want
+	}
+
+	switch {
+	case math.IsNaN(wantFloat64):
+		if !math.IsNaN(gotFloat64) {
+			t.Errorf("Unmarshal(0x%x) = %f, want NaN", data, gotFloat64)
+		}
+
+	case math.IsInf(wantFloat64, 0):
+		if gotFloat64 != wantFloat64 {
+			t.Errorf("Unmarshal(0x%x) = %f, want %f", data, gotFloat64, wantFloat64)
+		}
+
+	default:
+		if math.Abs(gotFloat64-wantFloat64) > equalityThreshold {
+			t.Errorf("Unmarshal(0x%x) = %.18f, want %.18f, diff %.18f > threshold %.18f", data, gotFloat64, wantFloat64, math.Abs(gotFloat64-wantFloat64), equalityThreshold)
 		}
 	}
 }
