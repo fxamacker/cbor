@@ -42,215 +42,928 @@ var (
 )
 
 type unmarshalTest struct {
-	cborData            []byte
-	emptyInterfaceValue interface{}
-	values              []interface{}
-	wrongTypes          []reflect.Type
+	data               []byte
+	wantInterfaceValue interface{}
+	wantValues         []interface{}
+	wrongTypes         []reflect.Type
 }
 
 var unmarshalTests = []unmarshalTest{
 	// CBOR test data are from https://tools.ietf.org/html/rfc7049#appendix-A.
-	// positive integer
+
+	// unsigned integer
 	{
-		hexDecode("00"),
-		uint64(0),
-		[]interface{}{uint8(0), uint16(0), uint32(0), uint64(0), uint(0), int8(0), int16(0), int32(0), int64(0), int(0), float32(0), float64(0), bigIntOrPanic("0")},
-		[]reflect.Type{typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("00"),
+		wantInterfaceValue: uint64(0),
+		wantValues: []interface{}{
+			uint8(0),
+			uint16(0),
+			uint32(0),
+			uint64(0),
+			uint(0),
+			int8(0),
+			int16(0),
+			int32(0),
+			int64(0),
+			int(0),
+			float32(0),
+			float64(0),
+			bigIntOrPanic("0"),
+		},
+		wrongTypes: []reflect.Type{
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("01"),
-		uint64(1),
-		[]interface{}{uint8(1), uint16(1), uint32(1), uint64(1), uint(1), int8(1), int16(1), int32(1), int64(1), int(1), float32(1), float64(1), bigIntOrPanic("1")},
-		[]reflect.Type{typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("01"),
+		wantInterfaceValue: uint64(1),
+		wantValues: []interface{}{
+			uint8(1),
+			uint16(1),
+			uint32(1),
+			uint64(1),
+			uint(1),
+			int8(1),
+			int16(1),
+			int32(1),
+			int64(1),
+			int(1),
+			float32(1),
+			float64(1),
+			bigIntOrPanic("1"),
+		},
+		wrongTypes: []reflect.Type{
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("0a"),
-		uint64(10),
-		[]interface{}{uint8(10), uint16(10), uint32(10), uint64(10), uint(10), int8(10), int16(10), int32(10), int64(10), int(10), float32(10), float64(10), bigIntOrPanic("10")},
-		[]reflect.Type{typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("0a"),
+		wantInterfaceValue: uint64(10),
+		wantValues: []interface{}{
+			uint8(10),
+			uint16(10),
+			uint32(10),
+			uint64(10),
+			uint(10),
+			int8(10),
+			int16(10),
+			int32(10),
+			int64(10),
+			int(10),
+			float32(10),
+			float64(10),
+			bigIntOrPanic("10"),
+		},
+		wrongTypes: []reflect.Type{
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("17"),
-		uint64(23),
-		[]interface{}{uint8(23), uint16(23), uint32(23), uint64(23), uint(23), int8(23), int16(23), int32(23), int64(23), int(23), float32(23), float64(23), bigIntOrPanic("23")},
-		[]reflect.Type{typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("17"),
+		wantInterfaceValue: uint64(23),
+		wantValues: []interface{}{
+			uint8(23),
+			uint16(23),
+			uint32(23),
+			uint64(23),
+			uint(23),
+			int8(23),
+			int16(23),
+			int32(23),
+			int64(23),
+			int(23),
+			float32(23),
+			float64(23),
+			bigIntOrPanic("23"),
+		},
+		wrongTypes: []reflect.Type{
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("1818"),
-		uint64(24),
-		[]interface{}{uint8(24), uint16(24), uint32(24), uint64(24), uint(24), int8(24), int16(24), int32(24), int64(24), int(24), float32(24), float64(24), bigIntOrPanic("24")},
-		[]reflect.Type{typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("1818"),
+		wantInterfaceValue: uint64(24),
+		wantValues: []interface{}{
+			uint8(24),
+			uint16(24),
+			uint32(24),
+			uint64(24),
+			uint(24),
+			int8(24),
+			int16(24),
+			int32(24),
+			int64(24),
+			int(24),
+			float32(24),
+			float64(24),
+			bigIntOrPanic("24"),
+		},
+		wrongTypes: []reflect.Type{
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("1819"),
-		uint64(25),
-		[]interface{}{uint8(25), uint16(25), uint32(25), uint64(25), uint(25), int8(25), int16(25), int32(25), int64(25), int(25), float32(25), float64(25), bigIntOrPanic("25")},
-		[]reflect.Type{typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("1819"),
+		wantInterfaceValue: uint64(25),
+		wantValues: []interface{}{
+			uint8(25),
+			uint16(25),
+			uint32(25),
+			uint64(25),
+			uint(25),
+			int8(25),
+			int16(25),
+			int32(25),
+			int64(25),
+			int(25),
+			float32(25),
+			float64(25),
+			bigIntOrPanic("25"),
+		},
+		wrongTypes: []reflect.Type{
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("1864"),
-		uint64(100),
-		[]interface{}{uint8(100), uint16(100), uint32(100), uint64(100), uint(100), int8(100), int16(100), int32(100), int64(100), int(100), float32(100), float64(100), bigIntOrPanic("100")},
-		[]reflect.Type{typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("1864"),
+		wantInterfaceValue: uint64(100),
+		wantValues: []interface{}{
+			uint8(100),
+			uint16(100),
+			uint32(100),
+			uint64(100),
+			uint(100),
+			int8(100),
+			int16(100),
+			int32(100),
+			int64(100),
+			int(100),
+			float32(100),
+			float64(100),
+			bigIntOrPanic("100"),
+		},
+		wrongTypes: []reflect.Type{
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("1903e8"),
-		uint64(1000),
-		[]interface{}{uint16(1000), uint32(1000), uint64(1000), uint(1000), int16(1000), int32(1000), int64(1000), int(1000), float32(1000), float64(1000), bigIntOrPanic("1000")},
-		[]reflect.Type{typeUint8, typeInt8, typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("1903e8"),
+		wantInterfaceValue: uint64(1000),
+		wantValues: []interface{}{
+			uint16(1000),
+			uint32(1000),
+			uint64(1000),
+			uint(1000),
+			int16(1000),
+			int32(1000),
+			int64(1000),
+			int(1000),
+			float32(1000),
+			float64(1000),
+			bigIntOrPanic("1000"),
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeInt8,
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("1a000f4240"),
-		uint64(1000000),
-		[]interface{}{uint32(1000000), uint64(1000000), uint(1000000), int32(1000000), int64(1000000), int(1000000), float32(1000000), float64(1000000), bigIntOrPanic("1000000")},
-		[]reflect.Type{typeUint8, typeUint16, typeInt8, typeInt16, typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("1a000f4240"),
+		wantInterfaceValue: uint64(1000000),
+		wantValues: []interface{}{
+			uint32(1000000),
+			uint64(1000000),
+			uint(1000000),
+			int32(1000000),
+			int64(1000000),
+			int(1000000),
+			float32(1000000),
+			float64(1000000),
+			bigIntOrPanic("1000000"),
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeInt8,
+			typeInt16,
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("1b000000e8d4a51000"),
-		uint64(1000000000000),
-		[]interface{}{uint64(1000000000000), uint(1000000000000), int64(1000000000000), int(1000000000000), float32(1000000000000), float64(1000000000000), bigIntOrPanic("1000000000000")},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeInt8, typeInt16, typeInt32, typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("1b000000e8d4a51000"),
+		wantInterfaceValue: uint64(1000000000000),
+		wantValues: []interface{}{
+			uint64(1000000000000),
+			uint(1000000000000),
+			int64(1000000000000),
+			int(1000000000000),
+			float32(1000000000000),
+			float64(1000000000000),
+			bigIntOrPanic("1000000000000"),
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("1bffffffffffffffff"),
-		uint64(18446744073709551615),
-		[]interface{}{uint64(18446744073709551615), uint(18446744073709551615), float32(18446744073709551615), float64(18446744073709551615), bigIntOrPanic("18446744073709551615")},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeInt8, typeInt16, typeInt32, typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("1bffffffffffffffff"),
+		wantInterfaceValue: uint64(18446744073709551615),
+		wantValues: []interface{}{
+			uint64(18446744073709551615),
+			uint(18446744073709551615),
+			float32(18446744073709551615),
+			float64(18446744073709551615),
+			bigIntOrPanic("18446744073709551615"),
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
+
 	// negative integer
 	{
-		hexDecode("20"),
-		int64(-1),
-		[]interface{}{int8(-1), int16(-1), int32(-1), int64(-1), int(-1), float32(-1), float64(-1), bigIntOrPanic("-1")},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("20"),
+		wantInterfaceValue: int64(-1),
+		wantValues: []interface{}{
+			int8(-1),
+			int16(-1),
+			int32(-1),
+			int64(-1),
+			int(-1),
+			float32(-1),
+			float64(-1),
+			bigIntOrPanic("-1"),
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("29"),
-		int64(-10),
-		[]interface{}{int8(-10), int16(-10), int32(-10), int64(-10), int(-10), float32(-10), float64(-10), bigIntOrPanic("-10")},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("29"),
+		wantInterfaceValue: int64(-10),
+		wantValues: []interface{}{
+			int8(-10),
+			int16(-10),
+			int32(-10),
+			int64(-10),
+			int(-10),
+			float32(-10),
+			float64(-10),
+			bigIntOrPanic("-10"),
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("3863"),
-		int64(-100),
-		[]interface{}{int8(-100), int16(-100), int32(-100), int64(-100), int(-100), float32(-100), float64(-100), bigIntOrPanic("-100")},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("3863"),
+		wantInterfaceValue: int64(-100),
+		wantValues: []interface{}{
+			int8(-100),
+			int16(-100),
+			int32(-100),
+			int64(-100),
+			int(-100),
+			float32(-100),
+			float64(-100),
+			bigIntOrPanic("-100"),
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("3903e7"),
-		int64(-1000),
-		[]interface{}{int16(-1000), int32(-1000), int64(-1000), int(-1000), float32(-1000), float64(-1000), bigIntOrPanic("-1000")},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("3903e7"),
+		wantInterfaceValue: int64(-1000),
+		wantValues: []interface{}{
+			int16(-1000),
+			int32(-1000),
+			int64(-1000),
+			int(-1000),
+			float32(-1000),
+			float64(-1000),
+			bigIntOrPanic("-1000"),
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("3bffffffffffffffff"),
-		bigIntOrPanic("-18446744073709551616"),
-		[]interface{}{bigIntOrPanic("-18446744073709551616")},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("3bffffffffffffffff"),
+		wantInterfaceValue: bigIntOrPanic("-18446744073709551616"),
+		wantValues: []interface{}{
+			bigIntOrPanic("-18446744073709551616"),
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	}, // CBOR value -18446744073709551616 overflows Go's int64, see TestNegIntOverflow
+
 	// byte string
 	{
-		hexDecode("40"),
-		[]byte{},
-		[]interface{}{[]byte{}, [0]byte{}, [1]byte{0}, [5]byte{0, 0, 0, 0, 0}, ByteString("")},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt},
+		data:               hexDecode("40"),
+		wantInterfaceValue: []byte{},
+		wantValues: []interface{}{
+			[]byte{},
+			[0]byte{},
+			[1]byte{0},
+			[5]byte{0, 0, 0, 0, 0},
+			ByteString(""),
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeBool,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+		},
 	},
 	{
-		hexDecode("4401020304"),
-		[]byte{1, 2, 3, 4},
-		[]interface{}{[]byte{1, 2, 3, 4}, [0]byte{}, [1]byte{1}, [5]byte{1, 2, 3, 4, 0}, ByteString("\x01\x02\x03\x04")},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt},
+		data:               hexDecode("4401020304"),
+		wantInterfaceValue: []byte{1, 2, 3, 4},
+		wantValues: []interface{}{
+			[]byte{1, 2, 3, 4},
+			[0]byte{},
+			[1]byte{1},
+			[5]byte{1, 2, 3, 4, 0},
+			ByteString("\x01\x02\x03\x04"),
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeBool,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+		},
 	},
 	{
-		hexDecode("5f42010243030405ff"),
-		[]byte{1, 2, 3, 4, 5},
-		[]interface{}{[]byte{1, 2, 3, 4, 5}, [0]byte{}, [1]byte{1}, [5]byte{1, 2, 3, 4, 5}, [6]byte{1, 2, 3, 4, 5, 0}, ByteString("\x01\x02\x03\x04\x05")},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt},
+		data:               hexDecode("5f42010243030405ff"),
+		wantInterfaceValue: []byte{1, 2, 3, 4, 5},
+		wantValues: []interface{}{
+			[]byte{1, 2, 3, 4, 5},
+			[0]byte{},
+			[1]byte{1},
+			[5]byte{1, 2, 3, 4, 5},
+			[6]byte{1, 2, 3, 4, 5, 0},
+			ByteString("\x01\x02\x03\x04\x05"),
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeBool,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+		},
 	},
+
 	// text string
 	{
-		hexDecode("60"),
-		"",
-		[]interface{}{""},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("60"),
+		wantInterfaceValue: "",
+		wantValues:         []interface{}{""},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("6161"),
-		"a",
-		[]interface{}{"a"},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("6161"),
+		wantInterfaceValue: "a",
+		wantValues:         []interface{}{"a"},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("6449455446"),
-		"IETF",
-		[]interface{}{"IETF"},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("6449455446"),
+		wantInterfaceValue: "IETF",
+		wantValues:         []interface{}{"IETF"},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("62225c"),
-		"\"\\",
-		[]interface{}{"\"\\"},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("62225c"),
+		wantInterfaceValue: "\"\\",
+		wantValues:         []interface{}{"\"\\"},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("62c3bc"),
-		"ü",
-		[]interface{}{"ü"},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("62c3bc"),
+		wantInterfaceValue: "ü",
+		wantValues:         []interface{}{"ü"},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("63e6b0b4"),
-		"水",
-		[]interface{}{"水"},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("63e6b0b4"),
+		wantInterfaceValue: "水",
+		wantValues:         []interface{}{"水"},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("64f0908591"),
-		"𐅑",
-		[]interface{}{"𐅑"},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("64f0908591"),
+		wantInterfaceValue: "𐅑",
+		wantValues:         []interface{}{"𐅑"},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("7f657374726561646d696e67ff"),
-		"streaming",
-		[]interface{}{"streaming"},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("7f657374726561646d696e67ff"),
+		wantInterfaceValue: "streaming",
+		wantValues:         []interface{}{"streaming"},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
+
 	// array
 	{
-		hexDecode("80"),
-		[]interface{}{},
-		[]interface{}{[]interface{}{}, []byte{}, []string{}, []int{}, [0]int{}, [1]int{0}, [5]int{0}, []float32{}, []float64{}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("80"),
+		wantInterfaceValue: []interface{}{},
+		wantValues: []interface{}{
+			[]interface{}{},
+			[]byte{},
+			[]string{},
+			[]int{},
+			[0]int{},
+			[1]int{0},
+			[5]int{0},
+			[]float32{},
+			[]float64{},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeString,
+			typeBool,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("83010203"),
-		[]interface{}{uint64(1), uint64(2), uint64(3)},
-		[]interface{}{[]interface{}{uint64(1), uint64(2), uint64(3)}, []byte{1, 2, 3}, []int{1, 2, 3}, []uint{1, 2, 3}, [0]int{}, [1]int{1}, [3]int{1, 2, 3}, [5]int{1, 2, 3, 0, 0}, []float32{1, 2, 3}, []float64{1, 2, 3}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("83010203"),
+		wantInterfaceValue: []interface{}{uint64(1), uint64(2), uint64(3)},
+		wantValues: []interface{}{
+			[]interface{}{uint64(1), uint64(2), uint64(3)},
+			[]byte{1, 2, 3},
+			[]int{1, 2, 3},
+			[]uint{1, 2, 3},
+			[0]int{},
+			[1]int{1},
+			[3]int{1, 2, 3},
+			[5]int{1, 2, 3, 0, 0},
+			[]float32{1, 2, 3},
+			[]float64{1, 2, 3},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeString,
+			typeBool,
+			typeStringSlice,
+			typeMapStringInt,
+			reflect.TypeOf([3]string{}),
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("8301820203820405"),
-		[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-		[]interface{}{[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}, [...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("8301820203820405"),
+		wantInterfaceValue: []interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		wantValues: []interface{}{
+			[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+			[...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeString,
+			typeBool,
+			typeStringSlice,
+			typeMapStringInt,
+			reflect.TypeOf([3]string{}),
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("83018202039f0405ff"),
-		[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-		[]interface{}{[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}, [...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("83018202039f0405ff"),
+		wantInterfaceValue: []interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		wantValues: []interface{}{
+			[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+			[...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeString,
+			typeBool,
+			typeStringSlice,
+			typeMapStringInt,
+			reflect.TypeOf([3]string{}),
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("83019f0203ff820405"),
-		[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-		[]interface{}{[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}, [...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("83019f0203ff820405"),
+		wantInterfaceValue: []interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		wantValues: []interface{}{
+			[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+			[...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeString,
+			typeBool,
+			typeStringSlice,
+			typeMapStringInt,
+			reflect.TypeOf([3]string{}),
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("98190102030405060708090a0b0c0d0e0f101112131415161718181819"),
-		[]interface{}{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
-		[]interface{}{
+		data:               hexDecode("98190102030405060708090a0b0c0d0e0f101112131415161718181819"),
+		wantInterfaceValue: []interface{}{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
+		wantValues: []interface{}{
 			[]interface{}{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
 			[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
@@ -261,30 +974,124 @@ var unmarshalTests = []unmarshalTest{
 			[30]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 0, 0, 0, 0, 0},
 			[]float32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag, typeBigInt, typeByteString},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeString,
+			typeBool,
+			typeStringSlice,
+			typeMapStringInt,
+			reflect.TypeOf([3]string{}),
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("9fff"),
-		[]interface{}{},
-		[]interface{}{[]interface{}{}, []byte{}, []string{}, []int{}, [0]int{}, [1]int{0}, [5]int{0, 0, 0, 0, 0}, []float32{}, []float64{}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("9fff"),
+		wantInterfaceValue: []interface{}{},
+		wantValues: []interface{}{
+			[]interface{}{},
+			[]byte{},
+			[]string{},
+			[]int{},
+			[0]int{},
+			[1]int{0},
+			[5]int{0, 0, 0, 0, 0},
+			[]float32{},
+			[]float64{},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeString,
+			typeBool,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("9f018202039f0405ffff"),
-		[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-		[]interface{}{[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}, [...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("9f018202039f0405ffff"),
+		wantInterfaceValue: []interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		wantValues: []interface{}{
+			[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+			[...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeString,
+			typeBool,
+			typeStringSlice,
+			typeMapStringInt,
+			reflect.TypeOf([3]string{}),
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("9f01820203820405ff"),
-		[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-		[]interface{}{[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}, [...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("9f01820203820405ff"),
+		wantInterfaceValue: []interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		wantValues: []interface{}{
+			[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+			[...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeString,
+			typeBool,
+			typeStringSlice,
+			typeMapStringInt,
+			reflect.TypeOf([3]string{}),
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("9f0102030405060708090a0b0c0d0e0f101112131415161718181819ff"),
-		[]interface{}{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
-		[]interface{}{
+		data:               hexDecode("9f0102030405060708090a0b0c0d0e0f101112131415161718181819ff"),
+		wantInterfaceValue: []interface{}{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
+		wantValues: []interface{}{
 			[]interface{}{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
 			[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
@@ -295,79 +1102,330 @@ var unmarshalTests = []unmarshalTest{
 			[30]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 0, 0, 0, 0, 0},
 			[]float32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag, typeBigInt, typeByteString},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeString,
+			typeBool,
+			typeStringSlice,
+			typeMapStringInt,
+			reflect.TypeOf([3]string{}),
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("826161a161626163"),
-		[]interface{}{"a", map[interface{}]interface{}{"b": "c"}},
-		[]interface{}{[]interface{}{"a", map[interface{}]interface{}{"b": "c"}}, [...]interface{}{"a", map[interface{}]interface{}{"b": "c"}}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeByteArray, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("826161a161626163"),
+		wantInterfaceValue: []interface{}{"a", map[interface{}]interface{}{"b": "c"}},
+		wantValues: []interface{}{
+			[]interface{}{"a", map[interface{}]interface{}{"b": "c"}},
+			[...]interface{}{"a", map[interface{}]interface{}{"b": "c"}},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeStringSlice,
+			typeMapStringInt,
+			reflect.TypeOf([3]string{}),
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("826161bf61626163ff"),
-		[]interface{}{"a", map[interface{}]interface{}{"b": "c"}},
-		[]interface{}{[]interface{}{"a", map[interface{}]interface{}{"b": "c"}}, [...]interface{}{"a", map[interface{}]interface{}{"b": "c"}}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeByteArray, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("826161bf61626163ff"),
+		wantInterfaceValue: []interface{}{"a", map[interface{}]interface{}{"b": "c"}},
+		wantValues: []interface{}{
+			[]interface{}{"a", map[interface{}]interface{}{"b": "c"}},
+			[...]interface{}{"a", map[interface{}]interface{}{"b": "c"}},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeStringSlice,
+			typeMapStringInt,
+			reflect.TypeOf([3]string{}),
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
+
 	// map
 	{
-		hexDecode("a0"),
-		map[interface{}]interface{}{},
-		[]interface{}{map[interface{}]interface{}{}, map[string]bool{}, map[string]int{}, map[int]string{}, map[int]bool{}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeByteArray, typeString, typeBool, typeIntSlice, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("a0"),
+		wantInterfaceValue: map[interface{}]interface{}{},
+		wantValues: []interface{}{
+			map[interface{}]interface{}{},
+			map[string]bool{},
+			map[string]int{},
+			map[int]string{},
+			map[int]bool{},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeByteSlice,
+			typeByteArray,
+			typeString,
+			typeBool,
+			typeIntSlice,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("a201020304"),
-		map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)},
-		[]interface{}{map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)}, map[uint]int{1: 2, 3: 4}, map[int]uint{1: 2, 3: 4}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeByteArray, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("a201020304"),
+		wantInterfaceValue: map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)},
+		wantValues: []interface{}{
+			map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)},
+			map[uint]int{1: 2, 3: 4}, map[int]uint{1: 2, 3: 4},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeByteSlice,
+			typeByteArray,
+			typeString,
+			typeBool,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("a26161016162820203"),
-		map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
-		[]interface{}{map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
-			map[string]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeByteArray, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("a26161016162820203"),
+		wantInterfaceValue: map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
+		wantValues: []interface{}{
+			map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
+			map[string]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeByteSlice,
+			typeByteArray,
+			typeString,
+			typeBool,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("a56161614161626142616361436164614461656145"),
-		map[interface{}]interface{}{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
-		[]interface{}{map[interface{}]interface{}{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
+		data:               hexDecode("a56161614161626142616361436164614461656145"),
+		wantInterfaceValue: map[interface{}]interface{}{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
+		wantValues: []interface{}{
+			map[interface{}]interface{}{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
 			map[string]interface{}{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
-			map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeByteArray, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+			map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeByteSlice,
+			typeByteArray,
+			typeString,
+			typeBool,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("bf61610161629f0203ffff"),
-		map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
-		[]interface{}{map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
-			map[string]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeByteArray, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("bf61610161629f0203ffff"),
+		wantInterfaceValue: map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
+		wantValues: []interface{}{
+			map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
+			map[string]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeByteSlice,
+			typeByteArray,
+			typeString,
+			typeBool,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("bf6346756ef563416d7421ff"),
-		map[interface{}]interface{}{"Fun": true, "Amt": int64(-2)},
-		[]interface{}{map[interface{}]interface{}{"Fun": true, "Amt": int64(-2)},
-			map[string]interface{}{"Fun": true, "Amt": int64(-2)}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeByteArray, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("bf6346756ef563416d7421ff"),
+		wantInterfaceValue: map[interface{}]interface{}{"Fun": true, "Amt": int64(-2)},
+		wantValues: []interface{}{
+			map[interface{}]interface{}{"Fun": true, "Amt": int64(-2)},
+			map[string]interface{}{"Fun": true, "Amt": int64(-2)},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeByteSlice,
+			typeByteArray,
+			typeString,
+			typeBool,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
+
 	// tag
 	{
-		hexDecode("c074323031332d30332d32315432303a30343a30305a"),
-		time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), // 2013-03-21 20:04:00 +0000 UTC
-		[]interface{}{"2013-03-21T20:04:00Z", time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), Tag{0, "2013-03-21T20:04:00Z"}, RawTag{0, hexDecode("74323031332d30332d32315432303a30343a30305a")}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeBigInt, typeByteString},
+		data:               hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+		wantInterfaceValue: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), // 2013-03-21 20:04:00 +0000 UTC
+		wantValues: []interface{}{
+			"2013-03-21T20:04:00Z",
+			time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
+			Tag{0, "2013-03-21T20:04:00Z"},
+			RawTag{0, hexDecode("74323031332d30332d32315432303a30343a30305a")},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeBigInt,
+			typeByteString,
+		},
 	}, // 0: standard date/time
 	{
-		hexDecode("c11a514b67b0"),
-		time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), // 2013-03-21 20:04:00 +0000 UTC
-		[]interface{}{uint32(1363896240), uint64(1363896240), int32(1363896240), int64(1363896240), float32(1363896240), float64(1363896240), time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), Tag{1, uint64(1363896240)}, RawTag{1, hexDecode("1a514b67b0")}},
-		[]reflect.Type{typeUint8, typeUint16, typeInt8, typeInt16, typeByteSlice, typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeByteString},
+		data:               hexDecode("c11a514b67b0"),
+		wantInterfaceValue: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), // 2013-03-21 20:04:00 +0000 UTC
+		wantValues: []interface{}{
+			uint32(1363896240),
+			uint64(1363896240),
+			int32(1363896240),
+			int64(1363896240),
+			float32(1363896240),
+			float64(1363896240),
+			time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
+			Tag{1, uint64(1363896240)},
+			RawTag{1, hexDecode("1a514b67b0")},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeInt8,
+			typeInt16,
+			typeByteSlice,
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeByteString,
+		},
 	}, // 1: epoch-based date/time
 	{
-		hexDecode("c249010000000000000000"),
-		bigIntOrPanic("18446744073709551616"),
-		[]interface{}{
+		data:               hexDecode("c249010000000000000000"),
+		wantInterfaceValue: bigIntOrPanic("18446744073709551616"),
+		wantValues: []interface{}{
 			// Decode to byte slice
 			[]byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 			// Decode to array of various lengths
@@ -382,12 +1440,27 @@ var unmarshalTests = []unmarshalTest{
 			// Decode to big.Int
 			bigIntOrPanic("18446744073709551616"),
 		},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeByteString},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeBool,
+			typeIntSlice,
+			typeMapStringInt,
+			typeByteString,
+		},
 	}, // 2: positive bignum: 18446744073709551616
 	{
-		hexDecode("c349010000000000000000"),
-		bigIntOrPanic("-18446744073709551617"),
-		[]interface{}{
+		data:               hexDecode("c349010000000000000000"),
+		wantInterfaceValue: bigIntOrPanic("-18446744073709551617"),
+		wantValues: []interface{}{
 			// Decode to byte slice
 			[]byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 			// Decode to array of various lengths
@@ -402,126 +1475,545 @@ var unmarshalTests = []unmarshalTest{
 			// Decode to big.Int
 			bigIntOrPanic("-18446744073709551617"),
 		},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeByteString},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeBool,
+			typeIntSlice,
+			typeMapStringInt,
+			typeByteString,
+		},
 	}, // 3: negative bignum: -18446744073709551617
 	{
-		hexDecode("c1fb41d452d9ec200000"),
-		time.Date(2013, 3, 21, 20, 4, 0, 500000000, time.UTC), // 2013-03-21 20:04:00.5 +0000 UTC
-		[]interface{}{float32(1363896240.5), float64(1363896240.5), time.Date(2013, 3, 21, 20, 4, 0, 500000000, time.UTC), Tag{1, float64(1363896240.5)}, RawTag{1, hexDecode("fb41d452d9ec200000")}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteSlice, typeByteArray, typeString, typeBool, typeIntSlice, typeMapStringInt, typeBigInt, typeByteString},
+		data:               hexDecode("c1fb41d452d9ec200000"),
+		wantInterfaceValue: time.Date(2013, 3, 21, 20, 4, 0, 500000000, time.UTC), // 2013-03-21 20:04:00.5 +0000 UTC
+		wantValues: []interface{}{
+			float32(1363896240.5),
+			float64(1363896240.5),
+			time.Date(2013, 3, 21, 20, 4, 0, 500000000, time.UTC),
+			Tag{1, float64(1363896240.5)},
+			RawTag{1, hexDecode("fb41d452d9ec200000")},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeByteSlice,
+			typeByteArray,
+			typeString,
+			typeBool,
+			typeIntSlice,
+			typeMapStringInt,
+			typeBigInt,
+			typeByteString,
+		},
 	}, // 1: epoch-based date/time
 	{
-		hexDecode("d74401020304"),
-		Tag{23, []byte{0x01, 0x02, 0x03, 0x04}},
-		[]interface{}{[]byte{0x01, 0x02, 0x03, 0x04}, [0]byte{}, [1]byte{0x01}, [3]byte{0x01, 0x02, 0x03}, [...]byte{0x01, 0x02, 0x03, 0x04}, [5]byte{0x01, 0x02, 0x03, 0x04, 0x00}, Tag{23, []byte{0x01, 0x02, 0x03, 0x04}}, RawTag{23, hexDecode("4401020304")}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeBigInt, typeByteString},
+		data:               hexDecode("d74401020304"),
+		wantInterfaceValue: Tag{23, []byte{0x01, 0x02, 0x03, 0x04}},
+		wantValues: []interface{}{
+			[]byte{0x01, 0x02, 0x03, 0x04},
+			[0]byte{},
+			[1]byte{0x01},
+			[3]byte{0x01, 0x02, 0x03},
+			[...]byte{0x01, 0x02, 0x03, 0x04},
+			[5]byte{0x01, 0x02, 0x03, 0x04, 0x00},
+			Tag{23, []byte{0x01, 0x02, 0x03, 0x04}},
+			RawTag{23, hexDecode("4401020304")},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeBool,
+			typeIntSlice,
+			typeMapStringInt,
+			typeBigInt,
+			typeByteString,
+		},
 	}, // 23: expected conversion to base16 encoding
 	{
-		hexDecode("d818456449455446"),
-		Tag{24, []byte{0x64, 0x49, 0x45, 0x54, 0x46}},
-		[]interface{}{[]byte{0x64, 0x49, 0x45, 0x54, 0x46}, [0]byte{}, [1]byte{0x64}, [3]byte{0x64, 0x49, 0x45}, [...]byte{0x64, 0x49, 0x45, 0x54, 0x46}, [6]byte{0x64, 0x49, 0x45, 0x54, 0x46, 0x00}, Tag{24, []byte{0x64, 0x49, 0x45, 0x54, 0x46}}, RawTag{24, hexDecode("456449455446")}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeBigInt, typeByteString},
+		data:               hexDecode("d818456449455446"),
+		wantInterfaceValue: Tag{24, []byte{0x64, 0x49, 0x45, 0x54, 0x46}},
+		wantValues: []interface{}{
+			[]byte{0x64, 0x49, 0x45, 0x54, 0x46},
+			[0]byte{},
+			[1]byte{0x64},
+			[3]byte{0x64, 0x49, 0x45},
+			[...]byte{0x64, 0x49, 0x45, 0x54, 0x46},
+			[6]byte{0x64, 0x49, 0x45, 0x54, 0x46, 0x00},
+			Tag{24, []byte{0x64, 0x49, 0x45, 0x54, 0x46}},
+			RawTag{24, hexDecode("456449455446")},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeBool,
+			typeIntSlice,
+			typeMapStringInt,
+			typeBigInt,
+			typeByteString,
+		},
 	}, // 24: encoded cborBytes data item
 	{
-		hexDecode("d82076687474703a2f2f7777772e6578616d706c652e636f6d"),
-		Tag{32, "http://www.example.com"},
-		[]interface{}{"http://www.example.com", Tag{32, "http://www.example.com"}, RawTag{32, hexDecode("76687474703a2f2f7777772e6578616d706c652e636f6d")}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeBigInt, typeByteString},
+		data:               hexDecode("d82076687474703a2f2f7777772e6578616d706c652e636f6d"),
+		wantInterfaceValue: Tag{32, "http://www.example.com"},
+		wantValues: []interface{}{
+			"http://www.example.com",
+			Tag{32, "http://www.example.com"},
+			RawTag{32, hexDecode("76687474703a2f2f7777772e6578616d706c652e636f6d")},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeBigInt,
+			typeByteString,
+		},
 	}, // 32: URI
+
 	// primitives
 	{
-		hexDecode("f4"),
-		false,
-		[]interface{}{false, SimpleValue(20)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteArray, typeByteSlice, typeString, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("f4"),
+		wantInterfaceValue: false,
+		wantValues: []interface{}{
+			false,
+			SimpleValue(20),
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeByteArray,
+			typeByteSlice,
+			typeString,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("f5"),
-		true,
-		[]interface{}{true, SimpleValue(21)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteArray, typeByteSlice, typeString, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("f5"),
+		wantInterfaceValue: true,
+		wantValues: []interface{}{
+			true,
+			SimpleValue(21),
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeByteArray,
+			typeByteSlice,
+			typeString,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("f6"),
-		nil,
-		[]interface{}{SimpleValue(22), false, uint(0), uint8(0), uint16(0), uint32(0), uint64(0), int(0), int8(0), int16(0), int32(0), int64(0), float32(0.0), float64(0.0), "", []byte(nil), []int(nil), []string(nil), map[string]int(nil), time.Time{}, bigIntOrPanic("0"), Tag{}, RawTag{}},
-		nil,
+		data:               hexDecode("f6"),
+		wantInterfaceValue: nil,
+		wantValues: []interface{}{
+			SimpleValue(22),
+			false,
+			uint(0),
+			uint8(0),
+			uint16(0),
+			uint32(0),
+			uint64(0),
+			int(0),
+			int8(0),
+			int16(0),
+			int32(0),
+			int64(0),
+			float32(0.0),
+			float64(0.0),
+			"",
+			[]byte(nil),
+			[]int(nil),
+			[]string(nil),
+			map[string]int(nil),
+			time.Time{},
+			bigIntOrPanic("0"),
+			Tag{},
+			RawTag{},
+		},
+		wrongTypes: nil,
 	},
 	{
-		hexDecode("f7"),
-		nil,
-		[]interface{}{SimpleValue(23), false, uint(0), uint8(0), uint16(0), uint32(0), uint64(0), int(0), int8(0), int16(0), int32(0), int64(0), float32(0.0), float64(0.0), "", []byte(nil), []int(nil), []string(nil), map[string]int(nil), time.Time{}, bigIntOrPanic("0"), Tag{}, RawTag{}},
-		nil,
+		data:               hexDecode("f7"),
+		wantInterfaceValue: nil,
+		wantValues: []interface{}{
+			SimpleValue(23),
+			false,
+			uint(0),
+			uint8(0),
+			uint16(0),
+			uint32(0),
+			uint64(0),
+			int(0),
+			int8(0),
+			int16(0),
+			int32(0),
+			int64(0),
+			float32(0.0),
+			float64(0.0),
+			"",
+			[]byte(nil),
+			[]int(nil),
+			[]string(nil),
+			map[string]int(nil),
+			time.Time{},
+			bigIntOrPanic("0"),
+			Tag{},
+			RawTag{},
+		},
+		wrongTypes: nil,
 	},
 	{
-		hexDecode("f0"),
-		SimpleValue(16),
-		[]interface{}{SimpleValue(16), uint8(16), uint16(16), uint32(16), uint64(16), uint(16), int8(16), int16(16), int32(16), int64(16), int(16), float32(16), float64(16), bigIntOrPanic("16")},
-		[]reflect.Type{typeByteSlice, typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("f0"),
+		wantInterfaceValue: SimpleValue(16),
+		wantValues: []interface{}{
+			SimpleValue(16),
+			uint8(16),
+			uint16(16),
+			uint32(16),
+			uint64(16),
+			uint(16),
+			int8(16),
+			int16(16),
+			int32(16),
+			int64(16),
+			int(16),
+			float32(16),
+			float64(16),
+			bigIntOrPanic("16"),
+		},
+		wrongTypes: []reflect.Type{
+			typeByteSlice,
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	// This example is not well-formed because Simple value (with 5-bit value 24) must be >= 32.
 	// See RFC 7049 section 2.3 for details, instead of the incorrect example in RFC 7049 Appendex A.
 	// I reported an errata to RFC 7049 and Carsten Bormann confirmed at https://github.com/fxamacker/cbor/issues/46
 	/*
 		{
-			hexDecode("f818"),
-			uint64(24),
-			[]interface{}{uint8(24), uint16(24), uint32(24), uint64(24), uint(24), int8(24), int16(24), int32(24), int64(24), int(24), float32(24), float64(24)},
-			[]reflect.Type{typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
+			data: hexDecode("f818"),
+			wantInterfaceValue: uint64(24),
+			wantValues: []interface{}{uint8(24), uint16(24), uint32(24), uint64(24), uint(24), int8(24), int16(24), int32(24), int64(24), int(24), float32(24), float64(24)},
+			wrongTypes: []reflect.Type{typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 		},
 	*/
 	{
-		hexDecode("f820"),
-		SimpleValue(32),
-		[]interface{}{SimpleValue(32), uint8(32), uint16(32), uint32(32), uint64(32), uint(32), int8(32), int16(32), int32(32), int64(32), int(32), float32(32), float64(32), bigIntOrPanic("32")},
-		[]reflect.Type{typeByteSlice, typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("f820"),
+		wantInterfaceValue: SimpleValue(32),
+		wantValues: []interface{}{
+			SimpleValue(32),
+			uint8(32),
+			uint16(32),
+			uint32(32),
+			uint64(32),
+			uint(32),
+			int8(32),
+			int16(32),
+			int32(32),
+			int64(32),
+			int(32),
+			float32(32),
+			float64(32),
+			bigIntOrPanic("32"),
+		},
+		wrongTypes: []reflect.Type{
+			typeByteSlice,
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("f8ff"),
-		SimpleValue(255),
-		[]interface{}{SimpleValue(255), uint8(255), uint16(255), uint32(255), uint64(255), uint(255), int16(255), int32(255), int64(255), int(255), float32(255), float64(255), bigIntOrPanic("255")},
-		[]reflect.Type{typeByteSlice, typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("f8ff"),
+		wantInterfaceValue: SimpleValue(255),
+		wantValues: []interface{}{
+			SimpleValue(255),
+			uint8(255),
+			uint16(255),
+			uint32(255),
+			uint64(255),
+			uint(255),
+			int16(255),
+			int32(255),
+			int64(255),
+			int(255),
+			float32(255),
+			float64(255),
+			bigIntOrPanic("255"),
+		},
+		wrongTypes: []reflect.Type{
+			typeByteSlice,
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
+
 	// More testcases not covered by https://tools.ietf.org/html/rfc7049#appendix-A.
 	{
-		hexDecode("5fff"), // empty indefinite length byte string
-		[]byte{},
-		[]interface{}{[]byte{}, [0]byte{}, [1]byte{0x00}, ByteString("")},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt},
+		data:               hexDecode("5fff"), // empty indefinite length byte string
+		wantInterfaceValue: []byte{},
+		wantValues: []interface{}{
+			[]byte{},
+			[0]byte{},
+			[1]byte{0x00},
+			ByteString(""),
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeBool,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+		},
 	},
 	{
-		hexDecode("7fff"), // empty indefinite length text string
-		"",
-		[]interface{}{""},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
+		data:               hexDecode("7fff"), // empty indefinite length text string
+		wantInterfaceValue: "",
+		wantValues:         []interface{}{""},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeTag,
+			typeRawTag,
+			typeBigInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("bfff"), // empty indefinite length map
-		map[interface{}]interface{}{},
-		[]interface{}{map[interface{}]interface{}{}, map[string]bool{}, map[string]int{}, map[int]string{}, map[int]bool{}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeTag, typeRawTag, typeByteString},
+		data:               hexDecode("bfff"), // empty indefinite length map
+		wantInterfaceValue: map[interface{}]interface{}{},
+		wantValues: []interface{}{
+			map[interface{}]interface{}{},
+			map[string]bool{},
+			map[string]int{},
+			map[int]string{},
+			map[int]bool{},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeByteArray,
+			typeByteSlice,
+			typeString,
+			typeBool,
+			typeIntSlice,
+			typeTag,
+			typeRawTag,
+			typeByteString,
+		},
 	},
+
 	// More test data with tags
 	{
-		hexDecode("c13a0177f2cf"), // 1969-03-21T20:04:00Z, tag 1 with negative integer as epoch time
-		time.Date(1969, 3, 21, 20, 4, 0, 0, time.UTC),
-		[]interface{}{int32(-24638160), int64(-24638160), int32(-24638160), int64(-24638160), float32(-24638160), float64(-24638160), time.Date(1969, 3, 21, 20, 4, 0, 0, time.UTC), Tag{1, int64(-24638160)}, RawTag{1, hexDecode("3a0177f2cf")}, bigIntOrPanic("-24638160")},
-		[]reflect.Type{typeUint8, typeUint16, typeInt8, typeInt16, typeByteSlice, typeString, typeBool, typeByteArray, typeIntSlice, typeMapStringInt, typeByteString},
+		data:               hexDecode("c13a0177f2cf"), // 1969-03-21T20:04:00Z, tag 1 with negative integer as epoch time
+		wantInterfaceValue: time.Date(1969, 3, 21, 20, 4, 0, 0, time.UTC),
+		wantValues: []interface{}{
+			int32(-24638160),
+			int64(-24638160),
+			int32(-24638160),
+			int64(-24638160),
+			float32(-24638160),
+			float64(-24638160),
+			time.Date(1969, 3, 21, 20, 4, 0, 0, time.UTC),
+			Tag{1, int64(-24638160)},
+			RawTag{1, hexDecode("3a0177f2cf")}, bigIntOrPanic("-24638160"),
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeInt8,
+			typeInt16,
+			typeByteSlice,
+			typeString,
+			typeBool,
+			typeByteArray,
+			typeIntSlice,
+			typeMapStringInt,
+			typeByteString,
+		},
 	},
 	{
-		hexDecode("d83dd183010203"), // 61(17([1, 2, 3])), nested tags 61 and 17
-		Tag{61, Tag{17, []interface{}{uint64(1), uint64(2), uint64(3)}}},
-		[]interface{}{[]interface{}{uint64(1), uint64(2), uint64(3)}, []byte{1, 2, 3}, [0]byte{}, [1]byte{1}, [3]byte{1, 2, 3}, [5]byte{1, 2, 3, 0, 0}, []int{1, 2, 3}, []uint{1, 2, 3}, [...]int{1, 2, 3}, []float32{1, 2, 3}, []float64{1, 2, 3}, Tag{61, Tag{17, []interface{}{uint64(1), uint64(2), uint64(3)}}}, RawTag{61, hexDecode("d183010203")}},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeByteString},
+		data:               hexDecode("d83dd183010203"), // 61(17([1, 2, 3])), nested tags 61 and 17
+		wantInterfaceValue: Tag{61, Tag{17, []interface{}{uint64(1), uint64(2), uint64(3)}}},
+		wantValues: []interface{}{
+			[]interface{}{uint64(1), uint64(2), uint64(3)},
+			[]byte{1, 2, 3},
+			[0]byte{},
+			[1]byte{1},
+			[3]byte{1, 2, 3},
+			[5]byte{1, 2, 3, 0, 0},
+			[]int{1, 2, 3},
+			[]uint{1, 2, 3},
+			[...]int{1, 2, 3},
+			[]float32{1, 2, 3},
+			[]float64{1, 2, 3},
+			Tag{61, Tag{17, []interface{}{uint64(1), uint64(2), uint64(3)}}},
+			RawTag{61, hexDecode("d183010203")},
+		},
+		wrongTypes: []reflect.Type{
+			typeUint8,
+			typeUint16,
+			typeUint32,
+			typeUint64,
+			typeInt8,
+			typeInt16,
+			typeInt32,
+			typeInt64,
+			typeFloat32,
+			typeFloat64,
+			typeString,
+			typeBool,
+			typeStringSlice,
+			typeMapStringInt,
+			reflect.TypeOf([3]string{}),
+			typeByteString,
+		},
 	},
 }
 
 type unmarshalFloatTest struct {
-	cborData            []byte
-	emptyInterfaceValue interface{}
-	values              []interface{}
-	wrongTypes          []reflect.Type
-	equalityThreshold   float64 // Not used for +inf, -inf, and NaN.
+	data               []byte
+	wantInterfaceValue interface{}
+	wantValues         []interface{}
+	equalityThreshold  float64 // Not used for +inf, -inf, and NaN.
+}
+
+var unmarshalFloatWrongTypes = []reflect.Type{
+	typeUint8,
+	typeUint16,
+	typeUint32,
+	typeUint64,
+	typeInt8,
+	typeInt16,
+	typeInt32,
+	typeInt64,
+	typeByteArray,
+	typeByteSlice,
+	typeString,
+	typeBool,
+	typeIntSlice,
+	typeMapStringInt,
+	typeTag,
+	typeRawTag,
+	typeBigInt,
+	typeByteString,
 }
 
 // unmarshalFloatTests includes test values for float16, float32, and float64.
@@ -529,263 +2021,203 @@ type unmarshalFloatTest struct {
 // 65536 values, which is too many to include here.
 var unmarshalFloatTests = []unmarshalFloatTest{
 	// CBOR test data are from https://tools.ietf.org/html/rfc7049#appendix-A.
+
 	// float16
 	{
-		hexDecode("f90000"),
-		float64(0.0),
-		[]interface{}{float32(0.0), float64(0.0)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("f90000"),
+		wantInterfaceValue: float64(0.0),
+		wantValues:         []interface{}{float32(0.0), float64(0.0)},
 	},
 	{
-		hexDecode("f98000"),
-		float64(-0.0), //nolint:staticcheck // we know -0.0 is 0.0 in Go
-		[]interface{}{float32(-0.0), float64(-0.0)}, //nolint:staticcheck // we know -0.0 is 0.0 in Go
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("f98000"),
+		wantInterfaceValue: float64(-0.0),                               //nolint:staticcheck // we know -0.0 is 0.0 in Go
+		wantValues:         []interface{}{float32(-0.0), float64(-0.0)}, //nolint:staticcheck // we know -0.0 is 0.0 in Go
 	},
 	{
-		hexDecode("f93c00"),
-		float64(1.0),
-		[]interface{}{float32(1.0), float64(1.0)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("f93c00"),
+		wantInterfaceValue: float64(1.0),
+		wantValues:         []interface{}{float32(1.0), float64(1.0)},
 	},
 	{
-		hexDecode("f93e00"),
-		float64(1.5),
-		[]interface{}{float32(1.5), float64(1.5)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("f93e00"),
+		wantInterfaceValue: float64(1.5),
+		wantValues:         []interface{}{float32(1.5), float64(1.5)},
 	},
 	{
-		hexDecode("f97bff"),
-		float64(65504.0),
-		[]interface{}{float32(65504.0), float64(65504.0)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("f97bff"),
+		wantInterfaceValue: float64(65504.0),
+		wantValues:         []interface{}{float32(65504.0), float64(65504.0)},
 	},
 	{
-		hexDecode("f90001"), // float16 subnormal value
-		float64(5.960464477539063e-08),
-		[]interface{}{float32(5.960464477539063e-08), float64(5.960464477539063e-08)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		1e-16,
+		data:               hexDecode("f90001"), // float16 subnormal value
+		wantInterfaceValue: float64(5.960464477539063e-08),
+		wantValues:         []interface{}{float32(5.960464477539063e-08), float64(5.960464477539063e-08)},
+		equalityThreshold:  1e-16,
 	},
 	{
-		hexDecode("f90400"),
-		float64(6.103515625e-05),
-		[]interface{}{float32(6.103515625e-05), float64(6.103515625e-05)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		1e-16,
+		data:               hexDecode("f90400"),
+		wantInterfaceValue: float64(6.103515625e-05),
+		wantValues:         []interface{}{float32(6.103515625e-05), float64(6.103515625e-05)},
+		equalityThreshold:  1e-16,
 	},
 	{
-		hexDecode("f9c400"),
-		float64(-4.0),
-		[]interface{}{float32(-4.0), float64(-4.0)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("f9c400"),
+		wantInterfaceValue: float64(-4.0),
+		wantValues:         []interface{}{float32(-4.0), float64(-4.0)},
 	},
 	{
-		hexDecode("f97c00"),
-		math.Inf(1),
-		[]interface{}{math.Float32frombits(0x7f800000), math.Inf(1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("f97c00"),
+		wantInterfaceValue: math.Inf(1),
+		wantValues:         []interface{}{math.Float32frombits(0x7f800000), math.Inf(1)},
 	},
 	{
-		hexDecode("f97e00"),
-		math.NaN(),
-		[]interface{}{math.Float32frombits(0x7fc00000), math.NaN()},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("f97e00"),
+		wantInterfaceValue: math.NaN(),
+		wantValues:         []interface{}{math.Float32frombits(0x7fc00000), math.NaN()},
 	},
 	{
-		hexDecode("f9fc00"),
-		math.Inf(-1),
-		[]interface{}{math.Float32frombits(0xff800000), math.Inf(-1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("f9fc00"),
+		wantInterfaceValue: math.Inf(-1),
+		wantValues:         []interface{}{math.Float32frombits(0xff800000), math.Inf(-1)},
 	},
+
 	// float32
 	{
-		hexDecode("fa47c35000"),
-		float64(100000.0),
-		[]interface{}{float32(100000.0), float64(100000.0)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("fa47c35000"),
+		wantInterfaceValue: float64(100000.0),
+		wantValues:         []interface{}{float32(100000.0), float64(100000.0)},
 	},
 	{
-		hexDecode("fa7f7fffff"),
-		float64(3.4028234663852886e+38),
-		[]interface{}{float32(3.4028234663852886e+38), float64(3.4028234663852886e+38)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		1e-9,
+		data:               hexDecode("fa7f7fffff"),
+		wantInterfaceValue: float64(3.4028234663852886e+38),
+		wantValues:         []interface{}{float32(3.4028234663852886e+38), float64(3.4028234663852886e+38)},
+		equalityThreshold:  1e-9,
 	},
 	{
-		hexDecode("fa7f800000"),
-		math.Inf(1),
-		[]interface{}{math.Float32frombits(0x7f800000), math.Inf(1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("fa7f800000"),
+		wantInterfaceValue: math.Inf(1),
+		wantValues:         []interface{}{math.Float32frombits(0x7f800000), math.Inf(1)},
 	},
 	{
-		hexDecode("fa7fc00000"),
-		math.NaN(),
-		[]interface{}{math.Float32frombits(0x7fc00000), math.NaN()},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("fa7fc00000"),
+		wantInterfaceValue: math.NaN(),
+		wantValues:         []interface{}{math.Float32frombits(0x7fc00000), math.NaN()},
 	},
 	{
-		hexDecode("faff800000"),
-		math.Inf(-1),
-		[]interface{}{math.Float32frombits(0xff800000), math.Inf(-1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("faff800000"),
+		wantInterfaceValue: math.Inf(-1),
+		wantValues:         []interface{}{math.Float32frombits(0xff800000), math.Inf(-1)},
 	},
+
 	// float64
 	{
-		hexDecode("fb3ff199999999999a"),
-		float64(1.1),
-		[]interface{}{float32(1.1), float64(1.1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		1e-9,
+		data:               hexDecode("fb3ff199999999999a"),
+		wantInterfaceValue: float64(1.1),
+		wantValues:         []interface{}{float32(1.1), float64(1.1)},
 	},
 	{
-		hexDecode("fb7e37e43c8800759c"),
-		float64(1.0e+300),
-		[]interface{}{float64(1.0e+300)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		1e-9,
+		data:               hexDecode("fb7e37e43c8800759c"),
+		wantInterfaceValue: float64(1.0e+300),
+		wantValues:         []interface{}{float64(1.0e+300)},
+		equalityThreshold:  1e-9,
 	},
 	{
-		hexDecode("fbc010666666666666"),
-		float64(-4.1),
-		[]interface{}{float32(-4.1), float64(-4.1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		1e-9,
+		data:               hexDecode("fbc010666666666666"),
+		wantInterfaceValue: float64(-4.1),
+		wantValues:         []interface{}{float32(-4.1), float64(-4.1)},
 	},
 	{
-		hexDecode("fb7ff0000000000000"),
-		math.Inf(1),
-		[]interface{}{math.Float32frombits(0x7f800000), math.Inf(1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("fb7ff0000000000000"),
+		wantInterfaceValue: math.Inf(1),
+		wantValues:         []interface{}{math.Float32frombits(0x7f800000), math.Inf(1)},
 	},
 	{
-		hexDecode("fb7ff8000000000000"),
-		math.NaN(),
-		[]interface{}{math.Float32frombits(0x7fc00000), math.NaN()},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("fb7ff8000000000000"),
+		wantInterfaceValue: math.NaN(),
+		wantValues:         []interface{}{math.Float32frombits(0x7fc00000), math.NaN()},
 	},
 	{
-		hexDecode("fbfff0000000000000"),
-		math.Inf(-1),
-		[]interface{}{math.Float32frombits(0xff800000), math.Inf(-1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("fbfff0000000000000"),
+		wantInterfaceValue: math.Inf(-1),
+		wantValues:         []interface{}{math.Float32frombits(0xff800000), math.Inf(-1)},
 	},
 
 	// float16 test data from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
 	{
-		hexDecode("f903ff"),
-		float64(0.000060976),
-		[]interface{}{float32(0.000060976), float64(0.000060976)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		1e-9,
+		data:               hexDecode("f903ff"),
+		wantInterfaceValue: float64(0.000060976),
+		wantValues:         []interface{}{float32(0.000060976), float64(0.000060976)},
+		equalityThreshold:  1e-9,
 	},
 	{
-		hexDecode("f93bff"),
-		float64(0.999511719),
-		[]interface{}{float32(0.999511719), float64(0.999511719)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		1e-9,
+		data:               hexDecode("f93bff"),
+		wantInterfaceValue: float64(0.999511719),
+		wantValues:         []interface{}{float32(0.999511719), float64(0.999511719)},
+		equalityThreshold:  1e-9,
 	},
 	{
-		hexDecode("f93c01"),
-		float64(1.000976563),
-		[]interface{}{float32(1.000976563), float64(1.000976563)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		1e-9,
+		data:               hexDecode("f93c01"),
+		wantInterfaceValue: float64(1.000976563),
+		wantValues:         []interface{}{float32(1.000976563), float64(1.000976563)},
+		equalityThreshold:  1e-9,
 	},
 	{
-		hexDecode("f93555"),
-		float64(0.333251953125),
-		[]interface{}{float32(0.333251953125), float64(0.333251953125)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		1e-9,
+		data:               hexDecode("f93555"),
+		wantInterfaceValue: float64(0.333251953125),
+		wantValues:         []interface{}{float32(0.333251953125), float64(0.333251953125)},
+		equalityThreshold:  1e-9,
 	},
+
 	// CBOR test data "canonNums" are from https://github.com/cbor-wg/cbor-test-vectors
 	{
-		hexDecode("f9bd00"),
-		float64(-1.25),
-		[]interface{}{float32(-1.25), float64(-1.25)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("f9bd00"),
+		wantInterfaceValue: float64(-1.25),
+		wantValues:         []interface{}{float32(-1.25), float64(-1.25)},
 	},
 	{
-		hexDecode("f93e00"),
-		float64(1.5),
-		[]interface{}{float32(1.5), float64(1.5)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("f93e00"),
+		wantInterfaceValue: float64(1.5),
+		wantValues:         []interface{}{float32(1.5), float64(1.5)},
 	},
 	{
-		hexDecode("fb4024333333333333"),
-		float64(10.1),
-		[]interface{}{float32(10.1), float64(10.1)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("fb4024333333333333"),
+		wantInterfaceValue: float64(10.1),
+		wantValues:         []interface{}{float32(10.1), float64(10.1)},
 	},
 	{
-		hexDecode("f90001"),
-		float64(5.960464477539063e-8),
-		[]interface{}{float32(5.960464477539063e-8), float64(5.960464477539063e-8)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("f90001"),
+		wantInterfaceValue: float64(5.960464477539063e-8),
+		wantValues:         []interface{}{float32(5.960464477539063e-8), float64(5.960464477539063e-8)},
 	},
 	{
-		hexDecode("fa7f7fffff"),
-		float64(3.4028234663852886e+38),
-		[]interface{}{float32(3.4028234663852886e+38), float64(3.4028234663852886e+38)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("fa7f7fffff"),
+		wantInterfaceValue: float64(3.4028234663852886e+38),
+		wantValues:         []interface{}{float32(3.4028234663852886e+38), float64(3.4028234663852886e+38)},
 	},
 	{
-		hexDecode("f90400"),
-		float64(0.00006103515625),
-		[]interface{}{float32(0.00006103515625), float64(0.00006103515625)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("f90400"),
+		wantInterfaceValue: float64(0.00006103515625),
+		wantValues:         []interface{}{float32(0.00006103515625), float64(0.00006103515625)},
 	},
 	{
-		hexDecode("f933ff"),
-		float64(0.2498779296875),
-		[]interface{}{float32(0.2498779296875), float64(0.2498779296875)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("f933ff"),
+		wantInterfaceValue: float64(0.2498779296875),
+		wantValues:         []interface{}{float32(0.2498779296875), float64(0.2498779296875)},
 	},
 	{
-		hexDecode("fa33000000"),
-		float64(2.9802322387695312e-8),
-		[]interface{}{float32(2.9802322387695312e-8), float64(2.9802322387695312e-8)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("fa33000000"),
+		wantInterfaceValue: float64(2.9802322387695312e-8),
+		wantValues:         []interface{}{float32(2.9802322387695312e-8), float64(2.9802322387695312e-8)},
 	},
 	{
-		hexDecode("fa33333866"),
-		float64(4.1727979294137185e-8),
-		[]interface{}{float32(4.1727979294137185e-8), float64(4.1727979294137185e-8)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("fa33333866"),
+		wantInterfaceValue: float64(4.1727979294137185e-8),
+		wantValues:         []interface{}{float32(4.1727979294137185e-8), float64(4.1727979294137185e-8)},
 	},
 	{
-		hexDecode("fa37002000"),
-		float64(0.000007636845111846924),
-		[]interface{}{float32(0.000007636845111846924), float64(0.000007636845111846924)},
-		[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeByteArray, typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag, typeBigInt, typeByteString},
-		0.0,
+		data:               hexDecode("fa37002000"),
+		wantInterfaceValue: float64(0.000007636845111846924),
+		wantValues:         []interface{}{float32(0.000007636845111846924), float64(0.000007636845111846924)},
 	},
 }
 
@@ -807,167 +2239,197 @@ func bigIntOrPanic(s string) big.Int {
 	return *bi
 }
 
-func TestUnmarshal(t *testing.T) {
+func TestUnmarshalToEmptyInterface(t *testing.T) {
 	for _, tc := range unmarshalTests {
-		// Test unmarshalling CBOR into empty interface.
 		var v interface{}
-		if err := Unmarshal(tc.cborData, &v); err != nil {
-			t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
-		} else {
-			if tm, ok := tc.emptyInterfaceValue.(time.Time); ok {
-				if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
-				}
-			} else if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
-			}
+		if err := Unmarshal(tc.data, &v); err != nil {
+			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
+			continue
 		}
-		// Test unmarshalling CBOR into RawMessage.
+		compareNonFloats(t, tc.data, v, tc.wantInterfaceValue)
+	}
+}
+
+func TestUnmarshalToRawMessage(t *testing.T) {
+	for _, tc := range unmarshalTests {
 		var r RawMessage
-		if err := Unmarshal(tc.cborData, &r); err != nil {
-			t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
-		} else if !bytes.Equal(r, tc.cborData) {
-			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", tc.cborData, r, tc.cborData)
+		if err := Unmarshal(tc.data, &r); err != nil {
+			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
+			continue
 		}
-		// Test unmarshalling CBOR into compatible data types.
-		for _, value := range tc.values {
-			v := reflect.New(reflect.TypeOf(value))
-			vPtr := v.Interface()
-			if err := Unmarshal(tc.cborData, vPtr); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
-			} else {
-				if tm, ok := value.(time.Time); ok {
-					if vt, ok := v.Elem().Interface().(time.Time); !ok || !tm.Equal(vt) {
-						t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), value, value)
-					}
-				} else if !reflect.DeepEqual(v.Elem().Interface(), value) {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), value, value)
-				}
+		if !bytes.Equal(r, tc.data) {
+			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", tc.data, r, tc.data)
+		}
+	}
+}
+
+func TestUnmarshalToCompatibleTypes(t *testing.T) {
+	for _, tc := range unmarshalTests {
+		for _, wantValue := range tc.wantValues {
+			rv := reflect.New(reflect.TypeOf(wantValue))
+			if err := Unmarshal(tc.data, rv.Interface()); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
+				continue
 			}
+			compareNonFloats(t, tc.data, rv.Elem().Interface(), wantValue)
 		}
-		// Test unmarshalling CBOR into incompatible data types.
-		for _, typ := range tc.wrongTypes {
-			v := reflect.New(typ)
-			vPtr := v.Interface()
-			if err := Unmarshal(tc.cborData, vPtr); err == nil {
-				t.Errorf("Unmarshal(0x%x, %s) didn't return an error", tc.cborData, typ.String())
-			} else if _, ok := err.(*UnmarshalTypeError); !ok {
-				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.cborData, err)
+	}
+}
+
+func TestUnmarshalToIncompatibleTypes(t *testing.T) {
+	for _, tc := range unmarshalTests {
+		for _, wrongType := range tc.wrongTypes {
+			rv := reflect.New(wrongType)
+			err := Unmarshal(tc.data, rv.Interface())
+			if err == nil {
+				t.Errorf("Unmarshal(0x%x, %s) didn't return an error", tc.data, wrongType.String())
+				continue
+			}
+			if _, ok := err.(*UnmarshalTypeError); !ok {
+				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.data, err)
 			} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborData, err.Error(), "cannot unmarshal")
+				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.data, err.Error(), "cannot unmarshal")
 			}
 		}
 	}
 }
 
-func TestUnmarshalFloat(t *testing.T) {
+func compareNonFloats(t *testing.T, data []byte, got interface{}, want interface{}) {
+	switch tm := want.(type) {
+	case time.Time:
+		if vt, ok := got.(time.Time); !ok || !tm.Equal(vt) {
+			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, got, got, want, want)
+		}
+
+	default:
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, got, got, want, want)
+		}
+	}
+}
+
+func TestUnmarshalFloatToEmptyInterface(t *testing.T) {
 	for _, tc := range unmarshalFloatTests {
-		// Test unmarshalling CBOR into empty interface.
 		var v interface{}
-		if err := Unmarshal(tc.cborData, &v); err != nil {
-			t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
-		} else {
-			testFloat(t, tc.cborData, v, tc.emptyInterfaceValue, tc.equalityThreshold)
+		if err := Unmarshal(tc.data, &v); err != nil {
+			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
+			continue
 		}
-		// Test unmarshalling CBOR into RawMessage.
+		compareFloats(t, tc.data, v, tc.wantInterfaceValue, tc.equalityThreshold)
+	}
+}
+
+func TestUnmarshalFloatToRawMessage(t *testing.T) {
+	for _, tc := range unmarshalFloatTests {
 		var r RawMessage
-		if err := Unmarshal(tc.cborData, &r); err != nil {
-			t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
-		} else if !bytes.Equal(r, tc.cborData) {
-			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", tc.cborData, r, tc.cborData)
+		if err := Unmarshal(tc.data, &r); err != nil {
+			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
+			continue
 		}
-		// Test unmarshalling CBOR into compatible data types.
-		for _, value := range tc.values {
-			v := reflect.New(reflect.TypeOf(value))
-			vPtr := v.Interface()
-			if err := Unmarshal(tc.cborData, vPtr); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
-			} else {
-				testFloat(t, tc.cborData, v.Elem().Interface(), value, tc.equalityThreshold)
+		if !bytes.Equal(r, tc.data) {
+			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", tc.data, r, tc.data)
+		}
+	}
+}
+
+func TestUnmarshalFloatToCompatibleTypes(t *testing.T) {
+	for _, tc := range unmarshalFloatTests {
+		for _, wantValue := range tc.wantValues {
+			rv := reflect.New(reflect.TypeOf(wantValue))
+			if err := Unmarshal(tc.data, rv.Interface()); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
+				continue
 			}
+			compareFloats(t, tc.data, rv.Elem().Interface(), wantValue, tc.equalityThreshold)
 		}
-		// Test unmarshalling CBOR into incompatible data types.
-		for _, typ := range tc.wrongTypes {
-			v := reflect.New(typ)
-			vPtr := v.Interface()
-			if err := Unmarshal(tc.cborData, vPtr); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
-			} else if _, ok := err.(*UnmarshalTypeError); !ok {
-				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.cborData, err)
+	}
+}
+
+func TestUnmarshalFloatToIncompatibleTypes(t *testing.T) {
+	for _, tc := range unmarshalFloatTests {
+		for _, wrongType := range unmarshalFloatWrongTypes {
+			rv := reflect.New(wrongType)
+			err := Unmarshal(tc.data, rv.Interface())
+			if err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
+				continue
+			}
+			if _, ok := err.(*UnmarshalTypeError); !ok {
+				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.data, err)
 			} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborData, err.Error(), "cannot unmarshal")
+				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.data, err.Error(), "cannot unmarshal")
 			}
 		}
 	}
 }
 
-func testFloat(t *testing.T, cborData []byte, f interface{}, wantf interface{}, equalityThreshold float64) {
-	switch wantf := wantf.(type) {
+func compareFloats(t *testing.T, data []byte, got interface{}, want interface{}, equalityThreshold float64) {
+	var gotFloat64, wantFloat64 float64
+
+	switch want := want.(type) {
 	case float32:
-		f, ok := f.(float32)
+		f, ok := got.(float32)
 		if !ok {
-			t.Errorf("Unmarshal(0x%x) returned value of type %T, want float32", cborData, f)
+			t.Errorf("Unmarshal(0x%x) returned value of type %T, want float32", data, f)
 			return
 		}
-		if math.IsNaN(float64(wantf)) {
-			if !math.IsNaN(float64(f)) {
-				t.Errorf("Unmarshal(0x%x) = %f, want NaN", cborData, f)
-			}
-		} else if math.IsInf(float64(wantf), 0) {
-			if f != wantf {
-				t.Errorf("Unmarshal(0x%x) = %f, want %f", cborData, f, wantf)
-			}
-		} else if math.Abs(float64(f-wantf)) > equalityThreshold {
-			t.Errorf("Unmarshal(0x%x) = %.18f, want %.18f, diff %.18f > threshold %.18f", cborData, f, wantf, math.Abs(float64(f-wantf)), equalityThreshold)
-		}
+		gotFloat64, wantFloat64 = float64(f), float64(want)
+
 	case float64:
-		f, ok := f.(float64)
+		f, ok := got.(float64)
 		if !ok {
-			t.Errorf("Unmarshal(0x%x) returned value of type %T, want float64", cborData, f)
+			t.Errorf("Unmarshal(0x%x) returned value of type %T, want float64", data, f)
 			return
 		}
-		if math.IsNaN(wantf) {
-			if !math.IsNaN(f) {
-				t.Errorf("Unmarshal(0x%x) = %f, want NaN", cborData, f)
-			}
-		} else if math.IsInf(wantf, 0) {
-			if f != wantf {
-				t.Errorf("Unmarshal(0x%x) = %f, want %f", cborData, f, wantf)
-			}
-		} else if math.Abs(f-wantf) > equalityThreshold {
-			t.Errorf("Unmarshal(0x%x) = %.18f, want %.18f, diff %.18f > threshold %.18f", cborData, f, wantf, math.Abs(f-wantf), equalityThreshold)
+		gotFloat64, wantFloat64 = f, want
+	}
+
+	switch {
+	case math.IsNaN(wantFloat64):
+		if !math.IsNaN(gotFloat64) {
+			t.Errorf("Unmarshal(0x%x) = %f, want NaN", data, gotFloat64)
+		}
+
+	case math.IsInf(wantFloat64, 0):
+		if gotFloat64 != wantFloat64 {
+			t.Errorf("Unmarshal(0x%x) = %f, want %f", data, gotFloat64, wantFloat64)
+		}
+
+	default:
+		if math.Abs(gotFloat64-wantFloat64) > equalityThreshold {
+			t.Errorf("Unmarshal(0x%x) = %.18f, want %.18f, diff %.18f > threshold %.18f", data, gotFloat64, wantFloat64, math.Abs(gotFloat64-wantFloat64), equalityThreshold)
 		}
 	}
 }
 
 func TestNegIntOverflow(t *testing.T) {
-	cborData := hexDecode("3bffffffffffffffff") // -18446744073709551616
+	data := hexDecode("3bffffffffffffffff") // -18446744073709551616
 
 	// Decode CBOR neg int that overflows Go int64 to empty interface
 	var v1 interface{}
 	wantObj := bigIntOrPanic("-18446744073709551616")
-	if err := Unmarshal(cborData, &v1); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %+v", cborData, err)
+	if err := Unmarshal(data, &v1); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %+v", data, err)
 	} else if !reflect.DeepEqual(v1, wantObj) {
-		t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", cborData, v1, v1, wantObj, wantObj)
+		t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", data, v1, v1, wantObj, wantObj)
 	}
 
 	// Decode CBOR neg int that overflows Go int64 to big.Int
 	var v2 big.Int
-	if err := Unmarshal(cborData, &v2); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %+v", cborData, err)
+	if err := Unmarshal(data, &v2); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %+v", data, err)
 	} else if !reflect.DeepEqual(v2, wantObj) {
-		t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", cborData, v2, v2, wantObj, wantObj)
+		t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", data, v2, v2, wantObj, wantObj)
 	}
 
 	// Decode CBOR neg int that overflows Go int64 to int64
 	var v3 int64
-	if err := Unmarshal(cborData, &v3); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	if err := Unmarshal(data, &v3); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 	} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), "cannot unmarshal")
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), "cannot unmarshal")
 	}
 }
 
@@ -1035,7 +2497,7 @@ func TestUnmarshalIntoPtrPrimitives(t *testing.T) {
 }
 
 func TestUnmarshalIntoPtrArrayPtrElem(t *testing.T) {
-	cborData := hexDecode("83010203") // []int{1, 2, 3}
+	data := hexDecode("83010203") // []int{1, 2, 3}
 
 	n1, n2, n3 := 1, 2, 3
 
@@ -1048,21 +2510,21 @@ func TestUnmarshalIntoPtrArrayPtrElem(t *testing.T) {
 	ppslc := &pslc
 
 	// Unmarshal CBOR array into a non-nil pointer.
-	if err := Unmarshal(cborData, &ppslc); err != nil {
-		t.Errorf("Unmarshal(0x%x, %s) returned error %v", cborData, reflect.TypeOf(ppslc), err)
+	if err := Unmarshal(data, &ppslc); err != nil {
+		t.Errorf("Unmarshal(0x%x, %s) returned error %v", data, reflect.TypeOf(ppslc), err)
 	} else if !reflect.DeepEqual(slc, wantArray) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborData, slc, slc, wantArray)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", data, slc, slc, wantArray)
 	}
 	// Unmarshal CBOR array into a nil pointer.
-	if err := Unmarshal(cborData, &p); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &p); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	} else if !reflect.DeepEqual(*p, wantArray) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborData, *p, p, wantArray)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", data, *p, p, wantArray)
 	}
 }
 
 func TestUnmarshalIntoPtrMapPtrElem(t *testing.T) {
-	cborData := hexDecode("a201020304") // {1: 2, 3: 4}
+	data := hexDecode("a201020304") // {1: 2, 3: 4}
 
 	n1, n2, n3, n4 := 1, 2, 3, 4
 
@@ -1075,16 +2537,16 @@ func TestUnmarshalIntoPtrMapPtrElem(t *testing.T) {
 	ppm := &pm
 
 	// Unmarshal CBOR map into a non-nil pointer.
-	if err := Unmarshal(cborData, &ppm); err != nil {
-		t.Errorf("Unmarshal(0x%x, %s) returned error %v", cborData, reflect.TypeOf(ppm), err)
+	if err := Unmarshal(data, &ppm); err != nil {
+		t.Errorf("Unmarshal(0x%x, %s) returned error %v", data, reflect.TypeOf(ppm), err)
 	} else if !reflect.DeepEqual(m, wantMap) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborData, m, m, wantMap)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", data, m, m, wantMap)
 	}
 	// Unmarshal CBOR map into a nil pointer.
-	if err := Unmarshal(cborData, &p); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &p); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	} else if !reflect.DeepEqual(*p, wantMap) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborData, *p, p, wantMap)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", data, *p, p, wantMap)
 	}
 }
 
@@ -1097,7 +2559,7 @@ func TestUnmarshalIntoPtrStructPtrElem(t *testing.T) {
 		E *string `cbor:"e"`
 	}
 
-	cborData := hexDecode("a56161614161626142616361436164614461656145") // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"}
+	data := hexDecode("a56161614161626142616361436164614461656145") // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"}
 
 	a, b, c, d, e := "A", "B", "C", "D", "E"
 	wantObj := s1{A: &a, B: &b, C: &c, D: &d, E: &e}
@@ -1109,44 +2571,44 @@ func TestUnmarshalIntoPtrStructPtrElem(t *testing.T) {
 	pps := &ps
 
 	// Unmarshal CBOR map into a non-nil pointer.
-	if err := Unmarshal(cborData, &pps); err != nil {
-		t.Errorf("Unmarshal(0x%x, %s) returned error %v", cborData, reflect.TypeOf(pps), err)
+	if err := Unmarshal(data, &pps); err != nil {
+		t.Errorf("Unmarshal(0x%x, %s) returned error %v", data, reflect.TypeOf(pps), err)
 	} else if !reflect.DeepEqual(s, wantObj) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborData, s, s, wantObj)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", data, s, s, wantObj)
 	}
 	// Unmarshal CBOR map into a nil pointer.
-	if err := Unmarshal(cborData, &p); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &p); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	} else if !reflect.DeepEqual(*p, wantObj) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborData, *p, p, wantObj)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", data, *p, p, wantObj)
 	}
 }
 
 func TestUnmarshalIntoArray(t *testing.T) {
-	cborData := hexDecode("83010203") // []int{1, 2, 3}
+	data := hexDecode("83010203") // []int{1, 2, 3}
 
 	// Unmarshal CBOR array into Go array.
 	var arr1 [3]int
-	if err := Unmarshal(cborData, &arr1); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &arr1); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	} else if arr1 != [3]int{1, 2, 3} {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want [3]int{1, 2, 3}", cborData, arr1, arr1)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want [3]int{1, 2, 3}", data, arr1, arr1)
 	}
 
 	// Unmarshal CBOR array into Go array with more elements.
 	var arr2 [5]int
-	if err := Unmarshal(cborData, &arr2); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &arr2); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	} else if arr2 != [5]int{1, 2, 3, 0, 0} {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want [5]int{1, 2, 3, 0, 0}", cborData, arr2, arr2)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want [5]int{1, 2, 3, 0, 0}", data, arr2, arr2)
 	}
 
 	// Unmarshal CBOR array into Go array with less elements.
 	var arr3 [1]int
-	if err := Unmarshal(cborData, &arr3); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &arr3); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	} else if arr3 != [1]int{1} {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want [0]int{1}", cborData, arr3, arr3)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want [0]int{1}", data, arr3, arr3)
 	}
 }
 
@@ -1166,7 +2628,7 @@ func TestUnmarshalNil(t *testing.T) {
 		I int
 	}
 
-	cborData := [][]byte{hexDecode("f6"), hexDecode("f7")} // CBOR null and undefined values
+	data := [][]byte{hexDecode("f6"), hexDecode("f7")} // CBOR null and undefined values
 
 	testCases := []struct {
 		name      string
@@ -1224,7 +2686,7 @@ func TestUnmarshalNil(t *testing.T) {
 	// Unmarshalling to values of specified Go types.
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			for _, data := range cborData {
+			for _, data := range data {
 				v := reflect.New(reflect.TypeOf(tc.value))
 				v.Elem().Set(reflect.ValueOf(tc.value))
 
@@ -1249,17 +2711,17 @@ var invalidUnmarshalTests = []struct {
 }
 
 func TestInvalidUnmarshal(t *testing.T) {
-	cborData := []byte{0x00}
+	data := []byte{0x00}
 
 	for _, tc := range invalidUnmarshalTests {
 		t.Run(tc.name, func(t *testing.T) {
-			err := Unmarshal(cborData, tc.v)
+			err := Unmarshal(data, tc.v)
 			if err == nil {
-				t.Errorf("Unmarshal(0x%x, %v) didn't return an error", cborData, tc.v)
+				t.Errorf("Unmarshal(0x%x, %v) didn't return an error", data, tc.v)
 			} else if _, ok := err.(*InvalidUnmarshalError); !ok {
-				t.Errorf("Unmarshal(0x%x, %v) error type %T, want *InvalidUnmarshalError", cborData, tc.v, err)
+				t.Errorf("Unmarshal(0x%x, %v) error type %T, want *InvalidUnmarshalError", data, tc.v, err)
 			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%x, %v) error %q, want %q", cborData, tc.v, err.Error(), tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x, %v) error %q, want %q", data, tc.v, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}
@@ -1267,7 +2729,7 @@ func TestInvalidUnmarshal(t *testing.T) {
 
 var invalidCBORUnmarshalTests = []struct {
 	name                 string
-	cborData             []byte
+	data                 []byte
 	wantErrorMsg         string
 	errorMsgPartialMatch bool
 }{
@@ -1379,13 +2841,13 @@ func TestInvalidCBORUnmarshal(t *testing.T) {
 	for _, tc := range invalidCBORUnmarshalTests {
 		t.Run(tc.name, func(t *testing.T) {
 			var i interface{}
-			err := Unmarshal(tc.cborData, &i)
+			err := Unmarshal(tc.data, &i)
 			if err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
+				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
 			} else if !tc.errorMsgPartialMatch && err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 			} else if tc.errorMsgPartialMatch && !strings.Contains(err.Error(), tc.wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}
@@ -1402,56 +2864,56 @@ func TestValidUTF8String(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name     string
-		cborData []byte
-		dm       DecMode
-		wantObj  interface{}
+		name    string
+		data    []byte
+		dm      DecMode
+		wantObj interface{}
 	}{
 		{
-			name:     "with UTF8RejectInvalid",
-			cborData: hexDecode("6973747265616d696e67"),
-			dm:       dmRejectInvalidUTF8,
-			wantObj:  "streaming",
+			name:    "with UTF8RejectInvalid",
+			data:    hexDecode("6973747265616d696e67"),
+			dm:      dmRejectInvalidUTF8,
+			wantObj: "streaming",
 		},
 		{
-			name:     "with UTF8DecodeInvalid",
-			cborData: hexDecode("6973747265616d696e67"),
-			dm:       dmDecodeInvalidUTF8,
-			wantObj:  "streaming",
+			name:    "with UTF8DecodeInvalid",
+			data:    hexDecode("6973747265616d696e67"),
+			dm:      dmDecodeInvalidUTF8,
+			wantObj: "streaming",
 		},
 		{
-			name:     "indef length with UTF8RejectInvalid",
-			cborData: hexDecode("7f657374726561646d696e67ff"),
-			dm:       dmRejectInvalidUTF8,
-			wantObj:  "streaming",
+			name:    "indef length with UTF8RejectInvalid",
+			data:    hexDecode("7f657374726561646d696e67ff"),
+			dm:      dmRejectInvalidUTF8,
+			wantObj: "streaming",
 		},
 		{
-			name:     "indef length with UTF8DecodeInvalid",
-			cborData: hexDecode("7f657374726561646d696e67ff"),
-			dm:       dmDecodeInvalidUTF8,
-			wantObj:  "streaming",
+			name:    "indef length with UTF8DecodeInvalid",
+			data:    hexDecode("7f657374726561646d696e67ff"),
+			dm:      dmDecodeInvalidUTF8,
+			wantObj: "streaming",
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Decode to empty interface
 			var i interface{}
-			err = tc.dm.Unmarshal(tc.cborData, &i)
+			err = tc.dm.Unmarshal(tc.data, &i)
 			if err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+				t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
 			}
 			if !reflect.DeepEqual(i, tc.wantObj) {
-				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.cborData, i, i, tc.wantObj, tc.wantObj)
+				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, i, i, tc.wantObj, tc.wantObj)
 			}
 
 			// Decode to string
 			var v string
-			err = tc.dm.Unmarshal(tc.cborData, &v)
+			err = tc.dm.Unmarshal(tc.data, &v)
 			if err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+				t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
 			}
 			if !reflect.DeepEqual(v, tc.wantObj) {
-				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantObj, tc.wantObj)
+				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, v, v, tc.wantObj, tc.wantObj)
 			}
 		})
 	}
@@ -1469,34 +2931,34 @@ func TestInvalidUTF8String(t *testing.T) {
 
 	testCases := []struct {
 		name         string
-		cborData     []byte
+		data         []byte
 		dm           DecMode
 		wantObj      interface{}
 		wantErrorMsg string
 	}{
 		{
 			name:         "with UTF8RejectInvalid",
-			cborData:     hexDecode("61fe"),
+			data:         hexDecode("61fe"),
 			dm:           dmRejectInvalidUTF8,
 			wantErrorMsg: invalidUTF8ErrorMsg,
 		},
 		{
-			name:     "with UTF8DecodeInvalid",
-			cborData: hexDecode("61fe"),
-			dm:       dmDecodeInvalidUTF8,
-			wantObj:  string([]byte{0xfe}),
+			name:    "with UTF8DecodeInvalid",
+			data:    hexDecode("61fe"),
+			dm:      dmDecodeInvalidUTF8,
+			wantObj: string([]byte{0xfe}),
 		},
 		{
 			name:         "indef length with UTF8RejectInvalid",
-			cborData:     hexDecode("7f62e6b061b4ff"),
+			data:         hexDecode("7f62e6b061b4ff"),
 			dm:           dmRejectInvalidUTF8,
 			wantErrorMsg: invalidUTF8ErrorMsg,
 		},
 		{
-			name:     "indef length with UTF8DecodeInvalid",
-			cborData: hexDecode("7f62e6b061b4ff"),
-			dm:       dmDecodeInvalidUTF8,
-			wantObj:  string([]byte{0xe6, 0xb0, 0xb4}),
+			name:    "indef length with UTF8DecodeInvalid",
+			data:    hexDecode("7f62e6b061b4ff"),
+			dm:      dmDecodeInvalidUTF8,
+			wantObj: string([]byte{0xe6, 0xb0, 0xb4}),
 		},
 	}
 
@@ -1504,37 +2966,37 @@ func TestInvalidUTF8String(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Decode to empty interface
 			var v interface{}
-			err = tc.dm.Unmarshal(tc.cborData, &v)
+			err = tc.dm.Unmarshal(tc.data, &v)
 			if tc.wantErrorMsg != "" {
 				if err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return error", tc.cborData)
+					t.Errorf("Unmarshal(0x%x) didn't return error", tc.data)
 				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+					t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 				}
 			} else {
 				if err != nil {
-					t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+					t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
 				}
 				if !reflect.DeepEqual(v, tc.wantObj) {
-					t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantObj, tc.wantObj)
+					t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, v, v, tc.wantObj, tc.wantObj)
 				}
 			}
 
 			// Decode to string
 			var s string
-			err = tc.dm.Unmarshal(tc.cborData, &s)
+			err = tc.dm.Unmarshal(tc.data, &s)
 			if tc.wantErrorMsg != "" {
 				if err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return error", tc.cborData)
+					t.Errorf("Unmarshal(0x%x) didn't return error", tc.data)
 				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+					t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 				}
 			} else {
 				if err != nil {
-					t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+					t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
 				}
 				if !reflect.DeepEqual(s, tc.wantObj) {
-					t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.cborData, s, s, tc.wantObj, tc.wantObj)
+					t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, s, s, tc.wantObj, tc.wantObj)
 				}
 			}
 		})
@@ -1542,8 +3004,8 @@ func TestInvalidUTF8String(t *testing.T) {
 
 	// Test decoding of mixed invalid text string and valid text string
 	// with UTF8RejectInvalid option (default)
-	cborData := hexDecode("7f62e6b061b4ff7f657374726561646d696e67ff")
-	dec := NewDecoder(bytes.NewReader(cborData))
+	data := hexDecode("7f62e6b061b4ff7f657374726561646d696e67ff")
+	dec := NewDecoder(bytes.NewReader(data))
 	var s string
 	if err := dec.Decode(&s); err == nil {
 		t.Errorf("Decode() didn't return an error")
@@ -1558,7 +3020,7 @@ func TestInvalidUTF8String(t *testing.T) {
 
 	// Test decoding of mixed invalid text string and valid text string
 	// with UTF8DecodeInvalid option
-	dec = dmDecodeInvalidUTF8.NewDecoder(bytes.NewReader(cborData))
+	dec = dmDecodeInvalidUTF8.NewDecoder(bytes.NewReader(data))
 	if err := dec.Decode(&s); err != nil {
 		t.Errorf("Decode() returned error %q", err)
 	} else if s != string([]byte{0xe6, 0xb0, 0xb4}) {
@@ -1585,9 +3047,9 @@ func TestUnmarshalStruct(t *testing.T) {
 	}
 
 	tests := []struct {
-		name     string
-		cborData []byte
-		want     interface{}
+		name string
+		data []byte
+		want interface{}
 	}{
 		{"case-insensitive field name match", hexDecode("a868696e746669656c64187b6a666c6f61746669656c64fa47c3500069626f6f6c6669656c64f56b537472696e674669656c6464746573746f42797465537472696e674669656c64430103056a41727261794669656c64826568656c6c6f65776f726c64684d61704669656c64a2676d6f726e696e67f56961667465726e6f6f6ef4714e65737465645374727563744669656c64a261581903e861591a000f4240"), want},
 		{"exact field name match", hexDecode("a868496e744669656c64187b6a466c6f61744669656c64fa47c3500069426f6f6c4669656c64f56b537472696e674669656c6464746573746f42797465537472696e674669656c64430103056a41727261794669656c64826568656c6c6f65776f726c64684d61704669656c64a2676d6f726e696e67f56961667465726e6f6f6ef4714e65737465645374727563744669656c64a261581903e861591a000f4240"), want},
@@ -1595,10 +3057,10 @@ func TestUnmarshalStruct(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			var v outer
-			if err := Unmarshal(tc.cborData, &v); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
+			if err := Unmarshal(tc.data, &v); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 			} else if !reflect.DeepEqual(v, want) {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, want, want)
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, want, want)
 			}
 		})
 	}
@@ -1628,35 +3090,35 @@ func TestUnmarshalStructError1(t *testing.T) {
 		unexportedField:   0,
 	}
 
-	cborData := hexDecode("a868496e744669656c64187b6a466c6f61744669656c64fa47c3500069426f6f6c4669656c64f56b537472696e674669656c6464746573746f42797465537472696e674669656c64430103056a41727261794669656c64826568656c6c6f65776f726c64684d61704669656c64a2676d6f726e696e67f56961667465726e6f6f6ef4714e65737465645374727563744669656c64a261581903e861591a000f4240")
+	data := hexDecode("a868496e744669656c64187b6a466c6f61744669656c64fa47c3500069426f6f6c4669656c64f56b537472696e674669656c6464746573746f42797465537472696e674669656c64430103056a41727261794669656c64826568656c6c6f65776f726c64684d61704669656c64a2676d6f726e696e67f56961667465726e6f6f6ef4714e65737465645374727563744669656c64a261581903e861591a000f4240")
 	wantCBORType := "UTF-8 text string"
 	wantGoType := "int"
 	wantStructFieldName := "cbor.outer2.ArrayField"
 	wantErrorMsg := "cannot unmarshal UTF-8 text string into Go struct field cbor.outer2.ArrayField of type int"
 
 	var v outer2
-	if err := Unmarshal(cborData, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	if err := Unmarshal(data, &v); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else {
 		if typeError, ok := err.(*UnmarshalTypeError); !ok {
-			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*UnmarshalTypeError)", cborData, err)
+			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*UnmarshalTypeError)", data, err)
 		} else {
 			if typeError.CBORType != wantCBORType {
-				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).CBORType %s, want %s", cborData, typeError.CBORType, wantCBORType)
+				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).CBORType %s, want %s", data, typeError.CBORType, wantCBORType)
 			}
 			if typeError.GoType != wantGoType {
-				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).GoType %s, want %s", cborData, typeError.GoType, wantGoType)
+				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).GoType %s, want %s", data, typeError.GoType, wantGoType)
 			}
 			if typeError.StructFieldName != wantStructFieldName {
-				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).StructFieldName %s, want %s", cborData, typeError.StructFieldName, wantStructFieldName)
+				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).StructFieldName %s, want %s", data, typeError.StructFieldName, wantStructFieldName)
 			}
 			if !strings.Contains(err.Error(), wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 			}
 		}
 	}
 	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, want, want)
 	}
 }
 
@@ -1672,108 +3134,108 @@ func TestUnmarshalStructError2(t *testing.T) {
 	}
 
 	// Unmarshal returns first error encountered, which is *UnmarshalTypeError (failed to unmarshal int into Go string)
-	cborData := hexDecode("a3fa47c35000026161614161fe6142") // {100000.0:2, "a":"A", 0xfe: B}
+	data := hexDecode("a3fa47c35000026161614161fe6142") // {100000.0:2, "a":"A", 0xfe: B}
 	wantCBORType := "primitives"
 	wantGoType := "string"
 	wantErrorMsg := "cannot unmarshal primitives into Go value of type string"
 
 	v := strc{}
-	if err := Unmarshal(cborData, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	if err := Unmarshal(data, &v); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else {
 		if typeError, ok := err.(*UnmarshalTypeError); !ok {
-			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*UnmarshalTypeError)", cborData, err)
+			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*UnmarshalTypeError)", data, err)
 		} else {
 			if typeError.CBORType != wantCBORType {
-				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).CBORType %s, want %s", cborData, typeError.CBORType, wantCBORType)
+				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).CBORType %s, want %s", data, typeError.CBORType, wantCBORType)
 			}
 			if typeError.GoType != wantGoType {
-				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).GoType %s, want %s", cborData, typeError.GoType, wantGoType)
+				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).GoType %s, want %s", data, typeError.GoType, wantGoType)
 			}
 			if !strings.Contains(err.Error(), wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 			}
 		}
 	}
 	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, want, want)
 	}
 
 	// Unmarshal returns first error encountered, which is *cbor.SemanticError (invalid UTF8 string)
-	cborData = hexDecode("a361fe6142010261616141") // {0xfe: B, 1:2, "a":"A"}
+	data = hexDecode("a361fe6142010261616141") // {0xfe: B, 1:2, "a":"A"}
 	v = strc{}
-	if err := Unmarshal(cborData, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	if err := Unmarshal(data, &v); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else {
 		if _, ok := err.(*SemanticError); !ok {
-			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*SemanticError)", cborData, err)
+			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*SemanticError)", data, err)
 		} else if err.Error() != invalidUTF8ErrorMsg {
-			t.Errorf("Unmarshal(0x%x) returned error %q, want error %q", cborData, err.Error(), invalidUTF8ErrorMsg)
+			t.Errorf("Unmarshal(0x%x) returned error %q, want error %q", data, err.Error(), invalidUTF8ErrorMsg)
 		}
 	}
 	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, want, want)
 	}
 
 	// Unmarshal returns first error encountered, which is *cbor.SemanticError (invalid UTF8 string)
-	cborData = hexDecode("a3616261fe010261616141") // {"b": 0xfe, 1:2, "a":"A"}
+	data = hexDecode("a3616261fe010261616141") // {"b": 0xfe, 1:2, "a":"A"}
 	v = strc{}
-	if err := Unmarshal(cborData, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	if err := Unmarshal(data, &v); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else {
 		if _, ok := err.(*SemanticError); !ok {
-			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*SemanticError)", cborData, err)
+			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*SemanticError)", data, err)
 		} else if err.Error() != invalidUTF8ErrorMsg {
-			t.Errorf("Unmarshal(0x%x) returned error %q, want error %q", cborData, err.Error(), invalidUTF8ErrorMsg)
+			t.Errorf("Unmarshal(0x%x) returned error %q, want error %q", data, err.Error(), invalidUTF8ErrorMsg)
 		}
 	}
 	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, want, want)
 	}
 }
 
 func TestUnmarshalPrefilledArray(t *testing.T) {
 	prefilledArr := []int{1, 2, 3, 4, 5}
 	want := []int{10, 11, 3, 4, 5}
-	cborData := hexDecode("820a0b") // []int{10, 11}
-	if err := Unmarshal(cborData, &prefilledArr); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	data := hexDecode("820a0b") // []int{10, 11}
+	if err := Unmarshal(data, &prefilledArr); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if len(prefilledArr) != 2 || cap(prefilledArr) != 5 {
-		t.Errorf("Unmarshal(0x%x) = %v (len %d, cap %d), want len == 2, cap == 5", cborData, prefilledArr, len(prefilledArr), cap(prefilledArr))
+		t.Errorf("Unmarshal(0x%x) = %v (len %d, cap %d), want len == 2, cap == 5", data, prefilledArr, len(prefilledArr), cap(prefilledArr))
 	}
 	if !reflect.DeepEqual(prefilledArr[:cap(prefilledArr)], want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, prefilledArr, prefilledArr, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, prefilledArr, prefilledArr, want, want)
 	}
 
-	cborData = hexDecode("80") // empty array
-	if err := Unmarshal(cborData, &prefilledArr); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	data = hexDecode("80") // empty array
+	if err := Unmarshal(data, &prefilledArr); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if len(prefilledArr) != 0 || cap(prefilledArr) != 0 {
-		t.Errorf("Unmarshal(0x%x) = %v (len %d, cap %d), want len == 0, cap == 0", cborData, prefilledArr, len(prefilledArr), cap(prefilledArr))
+		t.Errorf("Unmarshal(0x%x) = %v (len %d, cap %d), want len == 0, cap == 0", data, prefilledArr, len(prefilledArr), cap(prefilledArr))
 	}
 }
 
 func TestUnmarshalPrefilledMap(t *testing.T) {
 	prefilledMap := map[string]string{"key": "value", "a": "1"}
 	want := map[string]string{"key": "value", "a": "A", "b": "B", "c": "C", "d": "D", "e": "E"}
-	cborData := hexDecode("a56161614161626142616361436164614461656145") // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"}
-	if err := Unmarshal(cborData, &prefilledMap); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	data := hexDecode("a56161614161626142616361436164614461656145") // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"}
+	if err := Unmarshal(data, &prefilledMap); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if !reflect.DeepEqual(prefilledMap, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, prefilledMap, prefilledMap, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, prefilledMap, prefilledMap, want, want)
 	}
 
 	prefilledMap = map[string]string{"key": "value"}
 	want = map[string]string{"key": "value"}
-	cborData = hexDecode("a0") // map[string]string{}
-	if err := Unmarshal(cborData, &prefilledMap); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	data = hexDecode("a0") // map[string]string{}
+	if err := Unmarshal(data, &prefilledMap); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if !reflect.DeepEqual(prefilledMap, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, prefilledMap, prefilledMap, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, prefilledMap, prefilledMap, want, want)
 	}
 }
 
@@ -1785,18 +3247,18 @@ func TestUnmarshalPrefilledStruct(t *testing.T) {
 	}
 	prefilledStruct := s{a: 100, B: []int{200, 300, 400, 500}, C: true}
 	want := s{a: 100, B: []int{2, 3}, C: true}
-	cborData := hexDecode("a26161016162820203") // map[string]interface{} {"a": 1, "b": []int{2, 3}}
-	if err := Unmarshal(cborData, &prefilledStruct); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	data := hexDecode("a26161016162820203") // map[string]interface{} {"a": 1, "b": []int{2, 3}}
+	if err := Unmarshal(data, &prefilledStruct); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if !reflect.DeepEqual(prefilledStruct, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, prefilledStruct, prefilledStruct, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, prefilledStruct, prefilledStruct, want, want)
 	}
 	if len(prefilledStruct.B) != 2 || cap(prefilledStruct.B) != 4 {
-		t.Errorf("Unmarshal(0x%x) = %v (len %d, cap %d), want len == 2, cap == 5", cborData, prefilledStruct.B, len(prefilledStruct.B), cap(prefilledStruct.B))
+		t.Errorf("Unmarshal(0x%x) = %v (len %d, cap %d), want len == 2, cap == 5", data, prefilledStruct.B, len(prefilledStruct.B), cap(prefilledStruct.B))
 	}
 	if !reflect.DeepEqual(prefilledStruct.B[:cap(prefilledStruct.B)], []int{2, 3, 400, 500}) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, prefilledStruct.B, prefilledStruct.B, []int{2, 3, 400, 500}, []int{2, 3, 400, 500})
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, prefilledStruct.B, prefilledStruct.B, []int{2, 3, 400, 500}, []int{2, 3, 400, 500})
 	}
 }
 
@@ -1807,28 +3269,28 @@ func TestStructFieldNil(t *testing.T) {
 		PPI **int
 	}
 	var struc TestStruct
-	cborData, err := Marshal(struc)
+	data, err := Marshal(struc)
 	if err != nil {
 		t.Fatalf("Marshal(%+v) returned error %v", struc, err)
 	}
 	var struc2 TestStruct
-	err = Unmarshal(cborData, &struc2)
+	err = Unmarshal(data, &struc2)
 	if err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	} else if !reflect.DeepEqual(struc, struc2) {
-		t.Errorf("Unmarshal(0x%x) returned %+v, want %+v", cborData, struc2, struc)
+		t.Errorf("Unmarshal(0x%x) returned %+v, want %+v", data, struc2, struc)
 	}
 }
 
 func TestLengthOverflowsInt(t *testing.T) {
 	// Data is generating by go-fuzz.
 	// string/slice/map length in uint64 cast to int causes integer overflow.
-	cborData := [][]byte{
+	data := [][]byte{
 		hexDecode("bbcf30303030303030cfd697829782"),
 		hexDecode("5bcf30303030303030cfd697829782"),
 	}
 	wantErrorMsg := "is too large"
-	for _, data := range cborData {
+	for _, data := range data {
 		var intf interface{}
 		if err := Unmarshal(data, &intf); err == nil {
 			t.Errorf("Unmarshal(0x%x) didn't return an error, want error containing substring %q", data, wantErrorMsg)
@@ -1841,7 +3303,7 @@ func TestLengthOverflowsInt(t *testing.T) {
 func TestMapKeyUnhashable(t *testing.T) {
 	testCases := []struct {
 		name         string
-		cborData     []byte
+		data         []byte
 		wantErrorMsg string
 	}{
 		{"slice as map key", hexDecode("bf8030ff"), "cbor: invalid map key type: []interface {}"},                                                    // {[]: -17}
@@ -1856,17 +3318,17 @@ func TestMapKeyUnhashable(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v interface{}
-			if err := Unmarshal(tc.cborData, &v); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.cborData, tc.wantErrorMsg)
+			if err := Unmarshal(tc.data, &v); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, tc.wantErrorMsg)
 			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 			}
 			if _, ok := v.(map[interface{}]interface{}); ok {
 				var v map[interface{}]interface{}
-				if err := Unmarshal(tc.cborData, &v); err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.cborData, tc.wantErrorMsg)
+				if err := Unmarshal(tc.data, &v); err == nil {
+					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, tc.wantErrorMsg)
 				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 				}
 			}
 		})
@@ -1875,10 +3337,10 @@ func TestMapKeyUnhashable(t *testing.T) {
 
 func TestMapKeyNaN(t *testing.T) {
 	// Data is generating by go-fuzz.
-	cborData := hexDecode("b0303030303030303030303030303030303038303030faffff30303030303030303030303030") // {-17: -17, NaN: -17}
+	data := hexDecode("b0303030303030303030303030303030303038303030faffff30303030303030303030303030") // {-17: -17, NaN: -17}
 	var intf interface{}
-	if err := Unmarshal(cborData, &intf); err != nil {
-		t.Fatalf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &intf); err != nil {
+		t.Fatalf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	em, err := EncOptions{Sort: SortCanonical}.EncMode()
 	if err != nil {
@@ -1891,13 +3353,13 @@ func TestMapKeyNaN(t *testing.T) {
 
 func TestUnmarshalUndefinedElement(t *testing.T) {
 	// Data is generating by go-fuzz.
-	cborData := hexDecode("bfd1a388f730303030303030303030303030ff") // {17({[undefined, -17, -17, -17, -17, -17, -17, -17]: -17, -17: -17}): -17}
+	data := hexDecode("bfd1a388f730303030303030303030303030ff") // {17({[undefined, -17, -17, -17, -17, -17, -17, -17]: -17, -17: -17}): -17}
 	var intf interface{}
 	wantErrorMsg := "invalid map key type"
-	if err := Unmarshal(cborData, &intf); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error, want error containing substring %q", cborData, wantErrorMsg)
+	if err := Unmarshal(data, &intf); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error, want error containing substring %q", data, wantErrorMsg)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing substring %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing substring %q", data, err.Error(), wantErrorMsg)
 	}
 }
 
@@ -2058,42 +3520,42 @@ func TestDecodeTimeWithTag(t *testing.T) {
 func TestDecodeTimeError(t *testing.T) {
 	testCases := []struct {
 		name         string
-		cborData     []byte
+		data         []byte
 		wantErrorMsg string
 	}{
 		{
 			name:         "invalid RFC3339 time string",
-			cborData:     hexDecode("7f657374726561646d696e67ff"),
+			data:         hexDecode("7f657374726561646d696e67ff"),
 			wantErrorMsg: "cbor: cannot set streaming for time.Time",
 		},
 		{
 			name:         "byte string data cannot be decoded into time.Time",
-			cborData:     hexDecode("4f013030303030303030e03031ed3030"),
+			data:         hexDecode("4f013030303030303030e03031ed3030"),
 			wantErrorMsg: "cbor: cannot unmarshal byte string into Go value of type time.Time",
 		},
 		{
 			name:         "bool cannot be decoded into time.Time",
-			cborData:     hexDecode("f4"),
+			data:         hexDecode("f4"),
 			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type time.Time",
 		},
 		{
 			name:         "invalid UTF-8 string",
-			cborData:     hexDecode("7f62e6b061b4ff"),
+			data:         hexDecode("7f62e6b061b4ff"),
 			wantErrorMsg: "cbor: invalid UTF-8 string",
 		},
 		{
 			name:         "negative integer overflow",
-			cborData:     hexDecode("3bffffffffffffffff"),
+			data:         hexDecode("3bffffffffffffffff"),
 			wantErrorMsg: "cbor: cannot unmarshal negative integer into Go value of type time.Time",
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			tm := time.Now()
-			if err := Unmarshal(tc.cborData, &tm); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.cborData, tc.wantErrorMsg)
+			if err := Unmarshal(tc.data, &tm); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.data, tc.wantErrorMsg)
 			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}
@@ -2104,61 +3566,61 @@ func TestDecodeInvalidTagTime(t *testing.T) {
 
 	testCases := []struct {
 		name          string
-		cborData      []byte
+		data          []byte
 		decodeToTypes []reflect.Type
 		wantErrorMsg  string
 	}{
 		{
 			name:          "Tag 0 with invalid RFC3339 time string",
-			cborData:      hexDecode("c07f657374726561646d696e67ff"),
+			data:          hexDecode("c07f657374726561646d696e67ff"),
 			decodeToTypes: []reflect.Type{typeIntf, typeTime},
 			wantErrorMsg:  "cbor: cannot set streaming for time.Time",
 		},
 		{
 			name:          "Tag 0 with invalid UTF-8 string",
-			cborData:      hexDecode("c07f62e6b061b4ff"),
+			data:          hexDecode("c07f62e6b061b4ff"),
 			decodeToTypes: []reflect.Type{typeIntf, typeTime},
 			wantErrorMsg:  "cbor: invalid UTF-8 string",
 		},
 		{
 			name:          "Tag 0 with integer content",
-			cborData:      hexDecode("c01a514b67b0"),
+			data:          hexDecode("c01a514b67b0"),
 			decodeToTypes: []reflect.Type{typeIntf, typeTime},
 			wantErrorMsg:  "cbor: tag number 0 must be followed by text string, got positive integer",
 		},
 		{
 			name:          "Tag 0 with byte string content",
-			cborData:      hexDecode("c04f013030303030303030e03031ed3030"),
+			data:          hexDecode("c04f013030303030303030e03031ed3030"),
 			decodeToTypes: []reflect.Type{typeIntf, typeTime},
 			wantErrorMsg:  "cbor: tag number 0 must be followed by text string, got byte string",
 		},
 		{
 			name:          "Tag 0 with integer content as array element",
-			cborData:      hexDecode("81c01a514b67b0"),
+			data:          hexDecode("81c01a514b67b0"),
 			decodeToTypes: []reflect.Type{typeIntf, typeTimeSlice},
 			wantErrorMsg:  "cbor: tag number 0 must be followed by text string, got positive integer",
 		},
 		{
 			name:          "Tag 1 with negative integer overflow",
-			cborData:      hexDecode("c13bffffffffffffffff"),
+			data:          hexDecode("c13bffffffffffffffff"),
 			decodeToTypes: []reflect.Type{typeIntf, typeTime},
 			wantErrorMsg:  "cbor: cannot unmarshal tag into Go value of type time.Time",
 		},
 		{
 			name:          "Tag 1 with string content",
-			cborData:      hexDecode("c174323031332d30332d32315432303a30343a30305a"),
+			data:          hexDecode("c174323031332d30332d32315432303a30343a30305a"),
 			decodeToTypes: []reflect.Type{typeIntf, typeTime},
 			wantErrorMsg:  "cbor: tag number 1 must be followed by integer or floating-point number, got UTF-8 text string",
 		},
 		{
 			name:          "Tag 1 with simple value",
-			cborData:      hexDecode("d801f6"), // 1(null)
+			data:          hexDecode("d801f6"), // 1(null)
 			decodeToTypes: []reflect.Type{typeIntf, typeTime},
 			wantErrorMsg:  "cbor: tag number 1 must be followed by integer or floating-point number, got primitive",
 		},
 		{
 			name:          "Tag 1 with string content as array element",
-			cborData:      hexDecode("81c174323031332d30332d32315432303a30343a30305a"),
+			data:          hexDecode("81c174323031332d30332d32315432303a30343a30305a"),
 			decodeToTypes: []reflect.Type{typeIntf, typeTimeSlice},
 			wantErrorMsg:  "cbor: tag number 1 must be followed by integer or floating-point number, got UTF-8 text string",
 		},
@@ -2168,10 +3630,10 @@ func TestDecodeInvalidTagTime(t *testing.T) {
 		for _, decodeToType := range tc.decodeToTypes {
 			t.Run(tc.name+" decode to "+decodeToType.String(), func(t *testing.T) {
 				v := reflect.New(decodeToType)
-				if err := dm.Unmarshal(tc.cborData, v.Interface()); err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", tc.cborData, tc.wantErrorMsg)
+				if err := dm.Unmarshal(tc.data, v.Interface()); err == nil {
+					t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", tc.data, tc.wantErrorMsg)
 				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err, tc.wantErrorMsg)
+					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err, tc.wantErrorMsg)
 				}
 			})
 		}
@@ -2179,7 +3641,7 @@ func TestDecodeInvalidTagTime(t *testing.T) {
 }
 
 func TestDecodeTag0Error(t *testing.T) {
-	cborData := hexDecode("c01a514b67b0") // 0(1363896240)
+	data := hexDecode("c01a514b67b0") // 0(1363896240)
 	wantErrorMsg := "cbor: tag number 0 must be followed by text string, got positive integer"
 
 	timeTagIgnoredDM, _ := DecOptions{TimeTag: DecTagIgnored}.DecMode()
@@ -2199,33 +3661,33 @@ func TestDecodeTag0Error(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Decode to interface{}
 			var v interface{}
-			if err := tc.dm.Unmarshal(cborData, &v); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", cborData, wantErrorMsg)
+			if err := tc.dm.Unmarshal(data, &v); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", data, wantErrorMsg)
 			} else if !strings.Contains(err.Error(), wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err, wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err, wantErrorMsg)
 			}
 
 			// Decode to time.Time
 			var tm time.Time
-			if err := tc.dm.Unmarshal(cborData, &tm); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", cborData, wantErrorMsg)
+			if err := tc.dm.Unmarshal(data, &tm); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", data, wantErrorMsg)
 			} else if !strings.Contains(err.Error(), wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err, wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err, wantErrorMsg)
 			}
 
 			// Decode to uint64
 			var ui uint64
-			if err := tc.dm.Unmarshal(cborData, &ui); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", cborData, wantErrorMsg)
+			if err := tc.dm.Unmarshal(data, &ui); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", data, wantErrorMsg)
 			} else if !strings.Contains(err.Error(), wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err, wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err, wantErrorMsg)
 			}
 		})
 	}
 }
 
 func TestDecodeTag1Error(t *testing.T) {
-	cborData := hexDecode("c174323031332d30332d32315432303a30343a30305a") // 1("2013-03-21T20:04:00Z")
+	data := hexDecode("c174323031332d30332d32315432303a30343a30305a") // 1("2013-03-21T20:04:00Z")
 	wantErrorMsg := "cbor: tag number 1 must be followed by integer or floating-point number, got UTF-8 text string"
 
 	timeTagIgnoredDM, _ := DecOptions{TimeTag: DecTagIgnored}.DecMode()
@@ -2245,26 +3707,26 @@ func TestDecodeTag1Error(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Decode to interface{}
 			var v interface{}
-			if err := tc.dm.Unmarshal(cborData, &v); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", cborData, wantErrorMsg)
+			if err := tc.dm.Unmarshal(data, &v); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", data, wantErrorMsg)
 			} else if !strings.Contains(err.Error(), wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err, wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err, wantErrorMsg)
 			}
 
 			// Decode to time.Time
 			var tm time.Time
-			if err := tc.dm.Unmarshal(cborData, &tm); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", cborData, wantErrorMsg)
+			if err := tc.dm.Unmarshal(data, &tm); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", data, wantErrorMsg)
 			} else if !strings.Contains(err.Error(), wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err, wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err, wantErrorMsg)
 			}
 
 			// Decode to string
 			var s string
-			if err := tc.dm.Unmarshal(cborData, &s); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", cborData, wantErrorMsg)
+			if err := tc.dm.Unmarshal(data, &s); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", data, wantErrorMsg)
 			} else if !strings.Contains(err.Error(), wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err, wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err, wantErrorMsg)
 			}
 		})
 	}
@@ -2273,82 +3735,82 @@ func TestDecodeTag1Error(t *testing.T) {
 func TestDecodeTimeStreaming(t *testing.T) {
 	// Decoder decodes from mixed invalid and valid time.
 	testCases := []struct {
-		cborData     []byte
+		data         []byte
 		wantErrorMsg string
 		wantObj      time.Time
 	}{
 		{
-			cborData:     hexDecode("c07f62e6b061b4ff"),
+			data:         hexDecode("c07f62e6b061b4ff"),
 			wantErrorMsg: "cbor: invalid UTF-8 string",
 		},
 		{
-			cborData: hexDecode("c074323031332d30332d32315432303a30343a30305a"),
-			wantObj:  time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
+			data:    hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			wantObj: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
 		},
 		{
-			cborData:     hexDecode("c01a514b67b0"),
+			data:         hexDecode("c01a514b67b0"),
 			wantErrorMsg: "cbor: tag number 0 must be followed by text string, got positive integer",
 		},
 		{
-			cborData: hexDecode("c074323031332d30332d32315432303a30343a30305a"),
-			wantObj:  time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
+			data:    hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			wantObj: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
 		},
 		{
-			cborData:     hexDecode("c13bffffffffffffffff"),
+			data:         hexDecode("c13bffffffffffffffff"),
 			wantErrorMsg: "cbor: cannot unmarshal tag into Go value of type time.Time",
 		},
 		{
-			cborData: hexDecode("c11a514b67b0"),
-			wantObj:  time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
+			data:    hexDecode("c11a514b67b0"),
+			wantObj: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
 		},
 		{
-			cborData:     hexDecode("c174323031332d30332d32315432303a30343a30305a"),
+			data:         hexDecode("c174323031332d30332d32315432303a30343a30305a"),
 			wantErrorMsg: "tag number 1 must be followed by integer or floating-point number, got UTF-8 text string",
 		},
 		{
-			cborData: hexDecode("c11a514b67b0"),
-			wantObj:  time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
+			data:    hexDecode("c11a514b67b0"),
+			wantObj: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
 		},
 	}
 	// Data is a mixed stream of valid and invalid time data
-	var cborData []byte
+	var data []byte
 	for _, tc := range testCases {
-		cborData = append(cborData, tc.cborData...)
+		data = append(data, tc.data...)
 	}
 	dm, _ := DecOptions{TimeTag: DecTagOptional}.DecMode()
-	dec := dm.NewDecoder(bytes.NewReader(cborData))
+	dec := dm.NewDecoder(bytes.NewReader(data))
 	for _, tc := range testCases {
 		var v interface{}
 		err := dec.Decode(&v)
 		if tc.wantErrorMsg != "" {
 			if err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", tc.cborData, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", tc.data, tc.wantErrorMsg)
 			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error msg %q, want %q", tc.cborData, err, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error msg %q, want %q", tc.data, err, tc.wantErrorMsg)
 			}
 		} else {
 			tm, ok := v.(time.Time)
 			if !ok {
-				t.Errorf("Unmarshal(0x%x) returned %s (%T), want time.Time", tc.cborData, v, v)
+				t.Errorf("Unmarshal(0x%x) returned %s (%T), want time.Time", tc.data, v, v)
 			}
 			if !tc.wantObj.Equal(tm) {
-				t.Errorf("Unmarshal(0x%x) returned %s, want %s", tc.cborData, tm, tc.wantObj)
+				t.Errorf("Unmarshal(0x%x) returned %s, want %s", tc.data, tm, tc.wantObj)
 			}
 		}
 	}
-	dec = dm.NewDecoder(bytes.NewReader(cborData))
+	dec = dm.NewDecoder(bytes.NewReader(data))
 	for _, tc := range testCases {
 		var tm time.Time
 		err := dec.Decode(&tm)
 		if tc.wantErrorMsg != "" {
 			if err == nil {
-				t.Errorf("Unmarshal(0x%x) did't return error, want error msg %q", tc.cborData, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) did't return error, want error msg %q", tc.data, tc.wantErrorMsg)
 			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error msg %q, want %q", tc.cborData, err, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error msg %q, want %q", tc.data, err, tc.wantErrorMsg)
 			}
 		} else {
 			if !tc.wantObj.Equal(tm) {
-				t.Errorf("Unmarshal(0x%x) returned %s, want %s", tc.cborData, tm, tc.wantObj)
+				t.Errorf("Unmarshal(0x%x) returned %s, want %s", tc.data, tm, tc.wantObj)
 			}
 		}
 	}
@@ -2478,14 +3940,14 @@ func TestUnmarshalStructTag1(t *testing.T) {
 		B: "B",
 		C: "C",
 	}
-	cborData := hexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
+	data := hexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
 
 	var v strc
-	if err := Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, want, want)
 	}
 }
 
@@ -2500,14 +3962,14 @@ func TestUnmarshalStructTag2(t *testing.T) {
 		B: "B",
 		C: "C",
 	}
-	cborData := hexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
+	data := hexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
 
 	var v strc
-	if err := Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, want, want)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, want, want)
 	}
 }
 
@@ -2522,14 +3984,14 @@ func TestUnmarshalStructTag3(t *testing.T) {
 		B: "B",
 		C: "C",
 	}
-	cborData := hexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
+	data := hexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
 
 	var v strc
-	if err := Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, v, v, want, want)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, v, v, want, want)
 	}
 }
 
@@ -2543,14 +4005,14 @@ func TestUnmarshalStructTag4(t *testing.T) {
 		A: "A",
 		B: "B",
 	}
-	cborData := hexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
+	data := hexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
 
 	var v strc
-	if err := Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, v, v, want, want)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, v, v, want, want)
 	}
 }
 
@@ -2629,29 +4091,29 @@ func TestBinaryUnmarshalerError(t *testing.T) { //nolint:dupl
 	testCases := []struct {
 		name         string
 		typ          reflect.Type
-		cborData     []byte
+		data         []byte
 		wantErrorMsg string
 	}{
 		{
 			name:         "primitive type",
 			typ:          reflect.TypeOf(number(0)),
-			cborData:     hexDecode("44499602d2"),
+			data:         hexDecode("44499602d2"),
 			wantErrorMsg: "number:UnmarshalBinary: invalid length",
 		},
 		{
 			name:         "struct type",
 			typ:          reflect.TypeOf(stru{}),
-			cborData:     hexDecode("47612C622C632C64"),
+			data:         hexDecode("47612C622C632C64"),
 			wantErrorMsg: "stru:UnmarshalBinary: invalid element count",
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			v := reflect.New(tc.typ)
-			if err := Unmarshal(tc.cborData, v.Interface()); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.cborData, tc.wantErrorMsg)
+			if err := Unmarshal(tc.data, v.Interface()); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.data, tc.wantErrorMsg)
 			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}
@@ -2737,29 +4199,29 @@ func TestUnmarshalerError(t *testing.T) { //nolint:dupl
 	testCases := []struct {
 		name         string
 		typ          reflect.Type
-		cborData     []byte
+		data         []byte
 		wantErrorMsg string
 	}{
 		{
 			name:         "primitive type",
 			typ:          reflect.TypeOf(number2(0)),
-			cborData:     hexDecode("44499602d2"),
+			data:         hexDecode("44499602d2"),
 			wantErrorMsg: "cbor: cannot unmarshal byte string into Go value of type map[string]uint64",
 		},
 		{
 			name:         "struct type",
 			typ:          reflect.TypeOf(stru2{}),
-			cborData:     hexDecode("47612C622C632C64"),
+			data:         hexDecode("47612C622C632C64"),
 			wantErrorMsg: "cbor: cannot unmarshal byte string into Go value of type []string",
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			v := reflect.New(tc.typ)
-			if err := Unmarshal(tc.cborData, v.Interface()); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.cborData, tc.wantErrorMsg)
+			if err := Unmarshal(tc.data, v.Interface()); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.data, tc.wantErrorMsg)
 			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}
@@ -2777,25 +4239,25 @@ func TestMarshalerError(t *testing.T) {
 
 // Found at https://github.com/oasislabs/oasis-core/blob/master/go/common/cbor/cbor_test.go
 func TestOutOfMem1(t *testing.T) {
-	cborData := []byte("\x9b\x00\x00000000")
+	data := []byte("\x9b\x00\x00000000")
 	var f []byte
-	if err := Unmarshal(cborData, &f); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	if err := Unmarshal(data, &f); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	}
 }
 
 // Found at https://github.com/oasislabs/oasis-core/blob/master/go/common/cbor/cbor_test.go
 func TestOutOfMem2(t *testing.T) {
-	cborData := []byte("\x9b\x00\x00\x81112233")
+	data := []byte("\x9b\x00\x00\x81112233")
 	var f []byte
-	if err := Unmarshal(cborData, &f); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	if err := Unmarshal(data, &f); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	}
 }
 
 // Found at https://github.com/cose-wg/Examples/tree/master/RFC8152
 func TestCOSEExamples(t *testing.T) {
-	cborData := [][]byte{
+	data := [][]byte{
 		hexDecode("D8608443A10101A1054C02D1F7E6F26C43D4868D87CE582464F84D913BA60A76070A9A48F26E97E863E2852948658F0811139868826E89218A75715B818440A101225818DBD43C4E9D719C27C6275C67D628D493F090593DB8218F11818344A1013818A220A401022001215820B2ADD44368EA6D641F9CA9AF308B4079AEB519F11E9B8A55A600B21233E86E6822F40458246D65726961646F632E6272616E64796275636B406275636B6C616E642E6578616D706C6540"),
 		hexDecode("D8628440A054546869732069732074686520636F6E74656E742E818343A10126A1044231315840E2AEAFD40D69D19DFE6E52077C5D7FF4E408282CBEFB5D06CBF414AF2E19D982AC45AC98B8544C908B4507DE1E90B717C3D34816FE926A2B98F53AFD2FA0F30A"),
 		hexDecode("D8628440A054546869732069732074686520636F6E74656E742E828343A10126A1044231315840E2AEAFD40D69D19DFE6E52077C5D7FF4E408282CBEFB5D06CBF414AF2E19D982AC45AC98B8544C908B4507DE1E90B717C3D34816FE926A2B98F53AFD2FA0F30A8344A1013823A104581E62696C626F2E62616767696E7340686F626269746F6E2E6578616D706C65588400A2D28A7C2BDB1587877420F65ADF7D0B9A06635DD1DE64BB62974C863F0B160DD2163734034E6AC003B01E8705524C5C4CA479A952F0247EE8CB0B4FB7397BA08D009E0C8BF482270CC5771AA143966E5A469A09F613488030C5B07EC6D722E3835ADB5B2D8C44E95FFB13877DD2582866883535DE3BB03D01753F83AB87BB4F7A0297"),
@@ -2814,7 +4276,7 @@ func TestCOSEExamples(t *testing.T) {
 		hexDecode("D8618543A10105A054546869732069732074686520636F6E74656E742E5820BF48235E809B5C42E995F2B7D5FA13620E7ED834E337F6AA43DF161E49E9323E828344A101381CA220A4010220032158420043B12669ACAC3FD27898FFBA0BCD2E6C366D53BC4DB71F909A759304ACFB5E18CDC7BA0B13FF8C7636271A6924B1AC63C02688075B55EF2D613574E7DC242F79C322F504581E62696C626F2E62616767696E7340686F626269746F6E2E6578616D706C655828339BC4F79984CDC6B3E6CE5F315A4C7D2B0AC466FCEA69E8C07DFBCA5BB1F661BC5F8E0DF9E3EFF58340A2012404582430313863306165352D346439622D343731622D626664362D65656633313462633730333758280B2C7CFCE04E98276342D6476A7723C090DFDD15F9A518E7736549E998370695E6D6A83B4AE507BB"),
 		hexDecode("D18443A1010FA054546869732069732074686520636F6E74656E742E48726043745027214F"),
 	}
-	for _, d := range cborData {
+	for _, d := range data {
 		var v interface{}
 		if err := Unmarshal(d, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", d, err)
@@ -2826,14 +4288,14 @@ func TestUnmarshalStructKeyAsIntError(t *testing.T) {
 	type T1 struct {
 		F1 int `cbor:"1,keyasint"`
 	}
-	cborData := hexDecode("a13bffffffffffffffff01") // {1: -18446744073709551616}
+	data := hexDecode("a13bffffffffffffffff01") // {1: -18446744073709551616}
 	var v T1
-	if err := Unmarshal(cborData, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	if err := Unmarshal(data, &v); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 	} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), "cannot unmarshal")
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), "cannot unmarshal")
 	}
 }
 
@@ -2845,8 +4307,8 @@ func TestUnmarshalArrayToStruct(t *testing.T) {
 		C int
 	}
 	testCases := []struct {
-		name     string
-		cborData []byte
+		name string
+		data []byte
 	}{
 		{"definite length array", hexDecode("83010203")},
 		{"indefinite length array", hexDecode("9f010203ff")},
@@ -2854,8 +4316,8 @@ func TestUnmarshalArrayToStruct(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v T
-			if err := Unmarshal(tc.cborData, &v); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
+			if err := Unmarshal(tc.data, &v); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 			}
 		})
 	}
@@ -2867,10 +4329,10 @@ func TestUnmarshalArrayToStructNoToArrayOptionError(t *testing.T) {
 		B int
 		C int
 	}
-	cborData := hexDecode("8301020383010203")
+	data := hexDecode("8301020383010203")
 	var v1 T
 	wantT := T{}
-	dec := NewDecoder(bytes.NewReader(cborData))
+	dec := NewDecoder(bytes.NewReader(data))
 	if err := dec.Decode(&v1); err == nil {
 		t.Errorf("Decode(%+v) didn't return an error", v1)
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
@@ -2899,8 +4361,8 @@ func TestUnmarshalNonArrayDataToStructToArray(t *testing.T) {
 		C int
 	}
 	testCases := []struct {
-		name     string
-		cborData []byte
+		name string
+		data []byte
 	}{
 		{"CBOR positive int", hexDecode("00")},                        // 0
 		{"CBOR negative int", hexDecode("20")},                        // -1
@@ -2915,15 +4377,15 @@ func TestUnmarshalNonArrayDataToStructToArray(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v T
-			if err := Unmarshal(tc.cborData, &v); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
+			if err := Unmarshal(tc.data, &v); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
 			} else if _, ok := err.(*UnmarshalTypeError); !ok {
-				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.cborData, err)
+				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.data, err)
 			} else if !strings.Contains(err.Error(), wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborData, err.Error(), wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.data, err.Error(), wantErrorMsg)
 			}
 			if !reflect.DeepEqual(v, wantT) {
-				t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", tc.cborData, v, v, wantT, wantT)
+				t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", tc.data, v, v, wantT, wantT)
 			}
 		})
 	}
@@ -2935,10 +4397,10 @@ func TestUnmarshalArrayToStructWrongSizeError(t *testing.T) {
 		A int
 		B int
 	}
-	cborData := hexDecode("8301020383010203")
+	data := hexDecode("8301020383010203")
 	var v1 T
 	wantT := T{}
-	dec := NewDecoder(bytes.NewReader(cborData))
+	dec := NewDecoder(bytes.NewReader(data))
 	if err := dec.Decode(&v1); err == nil {
 		t.Errorf("Decode(%+v) didn't return an error", v1)
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
@@ -2968,7 +4430,7 @@ func TestUnmarshalArrayToStructWrongFieldTypeError(t *testing.T) {
 	}
 	testCases := []struct {
 		name         string
-		cborData     []byte
+		data         []byte
 		wantErrorMsg string
 		wantV        interface{}
 	}{
@@ -2980,13 +4442,13 @@ func TestUnmarshalArrayToStructWrongFieldTypeError(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v T
-			if err := Unmarshal(tc.cborData, &v); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
+			if err := Unmarshal(tc.data, &v); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
 			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.data, err.Error(), tc.wantErrorMsg)
 			}
 			if !reflect.DeepEqual(v, tc.wantV) {
-				t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", tc.cborData, v, v, tc.wantV, tc.wantV)
+				t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", tc.data, v, v, tc.wantV, tc.wantV)
 			}
 		})
 	}
@@ -3008,15 +4470,15 @@ func TestUnmarshalArrayToStructCannotSetEmbeddedPointerError(t *testing.T) {
 			*S2
 		}
 	)
-	cborData := []byte{0x82, 0x02, 0x04} // [2, 4]
+	data := []byte{0x82, 0x02, 0x04} // [2, 4]
 	const wantErrorMsg = "cannot set embedded pointer to unexported struct"
 	wantV := S{S2: &S2{Y: 4}}
 	var v S
-	err := Unmarshal(cborData, &v)
+	err := Unmarshal(data, &v)
 	if err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error, want error %q", cborData, wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) didn't return an error, want error %q", data, wantErrorMsg)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(v, wantV) {
 		t.Errorf("Decode() = %+v (%T), want %+v (%T)", v, v, wantV, wantV)
@@ -3024,68 +4486,68 @@ func TestUnmarshalArrayToStructCannotSetEmbeddedPointerError(t *testing.T) {
 }
 
 func TestUnmarshalIntoSliceError(t *testing.T) {
-	cborData := []byte{0x83, 0x61, 0x61, 0x61, 0xfe, 0x61, 0x62} // ["a", 0xfe, "b"]
+	data := []byte{0x83, 0x61, 0x61, 0x61, 0xfe, 0x61, 0x62} // ["a", 0xfe, "b"]
 	wantErrorMsg := invalidUTF8ErrorMsg
 	var want interface{}
 
 	// Unmarshal CBOR array into Go empty interface.
 	var v1 interface{}
 	want = []interface{}{"a", interface{}(nil), "b"}
-	if err := Unmarshal(cborData, &v1); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", cborData, wantErrorMsg)
+	if err := Unmarshal(data, &v1); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
 	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(v1, want) {
-		t.Errorf("Unmarshal(0x%x) = %v, want %v", cborData, v1, want)
+		t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v1, want)
 	}
 
 	// Unmarshal CBOR array into Go slice.
 	var v2 []string
 	want = []string{"a", "", "b"}
-	if err := Unmarshal(cborData, &v2); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", cborData, wantErrorMsg)
+	if err := Unmarshal(data, &v2); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
 	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(v2, want) {
-		t.Errorf("Unmarshal(0x%x) = %v, want %v", cborData, v2, want)
+		t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v2, want)
 	}
 
 	// Unmarshal CBOR array into Go array.
 	var v3 [3]string
 	want = [3]string{"a", "", "b"}
-	if err := Unmarshal(cborData, &v3); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", cborData, wantErrorMsg)
+	if err := Unmarshal(data, &v3); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
 	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(v3, want) {
-		t.Errorf("Unmarshal(0x%x) = %v, want %v", cborData, v3, want)
+		t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v3, want)
 	}
 
 	// Unmarshal CBOR array into populated Go slice.
 	v4 := []string{"hello", "to", "you"}
 	want = []string{"a", "to", "b"}
-	if err := Unmarshal(cborData, &v4); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", cborData, wantErrorMsg)
+	if err := Unmarshal(data, &v4); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
 	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(v4, want) {
-		t.Errorf("Unmarshal(0x%x) = %v, want %v", cborData, v4, want)
+		t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v4, want)
 	}
 }
 
 func TestUnmarshalIntoMapError(t *testing.T) {
-	cborData := [][]byte{
+	data := [][]byte{
 		{0xa3, 0x61, 0x61, 0x61, 0x41, 0x61, 0xfe, 0x61, 0x43, 0x61, 0x62, 0x61, 0x42}, // {"a":"A", 0xfe: "C", "b":"B"}
 		{0xa3, 0x61, 0x61, 0x61, 0x41, 0x61, 0x63, 0x61, 0xfe, 0x61, 0x62, 0x61, 0x42}, // {"a":"A", "c": 0xfe, "b":"B"}
 	}
 	wantErrorMsg := invalidUTF8ErrorMsg
 	var want interface{}
 
-	for _, data := range cborData {
+	for _, data := range data {
 		// Unmarshal CBOR map into Go empty interface.
 		var v1 interface{}
 		want = map[interface{}]interface{}{"a": "A", "b": "B"}
@@ -3153,7 +4615,7 @@ func TestUnmarshalDeepNesting(t *testing.T) {
 	if err != nil {
 		t.Errorf("EncMode() returned error %v", err)
 	}
-	cborData, err := em.Marshal(root)
+	data, err := em.Marshal(root)
 	if err != nil {
 		t.Errorf("Marshal() deeply nested object returned error %v", err)
 	}
@@ -3164,7 +4626,7 @@ func TestUnmarshalDeepNesting(t *testing.T) {
 		t.Errorf("DecMode() returned error %v", err)
 	}
 	var readback TestNode
-	err = dm.Unmarshal(cborData, &readback)
+	err = dm.Unmarshal(data, &readback)
 	if err != nil {
 		t.Errorf("Unmarshal() of deeply nested object returned error: %v", err)
 	}
@@ -3187,7 +4649,7 @@ func TestStructToArrayError(t *testing.T) {
 		Ciphertext  []byte
 	}
 	for _, tc := range []struct {
-		cborData     []byte
+		data         []byte
 		wantErrorMsg string
 	}{
 		// [-17, [-17, -17], -17]
@@ -3196,10 +4658,10 @@ func TestStructToArrayError(t *testing.T) {
 		{hexDecode("9f9fff9fff9f65933030303030ffff"), "cbor: cannot unmarshal array into Go struct field cbor.nestedCWT.Unprotected of type cbor.coseHeader (cannot decode CBOR array to struct without toarray option)"},
 	} {
 		var v nestedCWT
-		if err := Unmarshal(tc.cborData, &v); err == nil {
-			t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.cborData, tc.wantErrorMsg)
+		if err := Unmarshal(tc.data, &v); err == nil {
+			t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, tc.wantErrorMsg)
 		} else if err.Error() != tc.wantErrorMsg {
-			t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+			t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 		}
 	}
 }
@@ -3214,31 +4676,31 @@ func TestStructKeyAsIntError(t *testing.T) {
 		Iat float64 `cbor:"6,keyasint"`
 		Cti []byte  `cbor:"7,keyasint"`
 	}
-	cborData := hexDecode("bf0783e662f03030ff") // {7: [simple(6), "\xF00", -17]}
+	data := hexDecode("bf0783e662f03030ff") // {7: [simple(6), "\xF00", -17]}
 	wantErrorMsg := invalidUTF8ErrorMsg
 	wantV := claims{Cti: []byte{6, 0, 0}}
 	var v claims
-	if err := Unmarshal(cborData, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", cborData, wantErrorMsg)
+	if err := Unmarshal(data, &v); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
 	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(v, wantV) {
-		t.Errorf("Unmarshal(0x%x) = %v, want %v", cborData, v, wantV)
+		t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v, wantV)
 	}
 }
 
 func TestUnmarshalToNotNilInterface(t *testing.T) {
-	cborData := hexDecode("83010203") // []uint64{1, 2, 3}
-	s := "hello"                      //nolint:goconst
-	var v interface{} = s             // Unmarshal() sees v as type interface{} and sets CBOR data as default Go type.  s is unmodified.  Same behavior as encoding/json.
+	data := hexDecode("83010203") // []uint64{1, 2, 3}
+	s := "hello"                  //nolint:goconst
+	var v interface{} = s         // Unmarshal() sees v as type interface{} and sets CBOR data as default Go type.  s is unmodified.  Same behavior as encoding/json.
 	wantV := []interface{}{uint64(1), uint64(2), uint64(3)}
-	if err := Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	} else if !reflect.DeepEqual(v, wantV) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantV, wantV)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantV, wantV)
 	} else if s != "hello" {
-		t.Errorf("Unmarshal(0x%x) modified s %q", cborData, s)
+		t.Errorf("Unmarshal(0x%x) modified s %q", data, s)
 	}
 }
 
@@ -3537,19 +4999,19 @@ func TestUnmarshalStructKeyAsIntNumError(t *testing.T) {
 	}
 	testCases := []struct {
 		name         string
-		cborData     []byte
+		data         []byte
 		obj          interface{}
 		wantErrorMsg string
 	}{
 		{
 			name:         "string as key",
-			cborData:     hexDecode("a1616101"),
+			data:         hexDecode("a1616101"),
 			obj:          T1{},
 			wantErrorMsg: "cbor: failed to parse field name \"a\" to int",
 		},
 		{
 			name:         "out of range int as key",
-			cborData:     hexDecode("a13bffffffffffffffff01"),
+			data:         hexDecode("a13bffffffffffffffff01"),
 			obj:          T2{},
 			wantErrorMsg: "cbor: failed to parse field name \"-18446744073709551616\" to int",
 		},
@@ -3557,11 +5019,11 @@ func TestUnmarshalStructKeyAsIntNumError(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			v := reflect.New(reflect.TypeOf(tc.obj))
-			err := Unmarshal(tc.cborData, v.Interface())
+			err := Unmarshal(tc.data, v.Interface())
 			if err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error, want error %q", tc.cborData, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) didn't return an error, want error %q", tc.data, tc.wantErrorMsg)
 			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) error %v, want %v", tc.cborData, err.Error(), tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) error %v, want %v", tc.data, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}
@@ -3569,19 +5031,19 @@ func TestUnmarshalStructKeyAsIntNumError(t *testing.T) {
 
 func TestUnmarshalEmptyMapWithDupMapKeyOpt(t *testing.T) {
 	testCases := []struct {
-		name     string
-		cborData []byte
-		wantV    interface{}
+		name  string
+		data  []byte
+		wantV interface{}
 	}{
 		{
-			name:     "empty map",
-			cborData: hexDecode("a0"),
-			wantV:    map[interface{}]interface{}{},
+			name:  "empty map",
+			data:  hexDecode("a0"),
+			wantV: map[interface{}]interface{}{},
 		},
 		{
-			name:     "indefinite empty map",
-			cborData: hexDecode("bfff"),
-			wantV:    map[interface{}]interface{}{},
+			name:  "indefinite empty map",
+			data:  hexDecode("bfff"),
+			wantV: map[interface{}]interface{}{},
 		},
 	}
 
@@ -3593,27 +5055,27 @@ func TestUnmarshalEmptyMapWithDupMapKeyOpt(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v interface{}
-			if err := dm.Unmarshal(tc.cborData, &v); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
+			if err := dm.Unmarshal(tc.data, &v); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 			}
 			if !reflect.DeepEqual(v, tc.wantV) {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantV, tc.wantV)
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.wantV, tc.wantV)
 			}
 		})
 	}
 }
 
 func TestUnmarshalDupMapKeyToEmptyInterface(t *testing.T) {
-	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+	data := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	// Duplicate key overwrites previous value (default).
 	wantV := map[interface{}]interface{}{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
 	var v interface{}
-	if err := Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if !reflect.DeepEqual(v, wantV) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantV, wantV)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantV, wantV)
 	}
 
 	// Duplicate key triggers error.
@@ -3621,24 +5083,24 @@ func TestUnmarshalDupMapKeyToEmptyInterface(t *testing.T) {
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var v2 interface{}
-	if err := dm.Unmarshal(cborData, &v2); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	if err := dm.Unmarshal(data, &v2); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*DupMapKeyError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
 	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(v2, wantV) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v2, v2, wantV, wantV)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v2, v2, wantV, wantV)
 	}
 }
 
 func TestStreamDupMapKeyToEmptyInterface(t *testing.T) {
-	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // map with duplicate key "c": {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+	data := hexDecode("a6616161416162614261636143616161466164614461656145") // map with duplicate key "c": {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	var b []byte
 	for i := 0; i < 3; i++ {
-		b = append(b, cborData...)
+		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
@@ -3673,7 +5135,7 @@ func TestStreamDupMapKeyToEmptyInterface(t *testing.T) {
 			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
 		}
 		if !reflect.DeepEqual(v2, wantV) {
-			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v2, v2, wantV, wantV)
+			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v2, v2, wantV, wantV)
 		}
 	}
 	if err := dec.Decode(&v); err != io.EOF {
@@ -3682,16 +5144,16 @@ func TestStreamDupMapKeyToEmptyInterface(t *testing.T) {
 }
 
 func TestUnmarshalDupMapKeyToEmptyMap(t *testing.T) {
-	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+	data := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	// Duplicate key overwrites previous value (default).
 	wantM := map[string]string{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
 	var m map[string]string
-	if err := Unmarshal(cborData, &m); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &m); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if !reflect.DeepEqual(m, wantM) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, m, m, wantM, wantM)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, m, m, wantM, wantM)
 	}
 
 	// Duplicate key triggers error.
@@ -3699,24 +5161,24 @@ func TestUnmarshalDupMapKeyToEmptyMap(t *testing.T) {
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var m2 map[string]string
-	if err := dm.Unmarshal(cborData, &m2); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	if err := dm.Unmarshal(data, &m2); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*DupMapKeyError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
 	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(m2, wantM) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, m2, m2, wantM, wantM)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, m2, m2, wantM, wantM)
 	}
 }
 
 func TestStreamDupMapKeyToEmptyMap(t *testing.T) {
-	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+	data := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	var b []byte
 	for i := 0; i < 3; i++ {
-		b = append(b, cborData...)
+		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
@@ -3751,7 +5213,7 @@ func TestStreamDupMapKeyToEmptyMap(t *testing.T) {
 			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
 		}
 		if !reflect.DeepEqual(m2, wantM) {
-			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, m2, m2, wantM, wantM)
+			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, m2, m2, wantM, wantM)
 		}
 	}
 	if err := dec.Decode(&v); err != io.EOF {
@@ -3760,16 +5222,16 @@ func TestStreamDupMapKeyToEmptyMap(t *testing.T) {
 }
 
 func TestUnmarshalDupMapKeyToNotEmptyMap(t *testing.T) {
-	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+	data := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	// Duplicate key overwrites previous value (default).
 	m := map[string]string{"a": "Z", "b": "Z", "c": "Z", "d": "Z", "e": "Z", "f": "Z"}
 	wantM := map[string]string{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E", "f": "Z"}
-	if err := Unmarshal(cborData, &m); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &m); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if !reflect.DeepEqual(m, wantM) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, m, m, wantM, wantM)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, m, m, wantM, wantM)
 	}
 
 	// Duplicate key triggers error.
@@ -3777,24 +5239,24 @@ func TestUnmarshalDupMapKeyToNotEmptyMap(t *testing.T) {
 	wantM = map[string]string{"a": "", "b": "B", "c": "C", "d": "Z", "e": "Z", "f": "Z"}
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
-	if err := dm.Unmarshal(cborData, &m2); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	if err := dm.Unmarshal(data, &m2); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*DupMapKeyError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(m2, wantM) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, m2, m2, wantM, wantM)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, m2, m2, wantM, wantM)
 	}
 }
 
 func TestStreamDupMapKeyToNotEmptyMap(t *testing.T) {
-	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+	data := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	var b []byte
 	for i := 0; i < 3; i++ {
-		b = append(b, cborData...)
+		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
@@ -3829,7 +5291,7 @@ func TestStreamDupMapKeyToNotEmptyMap(t *testing.T) {
 			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
 		}
 		if !reflect.DeepEqual(m2, wantM) {
-			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, m2, m2, wantM, wantM)
+			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, m2, m2, wantM, wantM)
 		}
 	}
 	if err := dec.Decode(&v); err != io.EOF {
@@ -3845,16 +5307,16 @@ func TestUnmarshalDupMapKeyToStruct(t *testing.T) {
 		D string `cbor:"d"`
 		E string `cbor:"e"`
 	}
-	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+	data := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	// Duplicate key doesn't overwrite previous value (default).
 	wantS := s{A: "A", B: "B", C: "C", D: "D", E: "E"}
 	var s1 s
-	if err := Unmarshal(cborData, &s1); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &s1); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
 	}
 
 	// Duplicate key triggers error.
@@ -3862,15 +5324,15 @@ func TestUnmarshalDupMapKeyToStruct(t *testing.T) {
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
-	if err := dm.Unmarshal(cborData, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	if err := dm.Unmarshal(data, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
 	} else if _, ok := err.(*DupMapKeyError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
 	}
 }
 
@@ -3882,11 +5344,11 @@ func TestStreamDupMapKeyToStruct(t *testing.T) {
 		D string `cbor:"d"`
 		E string `cbor:"e"`
 	}
-	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+	data := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	var b []byte
 	for i := 0; i < 3; i++ {
-		b = append(b, cborData...)
+		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
@@ -3921,7 +5383,7 @@ func TestStreamDupMapKeyToStruct(t *testing.T) {
 			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
 		}
 		if !reflect.DeepEqual(s2, wantS) {
-			t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+			t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
 		}
 	}
 	if err := dec.Decode(&v); err != io.EOF {
@@ -3936,16 +5398,16 @@ func TestUnmarshalDupMapKeyToStructKeyAsInt(t *testing.T) {
 		B int `cbor:"3,keyasint"`
 		C int `cbor:"5,keyasint"`
 	}
-	cborData := hexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
+	data := hexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
 
 	// Duplicate key doesn't overwrite previous value (default).
 	wantS := s{A: 2, B: 4, C: 6}
 	var s1 s
-	if err := Unmarshal(cborData, &s1); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &s1); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
 	}
 
 	// Duplicate key triggers error.
@@ -3953,15 +5415,15 @@ func TestUnmarshalDupMapKeyToStructKeyAsInt(t *testing.T) {
 	wantErrorMsg := "cbor: found duplicate map key \"1\" at map element index 2"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
-	if err := dm.Unmarshal(cborData, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	if err := dm.Unmarshal(data, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
 	} else if _, ok := err.(*DupMapKeyError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
 	}
 }
 
@@ -3971,11 +5433,11 @@ func TestStreamDupMapKeyToStructKeyAsInt(t *testing.T) {
 		B int `cbor:"3,keyasint"`
 		C int `cbor:"5,keyasint"`
 	}
-	cborData := hexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
+	data := hexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
 
 	var b []byte
 	for i := 0; i < 3; i++ {
-		b = append(b, cborData...)
+		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
@@ -4010,7 +5472,7 @@ func TestStreamDupMapKeyToStructKeyAsInt(t *testing.T) {
 			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
 		}
 		if !reflect.DeepEqual(s2, wantS) {
-			t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+			t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
 		}
 	}
 	if err := dec.Decode(&v); err != io.EOF {
@@ -4025,15 +5487,15 @@ func TestUnmarshalDupMapKeyToStructNoMatchingField(t *testing.T) {
 		D string `cbor:"d"`
 		E string `cbor:"e"`
 	}
-	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+	data := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	wantS := s{B: "B", C: "C", D: "D", E: "E"}
 	var s1 s
-	if err := Unmarshal(cborData, &s1); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &s1); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
 	}
 
 	// Duplicate key triggers error even though map key "a" doesn't have a corresponding struct field.
@@ -4041,15 +5503,15 @@ func TestUnmarshalDupMapKeyToStructNoMatchingField(t *testing.T) {
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
-	if err := dm.Unmarshal(cborData, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	if err := dm.Unmarshal(data, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
 	} else if _, ok := err.(*DupMapKeyError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
 	}
 }
 
@@ -4060,11 +5522,11 @@ func TestStreamDupMapKeyToStructNoMatchingField(t *testing.T) {
 		D string `cbor:"d"`
 		E string `cbor:"e"`
 	}
-	cborData := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+	data := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	var b []byte
 	for i := 0; i < 3; i++ {
-		b = append(b, cborData...)
+		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
@@ -4112,15 +5574,15 @@ func TestUnmarshalDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
 		B int `cbor:"3,keyasint"`
 		C int `cbor:"5,keyasint"`
 	}
-	cborData := hexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
+	data := hexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
 
 	wantS := s{B: 4, C: 6}
 	var s1 s
-	if err := Unmarshal(cborData, &s1); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &s1); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
 	}
 
 	// Duplicate key triggers error even though map key "a" doesn't have a corresponding struct field.
@@ -4128,15 +5590,15 @@ func TestUnmarshalDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
 	wantErrorMsg := "cbor: found duplicate map key \"1\" at map element index 2"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
-	if err := dm.Unmarshal(cborData, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	if err := dm.Unmarshal(data, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
 	} else if _, ok := err.(*DupMapKeyError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
 	}
 }
 
@@ -4145,11 +5607,11 @@ func TestStreamDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
 		B int `cbor:"3,keyasint"`
 		C int `cbor:"5,keyasint"`
 	}
-	cborData := hexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
+	data := hexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
 
 	var b []byte
 	for i := 0; i < 3; i++ {
-		b = append(b, cborData...)
+		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
@@ -4200,35 +5662,35 @@ func TestUnmarshalDupMapKeyToStructWrongType(t *testing.T) {
 		D string `cbor:"d"`
 		E string `cbor:"e"`
 	}
-	cborData := hexDecode("a861616141fa47c35000026162614261636143fa47c3500003616161466164614461656145") // {"a": "A", 100000.0:2, "b": "B", "c": "C", 100000.0:3, "a": "F", "d": "D", "e": "E"}
+	data := hexDecode("a861616141fa47c35000026162614261636143fa47c3500003616161466164614461656145") // {"a": "A", 100000.0:2, "b": "B", "c": "C", 100000.0:3, "a": "F", "d": "D", "e": "E"}
 
 	var s1 s
 	wantS := s{A: "A", B: "B", C: "C", D: "D", E: "E"}
 	wantErrorMsg := "cbor: cannot unmarshal"
-	if err := Unmarshal(cborData, &s1); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	if err := Unmarshal(data, &s1); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
 	}
 
 	wantS = s{A: "A", B: "B", C: "C"}
 	wantErrorMsg = "cbor: found duplicate map key \"100000\" at map element index 4"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
-	if err := dm.Unmarshal(cborData, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	if err := dm.Unmarshal(data, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
 	} else if _, ok := err.(*DupMapKeyError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
 	}
 }
 
@@ -4240,11 +5702,11 @@ func TestStreamDupMapKeyToStructWrongType(t *testing.T) {
 		D string `cbor:"d"`
 		E string `cbor:"e"`
 	}
-	cborData := hexDecode("a861616141fa47c35000026162614261636143fa47c3500003616161466164614461656145") // {"a": "A", 100000.0:2, "b": "B", "c": "C", 100000.0:3, "a": "F", "d": "D", "e": "E"}
+	data := hexDecode("a861616141fa47c35000026162614261636143fa47c3500003616161466164614461656145") // {"a": "A", 100000.0:2, "b": "B", "c": "C", 100000.0:3, "a": "F", "d": "D", "e": "E"}
 
 	var b []byte
 	for i := 0; i < 3; i++ {
-		b = append(b, cborData...)
+		b = append(b, data...)
 	}
 
 	wantS := s{A: "A", B: "B", C: "C", D: "D", E: "E"}
@@ -4253,14 +5715,14 @@ func TestStreamDupMapKeyToStructWrongType(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		var s1 s
 		if err := dec.Decode(&s1); err == nil {
-			t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+			t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 		} else if _, ok := err.(*UnmarshalTypeError); !ok {
-			t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+			t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 		} else if !strings.Contains(err.Error(), wantErrorMsg) {
-			t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+			t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 		}
 		if !reflect.DeepEqual(s1, wantS) {
-			t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+			t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
 		}
 	}
 	var v interface{}
@@ -4283,7 +5745,7 @@ func TestStreamDupMapKeyToStructWrongType(t *testing.T) {
 			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
 		}
 		if !reflect.DeepEqual(s2, wantS) {
-			t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+			t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
 		}
 	}
 	if err := dec.Decode(&v); err != io.EOF {
@@ -4299,35 +5761,35 @@ func TestUnmarshalDupMapKeyToStructStringParseError(t *testing.T) {
 		D string `cbor:"d"`
 		E string `cbor:"e"`
 	}
-	cborData := hexDecode("a661fe6141616261426163614361fe61466164614461656145") // {"\xFE": "A", "b": "B", "c": "C", "\xFE": "F", "d": "D", "e": "E"}
+	data := hexDecode("a661fe6141616261426163614361fe61466164614461656145") // {"\xFE": "A", "b": "B", "c": "C", "\xFE": "F", "d": "D", "e": "E"}
 	wantS := s{A: "", B: "B", C: "C", D: "D", E: "E"}
 	wantErrorMsg := "cbor: invalid UTF-8 string"
 
 	// Duplicate key doesn't overwrite previous value (default).
 	var s1 s
-	if err := Unmarshal(cborData, &s1); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	if err := Unmarshal(data, &s1); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*SemanticError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*SemanticError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*SemanticError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
 	}
 
 	// Duplicate key triggers error.
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
-	if err := dm.Unmarshal(cborData, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	if err := dm.Unmarshal(data, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
 	} else if _, ok := err.(*SemanticError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*SemanticError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*SemanticError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
 	}
 }
 
@@ -4337,35 +5799,35 @@ func TestUnmarshalDupMapKeyToStructIntParseError(t *testing.T) {
 		B int `cbor:"3,keyasint"`
 		C int `cbor:"5,keyasint"`
 	}
-	cborData := hexDecode("a43bffffffffffffffff0203043bffffffffffffffff030506") // {-18446744073709551616:2, 3:4, -18446744073709551616:3, 5:6}
+	data := hexDecode("a43bffffffffffffffff0203043bffffffffffffffff030506") // {-18446744073709551616:2, 3:4, -18446744073709551616:3, 5:6}
 
 	// Duplicate key doesn't overwrite previous value (default).
 	wantS := s{B: 4, C: 6}
 	wantErrorMsg := "cbor: cannot unmarshal"
 	var s1 s
-	if err := Unmarshal(cborData, &s1); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	if err := Unmarshal(data, &s1); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
 	}
 
 	// Duplicate key triggers error.
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
-	if err := dm.Unmarshal(cborData, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	if err := dm.Unmarshal(data, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
 	}
 }
 
@@ -4377,35 +5839,35 @@ func TestUnmarshalDupMapKeyToStructWrongTypeParseError(t *testing.T) {
 		D string `cbor:"d"`
 		E string `cbor:"e"`
 	}
-	cborData := hexDecode("a68161fe614161626142616361438161fe61466164614461656145") // {["\xFE"]: "A", "b": "B", "c": "C", ["\xFE"]: "F", "d": "D", "e": "E"}
+	data := hexDecode("a68161fe614161626142616361438161fe61466164614461656145") // {["\xFE"]: "A", "b": "B", "c": "C", ["\xFE"]: "F", "d": "D", "e": "E"}
 
 	// Duplicate key doesn't overwrite previous value (default).
 	wantS := s{A: "", B: "B", C: "C", D: "D", E: "E"}
 	wantErrorMsg := "cbor: cannot unmarshal"
 	var s1 s
-	if err := Unmarshal(cborData, &s1); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	if err := Unmarshal(data, &s1); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
 	}
 
 	// Duplicate key triggers error.
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
-	if err := dm.Unmarshal(cborData, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	if err := dm.Unmarshal(data, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
 	}
 }
 
@@ -4417,35 +5879,35 @@ func TestUnmarshalDupMapKeyToStructWrongTypeUnhashableError(t *testing.T) {
 		D string `cbor:"d"`
 		E string `cbor:"e"`
 	}
-	cborData := hexDecode("a6810061416162614261636143810061466164614461656145") // {[0]: "A", "b": "B", "c": "C", [0]: "F", "d": "D", "e": "E"}
+	data := hexDecode("a6810061416162614261636143810061466164614461656145") // {[0]: "A", "b": "B", "c": "C", [0]: "F", "d": "D", "e": "E"}
 	wantS := s{A: "", B: "B", C: "C", D: "D", E: "E"}
 
 	// Duplicate key doesn't overwrite previous value (default).
 	wantErrorMsg := "cbor: cannot unmarshal"
 	var s1 s
-	if err := Unmarshal(cborData, &s1); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	if err := Unmarshal(data, &s1); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
 	}
 
 	// Duplicate key triggers error.
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
-	if err := dm.Unmarshal(cborData, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	if err := dm.Unmarshal(data, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
 	}
 }
 
@@ -4457,69 +5919,69 @@ func TestUnmarshalDupMapKeyToStructTagTypeError(t *testing.T) {
 		D string `cbor:"d"`
 		E string `cbor:"e"`
 	}
-	cborData := hexDecode("a6c24901000000000000000061416162614261636143c24901000000000000000061466164614461656145") // {bignum(18446744073709551616): "A", "b": "B", "c": "C", bignum(18446744073709551616): "F", "d": "D", "e": "E"}
+	data := hexDecode("a6c24901000000000000000061416162614261636143c24901000000000000000061466164614461656145") // {bignum(18446744073709551616): "A", "b": "B", "c": "C", bignum(18446744073709551616): "F", "d": "D", "e": "E"}
 	wantS := s{A: "", B: "B", C: "C", D: "D", E: "E"}
 
 	// Duplicate key doesn't overwrite previous value (default).
 	wantErrorMsg := "cbor: cannot unmarshal"
 	var s1 s
-	if err := Unmarshal(cborData, &s1); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	if err := Unmarshal(data, &s1); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s1, s1, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
 	}
 
 	// Duplicate key triggers error.
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
-	if err := dm.Unmarshal(cborData, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, reflect.TypeOf(s2))
+	if err := dm.Unmarshal(data, &s2); err == nil {
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
 	}
 	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", cborData, s2, s2, wantS, wantS)
+		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
 	}
 }
 
 func TestIndefiniteLengthArrayToArray(t *testing.T) {
 	testCases := []struct {
-		name     string
-		cborData []byte
-		wantV    interface{}
+		name  string
+		data  []byte
+		wantV interface{}
 	}{
 		{
-			name:     "CBOR empty array to Go 5 elem array",
-			cborData: hexDecode("9fff"),
-			wantV:    [5]byte{},
+			name:  "CBOR empty array to Go 5 elem array",
+			data:  hexDecode("9fff"),
+			wantV: [5]byte{},
 		},
 		{
-			name:     "CBOR 3 elem array to Go 5 elem array",
-			cborData: hexDecode("9f010203ff"),
-			wantV:    [5]byte{1, 2, 3, 0, 0},
+			name:  "CBOR 3 elem array to Go 5 elem array",
+			data:  hexDecode("9f010203ff"),
+			wantV: [5]byte{1, 2, 3, 0, 0},
 		},
 		{
-			name:     "CBOR 10 elem array to Go 5 elem array",
-			cborData: hexDecode("9f0102030405060708090aff"),
-			wantV:    [5]byte{1, 2, 3, 4, 5},
+			name:  "CBOR 10 elem array to Go 5 elem array",
+			data:  hexDecode("9f0102030405060708090aff"),
+			wantV: [5]byte{1, 2, 3, 4, 5},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			v := reflect.New(reflect.TypeOf(tc.wantV))
-			if err := Unmarshal(tc.cborData, v.Interface()); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
+			if err := Unmarshal(tc.data, v.Interface()); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 			}
 			if !reflect.DeepEqual(v.Elem().Interface(), tc.wantV) {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), tc.wantV, tc.wantV)
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v.Elem().Interface(), v.Elem().Interface(), tc.wantV, tc.wantV)
 			}
 		})
 	}
@@ -4529,19 +5991,19 @@ func TestExceedMaxArrayElements(t *testing.T) {
 	testCases := []struct {
 		name         string
 		opts         DecOptions
-		cborData     []byte
+		data         []byte
 		wantErrorMsg string
 	}{
 		{
 			name:         "array",
 			opts:         DecOptions{MaxArrayElements: 16},
-			cborData:     hexDecode("910101010101010101010101010101010101"),
+			data:         hexDecode("910101010101010101010101010101010101"),
 			wantErrorMsg: "cbor: exceeded max number of elements 16 for CBOR array",
 		},
 		{
 			name:         "indefinite length array",
 			opts:         DecOptions{MaxArrayElements: 16},
-			cborData:     hexDecode("9f0101010101010101010101010101010101ff"),
+			data:         hexDecode("9f0101010101010101010101010101010101ff"),
 			wantErrorMsg: "cbor: exceeded max number of elements 16 for CBOR array",
 		},
 	}
@@ -4549,10 +6011,10 @@ func TestExceedMaxArrayElements(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, _ := tc.opts.DecMode()
 			var v interface{}
-			if err := dm.Unmarshal(tc.cborData, &v); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
+			if err := dm.Unmarshal(tc.data, &v); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
 			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}
@@ -4562,19 +6024,19 @@ func TestExceedMaxMapPairs(t *testing.T) {
 	testCases := []struct {
 		name         string
 		opts         DecOptions
-		cborData     []byte
+		data         []byte
 		wantErrorMsg string
 	}{
 		{
 			name:         "array",
 			opts:         DecOptions{MaxMapPairs: 16},
-			cborData:     hexDecode("b101010101010101010101010101010101010101010101010101010101010101010101"),
+			data:         hexDecode("b101010101010101010101010101010101010101010101010101010101010101010101"),
 			wantErrorMsg: "cbor: exceeded max number of key-value pairs 16 for CBOR map",
 		},
 		{
 			name:         "indefinite length array",
 			opts:         DecOptions{MaxMapPairs: 16},
-			cborData:     hexDecode("bf01010101010101010101010101010101010101010101010101010101010101010101ff"),
+			data:         hexDecode("bf01010101010101010101010101010101010101010101010101010101010101010101ff"),
 			wantErrorMsg: "cbor: exceeded max number of key-value pairs 16 for CBOR map",
 		},
 	}
@@ -4582,10 +6044,10 @@ func TestExceedMaxMapPairs(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, _ := tc.opts.DecMode()
 			var v interface{}
-			if err := dm.Unmarshal(tc.cborData, &v); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
+			if err := dm.Unmarshal(tc.data, &v); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
 			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}
@@ -4595,31 +6057,31 @@ func TestDecIndefiniteLengthOption(t *testing.T) {
 	testCases := []struct {
 		name         string
 		opts         DecOptions
-		cborData     []byte
+		data         []byte
 		wantErrorMsg string
 	}{
 		{
 			name:         "byte string",
 			opts:         DecOptions{IndefLength: IndefLengthForbidden},
-			cborData:     hexDecode("5fff"),
+			data:         hexDecode("5fff"),
 			wantErrorMsg: "cbor: indefinite-length byte string isn't allowed",
 		},
 		{
 			name:         "text string",
 			opts:         DecOptions{IndefLength: IndefLengthForbidden},
-			cborData:     hexDecode("7fff"),
+			data:         hexDecode("7fff"),
 			wantErrorMsg: "cbor: indefinite-length UTF-8 text string isn't allowed",
 		},
 		{
 			name:         "array",
 			opts:         DecOptions{IndefLength: IndefLengthForbidden},
-			cborData:     hexDecode("9fff"),
+			data:         hexDecode("9fff"),
 			wantErrorMsg: "cbor: indefinite-length array isn't allowed",
 		},
 		{
 			name:         "indefinite length array",
 			opts:         DecOptions{IndefLength: IndefLengthForbidden},
-			cborData:     hexDecode("bfff"),
+			data:         hexDecode("bfff"),
 			wantErrorMsg: "cbor: indefinite-length map isn't allowed",
 		},
 	}
@@ -4627,36 +6089,36 @@ func TestDecIndefiniteLengthOption(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Default option allows indefinite length items
 			var v interface{}
-			if err := Unmarshal(tc.cborData, &v); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned an error %v", tc.cborData, err)
+			if err := Unmarshal(tc.data, &v); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned an error %v", tc.data, err)
 			}
 
 			dm, _ := tc.opts.DecMode()
-			if err := dm.Unmarshal(tc.cborData, &v); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
+			if err := dm.Unmarshal(tc.data, &v); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
 			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}
 }
 
 func TestDecTagsMdOption(t *testing.T) {
-	cborData := hexDecode("c074323031332d30332d32315432303a30343a30305a")
+	data := hexDecode("c074323031332d30332d32315432303a30343a30305a")
 	wantErrorMsg := "cbor: CBOR tag isn't allowed"
 
 	// Default option allows CBOR tags
 	var v interface{}
-	if err := Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned an error %v", cborData, err)
+	if err := Unmarshal(data, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned an error %v", data, err)
 	}
 
 	// Decoding CBOR tags with TagsForbidden option returns error
 	dm, _ := DecOptions{TagsMd: TagsForbidden}.DecMode()
-	if err := dm.Unmarshal(cborData, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", cborData)
+	if err := dm.Unmarshal(data, &v); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
 	}
 
 	// Create DecMode with TagSet and TagsForbidden option returns error
@@ -4714,41 +6176,41 @@ func TestIntDecConvertNone(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name     string
-		cborData []byte
-		wantObj  interface{}
+		name    string
+		data    []byte
+		wantObj interface{}
 	}{
 		{
-			name:     "CBOR pos int",
-			cborData: hexDecode("1a000f4240"),
-			wantObj:  uint64(1000000),
+			name:    "CBOR pos int",
+			data:    hexDecode("1a000f4240"),
+			wantObj: uint64(1000000),
 		},
 		{
-			name:     "CBOR pos int overflows int64",
-			cborData: hexDecode("1b8000000000000000"), // math.MaxInt64+1
-			wantObj:  uint64(math.MaxInt64 + 1),
+			name:    "CBOR pos int overflows int64",
+			data:    hexDecode("1b8000000000000000"), // math.MaxInt64+1
+			wantObj: uint64(math.MaxInt64 + 1),
 		},
 		{
-			name:     "CBOR neg int",
-			cborData: hexDecode("3903e7"),
-			wantObj:  int64(-1000),
+			name:    "CBOR neg int",
+			data:    hexDecode("3903e7"),
+			wantObj: int64(-1000),
 		},
 		{
-			name:     "CBOR neg int overflows int64",
-			cborData: hexDecode("3b8000000000000000"), // math.MinInt64-1
-			wantObj:  new(big.Int).Sub(big.NewInt(math.MinInt64), big.NewInt(1)),
+			name:    "CBOR neg int overflows int64",
+			data:    hexDecode("3b8000000000000000"), // math.MinInt64-1
+			wantObj: new(big.Int).Sub(big.NewInt(math.MinInt64), big.NewInt(1)),
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v interface{}
-			err := dm.Unmarshal(tc.cborData, &v)
+			err := dm.Unmarshal(tc.data, &v)
 			if err == nil {
 				if !reflect.DeepEqual(v, tc.wantObj) {
-					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantObj, tc.wantObj)
+					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.data, v, v, tc.wantObj, tc.wantObj)
 				}
 			} else {
-				t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+				t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
 			}
 		})
 	}
@@ -4765,46 +6227,46 @@ func TestIntDecConvertSigned(t *testing.T) {
 
 	testCases := []struct {
 		name         string
-		cborData     []byte
+		data         []byte
 		wantObj      interface{}
 		wantErrorMsg string
 	}{
 		{
-			name:     "CBOR pos int",
-			cborData: hexDecode("1a000f4240"),
-			wantObj:  int64(1000000),
+			name:    "CBOR pos int",
+			data:    hexDecode("1a000f4240"),
+			wantObj: int64(1000000),
 		},
 		{
 			name:         "CBOR pos int overflows int64",
-			cborData:     hexDecode("1b8000000000000000"), // math.MaxInt64+1
+			data:         hexDecode("1b8000000000000000"), // math.MaxInt64+1
 			wantErrorMsg: "9223372036854775808 overflows Go's int64",
 		},
 		{
-			name:     "CBOR neg int",
-			cborData: hexDecode("3903e7"),
-			wantObj:  int64(-1000),
+			name:    "CBOR neg int",
+			data:    hexDecode("3903e7"),
+			wantObj: int64(-1000),
 		},
 		{
-			name:     "CBOR neg int overflows int64",
-			cborData: hexDecode("3b8000000000000000"), // math.MinInt64-1
-			wantObj:  new(big.Int).Sub(big.NewInt(math.MinInt64), big.NewInt(1)),
+			name:    "CBOR neg int overflows int64",
+			data:    hexDecode("3b8000000000000000"), // math.MinInt64-1
+			wantObj: new(big.Int).Sub(big.NewInt(math.MinInt64), big.NewInt(1)),
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v interface{}
-			err := dm.Unmarshal(tc.cborData, &v)
+			err := dm.Unmarshal(tc.data, &v)
 			if err == nil {
 				if tc.wantErrorMsg != "" {
-					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.cborData, tc.wantErrorMsg)
+					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, tc.wantErrorMsg)
 				} else if !reflect.DeepEqual(v, tc.wantObj) {
-					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantObj, tc.wantObj)
+					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.data, v, v, tc.wantObj, tc.wantObj)
 				}
 			} else {
 				if tc.wantErrorMsg == "" {
-					t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+					t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
 				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 				}
 			}
 		})
@@ -4821,41 +6283,41 @@ func TestIntDecConvertSignedOrBigInt(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name     string
-		cborData []byte
-		wantObj  interface{}
+		name    string
+		data    []byte
+		wantObj interface{}
 	}{
 		{
-			name:     "CBOR pos int",
-			cborData: hexDecode("1a000f4240"),
-			wantObj:  int64(1000000),
+			name:    "CBOR pos int",
+			data:    hexDecode("1a000f4240"),
+			wantObj: int64(1000000),
 		},
 		{
-			name:     "CBOR pos int overflows int64",
-			cborData: hexDecode("1b8000000000000000"),
-			wantObj:  new(big.Int).Add(big.NewInt(math.MaxInt64), big.NewInt(1)),
+			name:    "CBOR pos int overflows int64",
+			data:    hexDecode("1b8000000000000000"),
+			wantObj: new(big.Int).Add(big.NewInt(math.MaxInt64), big.NewInt(1)),
 		},
 		{
-			name:     "CBOR neg int",
-			cborData: hexDecode("3903e7"),
-			wantObj:  int64(-1000),
+			name:    "CBOR neg int",
+			data:    hexDecode("3903e7"),
+			wantObj: int64(-1000),
 		},
 		{
-			name:     "CBOR neg int overflows int64",
-			cborData: hexDecode("3b8000000000000000"),
-			wantObj:  new(big.Int).Sub(big.NewInt(math.MinInt64), big.NewInt(1)),
+			name:    "CBOR neg int overflows int64",
+			data:    hexDecode("3b8000000000000000"),
+			wantObj: new(big.Int).Sub(big.NewInt(math.MinInt64), big.NewInt(1)),
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v interface{}
-			err := dm.Unmarshal(tc.cborData, &v)
+			err := dm.Unmarshal(tc.data, &v)
 			if err == nil {
 				if !reflect.DeepEqual(v, tc.wantObj) {
-					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantObj, tc.wantObj)
+					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.data, v, v, tc.wantObj, tc.wantObj)
 				}
 			} else {
-				t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+				t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
 			}
 		})
 	}
@@ -4872,46 +6334,46 @@ func TestIntDecConvertSignedOrError(t *testing.T) {
 
 	testCases := []struct {
 		name         string
-		cborData     []byte
+		data         []byte
 		wantObj      interface{}
 		wantErrorMsg string
 	}{
 		{
-			name:     "CBOR pos int",
-			cborData: hexDecode("1a000f4240"),
-			wantObj:  int64(1000000),
+			name:    "CBOR pos int",
+			data:    hexDecode("1a000f4240"),
+			wantObj: int64(1000000),
 		},
 		{
 			name:         "CBOR pos int overflows int64",
-			cborData:     hexDecode("1b8000000000000000"), // math.MaxInt64+1
+			data:         hexDecode("1b8000000000000000"), // math.MaxInt64+1
 			wantErrorMsg: "9223372036854775808 overflows Go's int64",
 		},
 		{
-			name:     "CBOR neg int",
-			cborData: hexDecode("3903e7"),
-			wantObj:  int64(-1000),
+			name:    "CBOR neg int",
+			data:    hexDecode("3903e7"),
+			wantObj: int64(-1000),
 		},
 		{
 			name:         "CBOR neg int overflows int64",
-			cborData:     hexDecode("3b8000000000000000"), // math.MinInt64-1
+			data:         hexDecode("3b8000000000000000"), // math.MinInt64-1
 			wantErrorMsg: "-9223372036854775809 overflows Go's int64",
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v interface{}
-			err := dm.Unmarshal(tc.cborData, &v)
+			err := dm.Unmarshal(tc.data, &v)
 			if err == nil {
 				if tc.wantErrorMsg != "" {
-					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.cborData, tc.wantErrorMsg)
+					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, tc.wantErrorMsg)
 				} else if !reflect.DeepEqual(v, tc.wantObj) {
-					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantObj, tc.wantObj)
+					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.data, v, v, tc.wantObj, tc.wantObj)
 				}
 			} else {
 				if tc.wantErrorMsg == "" {
-					t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+					t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
 				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 				}
 			}
 		})
@@ -4959,48 +6421,48 @@ func TestMapKeyByteString(t *testing.T) {
 
 	testCases := []struct {
 		name         string
-		cborData     []byte
+		data         []byte
 		wantObj      interface{}
 		wantErrorMsg string
 		dm           DecMode
 	}{
 		{
 			name:         "byte string map key with MapKeyByteStringForbidden",
-			cborData:     hexDecode("a143abcdef187b"),
+			data:         hexDecode("a143abcdef187b"),
 			wantErrorMsg: "cbor: invalid map key type: []uint8",
 			dm:           bsForbiddenMode,
 		},
 		{
 			name:         "tagged byte string map key with MapKeyByteStringForbidden",
-			cborData:     hexDecode("a1d86443abcdef187b"),
+			data:         hexDecode("a1d86443abcdef187b"),
 			wantErrorMsg: "cbor: invalid map key type: cbor.Tag",
 			dm:           bsForbiddenMode,
 		},
 		{
 			name:         "nested tagged byte string map key with MapKeyByteStringForbidden",
-			cborData:     hexDecode("a1d865d86443abcdef187b"),
+			data:         hexDecode("a1d865d86443abcdef187b"),
 			wantErrorMsg: "cbor: invalid map key type: cbor.Tag",
 			dm:           bsForbiddenMode,
 		},
 		{
-			name:     "byte string map key with MapKeyByteStringAllowed",
-			cborData: hexDecode("a143abcdef187b"),
+			name: "byte string map key with MapKeyByteStringAllowed",
+			data: hexDecode("a143abcdef187b"),
 			wantObj: map[interface{}]interface{}{
 				ByteString("\xab\xcd\xef"): uint64(123),
 			},
 			dm: bsAllowedMode,
 		},
 		{
-			name:     "tagged byte string map key with MapKeyByteStringAllowed",
-			cborData: hexDecode("a1d86443abcdef187b"),
+			name: "tagged byte string map key with MapKeyByteStringAllowed",
+			data: hexDecode("a1d86443abcdef187b"),
 			wantObj: map[interface{}]interface{}{
 				Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}: uint64(123),
 			},
 			dm: bsAllowedMode,
 		},
 		{
-			name:     "nested tagged byte string map key with MapKeyByteStringAllowed",
-			cborData: hexDecode("a1d865d86443abcdef187b"),
+			name: "nested tagged byte string map key with MapKeyByteStringAllowed",
+			data: hexDecode("a1d865d86443abcdef187b"),
 			wantObj: map[interface{}]interface{}{
 				Tag{Number: 101, Content: Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}}: uint64(123),
 			},
@@ -5012,18 +6474,18 @@ func TestMapKeyByteString(t *testing.T) {
 			for _, typ := range []reflect.Type{typeIntf, typeMapIntfIntf} {
 				v := reflect.New(typ)
 				vPtr := v.Interface()
-				err = tc.dm.Unmarshal(tc.cborData, vPtr)
+				err = tc.dm.Unmarshal(tc.data, vPtr)
 				if err == nil {
 					if tc.wantErrorMsg != "" {
-						t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.cborData, tc.wantErrorMsg)
+						t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, tc.wantErrorMsg)
 					} else if !reflect.DeepEqual(v.Elem().Interface(), tc.wantObj) {
-						t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), tc.wantObj, tc.wantObj)
+						t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.data, v.Elem().Interface(), v.Elem().Interface(), tc.wantObj, tc.wantObj)
 					}
 				} else {
 					if tc.wantErrorMsg == "" {
-						t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+						t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
 					} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-						t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+						t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 					}
 				}
 			}
@@ -5053,44 +6515,44 @@ func TestExtraErrorCondUnknownField(t *testing.T) {
 
 	testCases := []struct {
 		name         string
-		cborData     []byte
+		data         []byte
 		dm           DecMode
 		wantObj      interface{}
 		wantErrorMsg string
 	}{
 		{
-			name:     "field by field match",
-			cborData: hexDecode("a3614161616142616261436163"), // map[string]string{"A": "a", "B": "b", "C": "c"}
-			dm:       dm,
-			wantObj:  s{A: "a", B: "b", C: "c"},
+			name:    "field by field match",
+			data:    hexDecode("a3614161616142616261436163"), // map[string]string{"A": "a", "B": "b", "C": "c"}
+			dm:      dm,
+			wantObj: s{A: "a", B: "b", C: "c"},
 		},
 		{
-			name:     "field by field match with ExtraDecErrorUnknownField",
-			cborData: hexDecode("a3614161616142616261436163"), // map[string]string{"A": "a", "B": "b", "C": "c"}
-			dm:       dmUnknownFieldError,
-			wantObj:  s{A: "a", B: "b", C: "c"},
+			name:    "field by field match with ExtraDecErrorUnknownField",
+			data:    hexDecode("a3614161616142616261436163"), // map[string]string{"A": "a", "B": "b", "C": "c"}
+			dm:      dmUnknownFieldError,
+			wantObj: s{A: "a", B: "b", C: "c"},
 		},
 		{
-			name:     "CBOR map less field",
-			cborData: hexDecode("a26141616161426162"), // map[string]string{"A": "a", "B": "b"}
-			dm:       dm,
-			wantObj:  s{A: "a", B: "b", C: ""},
+			name:    "CBOR map less field",
+			data:    hexDecode("a26141616161426162"), // map[string]string{"A": "a", "B": "b"}
+			dm:      dm,
+			wantObj: s{A: "a", B: "b", C: ""},
 		},
 		{
-			name:     "CBOR map less field with ExtraDecErrorUnknownField",
-			cborData: hexDecode("a26141616161426162"), // map[string]string{"A": "a", "B": "b"}
-			dm:       dmUnknownFieldError,
-			wantObj:  s{A: "a", B: "b", C: ""},
+			name:    "CBOR map less field with ExtraDecErrorUnknownField",
+			data:    hexDecode("a26141616161426162"), // map[string]string{"A": "a", "B": "b"}
+			dm:      dmUnknownFieldError,
+			wantObj: s{A: "a", B: "b", C: ""},
 		},
 		{
-			name:     "CBOR map unknown field",
-			cborData: hexDecode("a461416161614261626143616361446164"), // map[string]string{"A": "a", "B": "b", "C": "c", "D": "d"}
-			dm:       dm,
-			wantObj:  s{A: "a", B: "b", C: "c"},
+			name:    "CBOR map unknown field",
+			data:    hexDecode("a461416161614261626143616361446164"), // map[string]string{"A": "a", "B": "b", "C": "c", "D": "d"}
+			dm:      dm,
+			wantObj: s{A: "a", B: "b", C: "c"},
 		},
 		{
 			name:         "CBOR map unknown field with ExtraDecErrorUnknownField",
-			cborData:     hexDecode("a461416161614261626143616361446164"), // map[string]string{"A": "a", "B": "b", "C": "c", "D": "d"}
+			data:         hexDecode("a461416161614261626143616361446164"), // map[string]string{"A": "a", "B": "b", "C": "c", "D": "d"}
 			dm:           dmUnknownFieldError,
 			wantErrorMsg: "cbor: found unknown field at map element index 3",
 		},
@@ -5098,18 +6560,18 @@ func TestExtraErrorCondUnknownField(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v s
-			err := tc.dm.Unmarshal(tc.cborData, &v)
+			err := tc.dm.Unmarshal(tc.data, &v)
 			if err == nil {
 				if tc.wantErrorMsg != "" {
-					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.cborData, tc.wantErrorMsg)
+					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, tc.wantErrorMsg)
 				} else if !reflect.DeepEqual(v, tc.wantObj) {
-					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantObj, tc.wantObj)
+					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.data, v, v, tc.wantObj, tc.wantObj)
 				}
 			} else {
 				if tc.wantErrorMsg == "" {
-					t.Errorf("Unmarshal(0x%x) returned error %q", tc.cborData, err)
+					t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
 				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 				}
 			}
 		})
@@ -5151,12 +6613,12 @@ func TestStreamExtraErrorCondUnknownField(t *testing.T) {
 		C string
 	}
 
-	cborData := hexDecode("a461416161614461646142616261436163a3614161616142616261436163") // map[string]string{"A": "a", "D": "d", "B": "b", "C": "c"}, map[string]string{"A": "a", "B": "b", "C": "c"}
+	data := hexDecode("a461416161614461646142616261436163a3614161616142616261436163") // map[string]string{"A": "a", "D": "d", "B": "b", "C": "c"}, map[string]string{"A": "a", "B": "b", "C": "c"}
 	wantErrorMsg := "cbor: found unknown field at map element index 1"
 	wantObj := s{A: "a", B: "b", C: "c"}
 
 	dmUnknownFieldError, _ := DecOptions{ExtraReturnErrors: ExtraDecErrorUnknownField}.DecMode()
-	dec := dmUnknownFieldError.NewDecoder(bytes.NewReader(cborData))
+	dec := dmUnknownFieldError.NewDecoder(bytes.NewReader(data))
 
 	var v1 s
 	err := dec.Decode(&v1)
@@ -5182,46 +6644,46 @@ func TestUnmarshalTagNum55799(t *testing.T) {
 
 	for _, tc := range unmarshalTests {
 		// Prefix tag number 55799 to CBOR test data
-		cborData := make([]byte, len(tc.cborData)+6)
-		copy(cborData, tagNum55799)
-		copy(cborData[3:], tagNum55799)
-		copy(cborData[6:], tc.cborData)
+		data := make([]byte, len(tc.data)+6)
+		copy(data, tagNum55799)
+		copy(data[3:], tagNum55799)
+		copy(data[6:], tc.data)
 
 		// Test unmarshalling CBOR into empty interface.
 		var v interface{}
-		if err := Unmarshal(cborData, &v); err != nil {
-			t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+		if err := Unmarshal(data, &v); err != nil {
+			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		} else {
-			if tm, ok := tc.emptyInterfaceValue.(time.Time); ok {
+			if tm, ok := tc.wantInterfaceValue.(time.Time); ok {
 				if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
 				}
-			} else if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+			} else if !reflect.DeepEqual(v, tc.wantInterfaceValue) {
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
 			}
 		}
 
 		// Test unmarshalling CBOR into RawMessage.
 		var r RawMessage
-		if err := Unmarshal(cborData, &r); err != nil {
-			t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
-		} else if !bytes.Equal(r, tc.cborData) {
-			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", cborData, r, tc.cborData)
+		if err := Unmarshal(data, &r); err != nil {
+			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
+		} else if !bytes.Equal(r, tc.data) {
+			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", data, r, tc.data)
 		}
 
 		// Test unmarshalling CBOR into compatible data types.
-		for _, value := range tc.values {
+		for _, value := range tc.wantValues {
 			v := reflect.New(reflect.TypeOf(value))
 			vPtr := v.Interface()
-			if err := Unmarshal(cborData, vPtr); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+			if err := Unmarshal(data, vPtr); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 			} else {
 				if tm, ok := value.(time.Time); ok {
 					if vt, ok := v.Elem().Interface().(time.Time); !ok || !tm.Equal(vt) {
-						t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v.Elem().Interface(), v.Elem().Interface(), value, value)
+						t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v.Elem().Interface(), v.Elem().Interface(), value, value)
 					}
 				} else if !reflect.DeepEqual(v.Elem().Interface(), value) {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v.Elem().Interface(), v.Elem().Interface(), value, value)
+					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v.Elem().Interface(), v.Elem().Interface(), value, value)
 				}
 			}
 		}
@@ -5230,12 +6692,12 @@ func TestUnmarshalTagNum55799(t *testing.T) {
 		for _, typ := range tc.wrongTypes {
 			v := reflect.New(typ)
 			vPtr := v.Interface()
-			if err := Unmarshal(cborData, vPtr); err == nil {
-				t.Errorf("Unmarshal(0x%x, %s) didn't return an error", cborData, typ.String())
+			if err := Unmarshal(data, vPtr); err == nil {
+				t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, typ.String())
 			} else if _, ok := err.(*UnmarshalTypeError); !ok {
-				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", cborData, err)
+				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 			} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", cborData, err.Error(), "cannot unmarshal")
+				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), "cannot unmarshal")
 			}
 		}
 	}
@@ -5248,47 +6710,47 @@ func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
 
 	for _, tc := range unmarshalFloatTests {
 		// Prefix tag number 55799 to CBOR test data
-		cborData := make([]byte, len(tc.cborData)+3)
-		copy(cborData, tagNum55799)
-		copy(cborData[3:], tc.cborData)
+		data := make([]byte, len(tc.data)+3)
+		copy(data, tagNum55799)
+		copy(data[3:], tc.data)
 
 		// Test unmarshalling CBOR into empty interface.
 		var v interface{}
-		if err := Unmarshal(tc.cborData, &v); err != nil {
-			t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
+		if err := Unmarshal(tc.data, &v); err != nil {
+			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 		} else {
-			testFloat(t, tc.cborData, v, tc.emptyInterfaceValue, tc.equalityThreshold)
+			compareFloats(t, tc.data, v, tc.wantInterfaceValue, tc.equalityThreshold)
 		}
 
 		// Test unmarshalling CBOR into RawMessage.
 		var r RawMessage
-		if err := Unmarshal(tc.cborData, &r); err != nil {
-			t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
-		} else if !bytes.Equal(r, tc.cborData) {
-			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", tc.cborData, r, tc.cborData)
+		if err := Unmarshal(tc.data, &r); err != nil {
+			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
+		} else if !bytes.Equal(r, tc.data) {
+			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", tc.data, r, tc.data)
 		}
 
 		// Test unmarshalling CBOR into compatible data types.
-		for _, value := range tc.values {
+		for _, value := range tc.wantValues {
 			v := reflect.New(reflect.TypeOf(value))
 			vPtr := v.Interface()
-			if err := Unmarshal(tc.cborData, vPtr); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
+			if err := Unmarshal(tc.data, vPtr); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 			} else {
-				testFloat(t, tc.cborData, v.Elem().Interface(), value, tc.equalityThreshold)
+				compareFloats(t, tc.data, v.Elem().Interface(), value, tc.equalityThreshold)
 			}
 		}
 
 		// Test unmarshalling CBOR into incompatible data types.
-		for _, typ := range tc.wrongTypes {
+		for _, typ := range unmarshalFloatWrongTypes {
 			v := reflect.New(typ)
 			vPtr := v.Interface()
-			if err := Unmarshal(tc.cborData, vPtr); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborData)
+			if err := Unmarshal(tc.data, vPtr); err == nil {
+				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
 			} else if _, ok := err.(*UnmarshalTypeError); !ok {
-				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.cborData, err)
+				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.data, err)
 			} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborData, err.Error(), "cannot unmarshal")
+				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.data, err.Error(), "cannot unmarshal")
 			}
 		}
 	}
@@ -5297,7 +6759,7 @@ func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
 func TestUnmarshalTagNum55799AsElement(t *testing.T) {
 	testCases := []struct {
 		name                string
-		cborData            []byte
+		data                []byte
 		emptyInterfaceValue interface{}
 		values              []interface{}
 		wrongTypes          []reflect.Type
@@ -5321,15 +6783,15 @@ func TestUnmarshalTagNum55799AsElement(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Test unmarshalling CBOR into empty interface.
 			var v interface{}
-			if err := Unmarshal(tc.cborData, &v); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
+			if err := Unmarshal(tc.data, &v); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 			} else {
 				if tm, ok := tc.emptyInterfaceValue.(time.Time); ok {
 					if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
-						t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+						t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
 					}
 				} else if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
 				}
 			}
 
@@ -5337,15 +6799,15 @@ func TestUnmarshalTagNum55799AsElement(t *testing.T) {
 			for _, value := range tc.values {
 				v := reflect.New(reflect.TypeOf(value))
 				vPtr := v.Interface()
-				if err := Unmarshal(tc.cborData, vPtr); err != nil {
-					t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborData, err)
+				if err := Unmarshal(tc.data, vPtr); err != nil {
+					t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 				} else {
 					if tm, ok := value.(time.Time); ok {
 						if vt, ok := v.Elem().Interface().(time.Time); !ok || !tm.Equal(vt) {
-							t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), value, value)
+							t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v.Elem().Interface(), v.Elem().Interface(), value, value)
 						}
 					} else if !reflect.DeepEqual(v.Elem().Interface(), value) {
-						t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), value, value)
+						t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v.Elem().Interface(), v.Elem().Interface(), value, value)
 					}
 				}
 			}
@@ -5354,12 +6816,12 @@ func TestUnmarshalTagNum55799AsElement(t *testing.T) {
 			for _, typ := range tc.wrongTypes {
 				v := reflect.New(typ)
 				vPtr := v.Interface()
-				if err := Unmarshal(tc.cborData, vPtr); err == nil {
-					t.Errorf("Unmarshal(0x%x, %s) didn't return an error", tc.cborData, typ.String())
+				if err := Unmarshal(tc.data, vPtr); err == nil {
+					t.Errorf("Unmarshal(0x%x, %s) didn't return an error", tc.data, typ.String())
 				} else if _, ok := err.(*UnmarshalTypeError); !ok {
-					t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.cborData, err)
+					t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.data, err)
 				} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborData, err.Error(), "cannot unmarshal")
+					t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.data, err.Error(), "cannot unmarshal")
 				}
 			}
 		})
@@ -5367,26 +6829,26 @@ func TestUnmarshalTagNum55799AsElement(t *testing.T) {
 }
 
 func TestUnmarshalTagNum55799ToBinaryUnmarshaler(t *testing.T) {
-	cborData := hexDecode("d9d9f74800000000499602d2") // 55799(h'00000000499602D2')
+	data := hexDecode("d9d9f74800000000499602d2") // 55799(h'00000000499602D2')
 	wantObj := number(1234567890)
 
 	var v number
-	if err := Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	} else if !reflect.DeepEqual(v, wantObj) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantObj, wantObj)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantObj, wantObj)
 	}
 }
 
 func TestUnmarshalTagNum55799ToUnmarshaler(t *testing.T) {
-	cborData := hexDecode("d9d9f7d864a1636e756d01") // 55799(100({"num": 1}))
+	data := hexDecode("d9d9f7d864a1636e756d01") // 55799(100({"num": 1}))
 	wantObj := number3(1)
 
 	var v number3
-	if err := Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	} else if !reflect.DeepEqual(v, wantObj) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantObj, wantObj)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantObj, wantObj)
 	}
 }
 
@@ -5401,88 +6863,88 @@ func TestUnmarshalTagNum55799ToRegisteredGoType(t *testing.T) {
 
 	dm, _ := DecOptions{}.DecModeWithTags(tags)
 
-	cborData := hexDecode("d9d9f7d87d01") // 55799(125(1))
+	data := hexDecode("d9d9f7d87d01") // 55799(125(1))
 	wantObj := myInt(1)
 
 	var v myInt
-	if err := dm.Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := dm.Unmarshal(data, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	} else if !reflect.DeepEqual(v, wantObj) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantObj, wantObj)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantObj, wantObj)
 	}
 }
 
 // TODO: wait for clarification from 7049bis https://github.com/cbor-wg/CBORbis/issues/183
 // Nested tag number 55799 may be stripeed as well depending on 7049bis clarification.
 func TestUnmarshalNestedTagNum55799ToEmptyInterface(t *testing.T) {
-	cborData := hexDecode("d864d9d9f701") // 100(55799(1))
+	data := hexDecode("d864d9d9f701") // 100(55799(1))
 	wantObj := Tag{100, Tag{55799, uint64(1)}}
 
 	var v interface{}
-	if err := Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	} else if !reflect.DeepEqual(v, wantObj) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantObj, wantObj)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantObj, wantObj)
 	}
 }
 
 func TestUnmarshalNestedTagNum55799ToValue(t *testing.T) {
-	cborData := hexDecode("d864d9d9f701") // 100(55799(1))
+	data := hexDecode("d864d9d9f701") // 100(55799(1))
 	wantObj := 1
 
 	var v int
-	if err := Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	} else if !reflect.DeepEqual(v, wantObj) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantObj, wantObj)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantObj, wantObj)
 	}
 }
 
 func TestUnmarshalNestedTagNum55799ToTag(t *testing.T) {
-	cborData := hexDecode("d864d9d9f701") // 100(55799(1))
+	data := hexDecode("d864d9d9f701") // 100(55799(1))
 	wantObj := Tag{100, Tag{55799, uint64(1)}}
 
 	var v Tag
-	if err := Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	} else if !reflect.DeepEqual(v, wantObj) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantObj, wantObj)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantObj, wantObj)
 	}
 }
 
 func TestUnmarshalNestedTagNum55799ToTime(t *testing.T) {
-	cborData := hexDecode("c0d9d9f774323031332d30332d32315432303a30343a30305a") // 0(55799("2013-03-21T20:04:00Z"))
+	data := hexDecode("c0d9d9f774323031332d30332d32315432303a30343a30305a") // 0(55799("2013-03-21T20:04:00Z"))
 	wantErrorMsg := "tag number 0 must be followed by text string, got tag"
 
 	var v time.Time
-	if err := Unmarshal(cborData, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return error", cborData)
+	if err := Unmarshal(data, &v); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return error", data)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %s, want %s", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %s, want %s", data, err.Error(), wantErrorMsg)
 	}
 }
 
 func TestUnmarshalNestedTagNum55799ToBinaryUnmarshaler(t *testing.T) {
-	cborData := hexDecode("d864d9d9f74800000000499602d2") // 100(55799(h'00000000499602D2'))
+	data := hexDecode("d864d9d9f74800000000499602d2") // 100(55799(h'00000000499602D2'))
 	wantObj := number(1234567890)
 
 	var v number
-	if err := Unmarshal(cborData, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborData, err)
+	if err := Unmarshal(data, &v); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	} else if !reflect.DeepEqual(v, wantObj) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", cborData, v, v, wantObj, wantObj)
+		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantObj, wantObj)
 	}
 }
 
 func TestUnmarshalNestedTagNum55799ToUnmarshaler(t *testing.T) {
-	cborData := hexDecode("d864d9d9f7a1636e756d01") // 100(55799({"num": 1}))
+	data := hexDecode("d864d9d9f7a1636e756d01") // 100(55799({"num": 1}))
 	wantErrorMsg := "wrong tag content type"
 
 	var v number3
-	if err := Unmarshal(cborData, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return error", cborData)
+	if err := Unmarshal(data, &v); err == nil {
+		t.Errorf("Unmarshal(0x%x) didn't return error", data)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %s, want %s", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %s, want %s", data, err.Error(), wantErrorMsg)
 	}
 }
 
@@ -5497,53 +6959,53 @@ func TestUnmarshalNestedTagNum55799ToRegisteredGoType(t *testing.T) {
 
 	dm, _ := DecOptions{}.DecModeWithTags(tags)
 
-	cborData := hexDecode("d87dd9d9f701") // 125(55799(1))
+	data := hexDecode("d87dd9d9f701") // 125(55799(1))
 	wantErrorMsg := "cbor: wrong tag number for cbor.myInt, got [125 55799], expected [125]"
 
 	var v myInt
-	if err := dm.Unmarshal(cborData, &v); err == nil {
+	if err := dm.Unmarshal(data, &v); err == nil {
 		t.Errorf("Unmarshal() didn't return error")
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %s, want %s", cborData, err.Error(), wantErrorMsg)
+		t.Errorf("Unmarshal(0x%x) returned error %s, want %s", data, err.Error(), wantErrorMsg)
 	}
 }
 
 func TestUnmarshalPosIntToBigInt(t *testing.T) {
-	cborData := hexDecode("1bffffffffffffffff") // 18446744073709551615
+	data := hexDecode("1bffffffffffffffff") // 18446744073709551615
 	wantEmptyInterfaceValue := uint64(18446744073709551615)
 	wantBigIntValue := bigIntOrPanic("18446744073709551615")
 
 	var v1 interface{}
-	if err := Unmarshal(cborData, &v1); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %+v", cborData, err)
+	if err := Unmarshal(data, &v1); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %+v", data, err)
 	} else if !reflect.DeepEqual(v1, wantEmptyInterfaceValue) {
-		t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", cborData, v1, v1, wantEmptyInterfaceValue, wantEmptyInterfaceValue)
+		t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", data, v1, v1, wantEmptyInterfaceValue, wantEmptyInterfaceValue)
 	}
 
 	var v2 big.Int
-	if err := Unmarshal(cborData, &v2); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %+v", cborData, err)
+	if err := Unmarshal(data, &v2); err != nil {
+		t.Errorf("Unmarshal(0x%x) returned error %+v", data, err)
 	} else if !reflect.DeepEqual(v2, wantBigIntValue) {
-		t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", cborData, v2, v2, wantBigIntValue, wantBigIntValue)
+		t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", data, v2, v2, wantBigIntValue, wantBigIntValue)
 	}
 }
 
 func TestUnmarshalNegIntToBigInt(t *testing.T) {
 	testCases := []struct {
 		name                    string
-		cborData                []byte
+		data                    []byte
 		wantEmptyInterfaceValue interface{}
 		wantBigIntValue         big.Int
 	}{
 		{
 			name:                    "fit Go int64",
-			cborData:                hexDecode("3b7fffffffffffffff"), // -9223372036854775808
+			data:                    hexDecode("3b7fffffffffffffff"), // -9223372036854775808
 			wantEmptyInterfaceValue: int64(-9223372036854775808),
 			wantBigIntValue:         bigIntOrPanic("-9223372036854775808"),
 		},
 		{
 			name:                    "overflow Go int64",
-			cborData:                hexDecode("3b8000000000000000"), // -9223372036854775809
+			data:                    hexDecode("3b8000000000000000"), // -9223372036854775809
 			wantEmptyInterfaceValue: bigIntOrPanic("-9223372036854775809"),
 			wantBigIntValue:         bigIntOrPanic("-9223372036854775809"),
 		},
@@ -5551,17 +7013,17 @@ func TestUnmarshalNegIntToBigInt(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v1 interface{}
-			if err := Unmarshal(tc.cborData, &v1); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %+v", tc.cborData, err)
+			if err := Unmarshal(tc.data, &v1); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %+v", tc.data, err)
 			} else if !reflect.DeepEqual(v1, tc.wantEmptyInterfaceValue) {
-				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.cborData, v1, v1, tc.wantEmptyInterfaceValue, tc.wantEmptyInterfaceValue)
+				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, v1, v1, tc.wantEmptyInterfaceValue, tc.wantEmptyInterfaceValue)
 			}
 
 			var v2 big.Int
-			if err := Unmarshal(tc.cborData, &v2); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %+v", tc.cborData, err)
+			if err := Unmarshal(tc.data, &v2); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %+v", tc.data, err)
 			} else if !reflect.DeepEqual(v2, tc.wantBigIntValue) {
-				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.cborData, v2, v2, tc.wantBigIntValue, tc.wantBigIntValue)
+				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, v2, v2, tc.wantBigIntValue, tc.wantBigIntValue)
 			}
 		})
 	}
@@ -5570,13 +7032,13 @@ func TestUnmarshalNegIntToBigInt(t *testing.T) {
 func TestUnmarshalTag2(t *testing.T) {
 	testCases := []struct {
 		name                    string
-		cborData                []byte
+		data                    []byte
 		wantEmptyInterfaceValue interface{}
 		wantValues              []interface{}
 	}{
 		{
 			name:                    "fit Go int64",
-			cborData:                hexDecode("c2430f4240"), // 2(1000000)
+			data:                    hexDecode("c2430f4240"), // 2(1000000)
 			wantEmptyInterfaceValue: bigIntOrPanic("1000000"),
 			wantValues: []interface{}{
 				int64(1000000),
@@ -5588,7 +7050,7 @@ func TestUnmarshalTag2(t *testing.T) {
 		},
 		{
 			name:                    "fit Go uint64",
-			cborData:                hexDecode("c248ffffffffffffffff"), // 2(18446744073709551615)
+			data:                    hexDecode("c248ffffffffffffffff"), // 2(18446744073709551615)
 			wantEmptyInterfaceValue: bigIntOrPanic("18446744073709551615"),
 			wantValues: []interface{}{
 				uint64(18446744073709551615),
@@ -5599,7 +7061,7 @@ func TestUnmarshalTag2(t *testing.T) {
 		},
 		{
 			name:                    "fit Go uint64 with leading zeros",
-			cborData:                hexDecode("c24900ffffffffffffffff"), // 2(18446744073709551615)
+			data:                    hexDecode("c24900ffffffffffffffff"), // 2(18446744073709551615)
 			wantEmptyInterfaceValue: bigIntOrPanic("18446744073709551615"),
 			wantValues: []interface{}{
 				uint64(18446744073709551615),
@@ -5610,7 +7072,7 @@ func TestUnmarshalTag2(t *testing.T) {
 		},
 		{
 			name:                    "overflow Go uint64",
-			cborData:                hexDecode("c249010000000000000000"), // 2(18446744073709551616)
+			data:                    hexDecode("c249010000000000000000"), // 2(18446744073709551616)
 			wantEmptyInterfaceValue: bigIntOrPanic("18446744073709551616"),
 			wantValues: []interface{}{
 				bigIntOrPanic("18446744073709551616"),
@@ -5618,7 +7080,7 @@ func TestUnmarshalTag2(t *testing.T) {
 		},
 		{
 			name:                    "overflow Go uint64 with leading zeros",
-			cborData:                hexDecode("c24b0000010000000000000000"), // 2(18446744073709551616)
+			data:                    hexDecode("c24b0000010000000000000000"), // 2(18446744073709551616)
 			wantEmptyInterfaceValue: bigIntOrPanic("18446744073709551616"),
 			wantValues: []interface{}{
 				bigIntOrPanic("18446744073709551616"),
@@ -5628,18 +7090,18 @@ func TestUnmarshalTag2(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v1 interface{}
-			if err := Unmarshal(tc.cborData, &v1); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %+v", tc.cborData, err)
+			if err := Unmarshal(tc.data, &v1); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %+v", tc.data, err)
 			} else if !reflect.DeepEqual(v1, tc.wantEmptyInterfaceValue) {
-				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.cborData, v1, v1, tc.wantEmptyInterfaceValue, tc.wantEmptyInterfaceValue)
+				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, v1, v1, tc.wantEmptyInterfaceValue, tc.wantEmptyInterfaceValue)
 			}
 
 			for _, wantValue := range tc.wantValues {
 				v := reflect.New(reflect.TypeOf(wantValue))
-				if err := Unmarshal(tc.cborData, v.Interface()); err != nil {
-					t.Errorf("Unmarshal(0x%x) returned error %+v", tc.cborData, err)
+				if err := Unmarshal(tc.data, v.Interface()); err != nil {
+					t.Errorf("Unmarshal(0x%x) returned error %+v", tc.data, err)
 				} else if !reflect.DeepEqual(v.Elem().Interface(), wantValue) {
-					t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), wantValue, wantValue)
+					t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, v.Elem().Interface(), v.Elem().Interface(), wantValue, wantValue)
 				}
 			}
 		})
@@ -5649,13 +7111,13 @@ func TestUnmarshalTag2(t *testing.T) {
 func TestUnmarshalTag3(t *testing.T) {
 	testCases := []struct {
 		name                    string
-		cborData                []byte
+		data                    []byte
 		wantEmptyInterfaceValue interface{}
 		wantValues              []interface{}
 	}{
 		{
 			name:                    "fit Go int64",
-			cborData:                hexDecode("c3487fffffffffffffff"), // 3(-9223372036854775808)
+			data:                    hexDecode("c3487fffffffffffffff"), // 3(-9223372036854775808)
 			wantEmptyInterfaceValue: bigIntOrPanic("-9223372036854775808"),
 			wantValues: []interface{}{
 				int64(-9223372036854775808),
@@ -5666,7 +7128,7 @@ func TestUnmarshalTag3(t *testing.T) {
 		},
 		{
 			name:                    "fit Go int64 with leading zeros",
-			cborData:                hexDecode("c349007fffffffffffffff"), // 3(-9223372036854775808)
+			data:                    hexDecode("c349007fffffffffffffff"), // 3(-9223372036854775808)
 			wantEmptyInterfaceValue: bigIntOrPanic("-9223372036854775808"),
 			wantValues: []interface{}{
 				int64(-9223372036854775808),
@@ -5677,7 +7139,7 @@ func TestUnmarshalTag3(t *testing.T) {
 		},
 		{
 			name:                    "overflow Go int64",
-			cborData:                hexDecode("c349010000000000000000"), // 3(-18446744073709551617)
+			data:                    hexDecode("c349010000000000000000"), // 3(-18446744073709551617)
 			wantEmptyInterfaceValue: bigIntOrPanic("-18446744073709551617"),
 			wantValues: []interface{}{
 				bigIntOrPanic("-18446744073709551617"),
@@ -5685,7 +7147,7 @@ func TestUnmarshalTag3(t *testing.T) {
 		},
 		{
 			name:                    "overflow Go int64 with leading zeros",
-			cborData:                hexDecode("c34b0000010000000000000000"), // 3(-18446744073709551617)
+			data:                    hexDecode("c34b0000010000000000000000"), // 3(-18446744073709551617)
 			wantEmptyInterfaceValue: bigIntOrPanic("-18446744073709551617"),
 			wantValues: []interface{}{
 				bigIntOrPanic("-18446744073709551617"),
@@ -5695,18 +7157,18 @@ func TestUnmarshalTag3(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v1 interface{}
-			if err := Unmarshal(tc.cborData, &v1); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %+v", tc.cborData, err)
+			if err := Unmarshal(tc.data, &v1); err != nil {
+				t.Errorf("Unmarshal(0x%x) returned error %+v", tc.data, err)
 			} else if !reflect.DeepEqual(v1, tc.wantEmptyInterfaceValue) {
-				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.cborData, v1, v1, tc.wantEmptyInterfaceValue, tc.wantEmptyInterfaceValue)
+				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, v1, v1, tc.wantEmptyInterfaceValue, tc.wantEmptyInterfaceValue)
 			}
 
 			for _, wantValue := range tc.wantValues {
 				v := reflect.New(reflect.TypeOf(wantValue))
-				if err := Unmarshal(tc.cborData, v.Interface()); err != nil {
-					t.Errorf("Unmarshal(0x%x) returned error %+v", tc.cborData, err)
+				if err := Unmarshal(tc.data, v.Interface()); err != nil {
+					t.Errorf("Unmarshal(0x%x) returned error %+v", tc.data, err)
 				} else if !reflect.DeepEqual(v.Elem().Interface(), wantValue) {
-					t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.cborData, v.Elem().Interface(), v.Elem().Interface(), wantValue, wantValue)
+					t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, v.Elem().Interface(), v.Elem().Interface(), wantValue, wantValue)
 				}
 			}
 		})
@@ -5718,25 +7180,25 @@ func TestUnmarshalInvalidTagBignum(t *testing.T) {
 
 	testCases := []struct {
 		name          string
-		cborData      []byte
+		data          []byte
 		decodeToTypes []reflect.Type
 		wantErrorMsg  string
 	}{
 		{
 			name:          "Tag 2 with string",
-			cborData:      hexDecode("c27f657374726561646d696e67ff"),
+			data:          hexDecode("c27f657374726561646d696e67ff"),
 			decodeToTypes: []reflect.Type{typeIntf, typeBigInt},
 			wantErrorMsg:  "cbor: tag number 2 or 3 must be followed by byte string, got UTF-8 text string",
 		},
 		{
 			name:          "Tag 3 with string",
-			cborData:      hexDecode("c37f657374726561646d696e67ff"),
+			data:          hexDecode("c37f657374726561646d696e67ff"),
 			decodeToTypes: []reflect.Type{typeIntf, typeBigInt},
 			wantErrorMsg:  "cbor: tag number 2 or 3 must be followed by byte string, got UTF-8 text string",
 		},
 		{
 			name:          "Tag 3 with negavtive int",
-			cborData:      hexDecode("81C330"), // [3(-17)]
+			data:          hexDecode("81C330"), // [3(-17)]
 			decodeToTypes: []reflect.Type{typeIntf, typeBigIntSlice},
 			wantErrorMsg:  "cbor: tag number 2 or 3 must be followed by byte string, got negative integer",
 		},
@@ -5745,10 +7207,10 @@ func TestUnmarshalInvalidTagBignum(t *testing.T) {
 		for _, decodeToType := range tc.decodeToTypes {
 			t.Run(tc.name+" decode to "+decodeToType.String(), func(t *testing.T) {
 				v := reflect.New(decodeToType)
-				if err := Unmarshal(tc.cborData, v.Interface()); err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", tc.cborData, tc.wantErrorMsg)
+				if err := Unmarshal(tc.data, v.Interface()); err == nil {
+					t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", tc.data, tc.wantErrorMsg)
 				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.cborData, err, tc.wantErrorMsg)
+					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err, tc.wantErrorMsg)
 				}
 			})
 		}
@@ -6123,7 +7585,7 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 	testCases := []struct {
 		name         string
 		opts         DecOptions
-		cborData     []byte
+		data         []byte
 		wantValue    interface{}
 		wantErrorMsg string
 	}{
@@ -6131,28 +7593,28 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 		{
 			name:      "decode CBOR map[int]int to Go map[interface{}]interface{} (default)",
 			opts:      decOptionsDefault,
-			cborData:  cborDataMapIntInt,
+			data:      cborDataMapIntInt,
 			wantValue: map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)},
 		},
 		{
 			name:      "decode CBOR map[string]int to Go map[interface{}]interface{} (default)",
 			opts:      decOptionsDefault,
-			cborData:  cborDataMapStringInt,
+			data:      cborDataMapStringInt,
 			wantValue: map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
 		},
 		{
-			name:     "decode CBOR array of map[string]int to Go []map[interface{}]interface{} (default)",
-			opts:     decOptionsDefault,
-			cborData: cborDataArrayOfMapStringint,
+			name: "decode CBOR array of map[string]int to Go []map[interface{}]interface{} (default)",
+			opts: decOptionsDefault,
+			data: cborDataArrayOfMapStringint,
 			wantValue: []interface{}{
 				map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
 				map[interface{}]interface{}{"c": uint64(3), "d": uint64(4)},
 			},
 		},
 		{
-			name:     "decode CBOR nested map to Go map[interface{}]interface{} (default)",
-			opts:     decOptionsDefault,
-			cborData: cborDataNestedMap,
+			name: "decode CBOR nested map to Go map[interface{}]interface{} (default)",
+			opts: decOptionsDefault,
+			data: cborDataNestedMap,
 			wantValue: map[interface{}]interface{}{
 				"IntField": uint64(1),
 				"MapField": map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
@@ -6162,28 +7624,28 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 		{
 			name:      "decode CBOR map[int]int to Go map[interface{}]interface{}",
 			opts:      decOptionsMapIntfIntfType,
-			cborData:  cborDataMapIntInt,
+			data:      cborDataMapIntInt,
 			wantValue: map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)},
 		},
 		{
 			name:      "decode CBOR map[string]int to Go map[interface{}]interface{}",
 			opts:      decOptionsMapIntfIntfType,
-			cborData:  cborDataMapStringInt,
+			data:      cborDataMapStringInt,
 			wantValue: map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
 		},
 		{
-			name:     "decode CBOR array of map[string]int to Go []map[interface{}]interface{}",
-			opts:     decOptionsMapIntfIntfType,
-			cborData: cborDataArrayOfMapStringint,
+			name: "decode CBOR array of map[string]int to Go []map[interface{}]interface{}",
+			opts: decOptionsMapIntfIntfType,
+			data: cborDataArrayOfMapStringint,
 			wantValue: []interface{}{
 				map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
 				map[interface{}]interface{}{"c": uint64(3), "d": uint64(4)},
 			},
 		},
 		{
-			name:     "decode CBOR nested map to Go map[interface{}]interface{}",
-			opts:     decOptionsMapIntfIntfType,
-			cborData: cborDataNestedMap,
+			name: "decode CBOR nested map to Go map[interface{}]interface{}",
+			opts: decOptionsMapIntfIntfType,
+			data: cborDataNestedMap,
 			wantValue: map[interface{}]interface{}{
 				"IntField": uint64(1),
 				"MapField": map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
@@ -6193,28 +7655,28 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 		{
 			name:         "decode CBOR map[int]int to Go map[string]interface{}",
 			opts:         decOptionsMapStringIntfType,
-			cborData:     cborDataMapIntInt,
+			data:         cborDataMapIntInt,
 			wantErrorMsg: "cbor: cannot unmarshal positive integer into Go value of type string",
 		},
 		{
 			name:      "decode CBOR map[string]int to Go map[string]interface{}",
 			opts:      decOptionsMapStringIntfType,
-			cborData:  cborDataMapStringInt,
+			data:      cborDataMapStringInt,
 			wantValue: map[string]interface{}{"a": uint64(1), "b": uint64(2)},
 		},
 		{
-			name:     "decode CBOR array of map[string]int to Go []map[string]interface{}",
-			opts:     decOptionsMapStringIntfType,
-			cborData: cborDataArrayOfMapStringint,
+			name: "decode CBOR array of map[string]int to Go []map[string]interface{}",
+			opts: decOptionsMapStringIntfType,
+			data: cborDataArrayOfMapStringint,
 			wantValue: []interface{}{
 				map[string]interface{}{"a": uint64(1), "b": uint64(2)},
 				map[string]interface{}{"c": uint64(3), "d": uint64(4)},
 			},
 		},
 		{
-			name:     "decode CBOR nested map to Go map[string]interface{}",
-			opts:     decOptionsMapStringIntfType,
-			cborData: cborDataNestedMap,
+			name: "decode CBOR nested map to Go map[string]interface{}",
+			opts: decOptionsMapStringIntfType,
+			data: cborDataNestedMap,
 			wantValue: map[string]interface{}{
 				"IntField": uint64(1),
 				"MapField": map[string]interface{}{"a": uint64(1), "b": uint64(2)},
@@ -6224,19 +7686,19 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 		{
 			name:         "decode CBOR map[int]int to Go map[string]int",
 			opts:         decOptionsMapStringIntType,
-			cborData:     cborDataMapIntInt,
+			data:         cborDataMapIntInt,
 			wantErrorMsg: "cbor: cannot unmarshal positive integer into Go value of type string",
 		},
 		{
 			name:      "decode CBOR map[string]int to Go map[string]int",
 			opts:      decOptionsMapStringIntType,
-			cborData:  cborDataMapStringInt,
+			data:      cborDataMapStringInt,
 			wantValue: map[string]int{"a": 1, "b": 2},
 		},
 		{
-			name:     "decode CBOR array of map[string]int to Go []map[string]int",
-			opts:     decOptionsMapStringIntType,
-			cborData: cborDataArrayOfMapStringint,
+			name: "decode CBOR array of map[string]int to Go []map[string]int",
+			opts: decOptionsMapStringIntType,
+			data: cborDataArrayOfMapStringint,
 			wantValue: []interface{}{
 				map[string]int{"a": 1, "b": 2},
 				map[string]int{"c": 3, "d": 4},
@@ -6245,7 +7707,7 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 		{
 			name:         "decode CBOR nested map to Go map[string]int",
 			opts:         decOptionsMapStringIntType,
-			cborData:     cborDataNestedMap,
+			data:         cborDataNestedMap,
 			wantErrorMsg: "cbor: cannot unmarshal map into Go value of type int",
 		},
 	}
@@ -6255,18 +7717,18 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 			decMode, _ := tc.opts.DecMode()
 
 			var v interface{}
-			err := decMode.Unmarshal(tc.cborData, &v)
+			err := decMode.Unmarshal(tc.data, &v)
 			if err != nil {
 				if tc.wantErrorMsg == "" {
-					t.Errorf("Unmarshal(0x%x) to empty interface returned error %v", tc.cborData, err)
+					t.Errorf("Unmarshal(0x%x) to empty interface returned error %v", tc.data, err)
 				} else if tc.wantErrorMsg != err.Error() {
-					t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.cborData, err.Error(), tc.wantErrorMsg)
+					t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 				}
 			} else {
 				if tc.wantValue == nil {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want error %q", tc.cborData, v, v, tc.wantErrorMsg)
+					t.Errorf("Unmarshal(0x%x) = %v (%T), want error %q", tc.data, v, v, tc.wantErrorMsg)
 				} else if !reflect.DeepEqual(v, tc.wantValue) {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantValue, tc.wantValue)
+					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.wantValue, tc.wantValue)
 				}
 			}
 		})
@@ -6276,19 +7738,19 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 func TestUnmarshalFirstNoTrailing(t *testing.T) {
 	for _, tc := range unmarshalTests {
 		var v interface{}
-		if rest, err := UnmarshalFirst(tc.cborData, &v); err != nil {
-			t.Errorf("UnmarshalFirst(0x%x) returned error %v", tc.cborData, err)
+		if rest, err := UnmarshalFirst(tc.data, &v); err != nil {
+			t.Errorf("UnmarshalFirst(0x%x) returned error %v", tc.data, err)
 		} else {
 			if len(rest) != 0 {
-				t.Errorf("UnmarshalFirst(0x%x) returned rest %x (want [])", tc.cborData, rest)
+				t.Errorf("UnmarshalFirst(0x%x) returned rest %x (want [])", tc.data, rest)
 			}
 			// Check the value as well, although this is covered by other tests
-			if tm, ok := tc.emptyInterfaceValue.(time.Time); ok {
+			if tm, ok := tc.wantInterfaceValue.(time.Time); ok {
 				if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
-					t.Errorf("UnmarshalFirst(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+					t.Errorf("UnmarshalFirst(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
 				}
-			} else if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
-				t.Errorf("UnmarshalFirst(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+			} else if !reflect.DeepEqual(v, tc.wantInterfaceValue) {
+				t.Errorf("UnmarshalFirst(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
 			}
 		}
 	}
@@ -6298,8 +7760,8 @@ func TestUnmarshalfirstTrailing(t *testing.T) {
 	// Random trailing data
 	trailingData := hexDecode("4a6b0f4718c73f391091ea1c")
 	for _, tc := range unmarshalTests {
-		data := make([]byte, 0, len(tc.cborData)+len(trailingData))
-		data = append(data, tc.cborData...)
+		data := make([]byte, 0, len(tc.data)+len(trailingData))
+		data = append(data, tc.data...)
 		data = append(data, trailingData...)
 		var v interface{}
 		if rest, err := UnmarshalFirst(data, &v); err != nil {
@@ -6309,12 +7771,12 @@ func TestUnmarshalfirstTrailing(t *testing.T) {
 				t.Errorf("UnmarshalFirst(0x%x) returned rest %x (want %x)", data, rest, trailingData)
 			}
 			// Check the value as well, although this is covered by other tests
-			if tm, ok := tc.emptyInterfaceValue.(time.Time); ok {
+			if tm, ok := tc.wantInterfaceValue.(time.Time); ok {
 				if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
-					t.Errorf("UnmarshalFirst(0x%x) = %v (%T), want %v (%T)", data, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+					t.Errorf("UnmarshalFirst(0x%x) = %v (%T), want %v (%T)", data, v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
 				}
-			} else if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
-				t.Errorf("UnmarshalFirst(0x%x) = %v (%T), want %v (%T)", data, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
+			} else if !reflect.DeepEqual(v, tc.wantInterfaceValue) {
+				t.Errorf("UnmarshalFirst(0x%x) = %v (%T), want %v (%T)", data, v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
 			}
 		}
 	}
@@ -6368,46 +7830,46 @@ func TestDecodeFieldNameMatching(t *testing.T) {
 	testCases := []struct {
 		name      string
 		opts      DecOptions
-		cborData  []byte
+		data      []byte
 		wantValue s
 	}{
 		{
 			name:      "case-insensitive match",
-			cborData:  hexDecode("a1614101"), // {"A": 1}
+			data:      hexDecode("a1614101"), // {"A": 1}
 			wantValue: s{LowerA: 1},
 		},
 		{
 			name:      "ignore case-insensitive match",
 			opts:      DecOptions{FieldNameMatching: FieldNameMatchingCaseSensitive},
-			cborData:  hexDecode("a1614101"), // {"A": 1}
+			data:      hexDecode("a1614101"), // {"A": 1}
 			wantValue: s{},
 		},
 		{
 			name:      "exact match before case-insensitive match",
-			cborData:  hexDecode("a2616101614102"), // {"a": 1, "A": 2}
+			data:      hexDecode("a2616101614102"), // {"a": 1, "A": 2}
 			wantValue: s{LowerA: 1},
 		},
 		{
 			name:      "case-insensitive match before exact match",
-			cborData:  hexDecode("a2614101616102"), // {"A": 1, "a": 2}
+			data:      hexDecode("a2614101616102"), // {"A": 1, "a": 2}
 			wantValue: s{LowerA: 1},
 		},
 		{
 			name:      "ignore case-insensitive match before exact match",
 			opts:      DecOptions{FieldNameMatching: FieldNameMatchingCaseSensitive},
-			cborData:  hexDecode("a2614101616102"), // {"A": 1, "a": 2}
+			data:      hexDecode("a2614101616102"), // {"A": 1, "a": 2}
 			wantValue: s{LowerA: 2},
 		},
 		{
 			name:      "earliest exact match wins",
 			opts:      DecOptions{FieldNameMatching: FieldNameMatchingCaseSensitive},
-			cborData:  hexDecode("a2616101616102"), // {"a": 1, "a": 2} (invalid)
+			data:      hexDecode("a2616101616102"), // {"a": 1, "a": 2} (invalid)
 			wantValue: s{LowerA: 1},
 		},
 		{
 			// the field tags themselves are case-insensitive matches for each other
 			name:      "duplicate keys decode to different fields",
-			cborData:  hexDecode("a2614201614202"), // {"B": 1, "B": 2} (invalid)
+			data:      hexDecode("a2614201614202"), // {"B": 1, "B": 2} (invalid)
 			wantValue: s{UpperB: 1, LowerB: 2},
 		},
 	}
@@ -6417,13 +7879,13 @@ func TestDecodeFieldNameMatching(t *testing.T) {
 			decMode, _ := tc.opts.DecMode()
 
 			var dst s
-			err := decMode.Unmarshal(tc.cborData, &dst)
+			err := decMode.Unmarshal(tc.data, &dst)
 			if err != nil {
-				t.Fatalf("Unmarshal(0x%x) returned unexpected error %v", tc.cborData, err)
+				t.Fatalf("Unmarshal(0x%x) returned unexpected error %v", tc.data, err)
 			}
 
 			if !reflect.DeepEqual(dst, tc.wantValue) {
-				t.Errorf("Unmarshal(0x%x) = %#v, want %#v", tc.cborData, dst, tc.wantValue)
+				t.Errorf("Unmarshal(0x%x) = %#v, want %#v", tc.data, dst, tc.wantValue)
 			}
 		})
 	}
@@ -6473,43 +7935,43 @@ func TestDecodeBignumToEmptyInterface(t *testing.T) {
 	testCases := []struct {
 		name      string
 		opts      DecOptions
-		cborData  []byte
+		data      []byte
 		wantValue interface{}
 	}{
 		{
 			name:      "decode positive bignum to big.Int",
 			opts:      decOptionsDecodeToBigIntValue,
-			cborData:  cborDataPositiveBignum,
+			data:      cborDataPositiveBignum,
 			wantValue: *pbn,
 		},
 		{
 			name:      "decode negative bignum to big.Int",
 			opts:      decOptionsDecodeToBigIntValue,
-			cborData:  cborDataNegativeBignum,
+			data:      cborDataNegativeBignum,
 			wantValue: *nbn,
 		},
 		{
 			name:      "decode large negative int to big.Int",
 			opts:      decOptionsDecodeToBigIntValue,
-			cborData:  cborDataLargeNegativeInt,
+			data:      cborDataLargeNegativeInt,
 			wantValue: *ni,
 		},
 		{
 			name:      "decode positive bignum to *big.Int",
 			opts:      decOptionsDecodeToBigIntPointer,
-			cborData:  cborDataPositiveBignum,
+			data:      cborDataPositiveBignum,
 			wantValue: pbn,
 		},
 		{
 			name:      "decode negative bignum to *big.Int",
 			opts:      decOptionsDecodeToBigIntPointer,
-			cborData:  cborDataNegativeBignum,
+			data:      cborDataNegativeBignum,
 			wantValue: nbn,
 		},
 		{
 			name:      "decode large negative int to *big.Int",
 			opts:      decOptionsDecodeToBigIntPointer,
-			cborData:  cborDataLargeNegativeInt,
+			data:      cborDataLargeNegativeInt,
 			wantValue: ni,
 		},
 	}
@@ -6519,12 +7981,12 @@ func TestDecodeBignumToEmptyInterface(t *testing.T) {
 			decMode, _ := tc.opts.DecMode()
 
 			var v interface{}
-			err := decMode.Unmarshal(tc.cborData, &v)
+			err := decMode.Unmarshal(tc.data, &v)
 			if err != nil {
-				t.Errorf("Unmarshal(0x%x) to empty interface returned error %v", tc.cborData, err)
+				t.Errorf("Unmarshal(0x%x) to empty interface returned error %v", tc.data, err)
 			} else {
 				if !reflect.DeepEqual(v, tc.wantValue) {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborData, v, v, tc.wantValue, tc.wantValue)
+					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.wantValue, tc.wantValue)
 				}
 			}
 		})
