@@ -834,6 +834,13 @@ const (
 // and does not perform bounds checking.
 func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
 
+	// Decode CBOR nil or CBOR undefined to pointer value by setting pointer value to nil.
+	if d.nextCBORNil() && v.Kind() == reflect.Ptr {
+		d.skip()
+		v.Set(reflect.Zero(v.Type()))
+		return nil
+	}
+
 	if tInfo.spclType == specialTypeIface {
 		if !v.IsNil() {
 			// Use value type
@@ -864,18 +871,17 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		}
 	}
 
-	// Create new value for the pointer v to point to if CBOR value is not nil/undefined.
-	if !d.nextCBORNil() {
-		for v.Kind() == reflect.Ptr {
-			if v.IsNil() {
-				if !v.CanSet() {
-					d.skip()
-					return errors.New("cbor: cannot set new value for " + v.Type().String())
-				}
-				v.Set(reflect.New(v.Type().Elem()))
+	// Create new value for the pointer v to point to.
+	// At this point, CBOR value is not nil/undefined if v is a pointer.
+	for v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			if !v.CanSet() {
+				d.skip()
+				return errors.New("cbor: cannot set new value for " + v.Type().String())
 			}
-			v = v.Elem()
+			v.Set(reflect.New(v.Type().Elem()))
 		}
+		v = v.Elem()
 	}
 
 	// Strip self-described CBOR tag number.
@@ -949,6 +955,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 	case cborTypePositiveInt:
 		_, _, val := d.getHead()
 		return fillPositiveInt(t, val, v)
+
 	case cborTypeNegativeInt:
 		_, _, val := d.getHead()
 		if val > math.MaxInt64 {
@@ -970,15 +977,18 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		}
 		nValue := int64(-1) ^ int64(val)
 		return fillNegativeInt(t, nValue, v)
+
 	case cborTypeByteString:
 		b := d.parseByteString()
 		return fillByteString(t, b, v)
+
 	case cborTypeTextString:
 		b, err := d.parseTextString()
 		if err != nil {
 			return err
 		}
 		return fillTextString(t, b, v)
+
 	case cborTypePrimitives:
 		_, ai, val := d.getHead()
 		switch ai {
@@ -1054,6 +1064,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 			}
 		}
 		return d.parseToValue(v, tInfo)
+
 	case cborTypeArray:
 		if tInfo.nonPtrKind == reflect.Slice {
 			return d.parseArrayToSlice(v, tInfo)
@@ -1064,6 +1075,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		}
 		d.skip()
 		return &UnmarshalTypeError{CBORType: t.String(), GoType: tInfo.nonPtrType.String()}
+
 	case cborTypeMap:
 		if tInfo.nonPtrKind == reflect.Struct {
 			return d.parseMapToStruct(v, tInfo)
@@ -1073,6 +1085,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		d.skip()
 		return &UnmarshalTypeError{CBORType: t.String(), GoType: tInfo.nonPtrType.String()}
 	}
+
 	return nil
 }
 
