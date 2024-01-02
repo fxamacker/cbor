@@ -110,6 +110,16 @@ func (e *UnsupportedTypeError) Error() string {
 	return "cbor: unsupported type: " + e.Type.String()
 }
 
+// UnsupportedValueError is returned by Marshal when attempting to encode an
+// unsupported value.
+type UnsupportedValueError struct {
+	msg string
+}
+
+func (e *UnsupportedValueError) Error() string {
+	return "cbor: unsupported value: " + e.msg
+}
+
 // SortMode identifies supported sorting order.
 type SortMode int
 
@@ -1269,14 +1279,6 @@ func encodeTag(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	return encode(e, em, reflect.ValueOf(t.Content))
 }
 
-func encodeSimpleValue(e *encoderBuffer, em *encMode, v reflect.Value) error {
-	if b := em.encTagBytes(v.Type()); b != nil {
-		e.Write(b)
-	}
-	encodeHead(e, byte(cborTypePrimitives), v.Uint())
-	return nil
-}
-
 func encodeHead(e *encoderBuffer, t byte, n uint64) {
 	if n <= 23 {
 		e.WriteByte(t | byte(n))
@@ -1319,7 +1321,7 @@ func getEncodeFuncInternal(t reflect.Type) (encodeFunc, isEmptyFunc) {
 	}
 	switch t {
 	case typeSimpleValue:
-		return encodeSimpleValue, isEmptyUint
+		return encodeMarshalerType, isEmptyUint
 	case typeTag:
 		return encodeTag, alwaysNotEmpty
 	case typeTime:

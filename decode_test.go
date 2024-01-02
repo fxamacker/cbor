@@ -79,6 +79,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -108,6 +109,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -137,6 +139,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -166,6 +169,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -195,6 +199,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -224,6 +229,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -253,6 +259,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -282,6 +289,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -311,6 +319,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -340,6 +349,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -367,6 +377,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 
@@ -397,6 +408,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -425,6 +437,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -453,6 +466,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -481,6 +495,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -506,6 +521,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	}, // CBOR value -18446744073709551616 overflows Go's int64, see TestNegIntOverflow
 
@@ -537,6 +553,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeBigInt,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -566,6 +583,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeBigInt,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -596,6 +614,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeBigInt,
+			typeSimpleValue,
 		},
 	},
 
@@ -623,6 +642,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -648,6 +668,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -673,6 +694,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -698,6 +720,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -723,6 +746,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -748,6 +772,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -773,6 +798,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -798,6 +824,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 
@@ -834,6 +861,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -871,6 +899,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -900,6 +929,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -929,6 +959,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -958,6 +989,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -994,6 +1026,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -1028,6 +1061,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -1057,6 +1091,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -1086,6 +1121,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -1122,6 +1158,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -1151,8 +1188,8 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeBigInt,
-
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -1183,6 +1220,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 
@@ -1216,6 +1254,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -1245,6 +1284,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -1274,6 +1314,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -1304,6 +1345,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -1333,6 +1375,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -1362,6 +1405,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 
@@ -1392,6 +1436,7 @@ var unmarshalTests = []unmarshalTest{
 			typeMapStringInt,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	}, // 0: standard date/time
 	{
@@ -1420,6 +1465,7 @@ var unmarshalTests = []unmarshalTest{
 			typeIntSlice,
 			typeMapStringInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	}, // 1: epoch-based date/time
 	{
@@ -1455,6 +1501,7 @@ var unmarshalTests = []unmarshalTest{
 			typeIntSlice,
 			typeMapStringInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	}, // 2: positive bignum: 18446744073709551616
 	{
@@ -1490,6 +1537,7 @@ var unmarshalTests = []unmarshalTest{
 			typeIntSlice,
 			typeMapStringInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	}, // 3: negative bignum: -18446744073709551617
 	{
@@ -1519,6 +1567,7 @@ var unmarshalTests = []unmarshalTest{
 			typeMapStringInt,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	}, // 1: epoch-based date/time
 	{
@@ -1550,6 +1599,7 @@ var unmarshalTests = []unmarshalTest{
 			typeMapStringInt,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	}, // 23: expected conversion to base16 encoding
 	{
@@ -1581,6 +1631,7 @@ var unmarshalTests = []unmarshalTest{
 			typeMapStringInt,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	}, // 24: encoded cborBytes data item
 	{
@@ -1608,6 +1659,7 @@ var unmarshalTests = []unmarshalTest{
 			typeMapStringInt,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	}, // 32: URI
 
@@ -1859,6 +1911,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeBigInt,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -1884,6 +1937,7 @@ var unmarshalTests = []unmarshalTest{
 			typeRawTag,
 			typeBigInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -1915,6 +1969,7 @@ var unmarshalTests = []unmarshalTest{
 			typeTag,
 			typeRawTag,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 
@@ -1945,6 +2000,7 @@ var unmarshalTests = []unmarshalTest{
 			typeIntSlice,
 			typeMapStringInt,
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 	{
@@ -1982,6 +2038,7 @@ var unmarshalTests = []unmarshalTest{
 			typeMapStringInt,
 			reflect.TypeOf([3]string{}),
 			typeByteString,
+			typeSimpleValue,
 		},
 	},
 }
@@ -2012,6 +2069,7 @@ var unmarshalFloatWrongTypes = []reflect.Type{
 	typeRawTag,
 	typeBigInt,
 	typeByteString,
+	typeSimpleValue,
 }
 
 // unmarshalFloatTests includes test values for float16, float32, and float64.
