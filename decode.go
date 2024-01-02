@@ -1002,11 +1002,6 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 			f := math.Float64frombits(val)
 			return fillFloat(t, f, v)
 		default: // ai <= 24
-			// Decode simple values (including false, true, null, and undefined)
-			if tInfo.nonPtrType == typeSimpleValue {
-				v.SetUint(val)
-				return nil
-			}
 			switch ai {
 			case 20, 21:
 				return fillBool(t, ai == 21, v)
