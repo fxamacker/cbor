@@ -1131,8 +1131,25 @@ func TestOmitEmptyMode(t *testing.T) {
 	}
 
 	v := T{}
-	// {"b": false, "ui": 0, "i":0, "f": 0, "s": "", "slc": null, "m": {}, "p": nil, "intf": nil, "str": {}, "stro": {}}
-	want := []byte{
+
+	// {"b": false, "ui": 0, "i":0, "f": 0, "s": "", "slc": nil, "m": nil, "p": nil, "intf": nil, "str": {}, "stro": {}}
+	wantGoValue := []byte{
+		0xab,
+		0x61, 0x62, 0xf4,
+		0x62, 0x75, 0x69, 0x00,
+		0x61, 0x69, 0x00,
+		0x61, 0x66, 0xfb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x61, 0x73, 0x60,
+		0x63, 0x73, 0x6c, 0x63, 0xf6,
+		0x61, 0x6d, 0xf6,
+		0x61, 0x70, 0xf6,
+		0x64, 0x69, 0x6e, 0x74, 0x66, 0xf6,
+		0x63, 0x73, 0x74, 0x72, 0xa0,
+		0x64, 0x73, 0x74, 0x72, 0x6F, 0xa0,
+	}
+
+	// {"b": false, "ui": 0, "i":0, "f": 0, "s": "", "slc": nil, "m": nil, "p": nil, "intf": nil, "str": nil, "stro": nil}
+	wantCborValue := []byte{
 		0xaa,
 		0x61, 0x62, 0xf4,
 		0x62, 0x75, 0x69, 0x00,
@@ -1143,13 +1160,14 @@ func TestOmitEmptyMode(t *testing.T) {
 		0x61, 0x6d, 0xf6,
 		0x61, 0x70, 0xf6,
 		0x64, 0x69, 0x6e, 0x74, 0x66, 0xf6,
-		0x63, 0x73, 0x74, 0x72,
-		0xa0,
+		0x63, 0x73, 0x74, 0x72, 0xa0,
 	}
 
-	em, _ := EncOptions{OmitEmpty: OmitEmptyV1}.EncMode()
+	em_govalue, _ := EncOptions{OmitEmpty: OmitEmptyGoValue}.EncMode()
+	em_cborvalue, _ := EncOptions{OmitEmpty: OmitEmptyCBORValue}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+	testRoundTrip(t, []roundTripTest{{"OmitEmptyGoValue default values", v, wantGoValue}}, em_govalue, dm)
+	testRoundTrip(t, []roundTripTest{{"OmitEmptyCBORValue values", v, wantCborValue}}, em_cborvalue, dm)
 }
 
 func TestOmitEmptyForNestedStruct(t *testing.T) {
