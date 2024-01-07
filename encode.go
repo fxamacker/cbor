@@ -293,6 +293,30 @@ func (m NilContainersMode) valid() bool {
 	return m >= 0 && m < maxNilContainersMode
 }
 
+// OmitEmptyMode specifies how to encode the fields with omitempty tag
+// The default behavior omits if field value would encode as empty JSON value
+type OmitEmptyMode int
+
+const (
+	// OmitEmptyCBORValue specifies that fields tagged with "omitempty" should be
+	// omitted from encoding if the field would be encoded as an empty CBOR value,
+	// such as CBOR false, 0, 0.0, nil, empty byte, empty string, empty array,
+	// empty struct or empty map.
+	OmitEmptyCBORValue OmitEmptyMode = iota
+
+	// OmitEmptyGoValue specifies that fields tagged with "omitempty" should be
+	// omitted from encoding if the field has an empty Go value, defined as false, 0, a nil pointer,
+	// a nil interface value, and any empty array, slice, map, or string.
+	// This behavior is the same as the current (aka v1) encoding/json package included in Go.
+	OmitEmptyGoValue
+
+	maxOmitEmptyMode
+)
+
+func (om OmitEmptyMode) valid() bool {
+	return om >= 0 && om < maxOmitEmptyMode
+}
+
 // EncOptions specifies encoding options.
 type EncOptions struct {
 	// Sort specifies sorting order.
@@ -326,6 +350,9 @@ type EncOptions struct {
 
 	// TagsMd specifies whether to allow CBOR tags (major type 6).
 	TagsMd TagsMode
+
+	// OmitEmptyMode specifies how to encode the fields with omitempty tag
+	OmitEmpty OmitEmptyMode
 }
 
 // CanonicalEncOptions returns EncOptions for "Canonical CBOR" encoding,
@@ -501,6 +528,9 @@ func (opts EncOptions) encMode() (*encMode, error) {
 	if opts.TagsMd == TagsForbidden && opts.TimeTag == EncTagRequired {
 		return nil, errors.New("cbor: cannot set TagsMd to TagsForbidden when TimeTag is EncTagRequired")
 	}
+	if !opts.OmitEmpty.valid() {
+		return nil, errors.New("cbor: invalid OmitEmpty " + strconv.Itoa(int(opts.OmitEmpty)))
+	}
 	em := encMode{
 		sort:          opts.Sort,
 		shortestFloat: opts.ShortestFloat,
@@ -512,6 +542,7 @@ func (opts EncOptions) encMode() (*encMode, error) {
 		indefLength:   opts.IndefLength,
 		nilContainers: opts.NilContainers,
 		tagsMd:        opts.TagsMd,
+		omitEmpty:     opts.OmitEmpty,
 	}
 	return &em, nil
 }
@@ -535,6 +566,7 @@ type encMode struct {
 	indefLength   IndefLengthMode
 	nilContainers NilContainersMode
 	tagsMd        TagsMode
+	omitEmpty     OmitEmptyMode
 }
 
 var defaultEncMode = &encMode{}
@@ -551,6 +583,7 @@ func (em *encMode) EncOptions() EncOptions {
 		TimeTag:       em.timeTag,
 		IndefLength:   em.indefLength,
 		TagsMd:        em.tagsMd,
+		OmitEmpty:     em.omitEmpty,
 	}
 }
 
@@ -610,7 +643,7 @@ func putEncoderBuffer(e *encoderBuffer) {
 }
 
 type encodeFunc func(e *encoderBuffer, em *encMode, v reflect.Value) error
-type isEmptyFunc func(v reflect.Value) (empty bool, err error)
+type isEmptyFunc func(em *encMode, v reflect.Value) (empty bool, err error)
 
 var (
 	cborFalse            = []byte{0xf4}
@@ -1108,9 +1141,8 @@ func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 				continue
 			}
 		}
-
 		if f.omitEmpty {
-			empty, err := f.ief(fv)
+			empty, err := f.ief(em, fv)
 			if err != nil {
 				putEncoderBuffer(kve)
 				return err
@@ -1403,50 +1435,54 @@ func getEncodeIndirectValueFunc(t reflect.Type) encodeFunc {
 	}
 }
 
-func alwaysNotEmpty(_ reflect.Value) (empty bool, err error) {
+func alwaysNotEmpty(em *encMode, _ reflect.Value) (empty bool, err error) {
 	return false, nil
 }
 
-func isEmptyBool(v reflect.Value) (bool, error) {
+func isEmptyBool(em *encMode, v reflect.Value) (bool, error) {
 	return !v.Bool(), nil
 }
 
-func isEmptyInt(v reflect.Value) (bool, error) {
+func isEmptyInt(em *encMode, v reflect.Value) (bool, error) {
 	return v.Int() == 0, nil
 }
 
-func isEmptyUint(v reflect.Value) (bool, error) {
+func isEmptyUint(em *encMode, v reflect.Value) (bool, error) {
 	return v.Uint() == 0, nil
 }
 
-func isEmptyFloat(v reflect.Value) (bool, error) {
+func isEmptyFloat(em *encMode, v reflect.Value) (bool, error) {
 	return v.Float() == 0.0, nil
 }
 
-func isEmptyString(v reflect.Value) (bool, error) {
+func isEmptyString(em *encMode, v reflect.Value) (bool, error) {
 	return v.Len() == 0, nil
 }
 
-func isEmptySlice(v reflect.Value) (bool, error) {
+func isEmptySlice(em *encMode, v reflect.Value) (bool, error) {
 	return v.Len() == 0, nil
 }
 
-func isEmptyMap(v reflect.Value) (bool, error) {
+func isEmptyMap(em *encMode, v reflect.Value) (bool, error) {
 	return v.Len() == 0, nil
 }
 
-func isEmptyPtr(v reflect.Value) (bool, error) {
+func isEmptyPtr(em *encMode, v reflect.Value) (bool, error) {
 	return v.IsNil(), nil
 }
 
-func isEmptyIntf(v reflect.Value) (bool, error) {
+func isEmptyIntf(em *encMode, v reflect.Value) (bool, error) {
 	return v.IsNil(), nil
 }
 
-func isEmptyStruct(v reflect.Value) (bool, error) {
+func isEmptyStruct(em *encMode, v reflect.Value) (bool, error) {
 	structType, err := getEncodingStructType(v.Type())
 	if err != nil {
 		return false, err
+	}
+
+	if em.omitEmpty == OmitEmptyGoValue {
+		return false, nil
 	}
 
 	if structType.toArray {
@@ -1475,7 +1511,7 @@ func isEmptyStruct(v reflect.Value) (bool, error) {
 			}
 		}
 
-		empty, err := f.ief(fv)
+		empty, err := f.ief(em, fv)
 		if err != nil {
 			return false, err
 		}
@@ -1486,7 +1522,7 @@ func isEmptyStruct(v reflect.Value) (bool, error) {
 	return true, nil
 }
 
-func isEmptyBinaryMarshaler(v reflect.Value) (bool, error) {
+func isEmptyBinaryMarshaler(em *encMode, v reflect.Value) (bool, error) {
 	m, ok := v.Interface().(encoding.BinaryMarshaler)
 	if !ok {
 		pv := reflect.New(v.Type())
