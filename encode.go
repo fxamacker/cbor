@@ -293,21 +293,23 @@ func (m NilContainersMode) valid() bool {
 	return m >= 0 && m < maxNilContainersMode
 }
 
-// OmitEmptyMode specifies how to encode the fields with omitempty tag
-// The default behavior omits if field value would encode as empty JSON value
+// OmitEmptyMode specifies how to encode struct fields with omitempty tag.
+// The default behavior omits if field value would encode as empty CBOR value.
 type OmitEmptyMode int
 
 const (
-	// OmitEmptyCBORValue specifies that fields tagged with "omitempty" should be
-	// omitted from encoding if the field would be encoded as an empty CBOR value,
-	// such as CBOR false, 0, 0.0, nil, empty byte, empty string, empty array,
-	// empty struct or empty map.
+	// OmitEmptyCBORValue specifies that struct fields tagged with "omitempty"
+	// should be omitted from encoding if the field would be encoded as an empty
+	// CBOR value, such as CBOR false, 0, 0.0, nil, empty byte, empty string,
+	// empty array, or empty map.
 	OmitEmptyCBORValue OmitEmptyMode = iota
 
-	// OmitEmptyGoValue specifies that fields tagged with "omitempty" should be
-	// omitted from encoding if the field has an empty Go value, defined as false, 0, a nil pointer,
-	// a nil interface value, and any empty array, slice, map, or string.
-	// This behavior is the same as the current (aka v1) encoding/json package included in Go.
+	// OmitEmptyGoValue specifies that struct fields tagged with "omitempty"
+	// should be omitted from encoding if the field has an empty Go value,
+	// defined as false, 0, 0.0, a nil pointer, a nil interface value, and
+	// any empty array, slice, map, or string.
+	// This behavior is the same as the current (aka v1) encoding/json package
+	// included in Go.
 	OmitEmptyGoValue
 
 	maxOmitEmptyMode
@@ -351,7 +353,7 @@ type EncOptions struct {
 	// TagsMd specifies whether to allow CBOR tags (major type 6).
 	TagsMd TagsMode
 
-	// OmitEmptyMode specifies how to encode the fields with omitempty tag
+	// OmitEmptyMode specifies how to encode struct fields with omitempty tag.
 	OmitEmpty OmitEmptyMode
 }
 
@@ -1435,43 +1437,43 @@ func getEncodeIndirectValueFunc(t reflect.Type) encodeFunc {
 	}
 }
 
-func alwaysNotEmpty(em *encMode, _ reflect.Value) (empty bool, err error) {
+func alwaysNotEmpty(_ *encMode, _ reflect.Value) (empty bool, err error) {
 	return false, nil
 }
 
-func isEmptyBool(em *encMode, v reflect.Value) (bool, error) {
+func isEmptyBool(_ *encMode, v reflect.Value) (bool, error) {
 	return !v.Bool(), nil
 }
 
-func isEmptyInt(em *encMode, v reflect.Value) (bool, error) {
+func isEmptyInt(_ *encMode, v reflect.Value) (bool, error) {
 	return v.Int() == 0, nil
 }
 
-func isEmptyUint(em *encMode, v reflect.Value) (bool, error) {
+func isEmptyUint(_ *encMode, v reflect.Value) (bool, error) {
 	return v.Uint() == 0, nil
 }
 
-func isEmptyFloat(em *encMode, v reflect.Value) (bool, error) {
+func isEmptyFloat(_ *encMode, v reflect.Value) (bool, error) {
 	return v.Float() == 0.0, nil
 }
 
-func isEmptyString(em *encMode, v reflect.Value) (bool, error) {
+func isEmptyString(_ *encMode, v reflect.Value) (bool, error) {
 	return v.Len() == 0, nil
 }
 
-func isEmptySlice(em *encMode, v reflect.Value) (bool, error) {
+func isEmptySlice(_ *encMode, v reflect.Value) (bool, error) {
 	return v.Len() == 0, nil
 }
 
-func isEmptyMap(em *encMode, v reflect.Value) (bool, error) {
+func isEmptyMap(_ *encMode, v reflect.Value) (bool, error) {
 	return v.Len() == 0, nil
 }
 
-func isEmptyPtr(em *encMode, v reflect.Value) (bool, error) {
+func isEmptyPtr(_ *encMode, v reflect.Value) (bool, error) {
 	return v.IsNil(), nil
 }
 
-func isEmptyIntf(em *encMode, v reflect.Value) (bool, error) {
+func isEmptyIntf(_ *encMode, v reflect.Value) (bool, error) {
 	return v.IsNil(), nil
 }
 
@@ -1522,7 +1524,7 @@ func isEmptyStruct(em *encMode, v reflect.Value) (bool, error) {
 	return true, nil
 }
 
-func isEmptyBinaryMarshaler(em *encMode, v reflect.Value) (bool, error) {
+func isEmptyBinaryMarshaler(_ *encMode, v reflect.Value) (bool, error) {
 	m, ok := v.Interface().(encoding.BinaryMarshaler)
 	if !ok {
 		pv := reflect.New(v.Type())
