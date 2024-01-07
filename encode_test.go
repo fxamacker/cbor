@@ -1127,6 +1127,34 @@ func TestOmitEmptyForStruct2(t *testing.T) {
 	testRoundTrip(t, []roundTripTest{{"non-default values", v, want}}, em, dm)
 }
 
+func TestInvalidOmitEmptyMode(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         EncOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         EncOptions{OmitEmpty: -1},
+			wantErrorMsg: "cbor: invalid OmitEmpty -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         EncOptions{OmitEmpty: 101},
+			wantErrorMsg: "cbor: invalid OmitEmpty 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.EncMode()
+			if err == nil {
+				t.Errorf("EncMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
 func TestOmitEmptyMode(t *testing.T) {
 	type T1 struct{}
 	type T struct {
@@ -1154,8 +1182,8 @@ func TestOmitEmptyMode(t *testing.T) {
 
 	v := T{}
 
-	// {"b": false, "ui": 0, "i":0, "f": 0, "s": "", "slc": nil, "m": nil, "p": nil, "intf": nil, "str": {}, "stro": {}}
-	wantGoValue := []byte{
+	// {"b": false, "ui": 0, "i": 0, "f": 0.0, "s": "", "slc": null, "m": null, "p": null, "intf": null, "str": {}, "stro": {}}
+	wantDataWithOmitEmptyGoValue := []byte{
 		0xab,
 		0x61, 0x62, 0xf4,
 		0x62, 0x75, 0x69, 0x00,
@@ -1170,8 +1198,8 @@ func TestOmitEmptyMode(t *testing.T) {
 		0x64, 0x73, 0x74, 0x72, 0x6F, 0xa0,
 	}
 
-	// {"b": false, "ui": 0, "i":0, "f": 0, "s": "", "slc": nil, "m": nil, "p": nil, "intf": nil, "str": nil, "stro": nil}
-	wantCborValue := []byte{
+	// {"b": false, "ui": 0, "i": 0, "f": 0.0, "s": "", "slc": null, "m": null, "p": null, "intf": null, "str": {}}
+	wantDataWithOmitEmptyCBORValue := []byte{
 		0xaa,
 		0x61, 0x62, 0xf4,
 		0x62, 0x75, 0x69, 0x00,
@@ -1185,11 +1213,11 @@ func TestOmitEmptyMode(t *testing.T) {
 		0x63, 0x73, 0x74, 0x72, 0xa0,
 	}
 
-	em_govalue, _ := EncOptions{OmitEmpty: OmitEmptyGoValue}.EncMode()
-	em_cborvalue, _ := EncOptions{OmitEmpty: OmitEmptyCBORValue}.EncMode()
+	emOmitEmptyGoValue, _ := EncOptions{OmitEmpty: OmitEmptyGoValue}.EncMode()
+	emOmitEmptyCBORValue, _ := EncOptions{OmitEmpty: OmitEmptyCBORValue}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"OmitEmptyGoValue default values", v, wantGoValue}}, em_govalue, dm)
-	testRoundTrip(t, []roundTripTest{{"OmitEmptyCBORValue values", v, wantCborValue}}, em_cborvalue, dm)
+	testRoundTrip(t, []roundTripTest{{"OmitEmptyGoValue (default) ", v, wantDataWithOmitEmptyGoValue}}, emOmitEmptyGoValue, dm)
+	testRoundTrip(t, []roundTripTest{{"OmitEmptyCBORValue", v, wantDataWithOmitEmptyCBORValue}}, emOmitEmptyCBORValue, dm)
 }
 
 func TestOmitEmptyForNestedStruct(t *testing.T) {
