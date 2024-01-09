@@ -3675,6 +3675,29 @@ func TestEncModeInvalidTimeTag(t *testing.T) {
 	}
 }
 
+func TestEncModeStringType(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         EncOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "",
+			opts:         EncOptions{String: -1},
+			wantErrorMsg: "cbor: invalid StringType -1",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.EncMode()
+			if err == nil {
+				t.Errorf("EncMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
 func TestEncIndefiniteLengthOption(t *testing.T) {
 	// Default option allows indefinite length items
 	var buf bytes.Buffer
@@ -3992,5 +4015,43 @@ func TestMapWithSimpleValueKey(t *testing.T) {
 	// Test roundtrip produces identical CBOR data.
 	if !bytes.Equal(data, encodedData) {
 		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, encodedData, data)
+	}
+}
+
+func TestMarshalStringType(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		opts EncOptions
+		in   string
+		want []byte
+	}{
+		{
+			name: "to byte string",
+			opts: EncOptions{String: StringToByteString},
+			in:   "01234",
+			want: hexDecode("453031323334"),
+		},
+		{
+			name: "to text string",
+			opts: EncOptions{String: StringToTextString},
+			in:   "01234",
+			want: hexDecode("653031323334"),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			em, err := tc.opts.EncMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			got, err := em.Marshal(tc.in)
+			if err != nil {
+				t.Errorf("unexpected error from Marshal(%q): %v", tc.in, err)
+			}
+
+			if !bytes.Equal(got, tc.want) {
+				t.Errorf("Marshal(%q): wanted %x, got %x", tc.in, tc.want, got)
+			}
+		})
 	}
 }
