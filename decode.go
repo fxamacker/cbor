@@ -429,6 +429,23 @@ func (bstsm ByteStringToStringMode) valid() bool {
 	return bstsm >= 0 && bstsm < maxByteStringToStringMode
 }
 
+// FieldNameByteStringMode specifies the behavior when decoding a CBOR byte string map key as a Go struct field name.
+type FieldNameByteStringMode int
+
+const (
+	// FieldNameByteStringForbidden generates an error on an attempt to decode a CBOR byte string map key as a Go struct field name.
+	FieldNameByteStringForbidden FieldNameByteStringMode = iota
+
+	// FieldNameByteStringAllowed permits CBOR byte string map keys to be recognized as Go struct field names.
+	FieldNameByteStringAllowed
+
+	maxFieldNameByteStringMode
+)
+
+func (fnbsm FieldNameByteStringMode) valid() bool {
+	return fnbsm >= 0 && fnbsm < maxFieldNameByteStringMode
+}
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -493,6 +510,10 @@ type DecOptions struct {
 
 	// ByteStringToString specifies the behavior when decoding a CBOR byte string into a Go string.
 	ByteStringToString ByteStringToStringMode
+
+	// FieldNameByteString specifies the behavior when decoding a CBOR byte string map key as a
+	// Go struct field name.
+	FieldNameByteString FieldNameByteStringMode
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -613,6 +634,9 @@ func (opts DecOptions) decMode() (*decMode, error) {
 	if !opts.ByteStringToString.valid() {
 		return nil, errors.New("cbor: invalid ByteStringToString " + strconv.Itoa(int(opts.ByteStringToString)))
 	}
+	if !opts.FieldNameByteString.valid() {
+		return nil, errors.New("cbor: invalid FieldNameByteString " + strconv.Itoa(int(opts.FieldNameByteString)))
+	}
 	dm := decMode{
 		dupMapKey:             opts.DupMapKey,
 		timeTag:               opts.TimeTag,
@@ -630,6 +654,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		bigIntDec:             opts.BigIntDec,
 		defaultByteStringType: opts.DefaultByteStringType,
 		byteStringToString:    opts.ByteStringToString,
+		fieldNameByteString:   opts.FieldNameByteString,
 	}
 	return &dm, nil
 }
@@ -698,6 +723,7 @@ type decMode struct {
 	bigIntDec             BigIntDecMode
 	defaultByteStringType reflect.Type
 	byteStringToString    ByteStringToStringMode
+	fieldNameByteString   FieldNameByteStringMode
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -720,6 +746,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		BigIntDec:             dm.bigIntDec,
 		DefaultByteStringType: dm.defaultByteStringType,
 		ByteStringToString:    dm.byteStringToString,
+		FieldNameByteString:   dm.fieldNameByteString,
 	}
 }
 
@@ -1848,15 +1875,19 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 		var k interface{} // Used by duplicate map key detection
 
 		t := d.nextCBORType()
-		if t == cborTypeTextString {
+		if t == cborTypeTextString || (t == cborTypeByteString && d.dm.fieldNameByteString == FieldNameByteStringAllowed) {
 			var keyBytes []byte
-			keyBytes, lastErr = d.parseTextString()
-			if lastErr != nil {
-				if err == nil {
-					err = lastErr
+			if t == cborTypeTextString {
+				keyBytes, lastErr = d.parseTextString()
+				if lastErr != nil {
+					if err == nil {
+						err = lastErr
+					}
+					d.skip() // skip value
+					continue
 				}
-				d.skip() // skip value
-				continue
+			} else { // cborTypeByteString
+				keyBytes, _ = d.parseByteString()
 			}
 
 			keyLen := len(keyBytes)
