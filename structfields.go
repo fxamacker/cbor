@@ -10,17 +10,18 @@ import (
 )
 
 type field struct {
-	name      string
-	nameAsInt int64 // used to decoder to match field name with CBOR int
-	cborName  []byte
-	idx       []int
-	typ       reflect.Type
-	ef        encodeFunc
-	ief       isEmptyFunc
-	typInfo   *typeInfo // used to decoder to reuse type info
-	tagged    bool      // used to choose dominant field (at the same level tagged fields dominate untagged fields)
-	omitEmpty bool      // used to skip empty field
-	keyAsInt  bool      // used to encode/decode field name as int
+	name               string
+	nameAsInt          int64 // used to decoder to match field name with CBOR int
+	cborName           []byte
+	cborNameByteString []byte // major type 2 name encoding iff cborName has major type 3
+	idx                []int
+	typ                reflect.Type
+	ef                 encodeFunc
+	ief                isEmptyFunc
+	typInfo            *typeInfo // used to decoder to reuse type info
+	tagged             bool      // used to choose dominant field (at the same level tagged fields dominate untagged fields)
+	omitEmpty          bool      // used to skip empty field
+	keyAsInt           bool      // used to encode/decode field name as int
 }
 
 type fields []*field

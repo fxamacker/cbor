@@ -3698,6 +3698,34 @@ func TestEncModeStringType(t *testing.T) {
 	}
 }
 
+func TestEncModeInvalidFieldNameMode(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         EncOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "",
+			opts:         EncOptions{FieldName: -1},
+			wantErrorMsg: "cbor: invalid FieldName -1",
+		},
+		{
+			name:         "",
+			opts:         EncOptions{FieldName: 101},
+			wantErrorMsg: "cbor: invalid FieldName 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.EncMode()
+			if err == nil {
+				t.Errorf("EncMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
 func TestEncIndefiniteLengthOption(t *testing.T) {
 	// Default option allows indefinite length items
 	var buf bytes.Buffer
@@ -4036,6 +4064,72 @@ func TestMarshalStringType(t *testing.T) {
 			opts: EncOptions{String: StringToTextString},
 			in:   "01234",
 			want: hexDecode("653031323334"),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			em, err := tc.opts.EncMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			got, err := em.Marshal(tc.in)
+			if err != nil {
+				t.Errorf("unexpected error from Marshal(%q): %v", tc.in, err)
+			}
+
+			if !bytes.Equal(got, tc.want) {
+				t.Errorf("Marshal(%q): wanted %x, got %x", tc.in, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestMarshalFieldNameType(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		opts EncOptions
+		in   interface{}
+		want []byte
+	}{
+		{
+			name: "fixed-length to text string",
+			opts: EncOptions{FieldName: FieldNameToTextString},
+			in: struct {
+				F1 int `cbor:"1,keyasint"`
+				F2 int `cbor:"a"`
+				F3 int `cbor:"-3,keyasint"`
+			}{},
+			want: hexDecode("a301006161002200"),
+		},
+		{
+			name: "fixed-length to byte string",
+			opts: EncOptions{FieldName: FieldNameToByteString},
+			in: struct {
+				F1 int `cbor:"1,keyasint"`
+				F2 int `cbor:"a"`
+				F3 int `cbor:"-3,keyasint"`
+			}{},
+			want: hexDecode("a301004161002200"),
+		},
+		{
+			name: "variable-length to text string",
+			opts: EncOptions{FieldName: FieldNameToTextString},
+			in: struct {
+				F1 int `cbor:"1,omitempty,keyasint"`
+				F2 int `cbor:"a,omitempty"`
+				F3 int `cbor:"-3,omitempty,keyasint"`
+			}{F1: 7, F2: 7, F3: 7},
+			want: hexDecode("a301076161072207"),
+		},
+		{
+			name: "variable-length to byte string",
+			opts: EncOptions{FieldName: FieldNameToByteString},
+			in: struct {
+				F1 int `cbor:"1,omitempty,keyasint"`
+				F2 int `cbor:"a,omitempty"`
+				F3 int `cbor:"-3,omitempty,keyasint"`
+			}{F1: 7, F2: 7, F3: 7},
+			want: hexDecode("a301074161072207"),
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
