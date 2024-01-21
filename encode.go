@@ -947,8 +947,13 @@ func (ae arrayEncodeFunc) encode(e *encoderBuffer, em *encMode, v reflect.Value)
 	return nil
 }
 
+// encodeKeyValueFunc encodes key/value pairs in map (v).
+// If kvs is provided (having the same length as v), length of encoded key and value are stored in kvs.
+// kvs is used for canonical encoding of map.
+type encodeKeyValueFunc func(e *encoderBuffer, em *encMode, v reflect.Value, kvs []keyValue) error
+
 type mapEncodeFunc struct {
-	kf, ef encodeFunc
+	e encodeKeyValueFunc
 }
 
 func (me mapEncodeFunc) encode(e *encoderBuffer, em *encMode, v reflect.Value) error {
@@ -967,16 +972,8 @@ func (me mapEncodeFunc) encode(e *encoderBuffer, em *encMode, v reflect.Value) e
 		return me.encodeCanonical(e, em, v)
 	}
 	encodeHead(e, byte(cborTypeMap), uint64(mlen))
-	iter := v.MapRange()
-	for iter.Next() {
-		if err := me.kf(e, em, iter.Key()); err != nil {
-			return err
-		}
-		if err := me.ef(e, em, iter.Value()); err != nil {
-			return err
-		}
-	}
-	return nil
+
+	return me.e(e, em, v, nil)
 }
 
 type keyValue struct {
@@ -1045,26 +1042,17 @@ func putKeyValues(x *[]keyValue) {
 }
 
 func (me mapEncodeFunc) encodeCanonical(e *encoderBuffer, em *encMode, v reflect.Value) error {
-	kve := getEncoderBuffer()     // accumulated cbor encoded key-values
+	kve := getEncoderBuffer() // accumulated cbor encoded key-values
+	defer putEncoderBuffer(kve)
+
 	kvsp := getKeyValues(v.Len()) // for sorting keys
+	defer putKeyValues(kvsp)
+
 	kvs := *kvsp
-	iter := v.MapRange()
-	for i := 0; iter.Next(); i++ {
-		off := kve.Len()
-		if err := me.kf(kve, em, iter.Key()); err != nil {
-			putEncoderBuffer(kve)
-			putKeyValues(kvsp)
-			return err
-		}
-		n1 := kve.Len() - off
-		if err := me.ef(kve, em, iter.Value()); err != nil {
-			putEncoderBuffer(kve)
-			putKeyValues(kvsp)
-			return err
-		}
-		n2 := kve.Len() - off
-		// Save key and keyvalue length to create slice later.
-		kvs[i] = keyValue{keyLen: n1, keyValueLen: n2}
+
+	err := me.e(kve, em, v, kvs)
+	if err != nil {
+		return err
 	}
 
 	b := kve.Bytes()
@@ -1085,8 +1073,6 @@ func (me mapEncodeFunc) encodeCanonical(e *encoderBuffer, em *encMode, v reflect
 		e.Write(kvs[i].keyValueCBORData)
 	}
 
-	putEncoderBuffer(kve)
-	putKeyValues(kvsp)
 	return nil
 }
 
@@ -1429,12 +1415,11 @@ func getEncodeFuncInternal(t reflect.Type) (encodeFunc, isEmptyFunc) {
 		}
 		return arrayEncodeFunc{f: f}.encode, isEmptySlice
 	case reflect.Map:
-		kf, _ := getEncodeFunc(t.Key())
-		ef, _ := getEncodeFunc(t.Elem())
-		if kf == nil || ef == nil {
+		f := getEncodeMapFunc(t)
+		if f == nil {
 			return nil, nil
 		}
-		return mapEncodeFunc{kf: kf, ef: ef}.encode, isEmptyMap
+		return f, isEmptyMap
 	case reflect.Struct:
 		// Get struct's special field "_" tag options
 		if f, ok := t.FieldByName("_"); ok {

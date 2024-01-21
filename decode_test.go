@@ -7514,7 +7514,7 @@ func TestUnmarshalToInterface(t *testing.T) {
 			if err != nil {
 				t.Errorf("Marshal(%+v) returned error %v", tc.v, err)
 			} else if !bytes.Equal(data, tc.data) {
-				t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.v, data, tc.v)
+				t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.v, data, tc.data)
 			}
 
 			// Unmarshal to empty interface
