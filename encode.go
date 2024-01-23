@@ -340,6 +340,23 @@ func (om OmitEmptyMode) valid() bool {
 	return om >= 0 && om < maxOmitEmptyMode
 }
 
+// FieldNameMode specifies the CBOR type to use when encoding struct field names.
+type FieldNameMode int
+
+const (
+	// FieldNameToTextString encodes struct fields to CBOR text string (major type 3).
+	FieldNameToTextString FieldNameMode = iota
+
+	// FieldNameToTextString encodes struct fields to CBOR byte string (major type 2).
+	FieldNameToByteString
+
+	maxFieldNameMode
+)
+
+func (fnm FieldNameMode) valid() bool {
+	return fnm >= 0 && fnm < maxFieldNameMode
+}
+
 // EncOptions specifies encoding options.
 type EncOptions struct {
 	// Sort specifies sorting order.
@@ -381,6 +398,9 @@ type EncOptions struct {
 	// - CBOR text string (major type 3) is default
 	// - CBOR byte string (major type 2)
 	String StringMode
+
+	// FieldName specifies the CBOR type to use when encoding struct field names.
+	FieldName FieldNameMode
 }
 
 // CanonicalEncOptions returns EncOptions for "Canonical CBOR" encoding,
@@ -563,6 +583,9 @@ func (opts EncOptions) encMode() (*encMode, error) {
 	if err != nil {
 		return nil, err
 	}
+	if !opts.FieldName.valid() {
+		return nil, errors.New("cbor: invalid FieldName " + strconv.Itoa(int(opts.FieldName)))
+	}
 	em := encMode{
 		sort:            opts.Sort,
 		shortestFloat:   opts.ShortestFloat,
@@ -577,6 +600,7 @@ func (opts EncOptions) encMode() (*encMode, error) {
 		omitEmpty:       opts.OmitEmpty,
 		stringType:      opts.String,
 		stringMajorType: stringMajorType,
+		fieldName:       opts.FieldName,
 	}
 	return &em, nil
 }
@@ -603,6 +627,7 @@ type encMode struct {
 	omitEmpty       OmitEmptyMode
 	stringType      StringMode
 	stringMajorType cborType
+	fieldName       FieldNameMode
 }
 
 var defaultEncMode, _ = EncOptions{}.encMode()
@@ -621,6 +646,7 @@ func (em *encMode) EncOptions() EncOptions {
 		TagsMd:        em.tagsMd,
 		OmitEmpty:     em.omitEmpty,
 		String:        em.stringType,
+		FieldName:     em.fieldName,
 	}
 }
 
@@ -1137,7 +1163,11 @@ func encodeFixedLengthStruct(e *encoderBuffer, em *encMode, v reflect.Value, fld
 
 	for i := 0; i < len(flds); i++ {
 		f := flds[i]
-		e.Write(f.cborName)
+		if !f.keyAsInt && em.fieldName == FieldNameToByteString {
+			e.Write(f.cborNameByteString)
+		} else { // int or text string
+			e.Write(f.cborName)
+		}
 
 		fv := v.Field(f.idx[0])
 		if err := f.ef(e, em, fv); err != nil {
@@ -1189,7 +1219,11 @@ func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 			}
 		}
 
-		kve.Write(f.cborName)
+		if !f.keyAsInt && em.fieldName == FieldNameToByteString {
+			kve.Write(f.cborNameByteString)
+		} else { // int or text string
+			kve.Write(f.cborName)
+		}
 
 		if err := f.ef(kve, em, fv); err != nil {
 			putEncoderBuffer(kve)

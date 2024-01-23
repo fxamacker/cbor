@@ -8302,6 +8302,70 @@ func TestUnmarshalByteStringToString(t *testing.T) {
 	}
 }
 
+func TestDecModeInvalidFieldNameByteStringMode(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{FieldNameByteString: -1},
+			wantErrorMsg: "cbor: invalid FieldNameByteString -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{FieldNameByteString: 101},
+			wantErrorMsg: "cbor: invalid FieldNameByteString 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestUnmarshalFieldNameByteString(t *testing.T) {
+	allowed, err := DecOptions{
+		FieldNameByteString: FieldNameByteStringAllowed,
+	}.DecMode()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var s struct {
+		F int64 `json:"f"`
+	}
+
+	err = allowed.Unmarshal(hexDecode("a1414601"), &s) // {h'46': 1}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if s.F != 1 {
+		t.Errorf("expected field F to be set to 1, got %d", s.F)
+	}
+
+	forbidden, err := DecOptions{
+		FieldNameByteString: FieldNameByteStringForbidden,
+	}.DecMode()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const wantMsg = "cbor: cannot unmarshal byte string into Go value of type string (map key is of type byte string and cannot be used to match struct field name)"
+	if err := forbidden.Unmarshal(hexDecode("a1414601"), &s); err == nil {
+		t.Errorf("expected non-nil error")
+	} else if gotMsg := err.Error(); gotMsg != wantMsg {
+		t.Errorf("expected error %q, got %q", wantMsg, gotMsg)
+	}
+}
+
 func isCBORNil(data []byte) bool {
 	return len(data) > 0 && (data[0] == 0xf6 || data[0] == 0xf7)
 }
