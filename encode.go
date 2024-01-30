@@ -643,6 +643,7 @@ func (em *encMode) EncOptions() EncOptions {
 		Time:          em.time,
 		TimeTag:       em.timeTag,
 		IndefLength:   em.indefLength,
+		NilContainers: em.nilContainers,
 		TagsMd:        em.tagsMd,
 		OmitEmpty:     em.omitEmpty,
 		String:        em.stringType,

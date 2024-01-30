@@ -4861,16 +4861,30 @@ func TestUnmarshalToNotNilInterface(t *testing.T) {
 
 func TestDecOptions(t *testing.T) {
 	opts1 := DecOptions{
-		DupMapKey:         DupMapKeyEnforcedAPF,
-		TimeTag:           DecTagRequired,
-		MaxNestedLevels:   100,
-		MaxArrayElements:  102,
-		MaxMapPairs:       101,
-		IndefLength:       IndefLengthForbidden,
-		TagsMd:            TagsForbidden,
-		IntDec:            IntDecConvertSigned,
-		ExtraReturnErrors: ExtraDecErrorUnknownField,
-		UTF8:              UTF8DecodeInvalid,
+		DupMapKey:             DupMapKeyEnforcedAPF,
+		TimeTag:               DecTagRequired,
+		MaxNestedLevels:       100,
+		MaxArrayElements:      102,
+		MaxMapPairs:           101,
+		IndefLength:           IndefLengthForbidden,
+		TagsMd:                TagsForbidden,
+		IntDec:                IntDecConvertSigned,
+		MapKeyByteString:      MapKeyByteStringForbidden,
+		ExtraReturnErrors:     ExtraDecErrorUnknownField,
+		DefaultMapType:        reflect.TypeOf(map[string]interface{}(nil)),
+		UTF8:                  UTF8DecodeInvalid,
+		FieldNameMatching:     FieldNameMatchingCaseSensitive,
+		BigIntDec:             BigIntDecodePointer,
+		DefaultByteStringType: reflect.TypeOf(""),
+		ByteStringToString:    ByteStringToStringAllowed,
+		FieldNameByteString:   FieldNameByteStringAllowed,
+	}
+	ov := reflect.ValueOf(opts1)
+	for i := 0; i < ov.NumField(); i++ {
+		fv := ov.Field(i)
+		if fv.IsZero() {
+			t.Errorf("options field %q is unset or set to the zero value for its type", ov.Type().Field(i).Name)
+		}
 	}
 	dm, err := opts1.DecMode()
 	if err != nil {
@@ -4878,7 +4892,7 @@ func TestDecOptions(t *testing.T) {
 	} else {
 		opts2 := dm.DecOptions()
 		if !reflect.DeepEqual(opts1, opts2) {
-			t.Errorf("DecOptions->DecMode->DecOptions returned different values: %v, %v", opts1, opts2)
+			t.Errorf("DecOptions->DecMode->DecOptions returned different values: %#v, %#v", opts1, opts2)
 		}
 	}
 }

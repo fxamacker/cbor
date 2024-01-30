@@ -3623,6 +3623,23 @@ func TestEncModeInvalidBigIntConvertMode(t *testing.T) {
 	}
 }
 
+func TestEncOptionsTagsForbidden(t *testing.T) {
+	// It's not valid to set both TagsMd and TimeTag to a non-zero value in the same EncOptions,
+	// so this exercises the options-mode-options roundtrip for non-zero TagsMd.
+	opts1 := EncOptions{
+		TagsMd: TagsForbidden,
+	}
+	em, err := opts1.EncMode()
+	if err != nil {
+		t.Errorf("EncMode() returned an error %v", err)
+	} else {
+		opts2 := em.EncOptions()
+		if !reflect.DeepEqual(opts1, opts2) {
+			t.Errorf("EncOptions->EncMode->EncOptions returned different values: %#v, %#v", opts1, opts2)
+		}
+	}
+}
+
 func TestEncOptions(t *testing.T) {
 	opts1 := EncOptions{
 		Sort:          SortBytewiseLexical,
@@ -3633,8 +3650,25 @@ func TestEncOptions(t *testing.T) {
 		Time:          TimeRFC3339Nano,
 		TimeTag:       EncTagRequired,
 		IndefLength:   IndefLengthForbidden,
-		NilContainers: NilContainerAsNull,
+		NilContainers: NilContainerAsEmpty,
 		TagsMd:        TagsAllowed,
+		OmitEmpty:     OmitEmptyGoValue,
+		String:        StringToByteString,
+		FieldName:     FieldNameToByteString,
+	}
+	ov := reflect.ValueOf(opts1)
+	for i := 0; i < ov.NumField(); i++ {
+		fv := ov.Field(i)
+		if fv.IsZero() {
+			fn := ov.Type().Field(i).Name
+			if fn == "TagsMd" {
+				// Roundtripping non-zero values for TagsMd is tested separately
+				// since the non-zero value (TagsForbidden) is incompatible with the
+				// non-zero value for other options (e.g. TimeTag).
+				continue
+			}
+			t.Errorf("options field %q is unset or set to the zero value for its type", fn)
+		}
 	}
 	em, err := opts1.EncMode()
 	if err != nil {
@@ -3642,7 +3676,7 @@ func TestEncOptions(t *testing.T) {
 	} else {
 		opts2 := em.EncOptions()
 		if !reflect.DeepEqual(opts1, opts2) {
-			t.Errorf("EncOptions->EncMode->EncOptions returned different values: %v, %v", opts1, opts2)
+			t.Errorf("EncOptions->EncMode->EncOptions returned different values: %#v, %#v", opts1, opts2)
 		}
 	}
 }
