@@ -4893,6 +4893,11 @@ func TestUnmarshalToNotNilInterface(t *testing.T) {
 }
 
 func TestDecOptions(t *testing.T) {
+	simpleValues, err := NewSimpleValueRegistry(WithSimpleValueAnalog(255, false))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	opts1 := DecOptions{
 		DupMapKey:             DupMapKeyEnforcedAPF,
 		TimeTag:               DecTagRequired,
@@ -4912,6 +4917,7 @@ func TestDecOptions(t *testing.T) {
 		ByteStringToString:    ByteStringToStringAllowed,
 		FieldNameByteString:   FieldNameByteStringAllowed,
 		UnrecognizedTagToAny:  UnrecognizedTagContentToAny,
+		SimpleValues:          simpleValues,
 	}
 	ov := reflect.ValueOf(opts1)
 	for i := 0; i < ov.NumField(); i++ {
@@ -8651,6 +8657,225 @@ func TestUnmarshalWithUnrecognizedTagToAnyModeForSharedTag(t *testing.T) {
 
 			compareNonFloats(t, tc.in, got, tc.want)
 
+		})
+	}
+}
+
+func TestNewSimpleValueRegistry(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         []func(*SimpleValueRegistry) error
+		wantErrorMsg string
+	}{
+		{
+			name:         "min reserved",
+			opts:         []func(*SimpleValueRegistry) error{WithSimpleValueAnalog(24, true)},
+			wantErrorMsg: "cbor: cannot set analog for reserved simple value 24",
+		},
+		{
+			name:         "max reserved",
+			opts:         []func(*SimpleValueRegistry) error{WithSimpleValueAnalog(31, true)},
+			wantErrorMsg: "cbor: cannot set analog for reserved simple value 31",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := NewSimpleValueRegistry(tc.opts...)
+			if err == nil {
+				t.Fatalf("got nil error, want: %s", tc.wantErrorMsg)
+			}
+			if got := err.Error(); got != tc.wantErrorMsg {
+				t.Errorf("want: %s, got: %s", tc.wantErrorMsg, got)
+			}
+		})
+	}
+}
+
+func TestUnmarshalSimpleValues(t *testing.T) {
+	type namedBool bool
+
+	assertNilError := func(t *testing.T, e error) {
+		if e != nil {
+			t.Errorf("expected nil error, got: %v", e)
+		}
+	}
+
+	assertExactError := func(want error) func(*testing.T, error) {
+		return func(t *testing.T, got error) {
+			if reflect.DeepEqual(want, got) {
+				return
+			}
+			t.Errorf("want %#v, got %#v", want, got)
+		}
+	}
+
+	for _, tc := range []struct {
+		name          string
+		builder       func(...func(*SimpleValueRegistry) error) (*SimpleValueRegistry, error)
+		fns           []func(*SimpleValueRegistry) error
+		in            []byte
+		into          reflect.Type
+		want          interface{}
+		assertOnError func(t *testing.T, e error)
+	}{
+		{
+			name:          "default false into interface{}",
+			builder:       NewSimpleValueRegistryFromDefaults,
+			fns:           nil,
+			in:            []byte{0xf4},
+			into:          typeIntf,
+			want:          false,
+			assertOnError: assertNilError,
+		},
+		{
+			name:          "default false into bool",
+			builder:       NewSimpleValueRegistryFromDefaults,
+			fns:           nil,
+			in:            []byte{0xf4},
+			into:          typeBool,
+			want:          false,
+			assertOnError: assertNilError,
+		},
+		{
+			name:          "default true into interface{}",
+			builder:       NewSimpleValueRegistryFromDefaults,
+			fns:           nil,
+			in:            []byte{0xf5},
+			into:          typeIntf,
+			want:          true,
+			assertOnError: assertNilError,
+		},
+		{
+			name:          "default true into bool",
+			builder:       NewSimpleValueRegistryFromDefaults,
+			fns:           nil,
+			in:            []byte{0xf5},
+			into:          typeBool,
+			want:          true,
+			assertOnError: assertNilError,
+		},
+		{
+			name:    "provided true into namedBool",
+			builder: NewSimpleValueRegistry,
+			fns:     []func(*SimpleValueRegistry) error{WithSimpleValueAnalog(21, true)},
+			in:      []byte{0xf5},
+			into:    reflect.TypeOf(namedBool(false)),
+			want:    namedBool(false),
+			assertOnError: assertExactError(&UnmarshalTypeError{
+				CBORType: "primitives",
+				GoType:   reflect.TypeOf(namedBool(false)).String(),
+				errorMsg: "analog true (bool) for simple value 21 is not assignable to a value of this type",
+			}),
+		},
+		{
+			name:          "provided namedBool(true) into namedBool",
+			builder:       NewSimpleValueRegistry,
+			fns:           []func(*SimpleValueRegistry) error{WithSimpleValueAnalog(21, namedBool(true))},
+			in:            []byte{0xf5},
+			into:          reflect.TypeOf(namedBool(false)),
+			want:          namedBool(true),
+			assertOnError: assertNilError,
+		},
+		{
+			name:          "provided namedBool(true) into interface{}",
+			builder:       NewSimpleValueRegistry,
+			fns:           []func(*SimpleValueRegistry) error{WithSimpleValueAnalog(21, namedBool(true))},
+			in:            []byte{0xf5},
+			into:          typeIntf,
+			want:          namedBool(true),
+			assertOnError: assertNilError,
+		},
+		{
+			name:          "default null into interface{}",
+			builder:       NewSimpleValueRegistryFromDefaults,
+			fns:           nil,
+			in:            []byte{0xf6},
+			into:          typeIntf,
+			want:          nil,
+			assertOnError: assertNilError,
+		},
+		{
+			name:          "provided untyped nil into []int32",
+			builder:       NewSimpleValueRegistry,
+			fns:           []func(*SimpleValueRegistry) error{WithSimpleValueAnalog(200, nil)},
+			in:            []byte{0xf8, 0xc8},
+			into:          reflect.TypeOf(([]int32)(nil)),
+			want:          ([]int32)(nil),
+			assertOnError: assertNilError,
+		},
+		{
+			name:    "provided untyped nil into string",
+			builder: NewSimpleValueRegistry,
+			fns:     []func(*SimpleValueRegistry) error{WithSimpleValueAnalog(200, nil)},
+			in:      []byte{0xf8, 0xc8},
+			into:    typeString,
+			want:    "",
+			assertOnError: assertExactError(&UnmarshalTypeError{
+				CBORType: "primitives",
+				GoType:   "string",
+				errorMsg: "analog <nil> (<nil>) for simple value 200 is not assignable to a value of this type",
+			}),
+		},
+		{
+			name:          "default undefined into interface{}",
+			builder:       NewSimpleValueRegistryFromDefaults,
+			fns:           nil,
+			in:            []byte{0xf7},
+			into:          typeIntf,
+			want:          nil,
+			assertOnError: assertNilError,
+		},
+		{
+			name:    "cleared default undefined into interface{}",
+			builder: NewSimpleValueRegistryFromDefaults,
+			fns:     []func(*SimpleValueRegistry) error{WithNoSimpleValueAnalog(23)},
+			in:      []byte{0xf7},
+			into:    typeIntf,
+			want:    nil,
+			assertOnError: assertExactError(&UnacceptableDataItemError{
+				CBORType: "primitives",
+				Message:  "simple value 23 is not recognized",
+			}),
+		},
+		{
+			name:          "default unrecognized into uint64",
+			builder:       NewSimpleValueRegistryFromDefaults,
+			fns:           nil,
+			in:            []byte{0xf8, 0xc8},
+			into:          typeUint64,
+			want:          uint64(200),
+			assertOnError: assertNilError,
+		},
+		{
+			name:    "empty unrecognized into uint64",
+			builder: NewSimpleValueRegistry,
+			fns:     nil,
+			in:      []byte{0xf8, 0xc8},
+			into:    typeUint64,
+			want:    uint64(0),
+			assertOnError: assertExactError(&UnacceptableDataItemError{
+				CBORType: "primitives",
+				Message:  "simple value 200 is not recognized",
+			}),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r, err := tc.builder(tc.fns...)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			decMode, err := DecOptions{SimpleValues: r}.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			dst := reflect.New(tc.into)
+			err = decMode.Unmarshal(tc.in, dst.Interface())
+			tc.assertOnError(t, err)
+
+			if got := dst.Elem().Interface(); !reflect.DeepEqual(tc.want, got) {
+				t.Errorf("got: %#v\nwant: %#v\n", got, tc.want)
+			}
 		})
 	}
 }
