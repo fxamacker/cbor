@@ -5,7 +5,9 @@ package cbor
 
 import (
 	"encoding"
+	"encoding/base64"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -446,6 +448,47 @@ func (fnbsm FieldNameByteStringMode) valid() bool {
 	return fnbsm >= 0 && fnbsm < maxFieldNameByteStringMode
 }
 
+// TextConversionMode specifies the direction of a conversion to or from a text encoding to be
+// performed on the contents of a byte string during decoding.
+type TextConversionMode int
+
+const (
+	// TextConversionNone indicates that no conversion should be performed. The contents of the
+	// byte string are decoded without modification.
+	TextConversionNone = iota
+
+	// TextConversionEncodeToText indicates that the contents of the byte string should be
+	// converted to the appropriate text encoding during decoding.
+	TextConversionEncodeToText
+
+	// TextConversionEncodeToText indicates that the contents of the byte string should be
+	// converted from the appropriate text encoding during decoding.
+	TextConversionDecodeFromText
+)
+
+// TextEncoding identifies a single binary-to-text encoding scheme.
+type TextEncoding int
+
+const (
+	// TextEncodingNone represents no encoding, i.e. identity.
+	TextEncodingNone = iota
+
+	// TextEncodingBase64URL is the unpadded base64url encoding defined in RFC 4648 Section 5.
+	TextEncodingBase64URL
+
+	// TextEncodingBase64 is the padded base64 encoding defined in RFC 4648 Section 4.
+	TextEncodingBase64
+
+	// TextEncodingBase16 is the hex encoding (RFC 4648 Section 8) with uppercase alphabetics.
+	TextEncodingBase16
+
+	maxTextEncoding
+)
+
+func (te TextEncoding) valid() bool {
+	return te >= 0 && te < maxTextEncoding
+}
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -514,6 +557,17 @@ type DecOptions struct {
 	// FieldNameByteString specifies the behavior when decoding a CBOR byte string map key as a
 	// Go struct field name.
 	FieldNameByteString FieldNameByteStringMode
+
+	// TextConverions is a function that determines, for a destination Go type, whether or not
+	// to automatically convert to or from a text encoding for interoperability with text
+	// formats (like JSON). If not nil, the "Expected Later Encoding" tags (21, 22, and 23) will
+	// be understood.
+	TextConversions func(dst reflect.Type) TextConversionMode
+
+	// The assumed text encoding of byte strings not enclosed by one of the "Expected Later
+	// Encoding" tags when decoding into a destination Go value configured for automatic text
+	// decoding (i.e. TextConversionDecodeFromText).
+	DefaultTextEncoding TextEncoding
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -521,15 +575,35 @@ func (opts DecOptions) DecMode() (DecMode, error) {
 	return opts.decMode()
 }
 
-// DecModeWithTags returns DecMode with options and tags that are both immutable (safe for concurrency).
-func (opts DecOptions) DecModeWithTags(tags TagSet) (DecMode, error) {
+// validForTags checks that the provided tag set is compatible with these options and returns a
+// non-nil error if and only if the provided tag set is incompatible.
+func (opts DecOptions) validForTags(tags TagSet) error {
 	if opts.TagsMd == TagsForbidden {
-		return nil, errors.New("cbor: cannot create DecMode with TagSet when TagsMd is TagsForbidden")
+		return errors.New("cbor: cannot create DecMode with TagSet when TagsMd is TagsForbidden")
 	}
 	if tags == nil {
-		return nil, errors.New("cbor: cannot create DecMode with nil value as TagSet")
+		return errors.New("cbor: cannot create DecMode with nil value as TagSet")
 	}
+	if opts.TextConversions != nil {
+		for _, tagNum := range []uint64{
+			expectedLaterEncodingBase64URLTagNum,
+			expectedLaterEncodingBase64TagNum,
+			expectedLaterEncodingBase16TagNum,
+		} {
+			if rt := tags.getTypeFromTagNum([]uint64{tagNum}); rt != nil {
+				return fmt.Errorf("cbor: DecMode with non-nil TextConversions treats tag %d as built-in and conflicts with the provided TagSet's registration of %v", tagNum, rt)
+			}
+		}
 
+	}
+	return nil
+}
+
+// DecModeWithTags returns DecMode with options and tags that are both immutable (safe for concurrency).
+func (opts DecOptions) DecModeWithTags(tags TagSet) (DecMode, error) {
+	if err := opts.validForTags(tags); err != nil {
+		return nil, err
+	}
 	dm, err := opts.decMode()
 	if err != nil {
 		return nil, err
@@ -555,11 +629,8 @@ func (opts DecOptions) DecModeWithTags(tags TagSet) (DecMode, error) {
 
 // DecModeWithSharedTags returns DecMode with immutable options and mutable shared tags (safe for concurrency).
 func (opts DecOptions) DecModeWithSharedTags(tags TagSet) (DecMode, error) {
-	if opts.TagsMd == TagsForbidden {
-		return nil, errors.New("cbor: cannot create DecMode with TagSet when TagsMd is TagsForbidden")
-	}
-	if tags == nil {
-		return nil, errors.New("cbor: cannot create DecMode with nil value as TagSet")
+	if err := opts.validForTags(tags); err != nil {
+		return nil, err
 	}
 	dm, err := opts.decMode()
 	if err != nil {
@@ -637,6 +708,9 @@ func (opts DecOptions) decMode() (*decMode, error) {
 	if !opts.FieldNameByteString.valid() {
 		return nil, errors.New("cbor: invalid FieldNameByteString " + strconv.Itoa(int(opts.FieldNameByteString)))
 	}
+	if !opts.DefaultTextEncoding.valid() {
+		return nil, errors.New("cbor: invalid DefaultTextEncoding " + strconv.Itoa(int(opts.DefaultTextEncoding)))
+	}
 	dm := decMode{
 		dupMapKey:             opts.DupMapKey,
 		timeTag:               opts.TimeTag,
@@ -655,6 +729,8 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		defaultByteStringType: opts.DefaultByteStringType,
 		byteStringToString:    opts.ByteStringToString,
 		fieldNameByteString:   opts.FieldNameByteString,
+		textConversions:       opts.TextConversions,
+		defaultTextEncoding:   opts.DefaultTextEncoding,
 	}
 	return &dm, nil
 }
@@ -724,6 +800,8 @@ type decMode struct {
 	defaultByteStringType reflect.Type
 	byteStringToString    ByteStringToStringMode
 	fieldNameByteString   FieldNameByteStringMode
+	textConversions       func(reflect.Type) TextConversionMode
+	defaultTextEncoding   TextEncoding
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -747,6 +825,8 @@ func (dm *decMode) DecOptions() DecOptions {
 		DefaultByteStringType: dm.defaultByteStringType,
 		ByteStringToString:    dm.byteStringToString,
 		FieldNameByteString:   dm.fieldNameByteString,
+		TextConversions:       dm.textConversions,
+		DefaultTextEncoding:   dm.defaultTextEncoding,
 	}
 }
 
@@ -834,6 +914,17 @@ type decoder struct {
 	data []byte
 	off  int // next read offset in data
 	dm   *decMode
+
+	// expectedLaterEncodingTags stores a stack of encountered "Expected Later Encoding" tags,
+	// if any.
+	//
+	// The "Expected Later Encoding" tags (21 to 23) are valid for any data item. When decoding
+	// byte strings, the effective encoding comes from the tag nearest to the byte string being
+	// decoded. For example, the effective encoding of the byte string 21(22(h'41')) would be
+	// controlled by tag 22,and in the data item 23(h'42', 22([21(h'43')])]) the effective
+	// encoding of the byte strings h'42' and h'43' would be controlled by tag 23 and 21,
+	// respectively.
+	expectedLaterEncodingTags []uint64
 }
 
 // value decodes CBOR data item into the value pointed to by v.
@@ -892,7 +983,10 @@ func (t cborType) String() string {
 }
 
 const (
-	selfDescribedCBORTagNum = 55799
+	selfDescribedCBORTagNum              = 55799
+	expectedLaterEncodingBase64URLTagNum = 21
+	expectedLaterEncodingBase64TagNum    = 22
+	expectedLaterEncodingBase16TagNum    = 23
 )
 
 // parseToValue decodes CBOR data to value.  It assumes data is well-formed,
@@ -1045,6 +1139,11 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 
 	case cborTypeByteString:
 		b, copied := d.parseByteString()
+		b, converted, err := d.applyByteStringTextConversion(b, v.Type())
+		if err != nil {
+			return err
+		}
+		copied = copied || converted
 		return fillByteString(t, b, !copied, v, d.dm.byteStringToString)
 
 	case cborTypeTextString:
@@ -1121,6 +1220,15 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				CBORType: t.String(),
 				GoType:   tInfo.nonPtrType.String(),
 				errorMsg: bi.String() + " overflows " + v.Type().String(),
+			}
+		case expectedLaterEncodingBase64URLTagNum, expectedLaterEncodingBase64TagNum, expectedLaterEncodingBase16TagNum:
+			// If conversion for interoperability with text encodings is not configured,
+			// treat tags 21-23 as unregistered tags.
+			if d.dm.textConversions != nil {
+				d.expectedLaterEncodingTags = append(d.expectedLaterEncodingTags, tagNum)
+				defer func() {
+					d.expectedLaterEncodingTags = d.expectedLaterEncodingTags[:len(d.expectedLaterEncodingTags)-1]
+				}()
 			}
 		}
 		return d.parseToValue(v, tInfo)
@@ -1344,9 +1452,19 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 		return nValue, nil
 
 	case cborTypeByteString:
-		switch d.dm.defaultByteStringType {
-		case nil, typeByteSlice:
-			b, copied := d.parseByteString()
+		b, copied := d.parseByteString()
+		var effectiveByteStringType = d.dm.defaultByteStringType
+		if effectiveByteStringType == nil {
+			effectiveByteStringType = typeByteSlice
+		}
+		b, converted, err := d.applyByteStringTextConversion(b, effectiveByteStringType)
+		if err != nil {
+			return nil, err
+		}
+		copied = copied || converted
+
+		switch effectiveByteStringType {
+		case typeByteSlice:
 			if copied {
 				return b, nil
 			}
@@ -1354,10 +1472,8 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 			copy(clone, b)
 			return clone, nil
 		case typeString:
-			b, _ := d.parseByteString()
 			return string(b), nil
 		default:
-			b, copied := d.parseByteString()
 			if copied || d.dm.defaultByteStringType.Kind() == reflect.String {
 				// Avoid an unnecessary copy since the conversion to string must
 				// copy the underlying bytes.
@@ -1400,6 +1516,16 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 				return bi, nil
 			}
 			return *bi, nil
+		case expectedLaterEncodingBase64URLTagNum, expectedLaterEncodingBase64TagNum, expectedLaterEncodingBase16TagNum:
+			// If conversion for interoperability with text encodings is not configured,
+			// treat tags 21-23 as unregistered tags.
+			if d.dm.textConversions != nil {
+				d.expectedLaterEncodingTags = append(d.expectedLaterEncodingTags, tagNum)
+				defer func() {
+					d.expectedLaterEncodingTags = d.expectedLaterEncodingTags[:len(d.expectedLaterEncodingTags)-1]
+				}()
+				return d.parse(false)
+			}
 		}
 
 		if d.dm.tags != nil {
@@ -1482,6 +1608,83 @@ func (d *decoder) parseByteString() ([]byte, bool) {
 		d.off += int(val)
 	}
 	return b, true
+}
+
+// applyByteStringTextConversion converts bytes read from a byte string to or from a configured text
+// encoding. If no transformation was performed (because it was not required), the original byte
+// slice is returned and the bool return value is false. Otherwise, a new slice containing the
+// converted bytes is returned along with the bool value true.
+func (d *decoder) applyByteStringTextConversion(src []byte, dstType reflect.Type) ([]byte, bool, error) {
+	if d.dm.textConversions == nil {
+		return src, false, nil
+	}
+
+	switch tcm := d.dm.textConversions(dstType); tcm {
+	case TextConversionNone:
+		return src, false, nil
+	case TextConversionEncodeToText:
+		if len(d.expectedLaterEncodingTags) == 0 {
+			return src, false, nil
+		}
+		switch d.expectedLaterEncodingTags[len(d.expectedLaterEncodingTags)-1] {
+		case expectedLaterEncodingBase64URLTagNum:
+			encoded := make([]byte, base64.RawURLEncoding.EncodedLen(len(src)))
+			base64.RawURLEncoding.Encode(encoded, src)
+			return encoded, true, nil
+		case expectedLaterEncodingBase64TagNum:
+			encoded := make([]byte, base64.StdEncoding.EncodedLen(len(src)))
+			base64.StdEncoding.Encode(encoded, src)
+			return encoded, true, nil
+		case expectedLaterEncodingBase16TagNum:
+			encoded := make([]byte, hex.EncodedLen(len(src)))
+			hex.Encode(encoded, src)
+			return encoded, true, nil
+		default:
+			// If this happens, there is a bug: the decoder is saving an invalid
+			// "expected later encoding" tag.
+			panic(fmt.Sprintf("unrecognized expected later encoding tag: %d", d.expectedLaterEncodingTags))
+		}
+	case TextConversionDecodeFromText:
+		if len(d.expectedLaterEncodingTags) > 0 || d.dm.defaultTextEncoding == TextEncodingNone {
+			// Either the encoder that produced the input indicated an expected text
+			// encoding through a tag, and therefore the content of the byte string has
+			// _not_ been text encoded, OR the decoder has not been configured with an
+			// assumed text encoding for unhinted byte strings.
+			return src, false, nil
+		}
+		switch d.dm.defaultTextEncoding {
+		case TextEncodingBase64URL:
+			decoded := make([]byte, base64.RawURLEncoding.DecodedLen(len(src)))
+			n, err := base64.RawURLEncoding.Decode(decoded, src)
+			if err != nil {
+				return nil, false, fmt.Errorf("cbor: failed to decode base64url string: %v", err)
+			}
+			return decoded[:n], true, nil
+		case TextEncodingBase64:
+			decoded := make([]byte, base64.StdEncoding.DecodedLen(len(src)))
+			n, err := base64.StdEncoding.Decode(decoded, src)
+			if err != nil {
+				return nil, false, fmt.Errorf("cbor: failed to decode base64 string: %v", err)
+			}
+			return decoded[:n], true, nil
+		case TextEncodingBase16:
+			decoded := make([]byte, hex.DecodedLen(len(src)))
+			n, err := hex.Decode(decoded, src)
+			if err != nil {
+				return nil, false, fmt.Errorf("cbor: failed to decode hex string: %v", err)
+			}
+			return decoded[:n], true, nil
+		default:
+			// This can only happen if there is a bug: the decoder has been configured
+			// with an invalid default and should have been rejected during option
+			// validation.
+			panic(fmt.Sprintf("unrecognized default text encoding tag: %d", d.dm.defaultTextEncoding))
+		}
+	default:
+		// Either the conversion selection function returned an invalid TextConversionMode,
+		// or there is a bug and a switch case is missing.
+		return nil, false, fmt.Errorf("cbor: provided text conversions function returned an unrecognized TextConversionMode: %d", tcm)
+	}
 }
 
 // parseTextString parses CBOR encoded text string.  It returns a byte slice
@@ -2158,6 +2361,7 @@ func (d *decoder) foundBreak() bool {
 func (d *decoder) reset(data []byte) {
 	d.data = data
 	d.off = 0
+	d.expectedLaterEncodingTags = d.expectedLaterEncodingTags[:0]
 }
 
 func (d *decoder) nextCBORType() cborType {
@@ -2400,6 +2604,13 @@ func validBuiltinTag(tagNum uint64, contentHead byte) error {
 		if t != cborTypeByteString {
 			return errors.New("cbor: tag number 2 or 3 must be followed by byte string, got " + t.String())
 		}
+		return nil
+	case expectedLaterEncodingBase64URLTagNum, expectedLaterEncodingBase64TagNum, expectedLaterEncodingBase16TagNum:
+		// From RFC 8949 3.4.5.2:
+		//   The data item tagged can be a byte string or any other data item. In the latter
+		//   case, the tag applies to all of the byte string data items contained in the data
+		//   item, except for those contained in a nested data item tagged with an expected
+		//   conversion.
 		return nil
 	}
 	return nil
