@@ -741,6 +741,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		IntDec:                dm.intDec,
 		MapKeyByteString:      dm.mapKeyByteString,
 		ExtraReturnErrors:     dm.extraReturnErrors,
+		DefaultMapType:        dm.defaultMapType,
 		UTF8:                  dm.utf8,
 		FieldNameMatching:     dm.fieldNameMatching,
 		BigIntDec:             dm.bigIntDec,
