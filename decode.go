@@ -446,6 +446,26 @@ func (fnbsm FieldNameByteStringMode) valid() bool {
 	return fnbsm >= 0 && fnbsm < maxFieldNameByteStringMode
 }
 
+// UnrecognizedTagToAnyMode specifies how to decode unrecognized CBOR tag into an empty interface (any).
+// Currently, recognized CBOR tag numbers are 0, 1, 2, 3, or registered by TagSet.
+type UnrecognizedTagToAnyMode int
+
+const (
+	// UnrecognizedTagNumAndContentToAny decodes CBOR tag number and tag content to cbor.Tag
+	// when decoding unrecognized CBOR tag into an empty interface.
+	UnrecognizedTagNumAndContentToAny UnrecognizedTagToAnyMode = iota
+
+	// UnrecognizedTagContentToAny decodes only CBOR tag content (into its default type)
+	// when decoding unrecognized CBOR tag into an empty interface.
+	UnrecognizedTagContentToAny
+
+	maxUnrecognizedTagToAny
+)
+
+func (uttam UnrecognizedTagToAnyMode) valid() bool {
+	return uttam >= 0 && uttam < maxUnrecognizedTagToAny
+}
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -514,6 +534,10 @@ type DecOptions struct {
 	// FieldNameByteString specifies the behavior when decoding a CBOR byte string map key as a
 	// Go struct field name.
 	FieldNameByteString FieldNameByteStringMode
+
+	// UnrecognizedTagToAny specifies how to decode unrecognized CBOR tag into an empty interface.
+	// Currently, recognized CBOR tag numbers are 0, 1, 2, 3, or registered by TagSet.
+	UnrecognizedTagToAny UnrecognizedTagToAnyMode
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -637,6 +661,9 @@ func (opts DecOptions) decMode() (*decMode, error) {
 	if !opts.FieldNameByteString.valid() {
 		return nil, errors.New("cbor: invalid FieldNameByteString " + strconv.Itoa(int(opts.FieldNameByteString)))
 	}
+	if !opts.UnrecognizedTagToAny.valid() {
+		return nil, errors.New("cbor: invalid UnrecognizedTagToAnyMode " + strconv.Itoa(int(opts.UnrecognizedTagToAny)))
+	}
 	dm := decMode{
 		dupMapKey:             opts.DupMapKey,
 		timeTag:               opts.TimeTag,
@@ -655,6 +682,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		defaultByteStringType: opts.DefaultByteStringType,
 		byteStringToString:    opts.ByteStringToString,
 		fieldNameByteString:   opts.FieldNameByteString,
+		unrecognizedTagToAny:  opts.UnrecognizedTagToAny,
 	}
 	return &dm, nil
 }
@@ -724,6 +752,7 @@ type decMode struct {
 	defaultByteStringType reflect.Type
 	byteStringToString    ByteStringToStringMode
 	fieldNameByteString   FieldNameByteStringMode
+	unrecognizedTagToAny  UnrecognizedTagToAnyMode
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -748,6 +777,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		DefaultByteStringType: dm.defaultByteStringType,
 		ByteStringToString:    dm.byteStringToString,
 		FieldNameByteString:   dm.fieldNameByteString,
+		UnrecognizedTagToAny:  dm.unrecognizedTagToAny,
 	}
 }
 
@@ -1426,6 +1456,9 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 		content, err := d.parse(false)
 		if err != nil {
 			return nil, err
+		}
+		if d.dm.unrecognizedTagToAny == UnrecognizedTagContentToAny {
+			return content, nil
 		}
 		return Tag{tagNum, content}, nil
 	case cborTypePrimitives:

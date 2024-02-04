@@ -8380,6 +8380,192 @@ func TestUnmarshalFieldNameByteString(t *testing.T) {
 	}
 }
 
+func TestDecModeInvalidReturnTypeForEmptyInterface(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{UnrecognizedTagToAny: -1},
+			wantErrorMsg: "cbor: invalid UnrecognizedTagToAnyMode -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{UnrecognizedTagToAny: 101},
+			wantErrorMsg: "cbor: invalid UnrecognizedTagToAnyMode 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestUnmarshalWithUnrecognizedTagToAnyMode(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		opts DecOptions
+		in   []byte
+		want interface{}
+	}{
+		{
+			name: "default to value of type Tag",
+			opts: DecOptions{},
+			in:   hexDecode("d8ff00"),
+			want: Tag{Number: uint64(255), Content: uint64(0)},
+		},
+		{
+			name: "Tag's content",
+			opts: DecOptions{UnrecognizedTagToAny: UnrecognizedTagContentToAny},
+			in:   hexDecode("d8ff00"),
+			want: uint64(0),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, err := tc.opts.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var got interface{}
+			if err := dm.Unmarshal(tc.in, &got); err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			if tc.want != got {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestUnmarshalWithUnrecognizedTagToAnyModeForSupportedTags(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		opts DecOptions
+		in   []byte
+		want interface{}
+	}{
+		{
+			name: "Unmarshal with tag number 0 when UnrecognizedTagContentToAny option is not set",
+			opts: DecOptions{},
+			in:   hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			want: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
+		},
+		{
+			name: "Unmarshal with tag number 0 when UnrecognizedTagContentToAny option is set",
+			opts: DecOptions{UnrecognizedTagToAny: UnrecognizedTagContentToAny},
+			in:   hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			want: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
+		},
+		{
+			name: "Unmarshal with tag number 1 when UnrecognizedTagContentToAny option is not set",
+			opts: DecOptions{},
+			in:   hexDecode("c11a514b67b0"),
+			want: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
+		},
+		{
+			name: "Unmarshal with tag number 1 when UnrecognizedTagContentToAny option is set",
+			opts: DecOptions{UnrecognizedTagToAny: UnrecognizedTagContentToAny},
+			in:   hexDecode("c11a514b67b0"),
+			want: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
+		},
+		{
+			name: "Unmarshal with tag number 2 when UnrecognizedTagContentToAny option is not set",
+			opts: DecOptions{},
+			in:   hexDecode("c249010000000000000000"),
+			want: bigIntOrPanic("18446744073709551616"),
+		},
+		{
+			name: "Unmarshal with tag number 2 when UnrecognizedTagContentToAny option is set",
+			opts: DecOptions{UnrecognizedTagToAny: UnrecognizedTagContentToAny},
+			in:   hexDecode("c249010000000000000000"),
+			want: bigIntOrPanic("18446744073709551616"),
+		},
+		{
+			name: "Unmarshal with tag number 3 when UnrecognizedTagContentToAny option is not set",
+			opts: DecOptions{},
+			in:   hexDecode("c349010000000000000000"),
+			want: bigIntOrPanic("-18446744073709551617"),
+		},
+		{
+			name: "Unmarshal with tag number 3 when UnrecognizedTagContentToAny option is set",
+			opts: DecOptions{UnrecognizedTagToAny: UnrecognizedTagContentToAny},
+			in:   hexDecode("c349010000000000000000"),
+			want: bigIntOrPanic("-18446744073709551617"),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, err := tc.opts.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var got interface{}
+			if err := dm.Unmarshal(tc.in, &got); err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			compareNonFloats(t, tc.in, got, tc.want)
+
+		})
+	}
+}
+
+func TestUnmarshalWithUnrecognizedTagToAnyModeForSharedTag(t *testing.T) {
+
+	type myInt int
+	typ := reflect.TypeOf(myInt(0))
+
+	tags := NewTagSet()
+	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 125); err != nil {
+		t.Fatalf("TagSet.Add(%s, %v) returned error %v", typ, 125, err)
+	}
+
+	for _, tc := range []struct {
+		name string
+		opts DecOptions
+		in   []byte
+		want interface{}
+	}{
+		{
+			name: "Unmarshal with a shared tag when UnrecognizedTagContentToAny option is not set",
+			opts: DecOptions{},
+			in:   hexDecode("d9d9f7d87d01"), // 55799(125(1))
+			want: myInt(1),
+		},
+		{
+			name: "Unmarshal with a shared tag when UnrecognizedTagContentToAny option is set",
+			opts: DecOptions{UnrecognizedTagToAny: UnrecognizedTagContentToAny},
+			in:   hexDecode("d9d9f7d87d01"), // 55799(125(1))
+			want: myInt(1),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, err := tc.opts.DecModeWithTags(tags)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var got interface{}
+
+			if err := dm.Unmarshal(tc.in, &got); err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			compareNonFloats(t, tc.in, got, tc.want)
+
+		})
+	}
+}
+
 func isCBORNil(data []byte) bool {
 	return len(data) > 0 && (data[0] == 0xf6 || data[0] == 0xf7)
 }
