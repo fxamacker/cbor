@@ -790,9 +790,9 @@ func (dm *decMode) Unmarshal(data []byte, v interface{}) error {
 	d := decoder{data: data, dm: dm}
 
 	// Check well-formedness.
-	off := d.off               // Save offset before data validation
-	err := d.wellformed(false) // don't allow any extra data after valid data item.
-	d.off = off                // Restore offset
+	off := d.off                      // Save offset before data validation
+	err := d.wellformed(false, false) // don't allow any extra data after valid data item.
+	d.off = off                       // Restore offset
 	if err != nil {
 		return err
 	}
@@ -810,9 +810,9 @@ func (dm *decMode) UnmarshalFirst(data []byte, v interface{}) (rest []byte, err 
 	d := decoder{data: data, dm: dm}
 
 	// check well-formedness.
-	off := d.off             // Save offset before data validation
-	err = d.wellformed(true) // allow extra data after well-formed data item
-	d.off = off              // Restore offset
+	off := d.off                    // Save offset before data validation
+	err = d.wellformed(true, false) // allow extra data after well-formed data item
+	d.off = off                     // Restore offset
 
 	// If it is well-formed, parse the value. This is structured like this to allow
 	// better test coverage
@@ -853,7 +853,7 @@ func (dm *decMode) Valid(data []byte) error {
 // an ExtraneousDataError is returned.
 func (dm *decMode) Wellformed(data []byte) error {
 	d := decoder{data: data, dm: dm}
-	return d.wellformed(false)
+	return d.wellformed(false, false)
 }
 
 // NewDecoder returns a new decoder that reads from r using dm DecMode.

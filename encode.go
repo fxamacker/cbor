@@ -100,6 +100,23 @@ type Marshaler interface {
 	MarshalCBOR() ([]byte, error)
 }
 
+// MarshalerError represents error from checking encoded CBOR data item
+// returned from MarshalCBOR for well-formedness and some very limited tag validation.
+type MarshalerError struct {
+	typ reflect.Type
+	err error
+}
+
+func (e *MarshalerError) Error() string {
+	return "cbor: error calling MarshalCBOR for type " +
+		e.typ.String() +
+		": " + e.err.Error()
+}
+
+func (e *MarshalerError) Unwrap() error {
+	return e.err
+}
+
 // UnsupportedTypeError is returned by Marshal when attempting to encode value
 // of an unsupported type.
 type UnsupportedTypeError struct {
@@ -1345,6 +1362,14 @@ func encodeMarshalerType(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	if err != nil {
 		return err
 	}
+
+	// Verify returned CBOR data item from MarshalCBOR() is well-formed and passes tag validity for builtin tags 0-3.
+	d := decoder{data: data, dm: defaultDecMode}
+	err = d.wellformed(false, true)
+	if err != nil {
+		return &MarshalerError{typ: v.Type(), err: err}
+	}
+
 	e.Write(data)
 	return nil
 }
