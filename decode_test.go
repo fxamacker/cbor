@@ -4878,6 +4878,7 @@ func TestDecOptions(t *testing.T) {
 		DefaultByteStringType: reflect.TypeOf(""),
 		ByteStringToString:    ByteStringToStringAllowed,
 		FieldNameByteString:   FieldNameByteStringAllowed,
+		UnrecognizedTagToAny:  UnrecognizedTagContentToAny,
 	}
 	ov := reflect.ValueOf(opts1)
 	for i := 0; i < ov.NumField(); i++ {
