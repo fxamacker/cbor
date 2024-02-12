@@ -8,7 +8,7 @@ CBOR is a [trusted alternative](https://www.rfc-editor.org/rfc/rfc8949.html#name
 
 `fxamacker/cbor` is used in projects by Arm Ltd., Cisco, Dapper Labs, EdgeX&nbsp;Foundry, Fraunhofer&#8209;AISEC, Let's&nbsp;Encrypt (ISRG), Linux&nbsp;Foundation, Microsoft, Mozilla, Oasis&nbsp;Protocol, Tailscale, Teleport, [and&nbsp;others](https://github.com/fxamacker/cbor#who-uses-fxamackercbor).
 
-See [Quick&nbsp;Start](#quick-start) and [v2.5.0](https://github.com/fxamacker/cbor/releases/tag/v2.5.0).  New funcs `UnmarshalFirst` and `DiagnoseFirst` return remaining bytes.
+See [Quick&nbsp;Start](#quick-start) and [Releases](https://github.com/fxamacker/cbor/releases/).  🆕 `UnmarshalFirst` and `DiagnoseFirst` can decode CBOR Sequences.
 
 ## fxamacker/cbor
 
@@ -218,6 +218,13 @@ API is mostly same as `encoding/json`, plus interfaces that simplify concurrency
 __Install__: `go get github.com/fxamacker/cbor/v2` and `import "github.com/fxamacker/cbor/v2"`.
 
 ### Key Points
+
+This library can encode and decode CBOR (RFC 8949) and CBOR Sequences (RFC 8742).
+
+- __CBOR data item__ is a single piece of CBOR data and its structure may contain zero, one, or more nested data items.
+- __CBOR sequence__ is a concatenation of 0 or more encoded CBOR data items.
+
+Configurable limits and options can be used to balance trade-offs.
 
 - Encoding and decoding modes are created from options (settings).
 - Modes can be created at startup and reused.
@@ -452,6 +459,12 @@ Default limits may need to be increased for systems handling very large data (e.
 
 ## Status
 
+v2.6.0 (February 2024) adds important new features, optimizations, and bug fixes. It is especially useful to systems that need to convert data between CBOR and JSON.  New options and optimizations improve handling of bignum, integers, maps, and strings.
+
+For more details, see [release notes](https://github.com/fxamacker/cbor/releases).
+
+### Prior Release
+
 v2.5.0 was released on Sunday, August 13, 2023 with new features and important bug fixes.  It is fuzz tested and production quality after extended beta [v2.5.0-beta](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta) (Dec 2022) -> [v2.5.0](https://github.com/fxamacker/cbor/releases/tag/v2.5.0) (Aug 2023).
 
 __IMPORTANT__:  👉 Before upgrading from v2.4 or older release, please read the notable changes highlighted in the release notes.  v2.5.0 is a large release with bug fixes to error handling for extraneous data in `Unmarshal`, etc. that should be reviewed before upgrading.
@@ -654,7 +667,7 @@ This library uses `x448/float16` which used to be included.  As a standalone pac
 
 ## License
 
-Copyright © 2019-2023 [Faye Amacker](https://github.com/fxamacker).
+Copyright © 2019-2024 [Faye Amacker](https://github.com/fxamacker).
 
 fxamacker/cbor is licensed under the MIT License.  See [LICENSE](LICENSE) for the full license text.
 
