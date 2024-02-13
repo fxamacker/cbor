@@ -6,6 +6,7 @@ package cbor
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"reflect"
 	"sort"
 	"strconv"
@@ -84,9 +85,25 @@ func newTypeInfo(t reflect.Type) *typeInfo {
 }
 
 type decodingStructType struct {
-	fields  fields
-	err     error
-	toArray bool
+	fields             fields
+	fieldIndicesByName map[string]int
+	err                error
+	toArray            bool
+}
+
+// The stdlib errors.Join was introduced in Go 1.20, and we still support Go 1.17, so instead,
+// here's a very basic implementation of an aggregated error.
+type multierror []error
+
+func (m multierror) Error() string {
+	var sb strings.Builder
+	for i, err := range m {
+		sb.WriteString(err.Error())
+		if i < len(m)-1 {
+			sb.WriteString(", ")
+		}
+	}
+	return sb.String()
 }
 
 func getDecodingStructType(t reflect.Type) *decodingStructType {
@@ -98,12 +115,12 @@ func getDecodingStructType(t reflect.Type) *decodingStructType {
 
 	toArray := hasToArrayOption(structOptions)
 
-	var err error
+	var errs []error
 	for i := 0; i < len(flds); i++ {
 		if flds[i].keyAsInt {
 			nameAsInt, numErr := strconv.Atoi(flds[i].name)
 			if numErr != nil {
-				err = errors.New("cbor: failed to parse field name \"" + flds[i].name + "\" to int (" + numErr.Error() + ")")
+				errs = append(errs, errors.New("cbor: failed to parse field name \""+flds[i].name+"\" to int ("+numErr.Error()+")"))
 				break
 			}
 			flds[i].nameAsInt = int64(nameAsInt)
@@ -112,7 +129,36 @@ func getDecodingStructType(t reflect.Type) *decodingStructType {
 		flds[i].typInfo = getTypeInfo(flds[i].typ)
 	}
 
-	structType := &decodingStructType{fields: flds, err: err, toArray: toArray}
+	fieldIndicesByName := make(map[string]int, len(flds))
+	for i, fld := range flds {
+		if _, ok := fieldIndicesByName[fld.name]; ok {
+			errs = append(errs, fmt.Errorf("cbor: two or more fields of %v have the same name %q", t, fld.name))
+			continue
+		}
+		fieldIndicesByName[fld.name] = i
+	}
+
+	var err error
+	{
+		var multi multierror
+		for _, each := range errs {
+			if each != nil {
+				multi = append(multi, each)
+			}
+		}
+		if len(multi) == 1 {
+			err = multi[0]
+		} else if len(multi) > 1 {
+			err = multi
+		}
+	}
+
+	structType := &decodingStructType{
+		fields:             flds,
+		fieldIndicesByName: fieldIndicesByName,
+		err:                err,
+		toArray:            toArray,
+	}
 	decodingStructTypeCache.Store(t, structType)
 	return structType
 }
