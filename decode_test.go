@@ -5476,33 +5476,82 @@ func TestUnmarshalDupMapKeyToStruct(t *testing.T) {
 		C string `cbor:"c"`
 		D string `cbor:"d"`
 		E string `cbor:"e"`
-	}
-	data := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
-	// Duplicate key doesn't overwrite previous value (default).
-	wantS := s{A: "A", B: "B", C: "C", D: "D", E: "E"}
-	var s1 s
-	if err := Unmarshal(data, &s1); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
+		I string `cbor:"1,keyasint"`
 	}
 
-	// Duplicate key triggers error.
-	wantS = s{A: "A", B: "B", C: "C"}
-	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
-	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
-	var s2 s
-	if err := dm.Unmarshal(data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
-	} else if _, ok := err.(*DupMapKeyError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
+	for _, tc := range []struct {
+		name    string
+		opts    DecOptions
+		data    []byte
+		want    s
+		wantErr *DupMapKeyError
+	}{
+		{
+			name: "duplicate key does not overwrite previous value",
+			data: hexDecode("a6616161416162614261636143616161466164614461656145"), // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+			want: s{A: "A", B: "B", C: "C", D: "D", E: "E"},
+		},
+		{
+			name:    "duplicate key triggers error",
+			opts:    DecOptions{DupMapKey: DupMapKeyEnforcedAPF},
+			data:    hexDecode("a6616161416162614261636143616161466164614461656145"), // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+			want:    s{A: "A", B: "B", C: "C"},
+			wantErr: &DupMapKeyError{Key: "a", Index: 3},
+		},
+		{
+			name:    "duplicate keys of comparable but disallowed cbor types skips remaining entries and returns error",
+			opts:    DecOptions{DupMapKey: DupMapKeyEnforcedAPF},
+			data:    hexDecode("a7616161416162614261636143d903e70100d903e701016164614461656145"), // {"a": "A", "b": "B", "c": "C", 999(1): 0, 999(1): 1, "d": "D", "e": "E"}
+			want:    s{A: "A", B: "B", C: "C"},
+			wantErr: &DupMapKeyError{Key: Tag{Number: 999, Content: uint64(1)}, Index: 4},
+		},
+		{
+			name: "mixed-case duplicate key does not overwrite previous value",
+			data: hexDecode("a6616161416162614261636143614161466164614461656145"), // {"a": "A", "b": "B", "c": "C", "A": "F", "d": "D", "e": "E"}
+			want: s{A: "A", B: "B", C: "C", D: "D", E: "E"},
+		},
+		{
+			name:    "mixed-case duplicate key triggers error",
+			opts:    DecOptions{DupMapKey: DupMapKeyEnforcedAPF},
+			data:    hexDecode("a6616161416162614261636143614161466164614461656145"), // {"a": "A", "b": "B", "c": "C", "A": "F", "d": "D", "e": "E"}
+			want:    s{A: "A", B: "B", C: "C"},
+			wantErr: &DupMapKeyError{Key: "A", Index: 3},
+		},
+		{
+			name: "keyasint duplicate key does not overwrite previous value",
+			data: hexDecode("a36131616901614961616141"), // {"1": "i", 1: "I", "a": "A"}
+			want: s{I: "i", A: "A"},
+		},
+		{
+			name:    "keyasint duplicate key triggers error",
+			opts:    DecOptions{DupMapKey: DupMapKeyEnforcedAPF},
+			data:    hexDecode("a36131616901614961616141"), // {"1": "i", 1: "I", "a": "A"}
+			want:    s{I: "i"},
+			wantErr: &DupMapKeyError{Key: int64(1), Index: 1},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, err := tc.opts.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var s1 s
+			if err := dm.Unmarshal(tc.data, &s1); err != nil {
+				if !reflect.DeepEqual(err, tc.wantErr) {
+					t.Errorf("got error: %v, wanted: %v", err, tc.wantErr)
+				}
+			} else {
+				if tc.wantErr != nil {
+					t.Errorf("got nil error, wanted: %v", tc.wantErr)
+				}
+			}
+
+			if !reflect.DeepEqual(s1, tc.want) {
+				t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", tc.data, s1, s1, tc.want, tc.want)
+			}
+		})
 	}
 }
 
@@ -6713,6 +6762,12 @@ func TestExtraErrorCondUnknownField(t *testing.T) {
 			data:    hexDecode("a26141616161426162"), // map[string]string{"A": "a", "B": "b"}
 			dm:      dmUnknownFieldError,
 			wantObj: s{A: "a", B: "b", C: ""},
+		},
+		{
+			name:    "duplicate map keys matching known field with ExtraDecErrorUnknownField",
+			data:    hexDecode("a26141616161416141"), // map[string]string{"A": "a", "A": "A"}
+			dm:      dmUnknownFieldError,
+			wantObj: s{A: "a"},
 		},
 		{
 			name:    "CBOR map unknown field",
@@ -8038,9 +8093,9 @@ func TestDecodeFieldNameMatching(t *testing.T) {
 		},
 		{
 			// the field tags themselves are case-insensitive matches for each other
-			name:      "duplicate keys decode to different fields",
+			name:      "duplicate key does not fall back to case-insensitive match",
 			data:      hexDecode("a2614201614202"), // {"B": 1, "B": 2} (invalid)
-			wantValue: s{UpperB: 1, LowerB: 2},
+			wantValue: s{UpperB: 1},
 		},
 	}
 

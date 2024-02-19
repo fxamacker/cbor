@@ -5,6 +5,7 @@ package cbor
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"reflect"
 	"testing"
@@ -740,6 +741,212 @@ func BenchmarkMarshalCOSEMACWithTag(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		if _, err := em.Marshal(v); err != nil {
 			b.Fatal("Marshal():", v, err)
+		}
+	}
+}
+
+func BenchmarkUnmarshalMapToStruct(b *testing.B) {
+	type S struct {
+		A, B, C, D, E, F, G, H, I, J, K, L, M bool
+	}
+
+	var (
+		allKnownFields            = hexDecode("ad6141f56142f56143f56144f56145f56146f56147f56148f56149f5614af5614bf5614cf5614df5") // {"A": true, ... "M": true }
+		allKnownDuplicateFields   = hexDecode("ad6141f56141f56141f56141f56141f56141f56141f56141f56141f56141f56141f56141f56141f5") // {"A": true, "A": true, "A": true, ...}
+		allUnknownFields          = hexDecode("ad614ef5614ff56150f56151f56152f56153f56154f56155f56156f56157f56158f56159f5615af5") // {"N": true, ... "Z": true }
+		allUnknownDuplicateFields = hexDecode("ad614ef5614ef5614ef5614ef5614ef5614ef5614ef5614ef5614ef5614ef5614ef5614ef5614ef5") // {"N": true, "N": true, "N": true, ...}
+	)
+
+	type ManyFields struct {
+		AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS, AT, AU, AV, AW, AX, AY, AZ bool
+		BA, BB, BC, BD, BE, BF, BG, BH, BI, BJ, BK, BL, BM, BN, BO, BP, BQ, BR, BS, BT, BU, BV, BW, BX, BY, BZ bool
+		CA, CB, CC, CD, CE, CF, CG, CH, CI, CJ, CK, CL, CM, CN, CO, CP, CQ, CR, CS, CT, CU, CV, CW, CX, CY, CZ bool
+		DA, DB, DC, DD, DE, DF, DG, DH, DI, DJ, DK, DL, DM, DN, DO, DP, DQ, DR, DS, DT, DU, DV, DW, DX, DY, DZ bool
+	}
+	var manyFieldsOneKeyPerField []byte
+	{
+		// An EncOption that accepts a function to sort or shuffle keys might be useful for
+		// cases like this. Here we are manually encoding the fields in reverse order to
+		// target worst-case key-to-field matching.
+		rt := reflect.TypeOf(ManyFields{})
+		var buf bytes.Buffer
+		if rt.NumField() > 255 {
+			b.Fatalf("invalid test assumption: ManyFields expected to have no more than 255 fields, has %d", rt.NumField())
+		}
+		buf.WriteByte(0xb8)
+		buf.WriteByte(byte(rt.NumField()))
+		for i := rt.NumField() - 1; i >= 0; i-- { // backwards
+			f := rt.Field(i)
+			if len(f.Name) > 23 {
+				b.Fatalf("invalid test assumption: field name %q longer than 23 bytes", f.Name)
+			}
+			buf.WriteByte(byte(0x60 + len(f.Name)))
+			buf.WriteString(f.Name)
+			buf.WriteByte(0xf5) // true
+		}
+		manyFieldsOneKeyPerField = buf.Bytes()
+	}
+
+	type input struct {
+		name   string
+		data   []byte
+		into   interface{}
+		reject bool
+	}
+
+	for _, tc := range []struct {
+		name   string
+		opts   DecOptions
+		inputs []input
+	}{
+		{
+			name: "default options",
+			opts: DecOptions{},
+			inputs: []input{
+				{
+					name:   "all known fields",
+					data:   allKnownFields,
+					into:   S{},
+					reject: false,
+				},
+				{
+					name:   "all known duplicate fields",
+					data:   allKnownDuplicateFields,
+					into:   S{},
+					reject: false,
+				},
+				{
+					name:   "all unknown fields",
+					data:   allUnknownFields,
+					into:   S{},
+					reject: false,
+				},
+				{
+					name:   "all unknown duplicate fields",
+					data:   allUnknownDuplicateFields,
+					into:   S{},
+					reject: false,
+				},
+				{
+					name:   "many fields one key per field",
+					data:   manyFieldsOneKeyPerField,
+					into:   ManyFields{},
+					reject: false,
+				},
+			},
+		},
+		{
+			name: "reject unknown",
+			opts: DecOptions{ExtraReturnErrors: ExtraDecErrorUnknownField},
+			inputs: []input{
+				{
+					name:   "all known fields",
+					data:   allKnownFields,
+					into:   S{},
+					reject: false,
+				},
+				{
+					name:   "all known duplicate fields",
+					data:   allKnownDuplicateFields,
+					into:   S{},
+					reject: false,
+				},
+				{
+					name:   "all unknown fields",
+					data:   allUnknownFields,
+					into:   S{},
+					reject: true,
+				},
+				{
+					name:   "all unknown duplicate fields",
+					data:   allUnknownDuplicateFields,
+					into:   S{},
+					reject: true,
+				},
+			},
+		},
+		{
+			name: "reject duplicate",
+			opts: DecOptions{DupMapKey: DupMapKeyEnforcedAPF},
+			inputs: []input{
+				{
+					name:   "all known fields",
+					data:   allKnownFields,
+					into:   S{},
+					reject: false,
+				},
+				{
+					name:   "all known duplicate fields",
+					data:   allKnownDuplicateFields,
+					into:   S{},
+					reject: true,
+				},
+				{
+					name:   "all unknown fields",
+					data:   allUnknownFields,
+					into:   S{},
+					reject: false,
+				},
+				{
+					name:   "all unknown duplicate fields",
+					data:   allUnknownDuplicateFields,
+					into:   S{},
+					reject: true,
+				},
+			},
+		},
+		{
+			name: "reject unknown and duplicate",
+			opts: DecOptions{
+				DupMapKey:         DupMapKeyEnforcedAPF,
+				ExtraReturnErrors: ExtraDecErrorUnknownField,
+			},
+			inputs: []input{
+				{
+					name:   "all known fields",
+					data:   allKnownFields,
+					into:   S{},
+					reject: false,
+				},
+				{
+					name:   "all known duplicate fields",
+					data:   allKnownDuplicateFields,
+					into:   S{},
+					reject: true,
+				},
+				{
+					name:   "all unknown fields",
+					data:   allUnknownFields,
+					into:   S{},
+					reject: true,
+				},
+				{
+					name:   "all unknown duplicate fields",
+					data:   allUnknownDuplicateFields,
+					into:   S{},
+					reject: true,
+				},
+			},
+		},
+	} {
+		for _, in := range tc.inputs {
+			b.Run(fmt.Sprintf("%s/%s", tc.name, in.name), func(b *testing.B) {
+				dm, err := tc.opts.DecMode()
+				if err != nil {
+					b.Fatal(err)
+				}
+
+				dst := reflect.New(reflect.TypeOf(in.into)).Interface()
+
+				b.ResetTimer()
+				for i := 0; i < b.N; i++ {
+					if err := dm.Unmarshal(in.data, dst); !in.reject && err != nil {
+						b.Fatalf("unexpected error: %v", err)
+					} else if in.reject && err == nil {
+						b.Fatal("expected non-nil error")
+					}
+				}
+			})
 		}
 	}
 }
