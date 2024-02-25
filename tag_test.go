@@ -1444,3 +1444,49 @@ func TestDecodeRegisterTagForUnmarshaler(t *testing.T) {
 		t.Errorf("Marshal(%v) returned %v, want %v", v2, b, data)
 	}
 }
+
+func TestMarshalRawTagContainingMalformedCBORData(t *testing.T) {
+	testCases := []struct {
+		name         string
+		value        interface{}
+		wantErrorMsg string
+	}{
+		// Nil RawMessage and empty RawMessage are encoded as CBOR nil.
+		{
+			name:         "truncated data",
+			value:        RawTag{Number: 100, Content: RawMessage{0xa6}},
+			wantErrorMsg: "cbor: error calling MarshalCBOR for type cbor.RawTag: unexpected EOF",
+		},
+		{
+			name:         "malformed data",
+			value:        RawTag{Number: 100, Content: RawMessage{0x1f}},
+			wantErrorMsg: "cbor: error calling MarshalCBOR for type cbor.RawTag: cbor: invalid additional information 31 for type positive integer",
+		},
+		{
+			name:         "extraneous data",
+			value:        RawTag{Number: 100, Content: RawMessage{0x01, 0x01}},
+			wantErrorMsg: "cbor: error calling MarshalCBOR for type cbor.RawTag: cbor: 1 bytes of extraneous data starting at index 3",
+		},
+		{
+			name:         "invalid builtin tag",
+			value:        RawTag{Number: 0, Content: RawMessage{0x01}},
+			wantErrorMsg: "cbor: error calling MarshalCBOR for type cbor.RawTag: cbor: tag number 0 must be followed by text string, got positive integer",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := Marshal(tc.value)
+			if err == nil {
+				t.Errorf("Marshal(%v) didn't return an error, want error %q", tc.value, tc.wantErrorMsg)
+			} else if _, ok := err.(*MarshalerError); !ok {
+				t.Errorf("Marshal(%v) error type %T, want *MarshalerError", tc.value, err)
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("Marshal(%v) error %q, want %q", tc.value, err.Error(), tc.wantErrorMsg)
+			}
+			if b != nil {
+				t.Errorf("Marshal(%v) = 0x%x, want nil", tc.value, b)
+			}
+		})
+	}
+}

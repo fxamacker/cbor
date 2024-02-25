@@ -84,7 +84,7 @@ func (dec *Decoder) readNext() (int, error) {
 		if dec.off < len(dec.buf) {
 			dec.d.reset(dec.buf[dec.off:])
 			off := dec.off // Save offset before data validation
-			validErr = dec.d.wellformed(true)
+			validErr = dec.d.wellformed(true, false)
 			dec.off = off // Restore offset
 
 			if validErr == nil {

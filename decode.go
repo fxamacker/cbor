@@ -606,69 +606,96 @@ const (
 	defaultMaxMapPairs = 131072
 	minMaxMapPairs     = 16
 	maxMaxMapPairs     = 2147483647
+
+	defaultMaxNestedLevels = 32
+	minMaxNestedLevels     = 4
+	maxMaxNestedLevels     = 65535
 )
 
 func (opts DecOptions) decMode() (*decMode, error) {
 	if !opts.DupMapKey.valid() {
 		return nil, errors.New("cbor: invalid DupMapKey " + strconv.Itoa(int(opts.DupMapKey)))
 	}
+
 	if !opts.TimeTag.valid() {
 		return nil, errors.New("cbor: invalid TimeTag " + strconv.Itoa(int(opts.TimeTag)))
 	}
+
 	if !opts.IndefLength.valid() {
 		return nil, errors.New("cbor: invalid IndefLength " + strconv.Itoa(int(opts.IndefLength)))
 	}
+
 	if !opts.TagsMd.valid() {
 		return nil, errors.New("cbor: invalid TagsMd " + strconv.Itoa(int(opts.TagsMd)))
 	}
+
 	if !opts.IntDec.valid() {
 		return nil, errors.New("cbor: invalid IntDec " + strconv.Itoa(int(opts.IntDec)))
 	}
+
 	if !opts.MapKeyByteString.valid() {
 		return nil, errors.New("cbor: invalid MapKeyByteString " + strconv.Itoa(int(opts.MapKeyByteString)))
 	}
+
 	if opts.MaxNestedLevels == 0 {
-		opts.MaxNestedLevels = 32
-	} else if opts.MaxNestedLevels < 4 || opts.MaxNestedLevels > 65535 {
-		return nil, errors.New("cbor: invalid MaxNestedLevels " + strconv.Itoa(opts.MaxNestedLevels) + " (range is [4, 65535])")
+		opts.MaxNestedLevels = defaultMaxNestedLevels
+	} else if opts.MaxNestedLevels < minMaxNestedLevels || opts.MaxNestedLevels > maxMaxNestedLevels {
+		return nil, errors.New("cbor: invalid MaxNestedLevels " + strconv.Itoa(opts.MaxNestedLevels) +
+			" (range is [" + strconv.Itoa(minMaxNestedLevels) + ", " + strconv.Itoa(maxMaxNestedLevels) + "])")
 	}
+
 	if opts.MaxArrayElements == 0 {
 		opts.MaxArrayElements = defaultMaxArrayElements
 	} else if opts.MaxArrayElements < minMaxArrayElements || opts.MaxArrayElements > maxMaxArrayElements {
-		return nil, errors.New("cbor: invalid MaxArrayElements " + strconv.Itoa(opts.MaxArrayElements) + " (range is [" + strconv.Itoa(minMaxArrayElements) + ", " + strconv.Itoa(maxMaxArrayElements) + "])")
+		return nil, errors.New("cbor: invalid MaxArrayElements " + strconv.Itoa(opts.MaxArrayElements) +
+			" (range is [" + strconv.Itoa(minMaxArrayElements) + ", " + strconv.Itoa(maxMaxArrayElements) + "])")
 	}
+
 	if opts.MaxMapPairs == 0 {
 		opts.MaxMapPairs = defaultMaxMapPairs
 	} else if opts.MaxMapPairs < minMaxMapPairs || opts.MaxMapPairs > maxMaxMapPairs {
-		return nil, errors.New("cbor: invalid MaxMapPairs " + strconv.Itoa(opts.MaxMapPairs) + " (range is [" + strconv.Itoa(minMaxMapPairs) + ", " + strconv.Itoa(maxMaxMapPairs) + "])")
+		return nil, errors.New("cbor: invalid MaxMapPairs " + strconv.Itoa(opts.MaxMapPairs) +
+			" (range is [" + strconv.Itoa(minMaxMapPairs) + ", " + strconv.Itoa(maxMaxMapPairs) + "])")
 	}
+
 	if !opts.ExtraReturnErrors.valid() {
 		return nil, errors.New("cbor: invalid ExtraReturnErrors " + strconv.Itoa(int(opts.ExtraReturnErrors)))
 	}
+
 	if opts.DefaultMapType != nil && opts.DefaultMapType.Kind() != reflect.Map {
 		return nil, fmt.Errorf("cbor: invalid DefaultMapType %s", opts.DefaultMapType)
 	}
+
 	if !opts.UTF8.valid() {
 		return nil, errors.New("cbor: invalid UTF8 " + strconv.Itoa(int(opts.UTF8)))
 	}
+
 	if !opts.FieldNameMatching.valid() {
 		return nil, errors.New("cbor: invalid FieldNameMatching " + strconv.Itoa(int(opts.FieldNameMatching)))
 	}
+
 	if !opts.BigIntDec.valid() {
 		return nil, errors.New("cbor: invalid BigIntDec " + strconv.Itoa(int(opts.BigIntDec)))
 	}
-	if opts.DefaultByteStringType != nil && opts.DefaultByteStringType.Kind() != reflect.String && (opts.DefaultByteStringType.Kind() != reflect.Slice || opts.DefaultByteStringType.Elem().Kind() != reflect.Uint8) {
+
+	if opts.DefaultByteStringType != nil &&
+		opts.DefaultByteStringType.Kind() != reflect.String &&
+		(opts.DefaultByteStringType.Kind() != reflect.Slice || opts.DefaultByteStringType.Elem().Kind() != reflect.Uint8) {
 		return nil, fmt.Errorf("cbor: invalid DefaultByteStringType: %s is not of kind string or []uint8", opts.DefaultByteStringType)
 	}
+
 	if !opts.ByteStringToString.valid() {
 		return nil, errors.New("cbor: invalid ByteStringToString " + strconv.Itoa(int(opts.ByteStringToString)))
 	}
+
 	if !opts.FieldNameByteString.valid() {
 		return nil, errors.New("cbor: invalid FieldNameByteString " + strconv.Itoa(int(opts.FieldNameByteString)))
 	}
+
 	if !opts.UnrecognizedTagToAny.valid() {
 		return nil, errors.New("cbor: invalid UnrecognizedTagToAnyMode " + strconv.Itoa(int(opts.UnrecognizedTagToAny)))
 	}
+
 	dm := decMode{
 		dupMapKey:             opts.DupMapKey,
 		timeTag:               opts.TimeTag,
@@ -689,6 +716,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		fieldNameByteString:   opts.FieldNameByteString,
 		unrecognizedTagToAny:  opts.UnrecognizedTagToAny,
 	}
+
 	return &dm, nil
 }
 
@@ -795,9 +823,9 @@ func (dm *decMode) Unmarshal(data []byte, v interface{}) error {
 	d := decoder{data: data, dm: dm}
 
 	// Check well-formedness.
-	off := d.off               // Save offset before data validation
-	err := d.wellformed(false) // don't allow any extra data after valid data item.
-	d.off = off                // Restore offset
+	off := d.off                      // Save offset before data validation
+	err := d.wellformed(false, false) // don't allow any extra data after valid data item.
+	d.off = off                       // Restore offset
 	if err != nil {
 		return err
 	}
@@ -815,9 +843,9 @@ func (dm *decMode) UnmarshalFirst(data []byte, v interface{}) (rest []byte, err 
 	d := decoder{data: data, dm: dm}
 
 	// check well-formedness.
-	off := d.off             // Save offset before data validation
-	err = d.wellformed(true) // allow extra data after well-formed data item
-	d.off = off              // Restore offset
+	off := d.off                    // Save offset before data validation
+	err = d.wellformed(true, false) // allow extra data after well-formed data item
+	d.off = off                     // Restore offset
 
 	// If it is well-formed, parse the value. This is structured like this to allow
 	// better test coverage
@@ -858,7 +886,7 @@ func (dm *decMode) Valid(data []byte) error {
 // an ExtraneousDataError is returned.
 func (dm *decMode) Wellformed(data []byte) error {
 	d := decoder{data: data, dm: dm}
-	return d.wellformed(false)
+	return d.wellformed(false, false)
 }
 
 // NewDecoder returns a new decoder that reads from r using dm DecMode.

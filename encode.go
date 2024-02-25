@@ -100,6 +100,23 @@ type Marshaler interface {
 	MarshalCBOR() ([]byte, error)
 }
 
+// MarshalerError represents error from checking encoded CBOR data item
+// returned from MarshalCBOR for well-formedness and some very limited tag validation.
+type MarshalerError struct {
+	typ reflect.Type
+	err error
+}
+
+func (e *MarshalerError) Error() string {
+	return "cbor: error calling MarshalCBOR for type " +
+		e.typ.String() +
+		": " + e.err.Error()
+}
+
+func (e *MarshalerError) Unwrap() error {
+	return e.err
+}
+
 // UnsupportedTypeError is returned by Marshal when attempting to encode value
 // of an unsupported type.
 type UnsupportedTypeError struct {
@@ -631,6 +648,75 @@ type encMode struct {
 }
 
 var defaultEncMode, _ = EncOptions{}.encMode()
+
+// These four decoding modes are used by getMarshalerDecMode.
+// maxNestedLevels, maxArrayElements, and maxMapPairs are
+// set to max allowed limits to avoid rejecting Marshaler
+// output that would have been the allowable output of a
+// non-Marshaler object that exceeds default limits.
+var (
+	marshalerForbidIndefLengthForbidTagsDecMode = decMode{
+		maxNestedLevels:  maxMaxNestedLevels,
+		maxArrayElements: maxMaxArrayElements,
+		maxMapPairs:      maxMaxMapPairs,
+		indefLength:      IndefLengthForbidden,
+		tagsMd:           TagsForbidden,
+	}
+
+	marshalerAllowIndefLengthForbidTagsDecMode = decMode{
+		maxNestedLevels:  maxMaxNestedLevels,
+		maxArrayElements: maxMaxArrayElements,
+		maxMapPairs:      maxMaxMapPairs,
+		indefLength:      IndefLengthAllowed,
+		tagsMd:           TagsForbidden,
+	}
+
+	marshalerForbidIndefLengthAllowTagsDecMode = decMode{
+		maxNestedLevels:  maxMaxNestedLevels,
+		maxArrayElements: maxMaxArrayElements,
+		maxMapPairs:      maxMaxMapPairs,
+		indefLength:      IndefLengthForbidden,
+		tagsMd:           TagsAllowed,
+	}
+
+	marshalerAllowIndefLengthAllowTagsDecMode = decMode{
+		maxNestedLevels:  maxMaxNestedLevels,
+		maxArrayElements: maxMaxArrayElements,
+		maxMapPairs:      maxMaxMapPairs,
+		indefLength:      IndefLengthAllowed,
+		tagsMd:           TagsAllowed,
+	}
+)
+
+// getMarshalerDecMode returns one of four existing decoding modes
+// which can be reused (safe for parallel use) for the purpose of
+// checking if data returned by Marshaler is well-formed.
+func getMarshalerDecMode(indefLength IndefLengthMode, tagsMd TagsMode) *decMode {
+	switch {
+	case indefLength == IndefLengthAllowed && tagsMd == TagsAllowed:
+		return &marshalerAllowIndefLengthAllowTagsDecMode
+
+	case indefLength == IndefLengthAllowed && tagsMd == TagsForbidden:
+		return &marshalerAllowIndefLengthForbidTagsDecMode
+
+	case indefLength == IndefLengthForbidden && tagsMd == TagsAllowed:
+		return &marshalerForbidIndefLengthAllowTagsDecMode
+
+	case indefLength == IndefLengthForbidden && tagsMd == TagsForbidden:
+		return &marshalerForbidIndefLengthForbidTagsDecMode
+
+	default:
+		// This should never happen, unless we add new options to
+		// IndefLengthMode or TagsMode without updating this function.
+		return &decMode{
+			maxNestedLevels:  maxMaxNestedLevels,
+			maxArrayElements: maxMaxArrayElements,
+			maxMapPairs:      maxMaxMapPairs,
+			indefLength:      indefLength,
+			tagsMd:           tagsMd,
+		}
+	}
+}
 
 // EncOptions returns user specified options used to create this EncMode.
 func (em *encMode) EncOptions() EncOptions {
@@ -1345,6 +1431,14 @@ func encodeMarshalerType(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	if err != nil {
 		return err
 	}
+
+	// Verify returned CBOR data item from MarshalCBOR() is well-formed and passes tag validity for builtin tags 0-3.
+	d := decoder{data: data, dm: getMarshalerDecMode(em.indefLength, em.tagsMd)}
+	err = d.wellformed(false, true)
+	if err != nil {
+		return &MarshalerError{typ: v.Type(), err: err}
+	}
+
 	e.Write(data)
 	return nil
 }

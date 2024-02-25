@@ -235,7 +235,7 @@ func (di *diagnose) diagFirst() (string, []byte, error) {
 
 func (di *diagnose) wellformed(allowExtraData bool) error {
 	off := di.d.off
-	err := di.d.wellformed(allowExtraData)
+	err := di.d.wellformed(allowExtraData, false)
 	di.d.off = off
 	return err
 }

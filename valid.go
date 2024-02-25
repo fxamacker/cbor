@@ -82,11 +82,11 @@ func (e *ExtraneousDataError) Error() string {
 // allowExtraData indicates if extraneous data is allowed after the CBOR data item.
 // - use allowExtraData = true when using Decoder.Decode()
 // - use allowExtraData = false when using Unmarshal()
-func (d *decoder) wellformed(allowExtraData bool) error {
+func (d *decoder) wellformed(allowExtraData bool, checkBuiltinTags bool) error {
 	if len(d.data) == d.off {
 		return io.EOF
 	}
-	_, err := d.wellformedInternal(0)
+	_, err := d.wellformedInternal(0, checkBuiltinTags)
 	if err == nil {
 		if !allowExtraData && d.off != len(d.data) {
 			err = &ExtraneousDataError{len(d.data) - d.off, d.off}
@@ -96,7 +96,7 @@ func (d *decoder) wellformed(allowExtraData bool) error {
 }
 
 // wellformedInternal checks data's well-formedness and returns max depth and error.
-func (d *decoder) wellformedInternal(depth int) (int, error) {
+func (d *decoder) wellformedInternal(depth int, checkBuiltinTags bool) (int, error) {
 	t, ai, val, err := d.wellformedHead()
 	if err != nil {
 		return 0, err
@@ -108,7 +108,7 @@ func (d *decoder) wellformedInternal(depth int) (int, error) {
 			if d.dm.indefLength == IndefLengthForbidden {
 				return 0, &IndefiniteLengthError{t}
 			}
-			return d.wellformedIndefiniteString(t, depth)
+			return d.wellformedIndefiniteString(t, depth, checkBuiltinTags)
 		}
 		valInt := int(val)
 		if valInt < 0 {
@@ -119,6 +119,7 @@ func (d *decoder) wellformedInternal(depth int) (int, error) {
 			return 0, io.ErrUnexpectedEOF
 		}
 		d.off += valInt
+
 	case cborTypeArray, cborTypeMap:
 		depth++
 		if depth > d.dm.maxNestedLevels {
@@ -129,7 +130,7 @@ func (d *decoder) wellformedInternal(depth int) (int, error) {
 			if d.dm.indefLength == IndefLengthForbidden {
 				return 0, &IndefiniteLengthError{t}
 			}
-			return d.wellformedIndefiniteArrayOrMap(t, depth)
+			return d.wellformedIndefiniteArrayOrMap(t, depth, checkBuiltinTags)
 		}
 
 		valInt := int(val)
@@ -156,7 +157,7 @@ func (d *decoder) wellformedInternal(depth int) (int, error) {
 		for j := 0; j < count; j++ {
 			for i := 0; i < valInt; i++ {
 				var dpt int
-				if dpt, err = d.wellformedInternal(depth); err != nil {
+				if dpt, err = d.wellformedInternal(depth, checkBuiltinTags); err != nil {
 					return 0, err
 				}
 				if dpt > maxDepth {
@@ -165,20 +166,29 @@ func (d *decoder) wellformedInternal(depth int) (int, error) {
 			}
 		}
 		depth = maxDepth
+
 	case cborTypeTag:
 		if d.dm.tagsMd == TagsForbidden {
 			return 0, &TagsMdError{}
 		}
+
+		tagNum := val
 
 		// Scan nested tag numbers to avoid recursion.
 		for {
 			if len(d.data) == d.off { // Tag number must be followed by tag content.
 				return 0, io.ErrUnexpectedEOF
 			}
+			if checkBuiltinTags {
+				err = validBuiltinTag(tagNum, d.data[d.off])
+				if err != nil {
+					return 0, err
+				}
+			}
 			if cborType(d.data[d.off]&0xe0) != cborTypeTag {
 				break
 			}
-			if _, _, _, err = d.wellformedHead(); err != nil {
+			if _, _, tagNum, err = d.wellformedHead(); err != nil {
 				return 0, err
 			}
 			depth++
@@ -187,13 +197,14 @@ func (d *decoder) wellformedInternal(depth int) (int, error) {
 			}
 		}
 		// Check tag content.
-		return d.wellformedInternal(depth)
+		return d.wellformedInternal(depth, checkBuiltinTags)
 	}
+
 	return depth, nil
 }
 
 // wellformedIndefiniteString checks indefinite length byte/text string's well-formedness and returns max depth and error.
-func (d *decoder) wellformedIndefiniteString(t cborType, depth int) (int, error) {
+func (d *decoder) wellformedIndefiniteString(t cborType, depth int, checkBuiltinTags bool) (int, error) {
 	var err error
 	for {
 		if len(d.data) == d.off {
@@ -211,7 +222,7 @@ func (d *decoder) wellformedIndefiniteString(t cborType, depth int) (int, error)
 		if (d.data[d.off] & 0x1f) == 31 {
 			return 0, &SyntaxError{"cbor: indefinite-length " + t.String() + " chunk is not definite-length"}
 		}
-		if depth, err = d.wellformedInternal(depth); err != nil {
+		if depth, err = d.wellformedInternal(depth, checkBuiltinTags); err != nil {
 			return 0, err
 		}
 	}
@@ -219,7 +230,7 @@ func (d *decoder) wellformedIndefiniteString(t cborType, depth int) (int, error)
 }
 
 // wellformedIndefiniteArrayOrMap checks indefinite length array/map's well-formedness and returns max depth and error.
-func (d *decoder) wellformedIndefiniteArrayOrMap(t cborType, depth int) (int, error) {
+func (d *decoder) wellformedIndefiniteArrayOrMap(t cborType, depth int, checkBuiltinTags bool) (int, error) {
 	var err error
 	maxDepth := depth
 	i := 0
@@ -232,7 +243,7 @@ func (d *decoder) wellformedIndefiniteArrayOrMap(t cborType, depth int) (int, er
 			break
 		}
 		var dpt int
-		if dpt, err = d.wellformedInternal(depth); err != nil {
+		if dpt, err = d.wellformedInternal(depth, checkBuiltinTags); err != nil {
 			return 0, err
 		}
 		if dpt > maxDepth {

@@ -63,7 +63,7 @@ func TestValidOnStreamingData(t *testing.T) {
 	}
 	d := decoder{data: buf.Bytes(), dm: defaultDecMode}
 	for i := 0; i < len(marshalTests); i++ {
-		if err := d.wellformed(true); err != nil {
+		if err := d.wellformed(true, false); err != nil {
 			t.Errorf("wellformed() returned error %v", err)
 		}
 	}
@@ -111,7 +111,7 @@ func TestDepth(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			d := decoder{data: tc.data, dm: defaultDecMode}
-			depth, err := d.wellformedInternal(0)
+			depth, err := d.wellformedInternal(0, false)
 			if err != nil {
 				t.Errorf("wellformed(0x%x) returned error %v", tc.data, err)
 			}
@@ -176,12 +176,122 @@ func TestDepthError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, _ := tc.opts.decMode()
 			d := decoder{data: tc.data, dm: dm}
-			if _, err := d.wellformedInternal(0); err == nil {
+			if _, err := d.wellformedInternal(0, false); err == nil {
 				t.Errorf("wellformed(0x%x) didn't return an error", tc.data)
 			} else if _, ok := err.(*MaxNestedLevelError); !ok {
 				t.Errorf("wellformed(0x%x) returned wrong error type %T, want (*MaxNestedLevelError)", tc.data, err)
 			} else if err.Error() != tc.wantErrorMsg {
 				t.Errorf("wellformed(0x%x) returned error %q, want error %q", tc.data, err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestValidBuiltinTagTest(t *testing.T) {
+	testCases := []struct {
+		name string
+		data []byte
+	}{
+		{
+			name: "tag 0",
+			data: hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+		},
+		{
+			name: "tag 1",
+			data: hexDecode("c11a514b67b0"),
+		},
+		{
+			name: "tag 2",
+			data: hexDecode("c249010000000000000000"),
+		},
+		{
+			name: "tag 3",
+			data: hexDecode("c349010000000000000000"),
+		},
+		{
+			name: "nested tag 0",
+			data: hexDecode("d9d9f7c074323031332d30332d32315432303a30343a30305a"),
+		},
+		{
+			name: "nested tag 1",
+			data: hexDecode("d9d9f7c11a514b67b0"),
+		},
+		{
+			name: "nested tag 2",
+			data: hexDecode("d9d9f7c249010000000000000000"),
+		},
+		{
+			name: "nested tag 3",
+			data: hexDecode("d9d9f7c349010000000000000000"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			d := decoder{data: tc.data, dm: defaultDecMode}
+			if err := d.wellformed(true, true); err != nil {
+				t.Errorf("wellformed(0x%x) returned error %v", tc.data, err)
+			}
+		})
+	}
+}
+
+func TestInvalidBuiltinTagTest(t *testing.T) {
+	testCases := []struct {
+		name         string
+		data         []byte
+		wantErrorMsg string
+	}{
+		{
+			name:         "tag 0",
+			data:         hexDecode("c01a514b67b0"),
+			wantErrorMsg: "cbor: tag number 0 must be followed by text string, got positive integer",
+		},
+		{
+			name:         "tag 1",
+			data:         hexDecode("c174323031332d30332d32315432303a30343a30305a"),
+			wantErrorMsg: "cbor: tag number 1 must be followed by integer or floating-point number, got UTF-8 text string",
+		},
+		{
+			name:         "tag 2",
+			data:         hexDecode("c269010000000000000000"),
+			wantErrorMsg: "cbor: tag number 2 or 3 must be followed by byte string, got UTF-8 text string",
+		},
+		{
+			name:         "tag 3",
+			data:         hexDecode("c300"),
+			wantErrorMsg: "cbor: tag number 2 or 3 must be followed by byte string, got positive integer",
+		},
+		{
+			name:         "nested tag 0",
+			data:         hexDecode("d9d9f7c01a514b67b0"),
+			wantErrorMsg: "cbor: tag number 0 must be followed by text string, got positive integer",
+		},
+		{
+			name:         "nested tag 1",
+			data:         hexDecode("d9d9f7c174323031332d30332d32315432303a30343a30305a"),
+			wantErrorMsg: "cbor: tag number 1 must be followed by integer or floating-point number, got UTF-8 text string",
+		},
+		{
+			name:         "nested tag 2",
+			data:         hexDecode("d9d9f7c269010000000000000000"),
+			wantErrorMsg: "cbor: tag number 2 or 3 must be followed by byte string, got UTF-8 text string",
+		},
+		{
+			name:         "nested tag 3",
+			data:         hexDecode("d9d9f7c300"),
+			wantErrorMsg: "cbor: tag number 2 or 3 must be followed by byte string, got positive integer",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			d := decoder{data: tc.data, dm: defaultDecMode}
+			err := d.wellformed(true, true)
+			if err == nil {
+				t.Errorf("wellformed(0x%x) didn't return an error", tc.data)
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("wellformed(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}

@@ -4183,3 +4183,163 @@ func TestMarshalFieldNameType(t *testing.T) {
 		})
 	}
 }
+
+func TestMarshalRawMessageContainingMalformedCBORData(t *testing.T) {
+	testCases := []struct {
+		name         string
+		value        interface{}
+		wantErrorMsg string
+	}{
+		// Nil RawMessage and empty RawMessage are encoded as CBOR nil.
+		{
+			name:         "truncated data",
+			value:        RawMessage{0xa6},
+			wantErrorMsg: "cbor: error calling MarshalCBOR for type cbor.RawMessage: unexpected EOF",
+		},
+		{
+			name:         "malformed data",
+			value:        RawMessage{0x1f},
+			wantErrorMsg: "cbor: error calling MarshalCBOR for type cbor.RawMessage: cbor: invalid additional information 31 for type positive integer",
+		},
+		{
+			name:         "extraneous data",
+			value:        RawMessage{0x01, 0x01},
+			wantErrorMsg: "cbor: error calling MarshalCBOR for type cbor.RawMessage: cbor: 1 bytes of extraneous data starting at index 1",
+		},
+		{
+			name:         "invalid builtin tag",
+			value:        RawMessage{0xc0, 0x01},
+			wantErrorMsg: "cbor: error calling MarshalCBOR for type cbor.RawMessage: cbor: tag number 0 must be followed by text string, got positive integer",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := Marshal(tc.value)
+			if err == nil {
+				t.Errorf("Marshal(%v) didn't return an error, want error %q", tc.value, tc.wantErrorMsg)
+			} else if _, ok := err.(*MarshalerError); !ok {
+				t.Errorf("Marshal(%v) error type %T, want *MarshalerError", tc.value, err)
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("Marshal(%v) error %q, want %q", tc.value, err.Error(), tc.wantErrorMsg)
+			}
+			if b != nil {
+				t.Errorf("Marshal(%v) = 0x%x, want nil", tc.value, b)
+			}
+		})
+	}
+}
+
+type marshaler struct {
+	data []byte
+}
+
+func (m marshaler) MarshalCBOR() (data []byte, err error) {
+	return m.data, nil
+}
+
+func TestMarshalerReturnsMalformedCBORData(t *testing.T) {
+
+	testCases := []struct {
+		name         string
+		value        interface{}
+		wantErrorMsg string
+	}{
+		{
+			name:         "truncated data",
+			value:        marshaler{data: []byte{0xa6}},
+			wantErrorMsg: "cbor: error calling MarshalCBOR for type cbor.marshaler: unexpected EOF",
+		},
+		{
+			name:         "malformed data",
+			value:        marshaler{data: []byte{0x1f}},
+			wantErrorMsg: "cbor: error calling MarshalCBOR for type cbor.marshaler: cbor: invalid additional information 31 for type positive integer",
+		},
+		{
+			name:         "extraneous data",
+			value:        marshaler{data: []byte{0x01, 0x01}},
+			wantErrorMsg: "cbor: error calling MarshalCBOR for type cbor.marshaler: cbor: 1 bytes of extraneous data starting at index 1",
+		},
+		{
+			name:         "invalid builtin tag",
+			value:        marshaler{data: []byte{0xc0, 0x01}},
+			wantErrorMsg: "cbor: error calling MarshalCBOR for type cbor.marshaler: cbor: tag number 0 must be followed by text string, got positive integer",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := Marshal(tc.value)
+			if err == nil {
+				t.Errorf("Marshal(%v) didn't return an error, want error %q", tc.value, tc.wantErrorMsg)
+			} else if _, ok := err.(*MarshalerError); !ok {
+				t.Errorf("Marshal(%v) error type %T, want *MarshalerError", tc.value, err)
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("Marshal(%v) error %q, want %q", tc.value, err.Error(), tc.wantErrorMsg)
+			}
+			if b != nil {
+				t.Errorf("Marshal(%v) = 0x%x, want nil", tc.value, b)
+			}
+		})
+	}
+}
+
+func TestMarshalerReturnsDisallowedCBORData(t *testing.T) {
+
+	testCases := []struct {
+		name         string
+		encOpts      EncOptions
+		value        interface{}
+		wantErrorMsg string
+	}{
+		{
+			name:         "enc mode forbids indefinite length, data has indefinite length",
+			encOpts:      EncOptions{IndefLength: IndefLengthForbidden},
+			value:        marshaler{data: hexDecode("5f42010243030405ff")},
+			wantErrorMsg: "cbor: error calling MarshalCBOR for type cbor.marshaler: cbor: indefinite-length byte string isn't allowed",
+		},
+		{
+			name:    "enc mode allows indefinite length, data has indefinite length",
+			encOpts: EncOptions{IndefLength: IndefLengthAllowed},
+			value:   marshaler{data: hexDecode("5f42010243030405ff")},
+		},
+		{
+			name:         "enc mode forbids tags, data has tags",
+			encOpts:      EncOptions{TagsMd: TagsForbidden},
+			value:        marshaler{data: hexDecode("c074323031332d30332d32315432303a30343a30305a")},
+			wantErrorMsg: "cbor: error calling MarshalCBOR for type cbor.marshaler: cbor: CBOR tag isn't allowed",
+		},
+		{
+			name:    "enc mode allows tags, data has tags",
+			encOpts: EncOptions{TagsMd: TagsAllowed},
+			value:   marshaler{data: hexDecode("c074323031332d30332d32315432303a30343a30305a")},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			em, err := tc.encOpts.EncMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			b, err := em.Marshal(tc.value)
+			if tc.wantErrorMsg == "" {
+				if err != nil {
+					t.Errorf("Marshal(%v) returned error %q", tc.value, err)
+				}
+			} else {
+				if err == nil {
+					t.Errorf("Marshal(%v) didn't return an error, want error %q", tc.value, tc.wantErrorMsg)
+				} else if _, ok := err.(*MarshalerError); !ok {
+					t.Errorf("Marshal(%v) error type %T, want *MarshalerError", tc.value, err)
+				} else if err.Error() != tc.wantErrorMsg {
+					t.Errorf("Marshal(%v) error %q, want %q", tc.value, err.Error(), tc.wantErrorMsg)
+				}
+				if b != nil {
+					t.Errorf("Marshal(%v) = 0x%x, want nil", tc.value, b)
+				}
+			}
+		})
+	}
+}
