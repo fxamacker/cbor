@@ -87,7 +87,8 @@ import (
 // To unmarshal a CBOR text string into a time.Time value, Unmarshal parses text
 // string formatted in RFC3339.  To unmarshal a CBOR integer/float into a
 // time.Time value, Unmarshal creates an unix time with integer/float as seconds
-// and fractional seconds since January 1, 1970 UTC.
+// and fractional seconds since January 1, 1970 UTC. As a special case, Infinite
+// and NaN float values decode to time.Time's zero value.
 //
 // To unmarshal CBOR null (0xf6) and undefined (0xf7) values into a
 // slice/map/pointer, Unmarshal sets Go value to nil.  Because null is often
@@ -476,8 +477,28 @@ type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
 	DupMapKey DupMapKeyMode
 
-	// TimeTag specifies whether to check validity of time.Time (e.g. valid tag number and tag content type).
-	// For now, valid tag number means 0 or 1 as specified in RFC 7049 if the Go type is time.Time.
+	// TimeTag specifies whether or not untagged data items, or tags other
+	// than tag 0 and tag 1, can be decoded to time.Time. If tag 0 or tag 1
+	// appears in an input, the type of its content is always validated as
+	// specified in RFC 8949. That behavior is not controlled by this
+	// option. The behavior of the supported modes are:
+	//
+	//   DecTagIgnored (default): Untagged text strings and text strings
+	//   enclosed in tags other than 0 and 1 are decoded as though enclosed
+	//   in tag 0. Untagged unsigned integers, negative integers, and
+	//   floating-point numbers (or those enclosed in tags other than 0 and
+	//   1) are decoded as though enclosed in tag 1. Decoding a tag other
+	//   than 0 or 1 enclosing simple values null or undefined into a
+	//   time.Time does not modify the destination value.
+	//
+	//   DecTagOptional: Untagged text strings are decoded as though
+	//   enclosed in tag 0. Untagged unsigned integers, negative integers,
+	//   and floating-point numbers are decoded as though enclosed in tag
+	//   1. Tags other than 0 and 1 will produce an error on attempts to
+	//   decode them into a time.Time.
+	//
+	//   DecTagRequired: Only tags 0 and 1 can be decoded to time.Time. Any
+	//   other input will produce an error.
 	TimeTag DecTagMode
 
 	// MaxNestedLevels specifies the max nested levels allowed for any combination of CBOR array, maps, and tags.
@@ -1024,15 +1045,15 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 	}
 
 	// Check validity of supported built-in tags.
-	if d.nextCBORType() == cborTypeTag {
-		off := d.off
+	off := d.off
+	for d.nextCBORType() == cborTypeTag {
 		_, _, tagNum := d.getHead()
 		if err := validBuiltinTag(tagNum, d.data[d.off]); err != nil {
 			d.skip()
 			return err
 		}
-		d.off = off
 	}
+	d.off = off
 
 	if tInfo.spclType != specialTypeNone {
 		switch tInfo.spclType {
@@ -1050,11 +1071,13 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				d.skip()
 				return nil
 			}
-			tm, err := d.parseToTime()
+			tm, ok, err := d.parseToTime()
 			if err != nil {
 				return err
 			}
-			v.Set(reflect.ValueOf(tm))
+			if ok {
+				v.Set(reflect.ValueOf(tm))
+			}
 			return nil
 		case specialTypeUnmarshalerIface:
 			return d.parseToUnmarshaler(v)
@@ -1239,64 +1262,98 @@ func (d *decoder) parseToTag(v reflect.Value) error {
 	return nil
 }
 
-func (d *decoder) parseToTime() (tm time.Time, err error) {
-	t := d.nextCBORType()
-
+// parseToTime decodes the current data item as a time.Time. The bool return value is false if and
+// only if the destination value should remain unmodified.
+func (d *decoder) parseToTime() (time.Time, bool, error) {
 	// Verify that tag number or absence of tag number is acceptable to specified timeTag.
-	if t == cborTypeTag {
+	if t := d.nextCBORType(); t == cborTypeTag {
 		if d.dm.timeTag == DecTagIgnored {
-			// Skip tag number
+			// Skip all enclosing tags
 			for t == cborTypeTag {
 				d.getHead()
 				t = d.nextCBORType()
+			}
+			if d.nextCBORNil() {
+				d.skip()
+				return time.Time{}, false, nil
 			}
 		} else {
 			// Read tag number
 			_, _, tagNum := d.getHead()
 			if tagNum != 0 && tagNum != 1 {
-				d.skip()
-				err = errors.New("cbor: wrong tag number for time.Time, got " + strconv.Itoa(int(tagNum)) + ", expect 0 or 1")
-				return
+				d.skip() // skip tag content
+				return time.Time{}, false, errors.New("cbor: wrong tag number for time.Time, got " + strconv.Itoa(int(tagNum)) + ", expect 0 or 1")
 			}
 		}
 	} else {
 		if d.dm.timeTag == DecTagRequired {
 			d.skip()
-			err = &UnmarshalTypeError{CBORType: t.String(), GoType: typeTime.String(), errorMsg: "expect CBOR tag value"}
-			return
+			return time.Time{}, false, &UnmarshalTypeError{CBORType: t.String(), GoType: typeTime.String(), errorMsg: "expect CBOR tag value"}
 		}
 	}
 
-	var content interface{}
-	content, err = d.parse(false)
-	if err != nil {
-		return
-	}
-
-	switch c := content.(type) {
-	case nil:
-		return
-	case uint64:
-		return time.Unix(int64(c), 0), nil
-	case int64:
-		return time.Unix(c, 0), nil
-	case float64:
-		if math.IsNaN(c) || math.IsInf(c, 0) {
-			return
-		}
-		f1, f2 := math.Modf(c)
-		return time.Unix(int64(f1), int64(f2*1e9)), nil
-	case string:
-		tm, err = time.Parse(time.RFC3339, c)
+	switch t := d.nextCBORType(); t {
+	case cborTypeTextString:
+		s, err := d.parseTextString()
 		if err != nil {
-			tm = time.Time{}
-			err = errors.New("cbor: cannot set " + c + " for time.Time: " + err.Error())
-			return
+			return time.Time{}, false, err
 		}
-		return
+		t, err := time.Parse(time.RFC3339, string(s))
+		if err != nil {
+			return time.Time{}, false, errors.New("cbor: cannot set " + string(s) + " for time.Time: " + err.Error())
+		}
+		return t, true, nil
+	case cborTypePositiveInt:
+		_, _, val := d.getHead()
+		if val > math.MaxInt64 {
+			return time.Time{}, false, &UnmarshalTypeError{
+				CBORType: t.String(),
+				GoType:   typeTime.String(),
+				errorMsg: fmt.Sprintf("%d overflows Go's int64", val),
+			}
+		}
+		return time.Unix(int64(val), 0), true, nil
+	case cborTypeNegativeInt:
+		_, _, val := d.getHead()
+		if val > math.MaxInt64 {
+			if val == math.MaxUint64 {
+				// Maximum absolute value representable by negative integer is 2^64,
+				// not 2^64-1, so it overflows uint64.
+				return time.Time{}, false, &UnmarshalTypeError{
+					CBORType: t.String(),
+					GoType:   typeTime.String(),
+					errorMsg: "-18446744073709551616 overflows Go's int64",
+				}
+			}
+			return time.Time{}, false, &UnmarshalTypeError{
+				CBORType: t.String(),
+				GoType:   typeTime.String(),
+				errorMsg: fmt.Sprintf("-%d overflows Go's int64", val+1),
+			}
+		}
+		return time.Unix(int64(-1)^int64(val), 0), true, nil
+	case cborTypePrimitives:
+		_, ai, val := d.getHead()
+		var f float64
+		switch ai {
+		case 25:
+			f = float64(float16.Frombits(uint16(val)).Float32())
+		case 26:
+			f = float64(math.Float32frombits(uint32(val)))
+		case 27:
+			f = math.Float64frombits(val)
+		default:
+			return time.Time{}, false, &UnmarshalTypeError{CBORType: t.String(), GoType: typeTime.String()}
+		}
+
+		if math.IsNaN(f) || math.IsInf(f, 0) {
+			// https://www.rfc-editor.org/rfc/rfc8949.html#section-3.4.2-6
+			return time.Time{}, true, nil
+		}
+		seconds, fractional := math.Modf(f)
+		return time.Unix(int64(seconds), int64(fractional*1e9)), true, nil
 	default:
-		err = &UnmarshalTypeError{CBORType: t.String(), GoType: typeTime.String()}
-		return
+		return time.Time{}, false, &UnmarshalTypeError{CBORType: t.String(), GoType: typeTime.String()}
 	}
 }
 
@@ -1336,15 +1393,15 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 	}
 
 	// Check validity of supported built-in tags.
-	if d.nextCBORType() == cborTypeTag {
-		off := d.off
+	off := d.off
+	for d.nextCBORType() == cborTypeTag {
 		_, _, tagNum := d.getHead()
 		if err := validBuiltinTag(tagNum, d.data[d.off]); err != nil {
 			d.skip()
 			return nil, err
 		}
-		d.off = off
 	}
+	d.off = off
 
 	t := d.nextCBORType()
 	switch t {
@@ -1445,7 +1502,8 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 		switch tagNum {
 		case 0, 1:
 			d.off = tagOff
-			return d.parseToTime()
+			tm, _, err := d.parseToTime()
+			return tm, err
 		case 2:
 			b, _ := d.parseByteString()
 			bi := new(big.Int).SetBytes(b)
