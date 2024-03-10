@@ -17,7 +17,7 @@ Thank you for your interest in contributing to fxamacker/cbor!
 
 - [ ] Include unit tests that cover the new code
 - [ ] Pass all unit tests 
-- [ ] Pass all 18 ci linters (golint, gosec, staticcheck, etc.)
+- [ ] Pass all lint checks in CI (goimports, gosec, staticcheck, etc.)
 - [ ] Sign each commit with your real name and email.  
       Last line of each commit message should be in this format:  
       Signed-off-by: Firstname Lastname <firstname.lastname@example.com>
