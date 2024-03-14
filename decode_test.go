@@ -3547,13 +3547,27 @@ func TestMapKeyNil(t *testing.T) {
 }
 
 func TestDecodeTime(t *testing.T) {
+	unmodified := time.Now()
+
 	testCases := []struct {
 		name            string
 		cborRFC3339Time []byte
 		cborUnixTime    []byte
 		wantTime        time.Time
 	}{
-		// Decoding CBOR null/defined to time.Time is no-op.  See TestUnmarshalNil.
+		// Decoding untagged CBOR null/defined to time.Time is no-op.  See TestUnmarshalNil.
+		{
+			name:            "null within unrecognized tag", // no-op in DecTagIgnored
+			cborRFC3339Time: hexDecode("dadeadbeeff6"),
+			cborUnixTime:    hexDecode("dadeadbeeff6"),
+			wantTime:        unmodified,
+		},
+		{
+			name:            "undefined within unrecognized tag", // no-op in DecTagIgnored
+			cborRFC3339Time: hexDecode("dadeadbeeff7"),
+			cborUnixTime:    hexDecode("dadeadbeeff7"),
+			wantTime:        unmodified,
+		},
 		{
 			name:            "NaN",
 			cborRFC3339Time: hexDecode("f97e00"),
@@ -3599,13 +3613,13 @@ func TestDecodeTime(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tm := time.Now()
+			tm := unmodified
 			if err := Unmarshal(tc.cborRFC3339Time, &tm); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborRFC3339Time, err)
 			} else if !tc.wantTime.Equal(tm) {
 				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborRFC3339Time, tm, tm, tc.wantTime, tc.wantTime)
 			}
-			tm = time.Now()
+			tm = unmodified
 			if err := Unmarshal(tc.cborUnixTime, &tm); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborUnixTime, err)
 			} else if !tc.wantTime.Equal(tm) {
@@ -3675,6 +3689,7 @@ func TestDecodeTimeWithTag(t *testing.T) {
 func TestDecodeTimeError(t *testing.T) {
 	testCases := []struct {
 		name         string
+		opts         DecOptions
 		data         []byte
 		wantErrorMsg string
 	}{
@@ -3703,11 +3718,29 @@ func TestDecodeTimeError(t *testing.T) {
 			data:         hexDecode("3bffffffffffffffff"),
 			wantErrorMsg: "cbor: cannot unmarshal negative integer into Go value of type time.Time",
 		},
+		{
+			name: "untagged byte string content cannot be decoded into time.Time with DefaultByteStringType string",
+			opts: DecOptions{
+				TimeTag:               DecTagOptional,
+				DefaultByteStringType: reflect.TypeOf(""),
+			},
+			data:         hexDecode("54323031332d30332d32315432303a30343a30305a"),
+			wantErrorMsg: "cbor: cannot unmarshal byte string into Go value of type time.Time",
+		},
+		{
+			name:         "time tag is validated when enclosed in unrecognized tag",
+			data:         hexDecode("dadeadbeefc001"),
+			wantErrorMsg: "cbor: tag number 0 must be followed by text string, got positive integer",
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			dm, err := tc.opts.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
 			tm := time.Now()
-			if err := Unmarshal(tc.data, &tm); err == nil {
+			if err := dm.Unmarshal(tc.data, &tm); err == nil {
 				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.data, tc.wantErrorMsg)
 			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
 				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
@@ -3759,7 +3792,7 @@ func TestDecodeInvalidTagTime(t *testing.T) {
 			name:          "Tag 1 with negative integer overflow",
 			data:          hexDecode("c13bffffffffffffffff"),
 			decodeToTypes: []reflect.Type{typeIntf, typeTime},
-			wantErrorMsg:  "cbor: cannot unmarshal tag into Go value of type time.Time",
+			wantErrorMsg:  "cbor: cannot unmarshal negative integer into Go value of type time.Time (-18446744073709551616 overflows Go's int64)",
 		},
 		{
 			name:          "Tag 1 with string content",
@@ -3912,7 +3945,7 @@ func TestDecodeTimeStreaming(t *testing.T) {
 		},
 		{
 			data:         hexDecode("c13bffffffffffffffff"),
-			wantErrorMsg: "cbor: cannot unmarshal tag into Go value of type time.Time",
+			wantErrorMsg: "cbor: cannot unmarshal negative integer into Go value of type time.Time (-18446744073709551616 overflows Go's int64)",
 		},
 		{
 			data:    hexDecode("c11a514b67b0"),
