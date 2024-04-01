@@ -472,6 +472,30 @@ func (uttam UnrecognizedTagToAnyMode) valid() bool {
 	return uttam >= 0 && uttam < maxUnrecognizedTagToAny
 }
 
+// TimeTagToAnyMode specifies how to decode CBOR tag 0 and 1 into an empty interface (any).
+// Based on the specified mode, Unmarshal can return a time.Time value or a time string in a specific format.
+type TimeTagToAnyMode int
+
+const (
+	// TimeTagToTime decodes CBOR tag 0 and 1 into a time.Time value
+	// when decoding tag 0 or 1 into an empty interface.
+	TimeTagToTime TimeTagToAnyMode = iota
+
+	// TimeTagToRFC3339 decodes CBOR tag 0 and 1 into a time string in RFC3339 format
+	// when decoding tag 0 or 1 into an empty interface.
+	TimeTagToRFC3339
+
+	// TimeTagToRFC3339Nano decodes CBOR tag 0 and 1 into a time string in RFC3339Nano format
+	// when decoding tag 0 or 1 into an empty interface.
+	TimeTagToRFC3339Nano
+
+	maxTimeTagToAnyMode
+)
+
+func (tttam TimeTagToAnyMode) valid() bool {
+	return tttam >= 0 && tttam < maxTimeTagToAnyMode
+}
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -564,6 +588,10 @@ type DecOptions struct {
 	// UnrecognizedTagToAny specifies how to decode unrecognized CBOR tag into an empty interface.
 	// Currently, recognized CBOR tag numbers are 0, 1, 2, 3, or registered by TagSet.
 	UnrecognizedTagToAny UnrecognizedTagToAnyMode
+
+	// TimeTagToAnyMode specifies how to decode CBOR tag 0 and 1 into an empty interface (any).
+	// Based on the specified mode, Unmarshal can return a time.Time value or a time string in a specific format.
+	TimeTagToAny TimeTagToAnyMode
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -717,6 +745,10 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		return nil, errors.New("cbor: invalid UnrecognizedTagToAnyMode " + strconv.Itoa(int(opts.UnrecognizedTagToAny)))
 	}
 
+	if !opts.TimeTagToAny.valid() {
+		return nil, errors.New("cbor: invalid TimeTagToAny " + strconv.Itoa(int(opts.TimeTagToAny)))
+	}
+
 	dm := decMode{
 		dupMapKey:             opts.DupMapKey,
 		timeTag:               opts.TimeTag,
@@ -736,6 +768,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		byteStringToString:    opts.ByteStringToString,
 		fieldNameByteString:   opts.FieldNameByteString,
 		unrecognizedTagToAny:  opts.UnrecognizedTagToAny,
+		timeTagToAny:          opts.TimeTagToAny,
 	}
 
 	return &dm, nil
@@ -807,6 +840,7 @@ type decMode struct {
 	byteStringToString    ByteStringToStringMode
 	fieldNameByteString   FieldNameByteStringMode
 	unrecognizedTagToAny  UnrecognizedTagToAnyMode
+	timeTagToAny          TimeTagToAnyMode
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -832,6 +866,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		ByteStringToString:    dm.byteStringToString,
 		FieldNameByteString:   dm.fieldNameByteString,
 		UnrecognizedTagToAny:  dm.unrecognizedTagToAny,
+		TimeTagToAny:          dm.timeTagToAny,
 	}
 }
 
@@ -1503,7 +1538,25 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 		case 0, 1:
 			d.off = tagOff
 			tm, _, err := d.parseToTime()
-			return tm, err
+			if err != nil {
+				return nil, err
+			}
+			switch d.dm.timeTagToAny {
+			case TimeTagToTime:
+				return tm, nil
+			case TimeTagToRFC3339:
+				if tagNum == 1 {
+					tm = tm.UTC()
+				}
+				return tm.Format(time.RFC3339), nil
+			case TimeTagToRFC3339Nano:
+				if tagNum == 1 {
+					tm = tm.UTC()
+				}
+				return tm.Format(time.RFC3339Nano), nil
+			default:
+				// not reachable
+			}
 		case 2:
 			b, _ := d.parseByteString()
 			bi := new(big.Int).SetBytes(b)

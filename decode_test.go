@@ -4912,6 +4912,7 @@ func TestDecOptions(t *testing.T) {
 		ByteStringToString:    ByteStringToStringAllowed,
 		FieldNameByteString:   FieldNameByteStringAllowed,
 		UnrecognizedTagToAny:  UnrecognizedTagContentToAny,
+		TimeTagToAny:          TimeTagToRFC3339,
 	}
 	ov := reflect.ValueOf(opts1)
 	for i := 0; i < ov.NumField(); i++ {
@@ -8657,4 +8658,93 @@ func TestUnmarshalWithUnrecognizedTagToAnyModeForSharedTag(t *testing.T) {
 
 func isCBORNil(data []byte) bool {
 	return len(data) > 0 && (data[0] == 0xf6 || data[0] == 0xf7)
+}
+
+func TestDecModeInvalidTimeTagToAnyMode(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{TimeTagToAny: -1},
+			wantErrorMsg: "cbor: invalid TimeTagToAny -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{TimeTagToAny: 4},
+			wantErrorMsg: "cbor: invalid TimeTagToAny 4",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("Expected non nil error from DecMode()")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("Expected error: %q, want: %q \n", tc.wantErrorMsg, err.Error())
+			}
+		})
+	}
+}
+
+func TestDecModeTimeTagToAny(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		opts DecOptions
+		in   []byte
+		want interface{}
+	}{
+		{
+			name: "Unmarshal tag 0 data to time.Time when TimeTagToAny is not set",
+			opts: DecOptions{},
+			in:   hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			want: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
+		},
+		{
+			name: "Unmarshal tag 1 data to time.Time when TimeTagToAny is not set",
+			opts: DecOptions{},
+			in:   hexDecode("c11a514b67b0"),
+			want: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
+		},
+		{
+			name: "Unmarshal tag 0 data to RFC3339 string when TimeTagToAny is set",
+			opts: DecOptions{TimeTagToAny: TimeTagToRFC3339},
+			in:   hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			want: "2013-03-21T20:04:00Z",
+		},
+		{
+			name: "Unmarshal tag 1 data to RFC3339 string when TimeTagToAny is set",
+			opts: DecOptions{TimeTagToAny: TimeTagToRFC3339},
+			in:   hexDecode("c11a514b67b0"),
+			want: "2013-03-21T20:04:00Z",
+		},
+		{
+			name: "Unmarshal tag 0 data to RFC3339Nano string when TimeTagToAny is set",
+			opts: DecOptions{TimeTagToAny: TimeTagToRFC3339Nano},
+			in:   hexDecode("c076323031332d30332d32315432303a30343a30302e355a"),
+			want: "2013-03-21T20:04:00.5Z",
+		},
+		{
+			name: "Unmarshal tag 1 data to RFC3339Nano string when TimeTagToAny is set",
+			opts: DecOptions{TimeTagToAny: TimeTagToRFC3339Nano},
+			in:   hexDecode("c1fb41d452d9ec200000"),
+			want: "2013-03-21T20:04:00.5Z",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, err := tc.opts.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var got interface{}
+			if err := dm.Unmarshal(tc.in, &got); err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			compareNonFloats(t, tc.in, got, tc.want)
+
+		})
+	}
 }
