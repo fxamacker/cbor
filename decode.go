@@ -539,6 +539,43 @@ func NewSimpleValueRegistryFromDefaults(fns ...func(*SimpleValueRegistry) error)
 	return &r, nil
 }
 
+// NaNMode specifies how to decode floating-point values (major type 7, additional information 25
+// through 27) representing NaN (not-a-number).
+type NaNMode int
+
+const (
+	// NaNDecodeAllowed will decode NaN values to Go float32 or float64.
+	NaNDecodeAllowed NaNMode = iota
+
+	// NaNDecodeForbidden will return an UnacceptableDataItemError on an attempt to decode a NaN value.
+	NaNDecodeForbidden
+
+	maxNaNDecode
+)
+
+func (ndm NaNMode) valid() bool {
+	return ndm >= 0 && ndm < maxNaNDecode
+}
+
+// InfMode specifies how to decode floating-point values (major type 7, additional information 25
+// through 27) representing positive or negative infinity.
+type InfMode int
+
+const (
+	// InfDecodeAllowed will decode infinite values to Go float32 or float64.
+	InfDecodeAllowed InfMode = iota
+
+	// InfDecodeForbidden will return an UnacceptableDataItemError on an attempt to decode an
+	// infinite value.
+	InfDecodeForbidden
+
+	maxInfDecode
+)
+
+func (idm InfMode) valid() bool {
+	return idm >= 0 && idm < maxInfDecode
+}
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -645,6 +682,14 @@ type DecOptions struct {
 	// Users may provide a custom SimpleValueRegistry constructed via
 	// NewSimpleValueRegistryFromDefaults.
 	SimpleValues *SimpleValueRegistry
+
+	// NaN specifies how to decode floating-point values (major type 7, additional information
+	// 25 through 27) representing NaN (not-a-number).
+	NaN NaNMode
+
+	// Inf specifies how to decode floating-point values (major type 7, additional information
+	// 25 through 27) representing positive or negative infinity.
+	Inf InfMode
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -815,6 +860,14 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		return nil, errors.New("cbor: invalid TimeTagToAny " + strconv.Itoa(int(opts.TimeTagToAny)))
 	}
 
+	if !opts.NaN.valid() {
+		return nil, errors.New("cbor: invalid NaNDec " + strconv.Itoa(int(opts.NaN)))
+	}
+
+	if !opts.Inf.valid() {
+		return nil, errors.New("cbor: invalid InfDec " + strconv.Itoa(int(opts.Inf)))
+	}
+
 	dm := decMode{
 		dupMapKey:             opts.DupMapKey,
 		timeTag:               opts.TimeTag,
@@ -836,6 +889,8 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		unrecognizedTagToAny:  opts.UnrecognizedTagToAny,
 		timeTagToAny:          opts.TimeTagToAny,
 		simpleValues:          simpleValues,
+		nanDec:                opts.NaN,
+		infDec:                opts.Inf,
 	}
 
 	return &dm, nil
@@ -909,6 +964,8 @@ type decMode struct {
 	unrecognizedTagToAny  UnrecognizedTagToAnyMode
 	timeTagToAny          TimeTagToAnyMode
 	simpleValues          *SimpleValueRegistry
+	nanDec                NaNMode
+	infDec                InfMode
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -943,6 +1000,8 @@ func (dm *decMode) DecOptions() DecOptions {
 		UnrecognizedTagToAny:  dm.unrecognizedTagToAny,
 		TimeTagToAny:          dm.timeTagToAny,
 		SimpleValues:          simpleValues,
+		NaN:                   dm.nanDec,
+		Inf:                   dm.infDec,
 	}
 }
 
