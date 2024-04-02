@@ -174,13 +174,14 @@ type encodingStructType struct {
 }
 
 func (st *encodingStructType) getFields(em *encMode) fields {
-	if em.sort == SortNone {
+	switch em.sort {
+	case SortNone, SortFastShuffle:
 		return st.fields
-	}
-	if em.sort == SortLengthFirst {
+	case SortLengthFirst:
 		return st.lengthFirstFields
+	default:
+		return st.bytewiseFields
 	}
-	return st.bytewiseFields
 }
 
 type bytewiseFieldSorter struct {

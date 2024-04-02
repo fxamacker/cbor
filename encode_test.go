@@ -4343,3 +4343,53 @@ func TestMarshalerReturnsDisallowedCBORData(t *testing.T) {
 		})
 	}
 }
+
+func TestSortModeFastShuffle(t *testing.T) {
+	em, err := EncOptions{Sort: SortFastShuffle}.EncMode()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// These cases are based on the assumption that even a constant-time shuffle algorithm can
+	// give an unbiased permutation of the keys when there are exactly 2 keys, so each trial
+	// should succeed with probability 1/2.
+
+	for _, tc := range []struct {
+		name   string
+		trials int
+		in     interface{}
+	}{
+		{
+			name:   "fixed length struct",
+			trials: 1024,
+			in:     struct{ A, B int }{},
+		},
+		{
+			name:   "variable length struct",
+			trials: 1024,
+			in: struct {
+				A int
+				B int `cbor:",omitempty"`
+			}{B: 1},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			first, err := em.Marshal(tc.in)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			for i := 1; i <= tc.trials; i++ {
+				next, err := em.Marshal(tc.in)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if string(first) != string(next) {
+					return
+				}
+			}
+
+			t.Errorf("object encoded identically in %d consecutive trials using SortFastShuffle", tc.trials)
+		})
+	}
+}

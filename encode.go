@@ -11,6 +11,7 @@ import (
 	"io"
 	"math"
 	"math/big"
+	"math/rand"
 	"reflect"
 	"sort"
 	"strconv"
@@ -141,7 +142,7 @@ func (e *UnsupportedValueError) Error() string {
 type SortMode int
 
 const (
-	// SortNone means no sorting.
+	// SortNone encodes map pairs and struct fields in an arbitrary order.
 	SortNone SortMode = 0
 
 	// SortLengthFirst causes map keys or struct fields to be sorted such that:
@@ -157,6 +158,12 @@ const (
 	// in RFC 7049bis.
 	SortBytewiseLexical SortMode = 2
 
+	// SortShuffle encodes map pairs and struct fields in a shuffled
+	// order. This mode does not guarantee an unbiased permutation, but it
+	// does guarantee that the runtime of the shuffle algorithm used will be
+	// constant.
+	SortFastShuffle SortMode = 3
+
 	// SortCanonical is used in "Canonical CBOR" encoding in RFC 7049 3.9.
 	SortCanonical SortMode = SortLengthFirst
 
@@ -166,7 +173,7 @@ const (
 	// SortCoreDeterministic is used in "Core Deterministic Encoding" in RFC 7049bis.
 	SortCoreDeterministic SortMode = SortBytewiseLexical
 
-	maxSortMode SortMode = 3
+	maxSortMode SortMode = 4
 )
 
 func (sm SortMode) valid() bool {
@@ -1081,8 +1088,12 @@ func (me mapEncodeFunc) encode(e *encoderBuffer, em *encMode, v reflect.Value) e
 	if mlen == 0 {
 		return e.WriteByte(byte(cborTypeMap))
 	}
-	if em.sort != SortNone && mlen > 1 {
-		return me.encodeCanonical(e, em, v)
+	switch em.sort {
+	case SortNone, SortFastShuffle:
+	default:
+		if mlen > 1 {
+			return me.encodeCanonical(e, em, v)
+		}
 	}
 	encodeHead(e, byte(cborTypeMap), uint64(mlen))
 
@@ -1234,7 +1245,13 @@ func encodeFixedLengthStruct(e *encoderBuffer, em *encMode, v reflect.Value, fld
 
 	encodeHead(e, byte(cborTypeMap), uint64(len(flds)))
 
-	for i := 0; i < len(flds); i++ {
+	start := 0
+	if em.sort == SortFastShuffle {
+		start = rand.Intn(len(flds)) //nolint:gosec // Don't need a CSPRNG for deck cutting.
+	}
+
+	for offset := 0; offset < len(flds); offset++ {
+		i := (start + offset) % len(flds)
 		f := flds[i]
 		if !f.keyAsInt && em.fieldName == FieldNameToByteString {
 			e.Write(f.cborNameByteString)
@@ -1263,9 +1280,16 @@ func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 		return encodeFixedLengthStruct(e, em, v, flds)
 	}
 
+	start := 0
+	if em.sort == SortFastShuffle {
+		start = rand.Intn(len(flds)) //nolint:gosec // Don't need a CSPRNG for deck cutting.
+	}
+
 	kve := getEncoderBuffer() // encode key-value pairs based on struct field tag options
 	kvcount := 0
-	for i := 0; i < len(flds); i++ {
+
+	for offset := 0; offset < len(flds); offset++ {
+		i := (start + offset) % len(flds)
 		f := flds[i]
 
 		var fv reflect.Value
