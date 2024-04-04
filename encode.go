@@ -1081,7 +1081,7 @@ func (me mapEncodeFunc) encode(e *encoderBuffer, em *encMode, v reflect.Value) e
 	if mlen == 0 {
 		return e.WriteByte(byte(cborTypeMap))
 	}
-	if em.sort != SortNone {
+	if em.sort != SortNone && mlen > 1 {
 		return me.encodeCanonical(e, em, v)
 	}
 	encodeHead(e, byte(cborTypeMap), uint64(mlen))
