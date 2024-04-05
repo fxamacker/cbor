@@ -496,6 +496,23 @@ func (tttam TimeTagToAnyMode) valid() bool {
 	return tttam >= 0 && tttam < maxTimeTagToAnyMode
 }
 
+// ByteStringToTimeMode specifies the behavior when decoding a CBOR byte string into a Go time.Time.
+type ByteStringToTimeMode int
+
+const (
+	// ByteStringToTimeForbidden generates an error on an attempt to decode a CBOR byte string into a Go time.Time.
+	ByteStringToTimeForbidden ByteStringToTimeMode = iota
+
+	// ByteStringToTimeAllowed permits decoding a CBOR byte string into a Go time.Time.
+	ByteStringToTimeAllowed
+
+	maxByteStringToTimeMode
+)
+
+func (bttm ByteStringToTimeMode) valid() bool {
+	return bttm >= 0 && bttm < maxByteStringToTimeMode
+}
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -592,6 +609,9 @@ type DecOptions struct {
 	// TimeTagToAnyMode specifies how to decode CBOR tag 0 and 1 into an empty interface (any).
 	// Based on the specified mode, Unmarshal can return a time.Time value or a time string in a specific format.
 	TimeTagToAny TimeTagToAnyMode
+
+	// ByteStringToTimeMode specifies the behavior when decoding a CBOR byte string into a Go time.Time.
+	ByteStringToTime ByteStringToTimeMode
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -749,6 +769,10 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		return nil, errors.New("cbor: invalid TimeTagToAny " + strconv.Itoa(int(opts.TimeTagToAny)))
 	}
 
+	if !opts.ByteStringToTime.valid() {
+		return nil, errors.New("cbor: invalid ByteStringToTime " + strconv.Itoa(int(opts.ByteStringToTime)))
+	}
+
 	dm := decMode{
 		dupMapKey:             opts.DupMapKey,
 		timeTag:               opts.TimeTag,
@@ -769,6 +793,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		fieldNameByteString:   opts.FieldNameByteString,
 		unrecognizedTagToAny:  opts.UnrecognizedTagToAny,
 		timeTagToAny:          opts.TimeTagToAny,
+		byteStringToTime:      opts.ByteStringToTime,
 	}
 
 	return &dm, nil
@@ -841,6 +866,7 @@ type decMode struct {
 	fieldNameByteString   FieldNameByteStringMode
 	unrecognizedTagToAny  UnrecognizedTagToAnyMode
 	timeTagToAny          TimeTagToAnyMode
+	byteStringToTime      ByteStringToTimeMode
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -867,6 +893,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		FieldNameByteString:   dm.fieldNameByteString,
 		UnrecognizedTagToAny:  dm.unrecognizedTagToAny,
 		TimeTagToAny:          dm.timeTagToAny,
+		ByteStringToTime:      dm.byteStringToTime,
 	}
 }
 
@@ -1328,6 +1355,16 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 	}
 
 	switch t := d.nextCBORType(); t {
+	case cborTypeByteString:
+		if d.dm.byteStringToTime == ByteStringToTimeAllowed {
+			b, _ := d.parseByteString()
+			t, err := time.Parse(time.RFC3339, string(b))
+			if err != nil {
+				return time.Time{}, false, errors.New("cbor: cannot set " + string(b) + " for time.Time: " + err.Error())
+			}
+			return t, true, nil
+		}
+		return time.Time{}, false, &UnmarshalTypeError{CBORType: t.String(), GoType: typeTime.String()}
 	case cborTypeTextString:
 		s, err := d.parseTextString()
 		if err != nil {

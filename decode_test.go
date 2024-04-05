@@ -4913,6 +4913,7 @@ func TestDecOptions(t *testing.T) {
 		FieldNameByteString:   FieldNameByteStringAllowed,
 		UnrecognizedTagToAny:  UnrecognizedTagContentToAny,
 		TimeTagToAny:          TimeTagToRFC3339,
+		ByteStringToTime:      ByteStringToTimeAllowed,
 	}
 	ov := reflect.ValueOf(opts1)
 	for i := 0; i < ov.NumField(); i++ {
@@ -8744,6 +8745,86 @@ func TestDecModeTimeTagToAny(t *testing.T) {
 			}
 
 			compareNonFloats(t, tc.in, got, tc.want)
+
+		})
+	}
+}
+
+func TestDecModeInvalidByteStringToTimeMode(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{ByteStringToTime: -1},
+			wantErrorMsg: "cbor: invalid ByteStringToTime -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{ByteStringToTime: 4},
+			wantErrorMsg: "cbor: invalid ByteStringToTime 4",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("Expected non nil error from DecMode()")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("Expected error: %q, want: %q \n", tc.wantErrorMsg, err.Error())
+			}
+		})
+	}
+}
+
+func TestDecModeByteStringToTime(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		in           []byte
+		want         time.Time
+		wantErrorMsg string
+	}{
+		{
+			name:         "Unmarshal byte string to time.Time when ByteStringToTime is not set",
+			opts:         DecOptions{},
+			in:           hexDecode("54323031332D30332D32315432303A30343A30305A"),
+			wantErrorMsg: "cbor: cannot unmarshal byte string into Go value of type time.Time",
+		},
+		{
+			name: "Unmarshal byte string to time.Time when ByteStringToTime is set to ByteStringToTimeAllowed",
+			opts: DecOptions{ByteStringToTime: ByteStringToTimeAllowed},
+			in:   hexDecode("54323031332D30332D32315432303A30343A30305A"), // '2013-03-21T20:04:00Z'
+			want: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
+		},
+		{
+			name: "Unmarshal byte string to time.Time with nano when ByteStringToTime is set to ByteStringToTimeAllowed",
+			opts: DecOptions{ByteStringToTime: ByteStringToTimeAllowed},
+			in:   hexDecode("56323031332D30332D32315432303A30343A30302E355A"), // '2013-03-21T20:04:00.5Z'
+			want: time.Date(2013, 3, 21, 20, 4, 0, 500000000, time.UTC),
+		},
+		{
+			name:         "Unmarshal an invalid byte string to time.Time when ByteStringToTime is set to ByteStringToTimeAllowed",
+			opts:         DecOptions{ByteStringToTime: ByteStringToTimeAllowed},
+			in:           hexDecode("4B696E76616C696454657874"), // 'invalidText'
+			wantErrorMsg: "cbor: cannot set invalidText for time.Time: parsing time \"invalidText\" as \"2006-01-02T15:04:05Z07:00\": cannot parse \"invalidText\" as \"2006\"",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, err := tc.opts.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var got time.Time
+			if err := dm.Unmarshal(tc.in, &got); err != nil {
+				if tc.wantErrorMsg != err.Error() {
+					t.Errorf("unexpected error: %v", err)
+				}
+			} else {
+				compareNonFloats(t, tc.in, got, tc.want)
+			}
 
 		})
 	}
