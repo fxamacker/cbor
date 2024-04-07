@@ -4893,6 +4893,11 @@ func TestUnmarshalToNotNilInterface(t *testing.T) {
 }
 
 func TestDecOptions(t *testing.T) {
+	simpleValues, err := NewSimpleValueRegistryFromDefaults(WithRejectedSimpleValue(255))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	opts1 := DecOptions{
 		DupMapKey:             DupMapKeyEnforcedAPF,
 		TimeTag:               DecTagRequired,
@@ -4913,6 +4918,7 @@ func TestDecOptions(t *testing.T) {
 		FieldNameByteString:   FieldNameByteStringAllowed,
 		UnrecognizedTagToAny:  UnrecognizedTagContentToAny,
 		TimeTagToAny:          TimeTagToRFC3339,
+		SimpleValues:          simpleValues,
 	}
 	ov := reflect.ValueOf(opts1)
 	for i := 0; i < ov.NumField(); i++ {
@@ -8652,6 +8658,160 @@ func TestUnmarshalWithUnrecognizedTagToAnyModeForSharedTag(t *testing.T) {
 
 			compareNonFloats(t, tc.in, got, tc.want)
 
+		})
+	}
+}
+
+func TestNewSimpleValueRegistry(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         []func(*SimpleValueRegistry) error
+		wantErrorMsg string
+	}{
+		{
+			name:         "min reserved",
+			opts:         []func(*SimpleValueRegistry) error{WithRejectedSimpleValue(24)},
+			wantErrorMsg: "cbor: cannot set analog for reserved simple value 24",
+		},
+		{
+			name:         "max reserved",
+			opts:         []func(*SimpleValueRegistry) error{WithRejectedSimpleValue(31)},
+			wantErrorMsg: "cbor: cannot set analog for reserved simple value 31",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := NewSimpleValueRegistryFromDefaults(tc.opts...)
+			if err == nil {
+				t.Fatalf("got nil error, want: %s", tc.wantErrorMsg)
+			}
+			if got := err.Error(); got != tc.wantErrorMsg {
+				t.Errorf("want: %s, got: %s", tc.wantErrorMsg, got)
+			}
+		})
+	}
+}
+
+func TestUnmarshalSimpleValues(t *testing.T) {
+	assertNilError := func(t *testing.T, e error) {
+		if e != nil {
+			t.Errorf("expected nil error, got: %v", e)
+		}
+	}
+
+	assertExactError := func(want error) func(*testing.T, error) {
+		return func(t *testing.T, got error) {
+			if reflect.DeepEqual(want, got) {
+				return
+			}
+			t.Errorf("want %#v, got %#v", want, got)
+		}
+	}
+
+	for _, tc := range []struct {
+		name          string
+		fns           []func(*SimpleValueRegistry) error
+		in            []byte
+		into          reflect.Type
+		want          interface{}
+		assertOnError func(t *testing.T, e error)
+	}{
+		{
+			name:          "default false into interface{}",
+			fns:           nil,
+			in:            []byte{0xf4},
+			into:          typeIntf,
+			want:          false,
+			assertOnError: assertNilError,
+		},
+		{
+			name:          "default false into bool",
+			fns:           nil,
+			in:            []byte{0xf4},
+			into:          typeBool,
+			want:          false,
+			assertOnError: assertNilError,
+		},
+		{
+			name:          "default true into interface{}",
+			fns:           nil,
+			in:            []byte{0xf5},
+			into:          typeIntf,
+			want:          true,
+			assertOnError: assertNilError,
+		},
+		{
+			name:          "default true into bool",
+			fns:           nil,
+			in:            []byte{0xf5},
+			into:          typeBool,
+			want:          true,
+			assertOnError: assertNilError,
+		},
+		{
+			name:          "default null into interface{}",
+			fns:           nil,
+			in:            []byte{0xf6},
+			into:          typeIntf,
+			want:          nil,
+			assertOnError: assertNilError,
+		},
+		{
+			name:          "default undefined into interface{}",
+			fns:           nil,
+			in:            []byte{0xf7},
+			into:          typeIntf,
+			want:          nil,
+			assertOnError: assertNilError,
+		},
+		{
+			name: "reject undefined into interface{}",
+			fns:  []func(*SimpleValueRegistry) error{WithRejectedSimpleValue(23)},
+			in:   []byte{0xf7},
+			into: typeIntf,
+			want: nil,
+			assertOnError: assertExactError(&UnacceptableDataItemError{
+				CBORType: "primitives",
+				Message:  "simple value 23 is not recognized",
+			}),
+		},
+		{
+			name: "reject true into bool",
+			fns:  []func(*SimpleValueRegistry) error{WithRejectedSimpleValue(21)},
+			in:   []byte{0xf5},
+			into: typeBool,
+			want: false,
+			assertOnError: assertExactError(&UnacceptableDataItemError{
+				CBORType: "primitives",
+				Message:  "simple value 21 is not recognized",
+			}),
+		},
+		{
+			name:          "default unrecognized into uint64",
+			fns:           nil,
+			in:            []byte{0xf8, 0xc8},
+			into:          typeUint64,
+			want:          uint64(200),
+			assertOnError: assertNilError,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r, err := NewSimpleValueRegistryFromDefaults(tc.fns...)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			decMode, err := DecOptions{SimpleValues: r}.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			dst := reflect.New(tc.into)
+			err = decMode.Unmarshal(tc.in, dst.Interface())
+			tc.assertOnError(t, err)
+
+			if got := dst.Elem().Interface(); !reflect.DeepEqual(tc.want, got) {
+				t.Errorf("got: %#v\nwant: %#v\n", got, tc.want)
+			}
 		})
 	}
 }
