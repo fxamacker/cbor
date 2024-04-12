@@ -107,6 +107,65 @@ type T3 struct {
 	Mss  map[string]string
 }
 
+type ManyFieldsOneOmitEmpty struct {
+	F01, F02, F03, F04, F05, F06, F07, F08, F09, F10, F11, F12, F13, F14, F15, F16 int
+	F17, F18, F19, F20, F21, F22, F23, F24, F25, F26, F27, F28, F29, F30, F31      int
+
+	F32 int `cbor:",omitempty"`
+}
+
+type SomeFieldsOneOmitEmpty struct {
+	F01, F02, F03, F04, F05, F06, F07 int
+
+	F08 int `cbor:",omitempty"`
+}
+
+type ManyFieldsAllOmitEmpty struct {
+	F01 int `cbor:",omitempty"`
+	F02 int `cbor:",omitempty"`
+	F03 int `cbor:",omitempty"`
+	F04 int `cbor:",omitempty"`
+	F05 int `cbor:",omitempty"`
+	F06 int `cbor:",omitempty"`
+	F07 int `cbor:",omitempty"`
+	F08 int `cbor:",omitempty"`
+	F09 int `cbor:",omitempty"`
+	F10 int `cbor:",omitempty"`
+	F11 int `cbor:",omitempty"`
+	F12 int `cbor:",omitempty"`
+	F13 int `cbor:",omitempty"`
+	F14 int `cbor:",omitempty"`
+	F15 int `cbor:",omitempty"`
+	F16 int `cbor:",omitempty"`
+	F17 int `cbor:",omitempty"`
+	F18 int `cbor:",omitempty"`
+	F19 int `cbor:",omitempty"`
+	F20 int `cbor:",omitempty"`
+	F21 int `cbor:",omitempty"`
+	F22 int `cbor:",omitempty"`
+	F23 int `cbor:",omitempty"`
+	F24 int `cbor:",omitempty"`
+	F25 int `cbor:",omitempty"`
+	F26 int `cbor:",omitempty"`
+	F27 int `cbor:",omitempty"`
+	F28 int `cbor:",omitempty"`
+	F29 int `cbor:",omitempty"`
+	F30 int `cbor:",omitempty"`
+	F31 int `cbor:",omitempty"`
+	F32 int `cbor:",omitempty"`
+}
+
+type SomeFieldsAllOmitEmpty struct {
+	F01 int `cbor:",omitempty"`
+	F02 int `cbor:",omitempty"`
+	F03 int `cbor:",omitempty"`
+	F04 int `cbor:",omitempty"`
+	F05 int `cbor:",omitempty"`
+	F06 int `cbor:",omitempty"`
+	F07 int `cbor:",omitempty"`
+	F08 int `cbor:",omitempty"`
+}
+
 var decodeBenchmarks = []struct {
 	name          string
 	data          []byte
@@ -396,6 +455,17 @@ func BenchmarkMarshal(b *testing.B) {
 	}{
 		{"Go map[string]interface{} to CBOR map", m1},
 		{"Go struct to CBOR map", v1},
+		{"Go struct many fields all omitempty all empty to CBOR map", ManyFieldsAllOmitEmpty{}},
+		{"Go struct some fields all omitempty all empty to CBOR map", SomeFieldsAllOmitEmpty{}},
+		{"Go struct many fields all omitempty all nonempty to CBOR map", ManyFieldsAllOmitEmpty{
+			F01: 1, F02: 1, F03: 1, F04: 1, F05: 1, F06: 1, F07: 1, F08: 1, F09: 1, F10: 1, F11: 1, F12: 1, F13: 1, F14: 1, F15: 1, F16: 1,
+			F17: 1, F18: 1, F19: 1, F20: 1, F21: 1, F22: 1, F23: 1, F24: 1, F25: 1, F26: 1, F27: 1, F28: 1, F29: 1, F30: 1, F31: 1, F32: 1,
+		}},
+		{"Go struct some fields all omitempty all nonempty to CBOR map", SomeFieldsAllOmitEmpty{
+			F01: 1, F02: 1, F03: 1, F04: 1, F05: 1, F06: 1, F07: 1, F08: 1,
+		}},
+		{"Go struct many fields one omitempty to CBOR map", ManyFieldsOneOmitEmpty{}},
+		{"Go struct some fields one omitempty to CBOR map", SomeFieldsOneOmitEmpty{}},
 		{"Go map[int]interface{} to CBOR map", m2},
 		{"Go struct keyasint to CBOR map", v2},
 		{"Go []interface{} to CBOR map", slc},
