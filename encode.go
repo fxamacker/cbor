@@ -1217,25 +1217,58 @@ func (me mapEncodeFunc) encode(e *bytes.Buffer, em *encMode, v reflect.Value) er
 	if mlen == 0 {
 		return e.WriteByte(byte(cborTypeMap))
 	}
-	switch em.sort {
-	case SortNone, SortFastShuffle:
-	default:
-		if mlen > 1 {
-			return me.encodeCanonical(e, em, v)
-		}
-	}
-	encodeHead(e, byte(cborTypeMap), uint64(mlen))
 
-	return me.e(e, em, v, nil)
+	encodeHead(e, byte(cborTypeMap), uint64(mlen))
+	if em.sort == SortNone || em.sort == SortFastShuffle || mlen <= 1 {
+		return me.e(e, em, v, nil)
+	}
+
+	kvsp := getKeyValues(v.Len()) // for sorting keys
+	defer putKeyValues(kvsp)
+	kvs := *kvsp
+
+	kvBeginOffset := e.Len()
+	if err := me.e(e, em, v, kvs); err != nil {
+		return err
+	}
+	kvTotalLen := e.Len() - kvBeginOffset
+
+	// Use the capacity at the tail of the encode buffer as a staging area to rearrange the
+	// encoded pairs into sorted order.
+	e.Grow(kvTotalLen)
+	tmp := e.Bytes()[e.Len() : e.Len()+kvTotalLen] // Can use e.AvailableBuffer() in Go 1.21+.
+	dst := e.Bytes()[kvBeginOffset:]
+
+	if em.sort == SortBytewiseLexical {
+		sort.Sort(&bytewiseKeyValueSorter{kvs: kvs, data: dst})
+	} else {
+		sort.Sort(&lengthFirstKeyValueSorter{kvs: kvs, data: dst})
+	}
+
+	// This is where the encoded bytes are actually rearranged in the output buffer to reflect
+	// the desired order.
+	sortedOffset := 0
+	for _, kv := range kvs {
+		copy(tmp[sortedOffset:], dst[kv.offset:kv.nextOffset])
+		sortedOffset += kv.nextOffset - kv.offset
+	}
+	copy(dst, tmp[:kvTotalLen])
+
+	return nil
+
 }
 
+// keyValue is the position of an encoded pair in a buffer. All offsets are zero-based and relative
+// to the first byte of the first encoded pair.
 type keyValue struct {
-	keyCBORData, keyValueCBORData []byte
-	keyLen, keyValueLen           int
+	offset      int
+	valueOffset int
+	nextOffset  int
 }
 
 type bytewiseKeyValueSorter struct {
-	kvs []keyValue
+	kvs  []keyValue
+	data []byte
 }
 
 func (x *bytewiseKeyValueSorter) Len() int {
@@ -1247,11 +1280,13 @@ func (x *bytewiseKeyValueSorter) Swap(i, j int) {
 }
 
 func (x *bytewiseKeyValueSorter) Less(i, j int) bool {
-	return bytes.Compare(x.kvs[i].keyCBORData, x.kvs[j].keyCBORData) <= 0
+	kvi, kvj := x.kvs[i], x.kvs[j]
+	return bytes.Compare(x.data[kvi.offset:kvi.valueOffset], x.data[kvj.offset:kvj.valueOffset]) <= 0
 }
 
 type lengthFirstKeyValueSorter struct {
-	kvs []keyValue
+	kvs  []keyValue
+	data []byte
 }
 
 func (x *lengthFirstKeyValueSorter) Len() int {
@@ -1263,10 +1298,11 @@ func (x *lengthFirstKeyValueSorter) Swap(i, j int) {
 }
 
 func (x *lengthFirstKeyValueSorter) Less(i, j int) bool {
-	if len(x.kvs[i].keyCBORData) != len(x.kvs[j].keyCBORData) {
-		return len(x.kvs[i].keyCBORData) < len(x.kvs[j].keyCBORData)
+	kvi, kvj := x.kvs[i], x.kvs[j]
+	if keyLengthDifference := (kvi.valueOffset - kvi.offset) - (kvj.valueOffset - kvj.offset); keyLengthDifference != 0 {
+		return keyLengthDifference < 0
 	}
-	return bytes.Compare(x.kvs[i].keyCBORData, x.kvs[j].keyCBORData) <= 0
+	return bytes.Compare(x.data[kvi.offset:kvi.valueOffset], x.data[kvj.offset:kvj.valueOffset]) <= 0
 }
 
 var keyValuePool = sync.Pool{}
@@ -1292,41 +1328,6 @@ func getKeyValues(length int) *[]keyValue {
 func putKeyValues(x *[]keyValue) {
 	*x = (*x)[:0]
 	keyValuePool.Put(x)
-}
-
-func (me mapEncodeFunc) encodeCanonical(e *bytes.Buffer, em *encMode, v reflect.Value) error {
-	kve := getEncodeBuffer() // accumulated cbor encoded key-values
-	defer putEncodeBuffer(kve)
-
-	kvsp := getKeyValues(v.Len()) // for sorting keys
-	defer putKeyValues(kvsp)
-
-	kvs := *kvsp
-
-	err := me.e(kve, em, v, kvs)
-	if err != nil {
-		return err
-	}
-
-	b := kve.Bytes()
-	for i, off := 0, 0; i < len(kvs); i++ {
-		kvs[i].keyCBORData = b[off : off+kvs[i].keyLen]
-		kvs[i].keyValueCBORData = b[off : off+kvs[i].keyValueLen]
-		off += kvs[i].keyValueLen
-	}
-
-	if em.sort == SortBytewiseLexical {
-		sort.Sort(&bytewiseKeyValueSorter{kvs})
-	} else {
-		sort.Sort(&lengthFirstKeyValueSorter{kvs})
-	}
-
-	encodeHead(e, byte(cborTypeMap), uint64(len(kvs)))
-	for i := 0; i < len(kvs); i++ {
-		e.Write(kvs[i].keyValueCBORData)
-	}
-
-	return nil
 }
 
 func encodeStructToArray(e *bytes.Buffer, em *encMode, v reflect.Value) (err error) {
