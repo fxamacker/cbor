@@ -861,7 +861,6 @@ func (em *encMode) NewEncoder(w io.Writer) *Encoder {
 
 type encoderBuffer struct {
 	bytes.Buffer
-	scratch [16]byte
 }
 
 // encoderBufferPool caches unused encoderBuffer objects for later reuse.
@@ -958,9 +957,10 @@ func encodeFloat(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	if v.Kind() == reflect.Float64 && (fopt == ShortestFloatNone || cannotFitFloat32(f64)) {
 		// Encode float64
 		// Don't use encodeFloat64() because it cannot be inlined.
-		e.scratch[0] = byte(cborTypePrimitives) | byte(27)
-		binary.BigEndian.PutUint64(e.scratch[1:], math.Float64bits(f64))
-		e.Write(e.scratch[:9])
+		var scratch [9]byte
+		scratch[0] = byte(cborTypePrimitives) | byte(27)
+		binary.BigEndian.PutUint64(scratch[1:], math.Float64bits(f64))
+		e.Write(scratch[:9])
 		return nil
 	}
 
@@ -981,18 +981,20 @@ func encodeFloat(e *encoderBuffer, em *encMode, v reflect.Value) error {
 		if p == float16.PrecisionExact {
 			// Encode float16
 			// Don't use encodeFloat16() because it cannot be inlined.
-			e.scratch[0] = byte(cborTypePrimitives) | byte(25)
-			binary.BigEndian.PutUint16(e.scratch[1:], uint16(f16))
-			e.Write(e.scratch[:3])
+			var scratch [3]byte
+			scratch[0] = byte(cborTypePrimitives) | byte(25)
+			binary.BigEndian.PutUint16(scratch[1:], uint16(f16))
+			e.Write(scratch[:3])
 			return nil
 		}
 	}
 
 	// Encode float32
 	// Don't use encodeFloat32() because it cannot be inlined.
-	e.scratch[0] = byte(cborTypePrimitives) | byte(26)
-	binary.BigEndian.PutUint32(e.scratch[1:], math.Float32bits(f32))
-	e.Write(e.scratch[:5])
+	var scratch [5]byte
+	scratch[0] = byte(cborTypePrimitives) | byte(26)
+	binary.BigEndian.PutUint32(scratch[1:], math.Float32bits(f32))
+	e.Write(scratch[:5])
 	return nil
 }
 
@@ -1077,23 +1079,26 @@ func encodeNaN(e *encoderBuffer, em *encMode, v reflect.Value) error {
 }
 
 func encodeFloat16(e *encoderBuffer, f16 float16.Float16) error {
-	e.scratch[0] = byte(cborTypePrimitives) | byte(25)
-	binary.BigEndian.PutUint16(e.scratch[1:], uint16(f16))
-	e.Write(e.scratch[:3])
+	var scratch [3]byte
+	scratch[0] = byte(cborTypePrimitives) | byte(25)
+	binary.BigEndian.PutUint16(scratch[1:], uint16(f16))
+	e.Write(scratch[:3])
 	return nil
 }
 
 func encodeFloat32(e *encoderBuffer, f32 float32) error {
-	e.scratch[0] = byte(cborTypePrimitives) | byte(26)
-	binary.BigEndian.PutUint32(e.scratch[1:], math.Float32bits(f32))
-	e.Write(e.scratch[:5])
+	var scratch [5]byte
+	scratch[0] = byte(cborTypePrimitives) | byte(26)
+	binary.BigEndian.PutUint32(scratch[1:], math.Float32bits(f32))
+	e.Write(scratch[:5])
 	return nil
 }
 
 func encodeFloat64(e *encoderBuffer, f64 float64) error {
-	e.scratch[0] = byte(cborTypePrimitives) | byte(27)
-	binary.BigEndian.PutUint64(e.scratch[1:], math.Float64bits(f64))
-	e.Write(e.scratch[:9])
+	var scratch [9]byte
+	scratch[0] = byte(cborTypePrimitives) | byte(27)
+	binary.BigEndian.PutUint64(scratch[1:], math.Float64bits(f64))
+	e.Write(scratch[:9])
 	return nil
 }
 
@@ -1581,26 +1586,28 @@ func encodeHead(e *encoderBuffer, t byte, n uint64) int {
 		return 1
 	}
 	if n <= math.MaxUint8 {
-		e.scratch[0] = t | byte(24)
-		e.scratch[1] = byte(n)
-		e.Write(e.scratch[:2])
+		scratch := [2]byte{t | byte(24), byte(n)}
+		e.Write(scratch[:2])
 		return 2
 	}
 	if n <= math.MaxUint16 {
-		e.scratch[0] = t | byte(25)
-		binary.BigEndian.PutUint16(e.scratch[1:], uint16(n))
-		e.Write(e.scratch[:3])
+		var scratch [3]byte
+		scratch[0] = t | byte(25)
+		binary.BigEndian.PutUint16(scratch[1:], uint16(n))
+		e.Write(scratch[:3])
 		return 3
 	}
 	if n <= math.MaxUint32 {
-		e.scratch[0] = t | byte(26)
-		binary.BigEndian.PutUint32(e.scratch[1:], uint32(n))
-		e.Write(e.scratch[:5])
+		var scratch [5]byte
+		scratch[0] = t | byte(26)
+		binary.BigEndian.PutUint32(scratch[1:], uint32(n))
+		e.Write(scratch[:5])
 		return 5
 	}
-	e.scratch[0] = t | byte(27)
-	binary.BigEndian.PutUint64(e.scratch[1:], n)
-	e.Write(e.scratch[:9])
+	var scratch [9]byte
+	scratch[0] = t | byte(27)
+	binary.BigEndian.PutUint64(scratch[1:], n)
+	e.Write(scratch[:9])
 	return 9
 }
 
