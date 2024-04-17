@@ -854,6 +854,10 @@ func (em *encMode) Marshal(v interface{}) ([]byte, error) {
 	return buf, nil
 }
 
+func (em *encMode) MarshalToBuffer(v interface{}, buf *bytes.Buffer) error {
+	return encode(buf, em, reflect.ValueOf(v))
+}
+
 // NewEncoder returns a new encoder that writes to w using em EncMode.
 func (em *encMode) NewEncoder(w io.Writer) *Encoder {
 	return &Encoder{w: w, em: em}
