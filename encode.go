@@ -840,17 +840,17 @@ func (em *encMode) encTagBytes(t reflect.Type) []byte {
 //
 // See the documentation for Marshal for details.
 func (em *encMode) Marshal(v interface{}) ([]byte, error) {
-	e := getEncoderBuffer()
+	e := getEncodeBuffer()
 
 	if err := encode(e, em, reflect.ValueOf(v)); err != nil {
-		putEncoderBuffer(e)
+		putEncodeBuffer(e)
 		return nil, err
 	}
 
 	buf := make([]byte, e.Len())
 	copy(buf, e.Bytes())
 
-	putEncoderBuffer(e)
+	putEncodeBuffer(e)
 	return buf, nil
 }
 
@@ -859,29 +859,25 @@ func (em *encMode) NewEncoder(w io.Writer) *Encoder {
 	return &Encoder{w: w, em: em}
 }
 
-type encoderBuffer struct {
-	bytes.Buffer
-}
-
-// encoderBufferPool caches unused encoderBuffer objects for later reuse.
-var encoderBufferPool = sync.Pool{
+// encodeBufferPool caches unused bytes.Buffer objects for later reuse.
+var encodeBufferPool = sync.Pool{
 	New: func() interface{} {
-		e := new(encoderBuffer)
+		e := new(bytes.Buffer)
 		e.Grow(32) // TODO: make this configurable
 		return e
 	},
 }
 
-func getEncoderBuffer() *encoderBuffer {
-	return encoderBufferPool.Get().(*encoderBuffer)
+func getEncodeBuffer() *bytes.Buffer {
+	return encodeBufferPool.Get().(*bytes.Buffer)
 }
 
-func putEncoderBuffer(e *encoderBuffer) {
+func putEncodeBuffer(e *bytes.Buffer) {
 	e.Reset()
-	encoderBufferPool.Put(e)
+	encodeBufferPool.Put(e)
 }
 
-type encodeFunc func(e *encoderBuffer, em *encMode, v reflect.Value) error
+type encodeFunc func(e *bytes.Buffer, em *encMode, v reflect.Value) error
 type isEmptyFunc func(em *encMode, v reflect.Value) (empty bool, err error)
 
 var (
@@ -893,7 +889,7 @@ var (
 	cborNegativeInfinity = []byte{0xf9, 0xfc, 0x00}
 )
 
-func encode(e *encoderBuffer, em *encMode, v reflect.Value) error {
+func encode(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if !v.IsValid() {
 		// v is zero value
 		e.Write(cborNil)
@@ -908,7 +904,7 @@ func encode(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	return f(e, em, v)
 }
 
-func encodeBool(e *encoderBuffer, em *encMode, v reflect.Value) error {
+func encodeBool(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if b := em.encTagBytes(v.Type()); b != nil {
 		e.Write(b)
 	}
@@ -920,7 +916,7 @@ func encodeBool(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	return nil
 }
 
-func encodeInt(e *encoderBuffer, em *encMode, v reflect.Value) error {
+func encodeInt(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if b := em.encTagBytes(v.Type()); b != nil {
 		e.Write(b)
 	}
@@ -934,7 +930,7 @@ func encodeInt(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	return nil
 }
 
-func encodeUint(e *encoderBuffer, em *encMode, v reflect.Value) error {
+func encodeUint(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if b := em.encTagBytes(v.Type()); b != nil {
 		e.Write(b)
 	}
@@ -942,7 +938,7 @@ func encodeUint(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	return nil
 }
 
-func encodeFloat(e *encoderBuffer, em *encMode, v reflect.Value) error {
+func encodeFloat(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if b := em.encTagBytes(v.Type()); b != nil {
 		e.Write(b)
 	}
@@ -998,7 +994,7 @@ func encodeFloat(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	return nil
 }
 
-func encodeInf(e *encoderBuffer, em *encMode, v reflect.Value) error {
+func encodeInf(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	f64 := v.Float()
 	switch em.infConvert {
 	case InfConvertReject:
@@ -1017,7 +1013,7 @@ func encodeInf(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	return encodeFloat32(e, float32(f64))
 }
 
-func encodeNaN(e *encoderBuffer, em *encMode, v reflect.Value) error {
+func encodeNaN(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	switch em.nanConvert {
 	case NaNConvert7e00:
 		e.Write(cborNaN)
@@ -1078,7 +1074,7 @@ func encodeNaN(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	}
 }
 
-func encodeFloat16(e *encoderBuffer, f16 float16.Float16) error {
+func encodeFloat16(e *bytes.Buffer, f16 float16.Float16) error {
 	var scratch [3]byte
 	scratch[0] = byte(cborTypePrimitives) | byte(25)
 	binary.BigEndian.PutUint16(scratch[1:], uint16(f16))
@@ -1086,7 +1082,7 @@ func encodeFloat16(e *encoderBuffer, f16 float16.Float16) error {
 	return nil
 }
 
-func encodeFloat32(e *encoderBuffer, f32 float32) error {
+func encodeFloat32(e *bytes.Buffer, f32 float32) error {
 	var scratch [5]byte
 	scratch[0] = byte(cborTypePrimitives) | byte(26)
 	binary.BigEndian.PutUint32(scratch[1:], math.Float32bits(f32))
@@ -1094,7 +1090,7 @@ func encodeFloat32(e *encoderBuffer, f32 float32) error {
 	return nil
 }
 
-func encodeFloat64(e *encoderBuffer, f64 float64) error {
+func encodeFloat64(e *bytes.Buffer, f64 float64) error {
 	var scratch [9]byte
 	scratch[0] = byte(cborTypePrimitives) | byte(27)
 	binary.BigEndian.PutUint64(scratch[1:], math.Float64bits(f64))
@@ -1102,7 +1098,7 @@ func encodeFloat64(e *encoderBuffer, f64 float64) error {
 	return nil
 }
 
-func encodeByteString(e *encoderBuffer, em *encMode, v reflect.Value) error {
+func encodeByteString(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	vk := v.Kind()
 	if vk == reflect.Slice && v.IsNil() && em.nilContainers == NilContainerAsNull {
 		e.Write(cborNil)
@@ -1129,7 +1125,7 @@ func encodeByteString(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	return nil
 }
 
-func encodeString(e *encoderBuffer, em *encMode, v reflect.Value) error {
+func encodeString(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if b := em.encTagBytes(v.Type()); b != nil {
 		e.Write(b)
 	}
@@ -1143,7 +1139,7 @@ type arrayEncodeFunc struct {
 	f encodeFunc
 }
 
-func (ae arrayEncodeFunc) encode(e *encoderBuffer, em *encMode, v reflect.Value) error {
+func (ae arrayEncodeFunc) encode(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if em.byteArray == ByteArrayToByteSlice && v.Type().Elem().Kind() == reflect.Uint8 {
 		return encodeByteString(e, em, v)
 	}
@@ -1170,13 +1166,13 @@ func (ae arrayEncodeFunc) encode(e *encoderBuffer, em *encMode, v reflect.Value)
 // encodeKeyValueFunc encodes key/value pairs in map (v).
 // If kvs is provided (having the same length as v), length of encoded key and value are stored in kvs.
 // kvs is used for canonical encoding of map.
-type encodeKeyValueFunc func(e *encoderBuffer, em *encMode, v reflect.Value, kvs []keyValue) error
+type encodeKeyValueFunc func(e *bytes.Buffer, em *encMode, v reflect.Value, kvs []keyValue) error
 
 type mapEncodeFunc struct {
 	e encodeKeyValueFunc
 }
 
-func (me mapEncodeFunc) encode(e *encoderBuffer, em *encMode, v reflect.Value) error {
+func (me mapEncodeFunc) encode(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if v.IsNil() && em.nilContainers == NilContainerAsNull {
 		e.Write(cborNil)
 		return nil
@@ -1265,9 +1261,9 @@ func putKeyValues(x *[]keyValue) {
 	keyValuePool.Put(x)
 }
 
-func (me mapEncodeFunc) encodeCanonical(e *encoderBuffer, em *encMode, v reflect.Value) error {
-	kve := getEncoderBuffer() // accumulated cbor encoded key-values
-	defer putEncoderBuffer(kve)
+func (me mapEncodeFunc) encodeCanonical(e *bytes.Buffer, em *encMode, v reflect.Value) error {
+	kve := getEncodeBuffer() // accumulated cbor encoded key-values
+	defer putEncodeBuffer(kve)
 
 	kvsp := getKeyValues(v.Len()) // for sorting keys
 	defer putKeyValues(kvsp)
@@ -1300,7 +1296,7 @@ func (me mapEncodeFunc) encodeCanonical(e *encoderBuffer, em *encMode, v reflect
 	return nil
 }
 
-func encodeStructToArray(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
+func encodeStructToArray(e *bytes.Buffer, em *encMode, v reflect.Value) (err error) {
 	structType, err := getEncodingStructType(v.Type())
 	if err != nil {
 		return err
@@ -1338,7 +1334,7 @@ func encodeStructToArray(e *encoderBuffer, em *encMode, v reflect.Value) (err er
 	return nil
 }
 
-func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
+func encodeStruct(e *bytes.Buffer, em *encMode, v reflect.Value) (err error) {
 	structType, err := getEncodingStructType(v.Type())
 	if err != nil {
 		return err
@@ -1408,7 +1404,7 @@ func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 	// Overwrite the bytes that were reserved for the head before encoding the map entries.
 	var actualHeadLen int
 	{
-		headbuf := encoderBuffer{Buffer: *bytes.NewBuffer(e.Bytes()[kvbegin-encodedHeadLen : kvbegin-encodedHeadLen : kvbegin])}
+		headbuf := *bytes.NewBuffer(e.Bytes()[kvbegin-encodedHeadLen : kvbegin-encodedHeadLen : kvbegin])
 		actualHeadLen = encodeHead(&headbuf, byte(cborTypeMap), uint64(kvcount))
 	}
 
@@ -1432,7 +1428,7 @@ func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 	return nil
 }
 
-func encodeIntf(e *encoderBuffer, em *encMode, v reflect.Value) error {
+func encodeIntf(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if v.IsNil() {
 		e.Write(cborNil)
 		return nil
@@ -1440,7 +1436,7 @@ func encodeIntf(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	return encode(e, em, v.Elem())
 }
 
-func encodeTime(e *encoderBuffer, em *encMode, v reflect.Value) error {
+func encodeTime(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	t := v.Interface().(time.Time)
 	if t.IsZero() {
 		e.Write(cborNil) // Even if tag is required, encode as CBOR null.
@@ -1478,7 +1474,7 @@ func encodeTime(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	}
 }
 
-func encodeBigInt(e *encoderBuffer, em *encMode, v reflect.Value) error {
+func encodeBigInt(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	vbi := v.Interface().(big.Int)
 	sign := vbi.Sign()
 	bi := new(big.Int).SetBytes(vbi.Bytes()) // bi is absolute value of v
@@ -1513,7 +1509,7 @@ func encodeBigInt(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	return nil
 }
 
-func encodeBinaryMarshalerType(e *encoderBuffer, em *encMode, v reflect.Value) error {
+func encodeBinaryMarshalerType(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	vt := v.Type()
 	m, ok := v.Interface().(encoding.BinaryMarshaler)
 	if !ok {
@@ -1533,7 +1529,7 @@ func encodeBinaryMarshalerType(e *encoderBuffer, em *encMode, v reflect.Value) e
 	return nil
 }
 
-func encodeMarshalerType(e *encoderBuffer, em *encMode, v reflect.Value) error {
+func encodeMarshalerType(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if em.tagsMd == TagsForbidden && v.Type() == typeRawTag {
 		return errors.New("cbor: cannot encode cbor.RawTag when TagsMd is TagsForbidden")
 	}
@@ -1559,7 +1555,7 @@ func encodeMarshalerType(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	return nil
 }
 
-func encodeTag(e *encoderBuffer, em *encMode, v reflect.Value) error {
+func encodeTag(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if em.tagsMd == TagsForbidden {
 		return errors.New("cbor: cannot encode cbor.Tag when TagsMd is TagsForbidden")
 	}
@@ -1580,7 +1576,7 @@ func encodeTag(e *encoderBuffer, em *encMode, v reflect.Value) error {
 }
 
 // encodeHead writes CBOR head of specified type t and returns number of bytes written.
-func encodeHead(e *encoderBuffer, t byte, n uint64) int {
+func encodeHead(e *bytes.Buffer, t byte, n uint64) int {
 	if n <= 23 {
 		e.WriteByte(t | byte(n))
 		return 1
@@ -1696,7 +1692,7 @@ func getEncodeIndirectValueFunc(t reflect.Type) encodeFunc {
 	if f == nil {
 		return nil
 	}
-	return func(e *encoderBuffer, em *encMode, v reflect.Value) error {
+	return func(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 		for v.Kind() == reflect.Ptr && !v.IsNil() {
 			v = v.Elem()
 		}
