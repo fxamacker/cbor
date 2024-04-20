@@ -240,6 +240,9 @@ const (
 	// NaN payload.
 	NaNConvertQuiet
 
+	// NaNConvertReject returns UnsupportedValueError on attempts to encode a NaN value.
+	NaNConvertReject
+
 	maxNaNConvert
 )
 
@@ -257,6 +260,9 @@ const (
 
 	// InfConvertNone never converts (used by CTAP2 Canonical CBOR).
 	InfConvertNone
+
+	// InfConvertReject returns UnsupportedValueError on attempts to encode an infinite value.
+	InfConvertReject
 
 	maxInfConvert
 )
@@ -908,7 +914,10 @@ func encodeFloat(e *encoderBuffer, em *encMode, v reflect.Value) error {
 
 func encodeInf(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	f64 := v.Float()
-	if em.infConvert == InfConvertFloat16 {
+	switch em.infConvert {
+	case InfConvertReject:
+		return &UnsupportedValueError{msg: "floating-point infinity"}
+	case InfConvertFloat16:
 		if f64 > 0 {
 			e.Write(cborPositiveInfinity)
 		} else {
@@ -934,6 +943,9 @@ func encodeNaN(e *encoderBuffer, em *encMode, v reflect.Value) error {
 		}
 		f32 := float32NaNFromReflectValue(v)
 		return encodeFloat32(e, f32)
+
+	case NaNConvertReject:
+		return &UnsupportedValueError{msg: "floating-point NaN"}
 
 	default: // NaNConvertPreserveSignal, NaNConvertQuiet
 		if v.Kind() == reflect.Float64 {

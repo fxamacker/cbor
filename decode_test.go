@@ -4919,6 +4919,8 @@ func TestDecOptions(t *testing.T) {
 		UnrecognizedTagToAny:  UnrecognizedTagContentToAny,
 		TimeTagToAny:          TimeTagToRFC3339,
 		SimpleValues:          simpleValues,
+		NaN:                   NaNDecodeForbidden,
+		Inf:                   InfDecodeForbidden,
 	}
 	ov := reflect.ValueOf(opts1)
 	for i := 0; i < ov.NumField(); i++ {
@@ -8905,6 +8907,522 @@ func TestDecModeTimeTagToAny(t *testing.T) {
 
 			compareNonFloats(t, tc.in, got, tc.want)
 
+		})
+	}
+}
+
+func TestDecModeInvalidNaNDec(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{NaN: -1},
+			wantErrorMsg: "cbor: invalid NaNDec -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{NaN: 101},
+			wantErrorMsg: "cbor: invalid NaNDec 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestNaNDecMode(t *testing.T) {
+	for _, tc := range []struct {
+		opt    NaNMode
+		src    []byte
+		dst    interface{}
+		reject bool
+	}{
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("197e00"),
+			dst:    new(interface{}),
+			reject: false,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("1a7fc00000"),
+			dst:    new(interface{}),
+			reject: false,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("1b7ff8000000000000"),
+			dst:    new(interface{}),
+			reject: false,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("f90000"), // 0.0
+			dst:    new(interface{}),
+			reject: false,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("f90000"), // 0.0
+			dst:    new(float32),
+			reject: false,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("f90000"), // 0.0
+			dst:    new(float64),
+			reject: false,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("f90000"), // 0.0
+			dst:    new(time.Time),
+			reject: false,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("fa47c35000"), // 100000.0
+			dst:    new(interface{}),
+			reject: false,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("fa47c35000"), // 100000.0
+			dst:    new(float32),
+			reject: false,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("fa47c35000"), // 100000.0
+			dst:    new(float64),
+			reject: false,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("fa47c35000"), // 100000.0
+			dst:    new(time.Time),
+			reject: false,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("fb3ff199999999999a"), // 1.1
+			dst:    new(interface{}),
+			reject: false,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("fb3ff199999999999a"), // 1.1
+			dst:    new(float32),
+			reject: false,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("fb3ff199999999999a"), // 1.1
+			dst:    new(float64),
+			reject: false,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("fb3ff199999999999a"), // 1.1
+			dst:    new(time.Time),
+			reject: false,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("f97e00"),
+			dst:    new(interface{}),
+			reject: true,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("f97e00"),
+			dst:    new(float32),
+			reject: true,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("f97e00"),
+			dst:    new(float64),
+			reject: true,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("f97e00"),
+			dst:    new(time.Time),
+			reject: true,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("fa7fc00000"),
+			dst:    new(interface{}),
+			reject: true,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("fa7fc00000"),
+			dst:    new(float32),
+			reject: true,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("fa7fc00000"),
+			dst:    new(float64),
+			reject: true,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("fa7fc00000"),
+			dst:    new(time.Time),
+			reject: true,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("fb7ff8000000000000"),
+			dst:    new(interface{}),
+			reject: true,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("fb7ff8000000000000"),
+			dst:    new(float32),
+			reject: true,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("fb7ff8000000000000"),
+			dst:    new(float64),
+			reject: true,
+		},
+		{
+			opt:    NaNDecodeForbidden,
+			src:    hexDecode("fb7ff8000000000000"),
+			dst:    new(time.Time),
+			reject: true,
+		},
+	} {
+		t.Run(fmt.Sprintf("mode=%d/0x%x into %s", tc.opt, tc.src, reflect.TypeOf(tc.dst).String()), func(t *testing.T) {
+			dm, err := DecOptions{NaN: tc.opt}.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := &UnacceptableDataItemError{
+				CBORType: cborTypePrimitives.String(),
+				Message:  "floating-point NaN",
+			}
+			if got := dm.Unmarshal(tc.src, tc.dst); got != nil {
+				if tc.reject {
+					if !reflect.DeepEqual(want, got) {
+						t.Errorf("want error: %v, got error: %v", want, got)
+					}
+				} else {
+					t.Errorf("unexpected error: %v", got)
+				}
+			} else if tc.reject {
+				t.Error("unexpected nil error")
+			}
+		})
+	}
+}
+
+func TestDecModeInvalidInfDec(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{Inf: -1},
+			wantErrorMsg: "cbor: invalid InfDec -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{Inf: 101},
+			wantErrorMsg: "cbor: invalid InfDec 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestInfDecMode(t *testing.T) {
+	for _, tc := range []struct {
+		opt    InfMode
+		src    []byte
+		dst    interface{}
+		reject bool
+	}{
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("197c00"),
+			dst:    new(interface{}),
+			reject: false,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("1a7f800000"), // Infinity
+			dst:    new(interface{}),
+			reject: false,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("1b7ff0000000000000"), // Infinity
+			dst:    new(interface{}),
+			reject: false,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("f90000"), // 0.0
+			dst:    new(interface{}),
+			reject: false,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("f90000"), // 0.0
+			dst:    new(float32),
+			reject: false,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("f90000"), // 0.0
+			dst:    new(float64),
+			reject: false,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("f90000"), // 0.0
+			dst:    new(time.Time),
+			reject: false,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fa47c35000"), // 100000.0
+			dst:    new(interface{}),
+			reject: false,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fa47c35000"), // 100000.0
+			dst:    new(float32),
+			reject: false,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fa47c35000"), // 100000.0
+			dst:    new(float64),
+			reject: false,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fa47c35000"), // 100000.0
+			dst:    new(time.Time),
+			reject: false,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fb3ff199999999999a"), // 1.1
+			dst:    new(interface{}),
+			reject: false,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fb3ff199999999999a"), // 1.1
+			dst:    new(float32),
+			reject: false,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fb3ff199999999999a"), // 1.1
+			dst:    new(float64),
+			reject: false,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fb3ff199999999999a"), // 1.1
+			dst:    new(time.Time),
+			reject: false,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("f97c00"), // Infinity
+			dst:    new(interface{}),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("f97c00"), // Infinity
+			dst:    new(float32),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("f97c00"), // Infinity
+			dst:    new(float64),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("f97c00"), // Infinity
+			dst:    new(time.Time),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("f9fc00"), // -Infinity
+			dst:    new(interface{}),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("f9fc00"), // -Infinity
+			dst:    new(float32),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("f9fc00"), // -Infinity
+			dst:    new(float64),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("f9fc00"), // -Infinity
+			dst:    new(time.Time),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fa7f800000"), // Infinity
+			dst:    new(interface{}),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fa7f800000"), // Infinity
+			dst:    new(float32),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fa7f800000"), // Infinity
+			dst:    new(float64),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fa7f800000"), // Infinity
+			dst:    new(time.Time),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("faff800000"), // -Infinity
+			dst:    new(interface{}),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("faff800000"), // -Infinity
+			dst:    new(float32),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("faff800000"), // -Infinity
+			dst:    new(float64),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("faff800000"), // -Infinity
+			dst:    new(time.Time),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fb7ff0000000000000"), // Infinity
+			dst:    new(interface{}),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fb7ff0000000000000"), // Infinity
+			dst:    new(float32),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fb7ff0000000000000"), // Infinity
+			dst:    new(float64),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fb7ff0000000000000"), // Infinity
+			dst:    new(time.Time),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fbfff0000000000000"), // -Infinity
+			dst:    new(interface{}),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fbfff0000000000000"), // -Infinity
+			dst:    new(float32),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fbfff0000000000000"), // -Infinity
+			dst:    new(float64),
+			reject: true,
+		},
+		{
+			opt:    InfDecodeForbidden,
+			src:    hexDecode("fbfff0000000000000"), // -Infinity
+			dst:    new(time.Time),
+			reject: true,
+		},
+	} {
+		t.Run(fmt.Sprintf("mode=%d/0x%x into %s", tc.opt, tc.src, tc.dst), func(t *testing.T) {
+			dm, err := DecOptions{Inf: tc.opt}.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := &UnacceptableDataItemError{
+				CBORType: cborTypePrimitives.String(),
+				Message:  "floating-point infinity",
+			}
+			if got := dm.Unmarshal(tc.src, tc.dst); got != nil {
+				if tc.reject {
+					if !reflect.DeepEqual(want, got) {
+						t.Errorf("want error: %v, got error: %v", want, got)
+					}
+				} else {
+					t.Errorf("unexpected error: %v", got)
+				}
+			} else if tc.reject {
+				t.Error("unexpected nil error")
+			}
 		})
 	}
 }

@@ -7,7 +7,10 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"math"
 	"strconv"
+
+	"github.com/x448/float16"
 )
 
 // SyntaxError is a description of a CBOR syntax error.
@@ -297,6 +300,11 @@ func (d *decoder) wellformedHead() (t cborType, ai byte, val uint64, err error) 
 		}
 		val = uint64(binary.BigEndian.Uint16(d.data[d.off : d.off+2]))
 		d.off += 2
+		if t == cborTypePrimitives {
+			if err := d.acceptableFloat(float64(float16.Frombits(uint16(val)).Float32())); err != nil {
+				return 0, 0, 0, err
+			}
+		}
 		return t, ai, val, nil
 	}
 	if ai == 26 {
@@ -305,6 +313,11 @@ func (d *decoder) wellformedHead() (t cborType, ai byte, val uint64, err error) 
 		}
 		val = uint64(binary.BigEndian.Uint32(d.data[d.off : d.off+4]))
 		d.off += 4
+		if t == cborTypePrimitives {
+			if err := d.acceptableFloat(float64(math.Float32frombits(uint32(val)))); err != nil {
+				return 0, 0, 0, err
+			}
+		}
 		return t, ai, val, nil
 	}
 	if ai == 27 {
@@ -313,6 +326,11 @@ func (d *decoder) wellformedHead() (t cborType, ai byte, val uint64, err error) 
 		}
 		val = binary.BigEndian.Uint64(d.data[d.off : d.off+8])
 		d.off += 8
+		if t == cborTypePrimitives {
+			if err := d.acceptableFloat(math.Float64frombits(val)); err != nil {
+				return 0, 0, 0, err
+			}
+		}
 		return t, ai, val, nil
 	}
 	if ai == 31 {
@@ -326,4 +344,20 @@ func (d *decoder) wellformedHead() (t cborType, ai byte, val uint64, err error) 
 	}
 	// ai == 28, 29, 30
 	return 0, 0, 0, &SyntaxError{"cbor: invalid additional information " + strconv.Itoa(int(ai)) + " for type " + t.String()}
+}
+
+func (d *decoder) acceptableFloat(f float64) error {
+	switch {
+	case d.dm.nanDec == NaNDecodeForbidden && math.IsNaN(f):
+		return &UnacceptableDataItemError{
+			CBORType: cborTypePrimitives.String(),
+			Message:  "floating-point NaN",
+		}
+	case d.dm.infDec == InfDecodeForbidden && math.IsInf(f, 0):
+		return &UnacceptableDataItemError{
+			CBORType: cborTypePrimitives.String(),
+			Message:  "floating-point infinity",
+		}
+	}
+	return nil
 }

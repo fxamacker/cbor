@@ -3004,13 +3004,30 @@ func TestInfConvert(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			em, err := tc.opts.EncMode()
 			if err != nil {
-				t.Errorf("EncMode() returned an error %v", err)
+				t.Fatalf("EncMode() returned an error %v", err)
 			}
 			b, err := em.Marshal(tc.v)
 			if err != nil {
 				t.Errorf("Marshal(%v) returned error %v", tc.v, err)
 			} else if !bytes.Equal(b, tc.wantCborData) {
 				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.v, b, tc.wantCborData)
+			}
+		})
+		var vName string
+		switch v := tc.v.(type) {
+		case float32:
+			vName = fmt.Sprintf("0x%x", math.Float32bits(v))
+		case float64:
+			vName = fmt.Sprintf("0x%x", math.Float64bits(v))
+		}
+		t.Run("reject inf "+vName, func(t *testing.T) {
+			em, err := EncOptions{InfConvert: InfConvertReject}.EncMode()
+			if err != nil {
+				t.Fatalf("EncMode() returned an error %v", err)
+			}
+			want := &UnsupportedValueError{msg: "floating-point infinity"}
+			if _, got := em.Marshal(tc.v); !reflect.DeepEqual(want, got) {
+				t.Errorf("expected Marshal(%v) to return error: %v, got: %v", tc.v, want, got)
 			}
 		})
 	}
@@ -3318,6 +3335,13 @@ func TestNaNConvert(t *testing.T) {
 		}},
 	}
 	for _, tc := range testCases {
+		var vName string
+		switch v := tc.v.(type) {
+		case float32:
+			vName = fmt.Sprintf("0x%x", math.Float32bits(v))
+		case float64:
+			vName = fmt.Sprintf("0x%x", math.Float64bits(v))
+		}
 		for _, convert := range tc.convert {
 			var convertName string
 			switch convert.opt.NaNConvert {
@@ -3330,18 +3354,11 @@ func TestNaNConvert(t *testing.T) {
 			case NaNConvertQuiet:
 				convertName = "ConvertQuiet"
 			}
-			var vName string
-			switch v := tc.v.(type) {
-			case float32:
-				vName = fmt.Sprintf("0x%x", math.Float32bits(v))
-			case float64:
-				vName = fmt.Sprintf("0x%x", math.Float64bits(v))
-			}
 			name := convertName + "_" + vName
 			t.Run(name, func(t *testing.T) {
 				em, err := convert.opt.EncMode()
 				if err != nil {
-					t.Errorf("EncMode() returned an error %v", err)
+					t.Fatalf("EncMode() returned an error %v", err)
 				}
 				b, err := em.Marshal(tc.v)
 				if err != nil {
@@ -3351,6 +3368,17 @@ func TestNaNConvert(t *testing.T) {
 				}
 			})
 		}
+
+		t.Run("ConvertReject_"+vName, func(t *testing.T) {
+			em, err := EncOptions{NaNConvert: NaNConvertReject}.EncMode()
+			if err != nil {
+				t.Fatalf("EncMode() returned an error %v", err)
+			}
+			want := &UnsupportedValueError{msg: "floating-point NaN"}
+			if _, got := em.Marshal(tc.v); !reflect.DeepEqual(want, got) {
+				t.Errorf("expected Marshal(%v) to return error: %v, got: %v", tc.v, want, got)
+			}
+		})
 	}
 }
 
