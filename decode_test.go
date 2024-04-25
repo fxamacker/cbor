@@ -4923,6 +4923,7 @@ func TestDecOptions(t *testing.T) {
 		Inf:                       InfDecodeForbidden,
 		ByteStringToTime:          ByteStringToTimeAllowed,
 		ByteSliceExpectedEncoding: ByteSliceToByteStringWithExpectedConversionToBase64,
+		BinaryUnmarshaler:         BinaryUnmarshalerNone,
 	}
 	ov := reflect.ValueOf(opts1)
 	for i := 0; i < ov.NumField(); i++ {
@@ -9922,6 +9923,86 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 
 			if dst := dstVal.Elem().Interface(); !reflect.DeepEqual(dst, tc.want) {
 				t.Errorf("got: %#v, want %#v", dst, tc.want)
+			}
+		})
+	}
+}
+
+func TestDecModeInvalidBinaryUnmarshaler(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{BinaryUnmarshaler: -1},
+			wantErrorMsg: "cbor: invalid BinaryUnmarshaler -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{BinaryUnmarshaler: 101},
+			wantErrorMsg: "cbor: invalid BinaryUnmarshaler 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+type testBinaryUnmarshaler []byte
+
+func (bu *testBinaryUnmarshaler) UnmarshalBinary(_ []byte) error {
+	*bu = []byte("UnmarshalBinary")
+	return nil
+}
+
+func TestBinaryUnmarshalerMode(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		opts DecOptions
+		in   []byte
+		want interface{}
+	}{
+		{
+			name: "UnmarshalBinary is called by default",
+			opts: DecOptions{},
+			in:   []byte("\x45hello"), // 'hello'
+			want: testBinaryUnmarshaler("UnmarshalBinary"),
+		},
+		{
+			name: "UnmarshalBinary is called with BinaryUnmarshalerByteString",
+			opts: DecOptions{BinaryUnmarshaler: BinaryUnmarshalerByteString},
+			in:   []byte("\x45hello"), // 'hello'
+			want: testBinaryUnmarshaler("UnmarshalBinary"),
+		},
+		{
+			name: "default byte slice unmarshaling behavior is used with BinaryUnmarshalerNone",
+			opts: DecOptions{BinaryUnmarshaler: BinaryUnmarshalerNone},
+			in:   []byte("\x45hello"), // 'hello'
+			want: testBinaryUnmarshaler("hello"),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, err := tc.opts.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			gotrv := reflect.New(reflect.TypeOf(tc.want))
+			if err := dm.Unmarshal(tc.in, gotrv.Interface()); err != nil {
+				t.Fatal(err)
+			}
+
+			got := gotrv.Elem().Interface()
+			if !reflect.DeepEqual(tc.want, got) {
+				t.Errorf("want: %v, got: %v", tc.want, got)
 			}
 		})
 	}
