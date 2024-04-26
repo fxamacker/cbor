@@ -4674,3 +4674,20 @@ func TestMarshalByteSliceMode(t *testing.T) {
 		})
 	}
 }
+
+func TestBigIntConvertReject(t *testing.T) {
+	em, err := EncOptions{BigIntConvert: BigIntConvertReject}.EncMode()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &UnsupportedTypeError{Type: typeBigInt}
+
+	if _, err := em.Marshal(big.Int{}); !reflect.DeepEqual(want, err) {
+		t.Errorf("want: %v, got: %v", want, err)
+	}
+
+	if _, err := em.Marshal(&big.Int{}); !reflect.DeepEqual(want, err) {
+		t.Errorf("want: %v, got: %v", want, err)
+	}
+}

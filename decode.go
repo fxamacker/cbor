@@ -630,6 +630,25 @@ func (bseem ByteSliceExpectedEncodingMode) valid() bool {
 	return bseem >= 0 && bseem < maxByteSliceExpectedEncodingMode
 }
 
+// BignumTagMode specifies whether or not the "bignum" tags 2 and 3 (RFC 8949 Section 3.4.3) can be
+// decoded.
+type BignumTagMode int
+
+const (
+	// BignumTagAllowed allows bignum tags to be decoded.
+	BignumTagAllowed BignumTagMode = iota
+
+	// BignumTagForbidden produces an UnacceptableDataItemError during Unmarshal if a bignum tag
+	// is encountered in the input.
+	BignumTagForbidden
+
+	maxBignumTag
+)
+
+func (btm BignumTagMode) valid() bool {
+	return btm >= 0 && btm < maxBignumTag
+}
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -751,6 +770,12 @@ type DecOptions struct {
 	// ByteSliceExpectedEncodingMode specifies how to decode a byte string NOT enclosed in an
 	// "expected later encoding" tag (RFC 8949 Section 3.4.5.2) into a Go byte slice.
 	ByteSliceExpectedEncoding ByteSliceExpectedEncodingMode
+
+	// BignumTag specifies whether or not the "bignum" tags 2 and 3 (RFC 8949 Section 3.4.3) can
+	// be decoded. Unlike BigIntDec, this option applies to all bignum tags encountered in a
+	// CBOR input, independent of the type of the destination value of a particular Unmarshal
+	// operation.
+	BignumTag BignumTagMode
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -954,6 +979,10 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		return nil, errors.New("cbor: invalid ByteSliceExpectedEncoding " + strconv.Itoa(int(opts.ByteSliceExpectedEncoding)))
 	}
 
+	if !opts.BignumTag.valid() {
+		return nil, errors.New("cbor: invalid BignumTag " + strconv.Itoa(int(opts.BignumTag)))
+	}
+
 	dm := decMode{
 		dupMapKey:                 opts.DupMapKey,
 		timeTag:                   opts.TimeTag,
@@ -979,6 +1008,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		infDec:                    opts.Inf,
 		byteStringToTime:          opts.ByteStringToTime,
 		byteSliceExpectedEncoding: opts.ByteSliceExpectedEncoding,
+		bignumTag:                 opts.BignumTag,
 	}
 
 	return &dm, nil
@@ -1056,6 +1086,7 @@ type decMode struct {
 	infDec                    InfMode
 	byteStringToTime          ByteStringToTimeMode
 	byteSliceExpectedEncoding ByteSliceExpectedEncodingMode
+	bignumTag                 BignumTagMode
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -1094,6 +1125,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		Inf:                       dm.infDec,
 		ByteStringToTime:          dm.byteStringToTime,
 		ByteSliceExpectedEncoding: dm.byteSliceExpectedEncoding,
+		BignumTag:                 dm.bignumTag,
 	}
 }
 
