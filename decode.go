@@ -576,6 +576,23 @@ func (idm InfMode) valid() bool {
 	return idm >= 0 && idm < maxInfDecode
 }
 
+// ByteStringToTimeMode specifies the behavior when decoding a CBOR byte string into a Go time.Time.
+type ByteStringToTimeMode int
+
+const (
+	// ByteStringToTimeForbidden generates an error on an attempt to decode a CBOR byte string into a Go time.Time.
+	ByteStringToTimeForbidden ByteStringToTimeMode = iota
+
+	// ByteStringToTimeAllowed permits decoding a CBOR byte string into a Go time.Time.
+	ByteStringToTimeAllowed
+
+	maxByteStringToTimeMode
+)
+
+func (bttm ByteStringToTimeMode) valid() bool {
+	return bttm >= 0 && bttm < maxByteStringToTimeMode
+}
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -690,6 +707,9 @@ type DecOptions struct {
 	// Inf specifies how to decode floating-point values (major type 7, additional information
 	// 25 through 27) representing positive or negative infinity.
 	Inf InfMode
+
+	// ByteStringToTimeMode specifies the behavior when decoding a CBOR byte string into a Go time.Time.
+	ByteStringToTime ByteStringToTimeMode
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -868,6 +888,10 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		return nil, errors.New("cbor: invalid InfDec " + strconv.Itoa(int(opts.Inf)))
 	}
 
+	if !opts.ByteStringToTime.valid() {
+		return nil, errors.New("cbor: invalid ByteStringToTime " + strconv.Itoa(int(opts.ByteStringToTime)))
+	}
+
 	dm := decMode{
 		dupMapKey:             opts.DupMapKey,
 		timeTag:               opts.TimeTag,
@@ -891,6 +915,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		simpleValues:          simpleValues,
 		nanDec:                opts.NaN,
 		infDec:                opts.Inf,
+		byteStringToTime:      opts.ByteStringToTime,
 	}
 
 	return &dm, nil
@@ -966,6 +991,7 @@ type decMode struct {
 	simpleValues          *SimpleValueRegistry
 	nanDec                NaNMode
 	infDec                InfMode
+	byteStringToTime      ByteStringToTimeMode
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -1002,6 +1028,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		SimpleValues:          simpleValues,
 		NaN:                   dm.nanDec,
 		Inf:                   dm.infDec,
+		ByteStringToTime:      dm.byteStringToTime,
 	}
 }
 
@@ -1470,6 +1497,16 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 	}
 
 	switch t := d.nextCBORType(); t {
+	case cborTypeByteString:
+		if d.dm.byteStringToTime == ByteStringToTimeAllowed {
+			b, _ := d.parseByteString()
+			t, err := time.Parse(time.RFC3339, string(b))
+			if err != nil {
+				return time.Time{}, false, fmt.Errorf("cbor: cannot set %q for time.Time: %w", string(b), err)
+			}
+			return t, true, nil
+		}
+		return time.Time{}, false, &UnmarshalTypeError{CBORType: t.String(), GoType: typeTime.String()}
 	case cborTypeTextString:
 		s, err := d.parseTextString()
 		if err != nil {
