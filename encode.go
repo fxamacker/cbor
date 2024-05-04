@@ -1297,12 +1297,17 @@ func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 		start = rand.Intn(len(flds)) //nolint:gosec // Don't need a CSPRNG for deck cutting.
 	}
 
-	kve := getEncoderBuffer() // encode key-value pairs based on struct field tag options
-	kvcount := 0
+	if b := em.encTagBytes(v.Type()); b != nil {
+		e.Write(b)
+	}
 
+	// Reserve space in the output buffer for the head if its encoded size is fixed.
+	encodeHead(e, byte(cborTypeMap), uint64(len(flds)))
+
+	kvbegin := e.Len()
+	kvcount := 0
 	for offset := 0; offset < len(flds); offset++ {
-		i := (start + offset) % len(flds)
-		f := flds[i]
+		f := flds[(start+offset)%len(flds)]
 
 		var fv reflect.Value
 		if len(f.idx) == 1 {
@@ -1320,7 +1325,6 @@ func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 		if f.omitEmpty {
 			empty, err := f.ief(em, fv)
 			if err != nil {
-				putEncoderBuffer(kve)
 				return err
 			}
 			if empty {
@@ -1329,26 +1333,42 @@ func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 		}
 
 		if !f.keyAsInt && em.fieldName == FieldNameToByteString {
-			kve.Write(f.cborNameByteString)
+			e.Write(f.cborNameByteString)
 		} else { // int or text string
-			kve.Write(f.cborName)
+			e.Write(f.cborName)
 		}
 
-		if err := f.ef(kve, em, fv); err != nil {
-			putEncoderBuffer(kve)
+		if err := f.ef(e, em, fv); err != nil {
 			return err
 		}
+
 		kvcount++
 	}
 
-	if b := em.encTagBytes(v.Type()); b != nil {
-		e.Write(b)
+	// Overwrite the bytes that were reserved for the head before encoding the map entries.
+	{
+		headbuf := encoderBuffer{Buffer: *bytes.NewBuffer(e.Bytes()[kvbegin-structType.maxHeadLen : kvbegin-structType.maxHeadLen : kvbegin])}
+		encodeHead(&headbuf, byte(cborTypeMap), uint64(kvcount))
 	}
 
-	encodeHead(e, byte(cborTypeMap), uint64(kvcount))
-	e.Write(kve.Bytes())
+	actualHeadLen := encodedHeadLen(uint64(kvcount))
+	if actualHeadLen == structType.maxHeadLen {
+		// The bytes reserved for the encoded head were exactly the right size, so the
+		// encoded entries are already in their final positions.
+		return nil
+	}
 
-	putEncoderBuffer(kve)
+	// We reserved more bytes than needed for the encoded head, based on the number of fields
+	// encoded. The encoded entries are offset to the right by the number of excess reserved
+	// bytes. Shift the entries left to remove the gap.
+	excessReservedBytes := structType.maxHeadLen - actualHeadLen
+	dst := e.Bytes()[kvbegin-excessReservedBytes : e.Len()-excessReservedBytes]
+	src := e.Bytes()[kvbegin:e.Len()]
+	copy(dst, src)
+
+	// After shifting, the excess bytes are at the end of the output buffer and they are
+	// garbage.
+	e.Truncate(e.Len() - excessReservedBytes)
 	return nil
 }
 
@@ -1525,6 +1545,22 @@ func encodeHead(e *encoderBuffer, t byte, n uint64) {
 	e.scratch[0] = t | byte(27)
 	binary.BigEndian.PutUint64(e.scratch[1:], n)
 	e.Write(e.scratch[:9])
+}
+
+// encodedHeadLen returns the number of bytes that will be written by a call to encodeHead with the
+// given argument. This must be kept in sync with encodeHead.
+func encodedHeadLen(arg uint64) int {
+	switch {
+	case arg <= 23:
+		return 1
+	case arg <= math.MaxUint8:
+		return 2
+	case arg <= math.MaxUint16:
+		return 3
+	case arg <= math.MaxUint32:
+		return 5
+	}
+	return 9
 }
 
 var (

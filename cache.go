@@ -171,6 +171,7 @@ type encodingStructType struct {
 	err                error
 	toArray            bool
 	fixedLength        bool // Struct type doesn't have any omitempty or anonymous fields.
+	maxHeadLen         int
 }
 
 func (st *encodingStructType) getFields(em *encMode) fields {
@@ -230,6 +231,8 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 	if hasToArrayOption(structOptions) {
 		return getEncodingStructToArrayType(t, flds)
 	}
+
+	nOptional := 0
 
 	var err error
 	var hasKeyAsInt bool
@@ -293,6 +296,10 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 			fixedLength = false
 			omitEmptyIdx = append(omitEmptyIdx, i)
 		}
+
+		if len(flds[i].idx) > 1 || flds[i].omitEmpty {
+			nOptional++
+		}
 	}
 	putEncoderBuffer(e)
 
@@ -320,7 +327,9 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 		lengthFirstFields:  lengthFirstFields,
 		omitEmptyFieldsIdx: omitEmptyIdx,
 		fixedLength:        fixedLength,
+		maxHeadLen:         encodedHeadLen(uint64(len(flds))),
 	}
+
 	encodingStructTypeCache.Store(t, structType)
 	return structType, structType.err
 }

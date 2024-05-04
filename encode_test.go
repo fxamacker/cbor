@@ -550,6 +550,58 @@ func TestMarshalStruct(t *testing.T) {
 		t.Errorf("Unmarshal() = %v, want %v", v2, unmarshalWant)
 	}
 }
+
+// TestMarshalStructVariableLength tests marshaling structs that can encode to CBOR maps of varying
+// size depending on their field contents.
+func TestMarshalStructVariableLength(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		in   interface{}
+		want []byte
+	}{
+		{
+			name: "zero out of one items",
+			in: struct {
+				F int `cbor:",omitempty"`
+			}{},
+			want: hexDecode("a0"),
+		},
+		{
+			name: "one out of one items",
+			in: struct {
+				F int `cbor:",omitempty"`
+			}{F: 1},
+			want: hexDecode("a1614601"),
+		},
+		{
+			name: "23 out of 24 items",
+			in: struct {
+				A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W int
+				X                                                                   int `cbor:",omitempty"`
+			}{},
+			want: hexDecode("b7614100614200614300614400614500614600614700614800614900614a00614b00614c00614d00614e00614f00615000615100615200615300615400615500615600615700"),
+		},
+		{
+			name: "24 out of 24 items",
+			in: struct {
+				A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W int
+				X                                                                   int `cbor:",omitempty"`
+			}{X: 1},
+			want: hexDecode("b818614100614200614300614400614500614600614700614800614900614a00614b00614c00614d00614e00614f00615000615100615200615300615400615500615600615700615801"),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Marshal(tc.in)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(tc.want, got) {
+				t.Errorf("want 0x%x but got 0x%x", tc.want, got)
+			}
+		})
+	}
+}
+
 func TestMarshalStructCanonical(t *testing.T) {
 	v := outer{
 		IntField:          123,
