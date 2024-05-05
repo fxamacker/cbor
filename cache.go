@@ -170,7 +170,6 @@ type encodingStructType struct {
 	omitEmptyFieldsIdx []int
 	err                error
 	toArray            bool
-	fixedLength        bool // Struct type doesn't have any omitempty or anonymous fields.
 	maxHeadLen         int
 }
 
@@ -238,7 +237,6 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 	var hasKeyAsInt bool
 	var hasKeyAsStr bool
 	var omitEmptyIdx []int
-	fixedLength := true
 	e := getEncoderBuffer()
 	for i := 0; i < len(flds); i++ {
 		// Get field's encodeFunc
@@ -286,14 +284,8 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 			hasKeyAsStr = true
 		}
 
-		// Check if field is from embedded struct
-		if len(flds[i].idx) > 1 {
-			fixedLength = false
-		}
-
 		// Check if field can be omitted when empty
 		if flds[i].omitEmpty {
-			fixedLength = false
 			omitEmptyIdx = append(omitEmptyIdx, i)
 		}
 
@@ -326,7 +318,6 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 		bytewiseFields:     bytewiseFields,
 		lengthFirstFields:  lengthFirstFields,
 		omitEmptyFieldsIdx: omitEmptyIdx,
-		fixedLength:        fixedLength,
 		maxHeadLen:         encodedHeadLen(uint64(len(flds))),
 	}
 
@@ -346,9 +337,8 @@ func getEncodingStructToArrayType(t reflect.Type, flds fields) (*encodingStructT
 	}
 
 	structType := &encodingStructType{
-		fields:      flds,
-		toArray:     true,
-		fixedLength: true,
+		fields:  flds,
+		toArray: true,
 	}
 	encodingStructTypeCache.Store(t, structType)
 	return structType, structType.err

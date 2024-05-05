@@ -1250,36 +1250,6 @@ func encodeStructToArray(e *encoderBuffer, em *encMode, v reflect.Value) (err er
 	return nil
 }
 
-func encodeFixedLengthStruct(e *encoderBuffer, em *encMode, v reflect.Value, flds fields) error {
-	if b := em.encTagBytes(v.Type()); b != nil {
-		e.Write(b)
-	}
-
-	encodeHead(e, byte(cborTypeMap), uint64(len(flds)))
-
-	start := 0
-	if em.sort == SortFastShuffle {
-		start = rand.Intn(len(flds)) //nolint:gosec // Don't need a CSPRNG for deck cutting.
-	}
-
-	for offset := 0; offset < len(flds); offset++ {
-		i := (start + offset) % len(flds)
-		f := flds[i]
-		if !f.keyAsInt && em.fieldName == FieldNameToByteString {
-			e.Write(f.cborNameByteString)
-		} else { // int or text string
-			e.Write(f.cborName)
-		}
-
-		fv := v.Field(f.idx[0])
-		if err := f.ef(e, em, fv); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 	structType, err := getEncodingStructType(v.Type())
 	if err != nil {
@@ -1287,10 +1257,6 @@ func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 	}
 
 	flds := structType.getFields(em)
-
-	if structType.fixedLength {
-		return encodeFixedLengthStruct(e, em, v, flds)
-	}
 
 	start := 0
 	if em.sort == SortFastShuffle {
@@ -1343,6 +1309,11 @@ func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 		}
 
 		kvcount++
+	}
+
+	if len(flds) == kvcount {
+		// Encoded element count in head is the same as actual element count.
+		return nil
 	}
 
 	// Overwrite the bytes that were reserved for the head before encoding the map entries.
