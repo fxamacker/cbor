@@ -1333,36 +1333,6 @@ func encodeStructToArray(e *encoderBuffer, em *encMode, v reflect.Value) (err er
 	return nil
 }
 
-func encodeFixedLengthStruct(e *encoderBuffer, em *encMode, v reflect.Value, flds fields) error {
-	if b := em.encTagBytes(v.Type()); b != nil {
-		e.Write(b)
-	}
-
-	encodeHead(e, byte(cborTypeMap), uint64(len(flds)))
-
-	start := 0
-	if em.sort == SortFastShuffle {
-		start = rand.Intn(len(flds)) //nolint:gosec // Don't need a CSPRNG for deck cutting.
-	}
-
-	for offset := 0; offset < len(flds); offset++ {
-		i := (start + offset) % len(flds)
-		f := flds[i]
-		if !f.keyAsInt && em.fieldName == FieldNameToByteString {
-			e.Write(f.cborNameByteString)
-		} else { // int or text string
-			e.Write(f.cborName)
-		}
-
-		fv := v.Field(f.idx[0])
-		if err := f.ef(e, em, fv); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 	structType, err := getEncodingStructType(v.Type())
 	if err != nil {
@@ -1371,10 +1341,6 @@ func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 
 	flds := structType.getFields(em)
 
-	if structType.fixedLength {
-		return encodeFixedLengthStruct(e, em, v, flds)
-	}
-
 	start := 0
 	if em.sort == SortFastShuffle {
 		start = rand.Intn(len(flds)) //nolint:gosec // Don't need a CSPRNG for deck cutting.
@@ -1384,8 +1350,9 @@ func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 		e.Write(b)
 	}
 
-	// Reserve space in the output buffer for the head if its encoded size is fixed.
-	encodeHead(e, byte(cborTypeMap), uint64(len(flds)))
+	// Encode head with struct field count.
+	// Head is rewritten later if actual encoded field count is different from struct field count.
+	encodedHeadLen := encodeHead(e, byte(cborTypeMap), uint64(len(flds)))
 
 	kvbegin := e.Len()
 	kvcount := 0
@@ -1428,14 +1395,19 @@ func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 		kvcount++
 	}
 
-	// Overwrite the bytes that were reserved for the head before encoding the map entries.
-	{
-		headbuf := encoderBuffer{Buffer: *bytes.NewBuffer(e.Bytes()[kvbegin-structType.maxHeadLen : kvbegin-structType.maxHeadLen : kvbegin])}
-		encodeHead(&headbuf, byte(cborTypeMap), uint64(kvcount))
+	if len(flds) == kvcount {
+		// Encoded element count in head is the same as actual element count.
+		return nil
 	}
 
-	actualHeadLen := encodedHeadLen(uint64(kvcount))
-	if actualHeadLen == structType.maxHeadLen {
+	// Overwrite the bytes that were reserved for the head before encoding the map entries.
+	var actualHeadLen int
+	{
+		headbuf := encoderBuffer{Buffer: *bytes.NewBuffer(e.Bytes()[kvbegin-encodedHeadLen : kvbegin-encodedHeadLen : kvbegin])}
+		actualHeadLen = encodeHead(&headbuf, byte(cborTypeMap), uint64(kvcount))
+	}
+
+	if actualHeadLen == encodedHeadLen {
 		// The bytes reserved for the encoded head were exactly the right size, so the
 		// encoded entries are already in their final positions.
 		return nil
@@ -1444,7 +1416,7 @@ func encodeStruct(e *encoderBuffer, em *encMode, v reflect.Value) (err error) {
 	// We reserved more bytes than needed for the encoded head, based on the number of fields
 	// encoded. The encoded entries are offset to the right by the number of excess reserved
 	// bytes. Shift the entries left to remove the gap.
-	excessReservedBytes := structType.maxHeadLen - actualHeadLen
+	excessReservedBytes := encodedHeadLen - actualHeadLen
 	dst := e.Bytes()[kvbegin-excessReservedBytes : e.Len()-excessReservedBytes]
 	src := e.Bytes()[kvbegin:e.Len()]
 	copy(dst, src)
@@ -1602,47 +1574,33 @@ func encodeTag(e *encoderBuffer, em *encMode, v reflect.Value) error {
 	return encode(e, em, reflect.ValueOf(t.Content))
 }
 
-func encodeHead(e *encoderBuffer, t byte, n uint64) {
+// encodeHead writes CBOR head of specified type t and returns number of bytes written.
+func encodeHead(e *encoderBuffer, t byte, n uint64) int {
 	if n <= 23 {
 		e.WriteByte(t | byte(n))
-		return
+		return 1
 	}
 	if n <= math.MaxUint8 {
 		e.scratch[0] = t | byte(24)
 		e.scratch[1] = byte(n)
 		e.Write(e.scratch[:2])
-		return
+		return 2
 	}
 	if n <= math.MaxUint16 {
 		e.scratch[0] = t | byte(25)
 		binary.BigEndian.PutUint16(e.scratch[1:], uint16(n))
 		e.Write(e.scratch[:3])
-		return
+		return 3
 	}
 	if n <= math.MaxUint32 {
 		e.scratch[0] = t | byte(26)
 		binary.BigEndian.PutUint32(e.scratch[1:], uint32(n))
 		e.Write(e.scratch[:5])
-		return
+		return 5
 	}
 	e.scratch[0] = t | byte(27)
 	binary.BigEndian.PutUint64(e.scratch[1:], n)
 	e.Write(e.scratch[:9])
-}
-
-// encodedHeadLen returns the number of bytes that will be written by a call to encodeHead with the
-// given argument. This must be kept in sync with encodeHead.
-func encodedHeadLen(arg uint64) int {
-	switch {
-	case arg <= 23:
-		return 1
-	case arg <= math.MaxUint8:
-		return 2
-	case arg <= math.MaxUint16:
-		return 3
-	case arg <= math.MaxUint32:
-		return 5
-	}
 	return 9
 }
 
