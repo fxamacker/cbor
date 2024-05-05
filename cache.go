@@ -170,7 +170,6 @@ type encodingStructType struct {
 	omitEmptyFieldsIdx []int
 	err                error
 	toArray            bool
-	maxHeadLen         int
 }
 
 func (st *encodingStructType) getFields(em *encMode) fields {
@@ -231,8 +230,6 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 		return getEncodingStructToArrayType(t, flds)
 	}
 
-	nOptional := 0
-
 	var err error
 	var hasKeyAsInt bool
 	var hasKeyAsStr bool
@@ -288,10 +285,6 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 		if flds[i].omitEmpty {
 			omitEmptyIdx = append(omitEmptyIdx, i)
 		}
-
-		if len(flds[i].idx) > 1 || flds[i].omitEmpty {
-			nOptional++
-		}
 	}
 	putEncoderBuffer(e)
 
@@ -318,7 +311,6 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 		bytewiseFields:     bytewiseFields,
 		lengthFirstFields:  lengthFirstFields,
 		omitEmptyFieldsIdx: omitEmptyIdx,
-		maxHeadLen:         encodedHeadLen(uint64(len(flds))),
 	}
 
 	encodingStructTypeCache.Store(t, structType)
