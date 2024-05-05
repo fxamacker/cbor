@@ -5,7 +5,9 @@ package cbor
 
 import (
 	"encoding"
+	"encoding/base64"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -440,6 +442,13 @@ const (
 	// ByteStringToStringAllowed permits decoding a CBOR byte string into a Go string.
 	ByteStringToStringAllowed
 
+	// ByteStringToStringAllowedWithExpectedLaterEncoding permits decoding a CBOR byte string
+	// into a Go string. Also, if the byte string is enclosed (directly or indirectly) by one of
+	// the "expected later encoding" tags (numbers 21 through 23), the destination string will
+	// be populated by applying the designated text encoding to the contents of the input byte
+	// string.
+	ByteStringToStringAllowedWithExpectedLaterEncoding
+
 	maxByteStringToStringMode
 )
 
@@ -593,6 +602,34 @@ func (bttm ByteStringToTimeMode) valid() bool {
 	return bttm >= 0 && bttm < maxByteStringToTimeMode
 }
 
+// ByteSliceExpectedEncodingMode specifies how to decode a byte string NOT enclosed in an "expected
+// later encoding" tag (RFC 8949 Section 3.4.5.2) into a Go byte slice.
+type ByteSliceExpectedEncodingMode int
+
+const (
+	// ByteSliceExpectedEncodingIgnored copies the contents of the byte string, unmodified, into
+	// a destination Go byte slice.
+	ByteSliceExpectedEncodingIgnored = iota
+
+	// ByteSliceExpectedEncodingBase64URL assumes that byte strings with no text encoding hint
+	// contain base64url-encoded bytes.
+	ByteSliceExpectedEncodingBase64URL
+
+	// ByteSliceExpectedEncodingBase64 assumes that byte strings with no text encoding hint
+	// contain base64-encoded bytes.
+	ByteSliceExpectedEncodingBase64
+
+	// ByteSliceExpectedEncodingBase16 assumes that byte strings with no text encoding hint
+	// contain base16-encoded bytes.
+	ByteSliceExpectedEncodingBase16
+
+	maxByteSliceExpectedEncodingMode
+)
+
+func (bseem ByteSliceExpectedEncodingMode) valid() bool {
+	return bseem >= 0 && bseem < maxByteSliceExpectedEncodingMode
+}
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -710,6 +747,10 @@ type DecOptions struct {
 
 	// ByteStringToTimeMode specifies the behavior when decoding a CBOR byte string into a Go time.Time.
 	ByteStringToTime ByteStringToTimeMode
+
+	// ByteSliceExpectedEncodingMode specifies how to decode a byte string NOT enclosed in an
+	// "expected later encoding" tag (RFC 8949 Section 3.4.5.2) into a Go byte slice.
+	ByteSliceExpectedEncoding ByteSliceExpectedEncodingMode
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -717,15 +758,35 @@ func (opts DecOptions) DecMode() (DecMode, error) {
 	return opts.decMode()
 }
 
-// DecModeWithTags returns DecMode with options and tags that are both immutable (safe for concurrency).
-func (opts DecOptions) DecModeWithTags(tags TagSet) (DecMode, error) {
+// validForTags checks that the provided tag set is compatible with these options and returns a
+// non-nil error if and only if the provided tag set is incompatible.
+func (opts DecOptions) validForTags(tags TagSet) error {
 	if opts.TagsMd == TagsForbidden {
-		return nil, errors.New("cbor: cannot create DecMode with TagSet when TagsMd is TagsForbidden")
+		return errors.New("cbor: cannot create DecMode with TagSet when TagsMd is TagsForbidden")
 	}
 	if tags == nil {
-		return nil, errors.New("cbor: cannot create DecMode with nil value as TagSet")
+		return errors.New("cbor: cannot create DecMode with nil value as TagSet")
 	}
+	if opts.ByteStringToString == ByteStringToStringAllowedWithExpectedLaterEncoding || opts.ByteSliceExpectedEncoding != ByteSliceExpectedEncodingIgnored {
+		for _, tagNum := range []uint64{
+			expectedLaterEncodingBase64URLTagNum,
+			expectedLaterEncodingBase64TagNum,
+			expectedLaterEncodingBase16TagNum,
+		} {
+			if rt := tags.getTypeFromTagNum([]uint64{tagNum}); rt != nil {
+				return fmt.Errorf("cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag %d as built-in and conflicts with the provided TagSet's registration of %v", tagNum, rt)
+			}
+		}
 
+	}
+	return nil
+}
+
+// DecModeWithTags returns DecMode with options and tags that are both immutable (safe for concurrency).
+func (opts DecOptions) DecModeWithTags(tags TagSet) (DecMode, error) {
+	if err := opts.validForTags(tags); err != nil {
+		return nil, err
+	}
 	dm, err := opts.decMode()
 	if err != nil {
 		return nil, err
@@ -751,11 +812,8 @@ func (opts DecOptions) DecModeWithTags(tags TagSet) (DecMode, error) {
 
 // DecModeWithSharedTags returns DecMode with immutable options and mutable shared tags (safe for concurrency).
 func (opts DecOptions) DecModeWithSharedTags(tags TagSet) (DecMode, error) {
-	if opts.TagsMd == TagsForbidden {
-		return nil, errors.New("cbor: cannot create DecMode with TagSet when TagsMd is TagsForbidden")
-	}
-	if tags == nil {
-		return nil, errors.New("cbor: cannot create DecMode with nil value as TagSet")
+	if err := opts.validForTags(tags); err != nil {
+		return nil, err
 	}
 	dm, err := opts.decMode()
 	if err != nil {
@@ -892,30 +950,35 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		return nil, errors.New("cbor: invalid ByteStringToTime " + strconv.Itoa(int(opts.ByteStringToTime)))
 	}
 
+	if !opts.ByteSliceExpectedEncoding.valid() {
+		return nil, errors.New("cbor: invalid ByteSliceExpectedEncoding " + strconv.Itoa(int(opts.ByteSliceExpectedEncoding)))
+	}
+
 	dm := decMode{
-		dupMapKey:             opts.DupMapKey,
-		timeTag:               opts.TimeTag,
-		maxNestedLevels:       opts.MaxNestedLevels,
-		maxArrayElements:      opts.MaxArrayElements,
-		maxMapPairs:           opts.MaxMapPairs,
-		indefLength:           opts.IndefLength,
-		tagsMd:                opts.TagsMd,
-		intDec:                opts.IntDec,
-		mapKeyByteString:      opts.MapKeyByteString,
-		extraReturnErrors:     opts.ExtraReturnErrors,
-		defaultMapType:        opts.DefaultMapType,
-		utf8:                  opts.UTF8,
-		fieldNameMatching:     opts.FieldNameMatching,
-		bigIntDec:             opts.BigIntDec,
-		defaultByteStringType: opts.DefaultByteStringType,
-		byteStringToString:    opts.ByteStringToString,
-		fieldNameByteString:   opts.FieldNameByteString,
-		unrecognizedTagToAny:  opts.UnrecognizedTagToAny,
-		timeTagToAny:          opts.TimeTagToAny,
-		simpleValues:          simpleValues,
-		nanDec:                opts.NaN,
-		infDec:                opts.Inf,
-		byteStringToTime:      opts.ByteStringToTime,
+		dupMapKey:                 opts.DupMapKey,
+		timeTag:                   opts.TimeTag,
+		maxNestedLevels:           opts.MaxNestedLevels,
+		maxArrayElements:          opts.MaxArrayElements,
+		maxMapPairs:               opts.MaxMapPairs,
+		indefLength:               opts.IndefLength,
+		tagsMd:                    opts.TagsMd,
+		intDec:                    opts.IntDec,
+		mapKeyByteString:          opts.MapKeyByteString,
+		extraReturnErrors:         opts.ExtraReturnErrors,
+		defaultMapType:            opts.DefaultMapType,
+		utf8:                      opts.UTF8,
+		fieldNameMatching:         opts.FieldNameMatching,
+		bigIntDec:                 opts.BigIntDec,
+		defaultByteStringType:     opts.DefaultByteStringType,
+		byteStringToString:        opts.ByteStringToString,
+		fieldNameByteString:       opts.FieldNameByteString,
+		unrecognizedTagToAny:      opts.UnrecognizedTagToAny,
+		timeTagToAny:              opts.TimeTagToAny,
+		simpleValues:              simpleValues,
+		nanDec:                    opts.NaN,
+		infDec:                    opts.Inf,
+		byteStringToTime:          opts.ByteStringToTime,
+		byteSliceExpectedEncoding: opts.ByteSliceExpectedEncoding,
 	}
 
 	return &dm, nil
@@ -968,30 +1031,31 @@ type DecMode interface {
 }
 
 type decMode struct {
-	tags                  tagProvider
-	dupMapKey             DupMapKeyMode
-	timeTag               DecTagMode
-	maxNestedLevels       int
-	maxArrayElements      int
-	maxMapPairs           int
-	indefLength           IndefLengthMode
-	tagsMd                TagsMode
-	intDec                IntDecMode
-	mapKeyByteString      MapKeyByteStringMode
-	extraReturnErrors     ExtraDecErrorCond
-	defaultMapType        reflect.Type
-	utf8                  UTF8Mode
-	fieldNameMatching     FieldNameMatchingMode
-	bigIntDec             BigIntDecMode
-	defaultByteStringType reflect.Type
-	byteStringToString    ByteStringToStringMode
-	fieldNameByteString   FieldNameByteStringMode
-	unrecognizedTagToAny  UnrecognizedTagToAnyMode
-	timeTagToAny          TimeTagToAnyMode
-	simpleValues          *SimpleValueRegistry
-	nanDec                NaNMode
-	infDec                InfMode
-	byteStringToTime      ByteStringToTimeMode
+	tags                      tagProvider
+	dupMapKey                 DupMapKeyMode
+	timeTag                   DecTagMode
+	maxNestedLevels           int
+	maxArrayElements          int
+	maxMapPairs               int
+	indefLength               IndefLengthMode
+	tagsMd                    TagsMode
+	intDec                    IntDecMode
+	mapKeyByteString          MapKeyByteStringMode
+	extraReturnErrors         ExtraDecErrorCond
+	defaultMapType            reflect.Type
+	utf8                      UTF8Mode
+	fieldNameMatching         FieldNameMatchingMode
+	bigIntDec                 BigIntDecMode
+	defaultByteStringType     reflect.Type
+	byteStringToString        ByteStringToStringMode
+	fieldNameByteString       FieldNameByteStringMode
+	unrecognizedTagToAny      UnrecognizedTagToAnyMode
+	timeTagToAny              TimeTagToAnyMode
+	simpleValues              *SimpleValueRegistry
+	nanDec                    NaNMode
+	infDec                    InfMode
+	byteStringToTime          ByteStringToTimeMode
+	byteSliceExpectedEncoding ByteSliceExpectedEncodingMode
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -1006,29 +1070,30 @@ func (dm *decMode) DecOptions() DecOptions {
 	}
 
 	return DecOptions{
-		DupMapKey:             dm.dupMapKey,
-		TimeTag:               dm.timeTag,
-		MaxNestedLevels:       dm.maxNestedLevels,
-		MaxArrayElements:      dm.maxArrayElements,
-		MaxMapPairs:           dm.maxMapPairs,
-		IndefLength:           dm.indefLength,
-		TagsMd:                dm.tagsMd,
-		IntDec:                dm.intDec,
-		MapKeyByteString:      dm.mapKeyByteString,
-		ExtraReturnErrors:     dm.extraReturnErrors,
-		DefaultMapType:        dm.defaultMapType,
-		UTF8:                  dm.utf8,
-		FieldNameMatching:     dm.fieldNameMatching,
-		BigIntDec:             dm.bigIntDec,
-		DefaultByteStringType: dm.defaultByteStringType,
-		ByteStringToString:    dm.byteStringToString,
-		FieldNameByteString:   dm.fieldNameByteString,
-		UnrecognizedTagToAny:  dm.unrecognizedTagToAny,
-		TimeTagToAny:          dm.timeTagToAny,
-		SimpleValues:          simpleValues,
-		NaN:                   dm.nanDec,
-		Inf:                   dm.infDec,
-		ByteStringToTime:      dm.byteStringToTime,
+		DupMapKey:                 dm.dupMapKey,
+		TimeTag:                   dm.timeTag,
+		MaxNestedLevels:           dm.maxNestedLevels,
+		MaxArrayElements:          dm.maxArrayElements,
+		MaxMapPairs:               dm.maxMapPairs,
+		IndefLength:               dm.indefLength,
+		TagsMd:                    dm.tagsMd,
+		IntDec:                    dm.intDec,
+		MapKeyByteString:          dm.mapKeyByteString,
+		ExtraReturnErrors:         dm.extraReturnErrors,
+		DefaultMapType:            dm.defaultMapType,
+		UTF8:                      dm.utf8,
+		FieldNameMatching:         dm.fieldNameMatching,
+		BigIntDec:                 dm.bigIntDec,
+		DefaultByteStringType:     dm.defaultByteStringType,
+		ByteStringToString:        dm.byteStringToString,
+		FieldNameByteString:       dm.fieldNameByteString,
+		UnrecognizedTagToAny:      dm.unrecognizedTagToAny,
+		TimeTagToAny:              dm.timeTagToAny,
+		SimpleValues:              simpleValues,
+		NaN:                       dm.nanDec,
+		Inf:                       dm.infDec,
+		ByteStringToTime:          dm.byteStringToTime,
+		ByteSliceExpectedEncoding: dm.byteSliceExpectedEncoding,
 	}
 }
 
@@ -1116,6 +1181,17 @@ type decoder struct {
 	data []byte
 	off  int // next read offset in data
 	dm   *decMode
+
+	// expectedLaterEncodingTags stores a stack of encountered "Expected Later Encoding" tags,
+	// if any.
+	//
+	// The "Expected Later Encoding" tags (21 to 23) are valid for any data item. When decoding
+	// byte strings, the effective encoding comes from the tag nearest to the byte string being
+	// decoded. For example, the effective encoding of the byte string 21(22(h'41')) would be
+	// controlled by tag 22,and in the data item 23(h'42', 22([21(h'43')])]) the effective
+	// encoding of the byte strings h'42' and h'43' would be controlled by tag 23 and 21,
+	// respectively.
+	expectedLaterEncodingTags []uint64
 }
 
 // value decodes CBOR data item into the value pointed to by v.
@@ -1174,7 +1250,10 @@ func (t cborType) String() string {
 }
 
 const (
-	selfDescribedCBORTagNum = 55799
+	selfDescribedCBORTagNum              = 55799
+	expectedLaterEncodingBase64URLTagNum = 21
+	expectedLaterEncodingBase64TagNum    = 22
+	expectedLaterEncodingBase16TagNum    = 23
 )
 
 // parseToValue decodes CBOR data to value.  It assumes data is well-formed,
@@ -1329,6 +1408,11 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 
 	case cborTypeByteString:
 		b, copied := d.parseByteString()
+		b, converted, err := d.applyByteStringTextConversion(b, v.Type())
+		if err != nil {
+			return err
+		}
+		copied = copied || converted
 		return fillByteString(t, b, !copied, v, d.dm.byteStringToString)
 
 	case cborTypeTextString:
@@ -1412,6 +1496,15 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				CBORType: t.String(),
 				GoType:   tInfo.nonPtrType.String(),
 				errorMsg: bi.String() + " overflows " + v.Type().String(),
+			}
+		case expectedLaterEncodingBase64URLTagNum, expectedLaterEncodingBase64TagNum, expectedLaterEncodingBase16TagNum:
+			// If conversion for interoperability with text encodings is not configured,
+			// treat tags 21-23 as unregistered tags.
+			if d.dm.byteStringToString == ByteStringToStringAllowedWithExpectedLaterEncoding || d.dm.byteSliceExpectedEncoding != ByteSliceExpectedEncodingIgnored {
+				d.expectedLaterEncodingTags = append(d.expectedLaterEncodingTags, tagNum)
+				defer func() {
+					d.expectedLaterEncodingTags = d.expectedLaterEncodingTags[:len(d.expectedLaterEncodingTags)-1]
+				}()
 			}
 		}
 		return d.parseToValue(v, tInfo)
@@ -1679,9 +1772,19 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 		return nValue, nil
 
 	case cborTypeByteString:
-		switch d.dm.defaultByteStringType {
-		case nil, typeByteSlice:
-			b, copied := d.parseByteString()
+		b, copied := d.parseByteString()
+		var effectiveByteStringType = d.dm.defaultByteStringType
+		if effectiveByteStringType == nil {
+			effectiveByteStringType = typeByteSlice
+		}
+		b, converted, err := d.applyByteStringTextConversion(b, effectiveByteStringType)
+		if err != nil {
+			return nil, err
+		}
+		copied = copied || converted
+
+		switch effectiveByteStringType {
+		case typeByteSlice:
 			if copied {
 				return b, nil
 			}
@@ -1689,10 +1792,8 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 			copy(clone, b)
 			return clone, nil
 		case typeString:
-			b, _ := d.parseByteString()
 			return string(b), nil
 		default:
-			b, copied := d.parseByteString()
 			if copied || d.dm.defaultByteStringType.Kind() == reflect.String {
 				// Avoid an unnecessary copy since the conversion to string must
 				// copy the underlying bytes.
@@ -1754,6 +1855,16 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 				return bi, nil
 			}
 			return *bi, nil
+		case expectedLaterEncodingBase64URLTagNum, expectedLaterEncodingBase64TagNum, expectedLaterEncodingBase16TagNum:
+			// If conversion for interoperability with text encodings is not configured,
+			// treat tags 21-23 as unregistered tags.
+			if d.dm.byteStringToString == ByteStringToStringAllowedWithExpectedLaterEncoding || d.dm.byteSliceExpectedEncoding != ByteSliceExpectedEncodingIgnored {
+				d.expectedLaterEncodingTags = append(d.expectedLaterEncodingTags, tagNum)
+				defer func() {
+					d.expectedLaterEncodingTags = d.expectedLaterEncodingTags[:len(d.expectedLaterEncodingTags)-1]
+				}()
+				return d.parse(false)
+			}
 		}
 
 		if d.dm.tags != nil {
@@ -1845,6 +1956,71 @@ func (d *decoder) parseByteString() ([]byte, bool) {
 		d.off += int(val)
 	}
 	return b, true
+}
+
+// applyByteStringTextConversion converts bytes read from a byte string to or from a configured text
+// encoding. If no transformation was performed (because it was not required), the original byte
+// slice is returned and the bool return value is false. Otherwise, a new slice containing the
+// converted bytes is returned along with the bool value true.
+func (d *decoder) applyByteStringTextConversion(src []byte, dstType reflect.Type) ([]byte, bool, error) {
+	switch dstType.Kind() {
+	case reflect.String:
+		if d.dm.byteStringToString != ByteStringToStringAllowedWithExpectedLaterEncoding || len(d.expectedLaterEncodingTags) == 0 {
+			return src, false, nil
+		}
+
+		switch d.expectedLaterEncodingTags[len(d.expectedLaterEncodingTags)-1] {
+		case expectedLaterEncodingBase64URLTagNum:
+			encoded := make([]byte, base64.RawURLEncoding.EncodedLen(len(src)))
+			base64.RawURLEncoding.Encode(encoded, src)
+			return encoded, true, nil
+		case expectedLaterEncodingBase64TagNum:
+			encoded := make([]byte, base64.StdEncoding.EncodedLen(len(src)))
+			base64.StdEncoding.Encode(encoded, src)
+			return encoded, true, nil
+		case expectedLaterEncodingBase16TagNum:
+			encoded := make([]byte, hex.EncodedLen(len(src)))
+			hex.Encode(encoded, src)
+			return encoded, true, nil
+		default:
+			// If this happens, there is a bug: the decoder has pushed an invalid
+			// "expected later encoding" tag to the stack.
+			panic(fmt.Sprintf("unrecognized expected later encoding tag: %d", d.expectedLaterEncodingTags))
+		}
+	case reflect.Slice:
+		if dstType.Elem().Kind() != reflect.Uint8 || len(d.expectedLaterEncodingTags) > 0 {
+			// Either the destination is not a slice of bytes, or the encoder that
+			// produced the input indicated an expected text encoding tag and therefore
+			// the content of the byte string has NOT been text encoded.
+			return src, false, nil
+		}
+
+		switch d.dm.byteSliceExpectedEncoding {
+		case ByteSliceExpectedEncodingBase64URL:
+			decoded := make([]byte, base64.RawURLEncoding.DecodedLen(len(src)))
+			n, err := base64.RawURLEncoding.Decode(decoded, src)
+			if err != nil {
+				return nil, false, fmt.Errorf("cbor: failed to decode base64url string: %v", err)
+			}
+			return decoded[:n], true, nil
+		case ByteSliceExpectedEncodingBase64:
+			decoded := make([]byte, base64.StdEncoding.DecodedLen(len(src)))
+			n, err := base64.StdEncoding.Decode(decoded, src)
+			if err != nil {
+				return nil, false, fmt.Errorf("cbor: failed to decode base64 string: %v", err)
+			}
+			return decoded[:n], true, nil
+		case ByteSliceExpectedEncodingBase16:
+			decoded := make([]byte, hex.DecodedLen(len(src)))
+			n, err := hex.Decode(decoded, src)
+			if err != nil {
+				return nil, false, fmt.Errorf("cbor: failed to decode hex string: %v", err)
+			}
+			return decoded[:n], true, nil
+		}
+	}
+
+	return src, false, nil
 }
 
 // parseTextString parses CBOR encoded text string.  It returns a byte slice
@@ -2588,6 +2764,7 @@ func (d *decoder) foundBreak() bool {
 func (d *decoder) reset(data []byte) {
 	d.data = data
 	d.off = 0
+	d.expectedLaterEncodingTags = d.expectedLaterEncodingTags[:0]
 }
 
 func (d *decoder) nextCBORType() cborType {
@@ -2721,7 +2898,7 @@ func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, bsts B
 		}
 		return errors.New("cbor: cannot set new value for " + v.Type().String())
 	}
-	if bsts == ByteStringToStringAllowed && v.Kind() == reflect.String {
+	if bsts != ByteStringToStringForbidden && v.Kind() == reflect.String {
 		v.SetString(string(val))
 		return nil
 	}
@@ -2830,6 +3007,13 @@ func validBuiltinTag(tagNum uint64, contentHead byte) error {
 		if t != cborTypeByteString {
 			return errors.New("cbor: tag number 2 or 3 must be followed by byte string, got " + t.String())
 		}
+		return nil
+	case expectedLaterEncodingBase64URLTagNum, expectedLaterEncodingBase64TagNum, expectedLaterEncodingBase16TagNum:
+		// From RFC 8949 3.4.5.2:
+		//   The data item tagged can be a byte string or any other data item. In the latter
+		//   case, the tag applies to all of the byte string data items contained in the data
+		//   item, except for those contained in a nested data item tagged with an expected
+		//   conversion.
 		return nil
 	}
 	return nil

@@ -387,6 +387,62 @@ func (fnm FieldNameMode) valid() bool {
 	return fnm >= 0 && fnm < maxFieldNameMode
 }
 
+// ByteSliceMode specifies how to encode slices of bytes.
+type ByteSliceMode int
+
+const (
+	// ByteSliceToByteString encodes slices of bytes to CBOR byte string (major type 2).
+	ByteSliceToByteString = iota
+
+	// ByteSliceToByteStringWithExpectedConversionToBase64URL encodes slices of bytes to CBOR
+	// byte string (major type 2) inside tag 21 (expected conversion to base64url encoding, see
+	// RFC 8949 Section 3.4.5.2).
+	ByteSliceToByteStringWithExpectedConversionToBase64URL
+
+	// ByteSliceToByteStringWithExpectedConversionToBase64 encodes slices of bytes to CBOR byte
+	// string (major type 2) inside tag 22 (expected conversion to base64 encoding, see RFC 8949
+	// Section 3.4.5.2).
+	ByteSliceToByteStringWithExpectedConversionToBase64
+
+	// ByteSliceToByteStringWithExpectedConversionToBase16 encodes slices of bytes to CBOR byte
+	// string (major type 2) inside tag 23 (expected conversion to base16 encoding, see RFC 8949
+	// Section 3.4.5.2).
+	ByteSliceToByteStringWithExpectedConversionToBase16
+)
+
+func (bsm ByteSliceMode) encodingTag() (uint64, error) {
+	switch bsm {
+	case ByteSliceToByteString:
+		return 0, nil
+	case ByteSliceToByteStringWithExpectedConversionToBase64URL:
+		return expectedLaterEncodingBase64URLTagNum, nil
+	case ByteSliceToByteStringWithExpectedConversionToBase64:
+		return expectedLaterEncodingBase64TagNum, nil
+	case ByteSliceToByteStringWithExpectedConversionToBase16:
+		return expectedLaterEncodingBase16TagNum, nil
+	}
+	return 0, errors.New("cbor: invalid ByteSlice " + strconv.Itoa(int(bsm)))
+}
+
+// ByteArrayMode specifies how to encode byte arrays.
+type ByteArrayMode int
+
+const (
+	// ByteArrayToByteSlice encodes byte arrays the same way that a byte slice with identical
+	// length and contents is encoded.
+	ByteArrayToByteSlice = iota
+
+	// ByteArrayToArray encodes byte arrays to the CBOR array type with one unsigned integer
+	// item for each byte in the array.
+	ByteArrayToArray
+
+	maxByteArrayMode
+)
+
+func (bam ByteArrayMode) valid() bool {
+	return bam >= 0 && bam < maxByteArrayMode
+}
+
 // EncOptions specifies encoding options.
 type EncOptions struct {
 	// Sort specifies sorting order.
@@ -431,6 +487,12 @@ type EncOptions struct {
 
 	// FieldName specifies the CBOR type to use when encoding struct field names.
 	FieldName FieldNameMode
+
+	// ByteSlice specifies how to encode byte slices.
+	ByteSlice ByteSliceMode
+
+	// ByteArray specifies how to encode byte arrays.
+	ByteArray ByteArrayMode
 }
 
 // CanonicalEncOptions returns EncOptions for "Canonical CBOR" encoding,
@@ -616,21 +678,31 @@ func (opts EncOptions) encMode() (*encMode, error) {
 	if !opts.FieldName.valid() {
 		return nil, errors.New("cbor: invalid FieldName " + strconv.Itoa(int(opts.FieldName)))
 	}
+	byteSliceEncodingTag, err := opts.ByteSlice.encodingTag()
+	if err != nil {
+		return nil, err
+	}
+	if !opts.ByteArray.valid() {
+		return nil, errors.New("cbor: invalid ByteArray " + strconv.Itoa(int(opts.ByteArray)))
+	}
 	em := encMode{
-		sort:            opts.Sort,
-		shortestFloat:   opts.ShortestFloat,
-		nanConvert:      opts.NaNConvert,
-		infConvert:      opts.InfConvert,
-		bigIntConvert:   opts.BigIntConvert,
-		time:            opts.Time,
-		timeTag:         opts.TimeTag,
-		indefLength:     opts.IndefLength,
-		nilContainers:   opts.NilContainers,
-		tagsMd:          opts.TagsMd,
-		omitEmpty:       opts.OmitEmpty,
-		stringType:      opts.String,
-		stringMajorType: stringMajorType,
-		fieldName:       opts.FieldName,
+		sort:                 opts.Sort,
+		shortestFloat:        opts.ShortestFloat,
+		nanConvert:           opts.NaNConvert,
+		infConvert:           opts.InfConvert,
+		bigIntConvert:        opts.BigIntConvert,
+		time:                 opts.Time,
+		timeTag:              opts.TimeTag,
+		indefLength:          opts.IndefLength,
+		nilContainers:        opts.NilContainers,
+		tagsMd:               opts.TagsMd,
+		omitEmpty:            opts.OmitEmpty,
+		stringType:           opts.String,
+		stringMajorType:      stringMajorType,
+		fieldName:            opts.FieldName,
+		byteSlice:            opts.ByteSlice,
+		byteSliceEncodingTag: byteSliceEncodingTag,
+		byteArray:            opts.ByteArray,
 	}
 	return &em, nil
 }
@@ -643,21 +715,24 @@ type EncMode interface {
 }
 
 type encMode struct {
-	tags            tagProvider
-	sort            SortMode
-	shortestFloat   ShortestFloatMode
-	nanConvert      NaNConvertMode
-	infConvert      InfConvertMode
-	bigIntConvert   BigIntConvertMode
-	time            TimeMode
-	timeTag         EncTagMode
-	indefLength     IndefLengthMode
-	nilContainers   NilContainersMode
-	tagsMd          TagsMode
-	omitEmpty       OmitEmptyMode
-	stringType      StringMode
-	stringMajorType cborType
-	fieldName       FieldNameMode
+	tags                 tagProvider
+	sort                 SortMode
+	shortestFloat        ShortestFloatMode
+	nanConvert           NaNConvertMode
+	infConvert           InfConvertMode
+	bigIntConvert        BigIntConvertMode
+	time                 TimeMode
+	timeTag              EncTagMode
+	indefLength          IndefLengthMode
+	nilContainers        NilContainersMode
+	tagsMd               TagsMode
+	omitEmpty            OmitEmptyMode
+	stringType           StringMode
+	stringMajorType      cborType
+	fieldName            FieldNameMode
+	byteSlice            ByteSliceMode
+	byteSliceEncodingTag uint64
+	byteArray            ByteArrayMode
 }
 
 var defaultEncMode, _ = EncOptions{}.encMode()
@@ -747,6 +822,8 @@ func (em *encMode) EncOptions() EncOptions {
 		OmitEmpty:     em.omitEmpty,
 		String:        em.stringType,
 		FieldName:     em.fieldName,
+		ByteSlice:     em.byteSlice,
+		ByteArray:     em.byteArray,
 	}
 }
 
@@ -1026,6 +1103,9 @@ func encodeByteString(e *encoderBuffer, em *encMode, v reflect.Value) error {
 		e.Write(cborNil)
 		return nil
 	}
+	if vk == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8 && em.byteSliceEncodingTag != 0 {
+		encodeHead(e, byte(cborTypeTag), em.byteSliceEncodingTag)
+	}
 	if b := em.encTagBytes(v.Type()); b != nil {
 		e.Write(b)
 	}
@@ -1059,6 +1139,9 @@ type arrayEncodeFunc struct {
 }
 
 func (ae arrayEncodeFunc) encode(e *encoderBuffer, em *encMode, v reflect.Value) error {
+	if em.byteArray == ByteArrayToByteSlice && v.Type().Elem().Kind() == reflect.Uint8 {
+		return encodeByteString(e, em, v)
+	}
 	if v.Kind() == reflect.Slice && v.IsNil() && em.nilContainers == NilContainerAsNull {
 		e.Write(cborNil)
 		return nil
@@ -1606,10 +1689,12 @@ func getEncodeFuncInternal(t reflect.Type) (encodeFunc, isEmptyFunc) {
 		return encodeFloat, isEmptyFloat
 	case reflect.String:
 		return encodeString, isEmptyString
-	case reflect.Slice, reflect.Array:
+	case reflect.Slice:
 		if t.Elem().Kind() == reflect.Uint8 {
 			return encodeByteString, isEmptySlice
 		}
+		fallthrough
+	case reflect.Array:
 		f, _ := getEncodeFunc(t.Elem())
 		if f == nil {
 			return nil, nil

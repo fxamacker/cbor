@@ -3735,6 +3735,8 @@ func TestEncOptions(t *testing.T) {
 		OmitEmpty:     OmitEmptyGoValue,
 		String:        StringToByteString,
 		FieldName:     FieldNameToByteString,
+		ByteSlice:     ByteSliceToByteStringWithExpectedConversionToBase16,
+		ByteArray:     ByteArrayToArray,
 	}
 	ov := reflect.ValueOf(opts1)
 	for i := 0; i < ov.NumField(); i++ {
@@ -4470,6 +4472,205 @@ func TestSortModeFastShuffle(t *testing.T) {
 			}
 
 			t.Errorf("object encoded identically in %d consecutive trials using SortFastShuffle", tc.trials)
+		})
+	}
+}
+
+func TestInvalidByteSlice(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         EncOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         EncOptions{ByteSlice: -1},
+			wantErrorMsg: "cbor: invalid ByteSlice -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         EncOptions{ByteSlice: 101},
+			wantErrorMsg: "cbor: invalid ByteSlice 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.EncMode()
+			if err == nil {
+				t.Errorf("EncMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestInvalidByteArray(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         EncOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         EncOptions{ByteArray: -1},
+			wantErrorMsg: "cbor: invalid ByteArray -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         EncOptions{ByteArray: 101},
+			wantErrorMsg: "cbor: invalid ByteArray 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.EncMode()
+			if err == nil {
+				t.Errorf("EncMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestMarshalByteArrayMode(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		opts     EncOptions
+		in       interface{}
+		expected []byte
+	}{
+		{
+			name:     "byte array treated as byte slice by default",
+			opts:     EncOptions{},
+			in:       [1]byte{},
+			expected: []byte{0x41, 0x00},
+		},
+		{
+			name:     "byte array treated as byte slice with ByteArrayAsByteSlice",
+			opts:     EncOptions{ByteArray: ByteArrayToByteSlice},
+			in:       [1]byte{},
+			expected: []byte{0x41, 0x00},
+		},
+		{
+			name:     "byte array treated as array of integers with ByteArrayToArray",
+			opts:     EncOptions{ByteArray: ByteArrayToArray},
+			in:       [1]byte{},
+			expected: []byte{0x81, 0x00},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			em, err := tc.opts.EncMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			out, err := em.Marshal(tc.in)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if string(out) != string(tc.expected) {
+				t.Errorf("unexpected output, got 0x%x want 0x%x", out, tc.expected)
+			}
+		})
+	}
+}
+
+func TestMarshalByteSliceMode(t *testing.T) {
+	type namedByteSlice []byte
+	ts := NewTagSet()
+	if err := ts.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeOf(namedByteSlice{}), 0xcc); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		name     string
+		tags     TagSet
+		opts     EncOptions
+		in       interface{}
+		expected []byte
+	}{
+		{
+			name:     "byte slice marshals to byte string by default",
+			opts:     EncOptions{},
+			in:       []byte{0xbb},
+			expected: []byte{0x41, 0xbb},
+		},
+		{
+			name:     "byte slice marshals to byte string by with ByteSliceToByteString",
+			opts:     EncOptions{ByteSlice: ByteSliceToByteString},
+			in:       []byte{0xbb},
+			expected: []byte{0x41, 0xbb},
+		},
+		{
+			name:     "byte slice marshaled to byte string enclosed in base64url expected encoding tag",
+			opts:     EncOptions{ByteSlice: ByteSliceToByteStringWithExpectedConversionToBase64URL},
+			in:       []byte{0xbb},
+			expected: []byte{0xd5, 0x41, 0xbb},
+		},
+		{
+			name:     "byte slice marshaled to byte string enclosed in base64 expected encoding tag",
+			opts:     EncOptions{ByteSlice: ByteSliceToByteStringWithExpectedConversionToBase64},
+			in:       []byte{0xbb},
+			expected: []byte{0xd6, 0x41, 0xbb},
+		},
+		{
+			name:     "byte slice marshaled to byte string enclosed in base16 expected encoding tag",
+			opts:     EncOptions{ByteSlice: ByteSliceToByteStringWithExpectedConversionToBase16},
+			in:       []byte{0xbb},
+			expected: []byte{0xd7, 0x41, 0xbb},
+		},
+		{
+			name:     "user-registered tag numbers are encoded with no expected encoding tag",
+			tags:     ts,
+			opts:     EncOptions{ByteSlice: ByteSliceToByteString},
+			in:       namedByteSlice{0xbb},
+			expected: []byte{0xd8, 0xcc, 0x41, 0xbb},
+		},
+		{
+			name:     "user-registered tag numbers are encoded after base64url expected encoding tag",
+			tags:     ts,
+			opts:     EncOptions{ByteSlice: ByteSliceToByteStringWithExpectedConversionToBase64URL},
+			in:       namedByteSlice{0xbb},
+			expected: []byte{0xd5, 0xd8, 0xcc, 0x41, 0xbb},
+		},
+		{
+			name:     "user-registered tag numbers are encoded after base64 expected encoding tag",
+			tags:     ts,
+			opts:     EncOptions{ByteSlice: ByteSliceToByteStringWithExpectedConversionToBase64},
+			in:       namedByteSlice{0xbb},
+			expected: []byte{0xd6, 0xd8, 0xcc, 0x41, 0xbb},
+		},
+		{
+			name:     "user-registered tag numbers are encoded after base16 expected encoding tag",
+			tags:     ts,
+			opts:     EncOptions{ByteSlice: ByteSliceToByteStringWithExpectedConversionToBase16},
+			in:       namedByteSlice{0xbb},
+			expected: []byte{0xd7, 0xd8, 0xcc, 0x41, 0xbb},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var em EncMode
+			if tc.tags != nil {
+				var err error
+				if em, err = tc.opts.EncModeWithTags(tc.tags); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				var err error
+				if em, err = tc.opts.EncMode(); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			out, err := em.Marshal(tc.in)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if string(out) != string(tc.expected) {
+				t.Errorf("unexpected output, got 0x%x want 0x%x", out, tc.expected)
+			}
 		})
 	}
 }
