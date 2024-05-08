@@ -500,52 +500,59 @@ func (di *diagnose) encodeByteString(val []byte) error {
 	switch di.dm.byteStringEncoding {
 	case ByteStringBase16Encoding:
 		di.w.WriteString("h'")
-
-		encoder := hex.NewEncoder(di.w)
 		if di.dm.byteStringHexWhitespace {
-			for i, b := range val {
+			sz := hex.EncodedLen(len(val))
+			if len(val) > 0 {
+				sz += len(val) - 1
+			}
+			di.w.Grow(sz)
+
+			dst := di.w.Bytes()[di.w.Len():]
+			for i := range val {
 				if i > 0 {
-					di.w.WriteByte(' ')
+					dst = append(dst, ' ')
 				}
-				if _, err := encoder.Write([]byte{b}); err != nil {
-					return err
-				}
+				hex.Encode(dst[len(dst):len(dst)+2], val[i:i+1])
+				dst = dst[:len(dst)+2]
 			}
+			di.w.Write(dst)
 		} else {
-			if _, err := encoder.Write(val); err != nil {
-				return err
-			}
+			sz := hex.EncodedLen(len(val))
+			di.w.Grow(sz)
+			dst := di.w.Bytes()[di.w.Len() : di.w.Len()+sz]
+			hex.Encode(dst, val)
+			di.w.Write(dst)
 		}
 		di.w.WriteByte('\'')
 		return nil
 
 	case ByteStringBase32Encoding:
 		di.w.WriteString("b32'")
-		encoder := base32.NewEncoder(rawBase32Encoding, di.w)
-		if _, err := encoder.Write(val); err != nil {
-			return err
-		}
-		encoder.Close()
+		sz := rawBase32Encoding.EncodedLen(len(val))
+		di.w.Grow(sz)
+		dst := di.w.Bytes()[di.w.Len() : di.w.Len()+sz]
+		rawBase32Encoding.Encode(dst, val)
+		di.w.Write(dst)
 		di.w.WriteByte('\'')
 		return nil
 
 	case ByteStringBase32HexEncoding:
 		di.w.WriteString("h32'")
-		encoder := base32.NewEncoder(rawBase32HexEncoding, di.w)
-		if _, err := encoder.Write(val); err != nil {
-			return err
-		}
-		encoder.Close()
+		sz := rawBase32HexEncoding.EncodedLen(len(val))
+		di.w.Grow(sz)
+		dst := di.w.Bytes()[di.w.Len() : di.w.Len()+sz]
+		rawBase32HexEncoding.Encode(dst, val)
+		di.w.Write(dst)
 		di.w.WriteByte('\'')
 		return nil
 
 	case ByteStringBase64Encoding:
 		di.w.WriteString("b64'")
-		encoder := base64.NewEncoder(base64.RawURLEncoding, di.w)
-		if _, err := encoder.Write(val); err != nil {
-			return err
-		}
-		encoder.Close()
+		sz := base64.RawURLEncoding.EncodedLen(len(val))
+		di.w.Grow(sz)
+		dst := di.w.Bytes()[di.w.Len() : di.w.Len()+sz]
+		base64.RawURLEncoding.Encode(dst, val)
+		di.w.Write(dst)
 		di.w.WriteByte('\'')
 		return nil
 
