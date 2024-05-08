@@ -466,10 +466,14 @@ func (di *diagnose) item() error { //nolint:gocyclo
 // writeU16 format a rune as "\uxxxx"
 func (di *diagnose) writeU16(val rune) {
 	di.w.WriteString("\\u")
-	b := make([]byte, 2)
-	b[0] = byte(val >> 8)
-	b[1] = byte(val)
-	di.w.WriteString(hex.EncodeToString(b))
+	var in [2]byte
+	in[0] = byte(val >> 8)
+	in[1] = byte(val)
+	sz := hex.EncodedLen(len(in))
+	di.w.Grow(sz)
+	dst := di.w.Bytes()[di.w.Len() : di.w.Len()+sz]
+	hex.Encode(dst, in[:])
+	di.w.Write(dst)
 }
 
 var rawBase32Encoding = base32.StdEncoding.WithPadding(base32.NoPadding)
