@@ -3722,21 +3722,22 @@ func TestEncOptionsTagsForbidden(t *testing.T) {
 
 func TestEncOptions(t *testing.T) {
 	opts1 := EncOptions{
-		Sort:          SortBytewiseLexical,
-		ShortestFloat: ShortestFloat16,
-		NaNConvert:    NaNConvertPreserveSignal,
-		InfConvert:    InfConvertNone,
-		BigIntConvert: BigIntConvertNone,
-		Time:          TimeRFC3339Nano,
-		TimeTag:       EncTagRequired,
-		IndefLength:   IndefLengthForbidden,
-		NilContainers: NilContainerAsEmpty,
-		TagsMd:        TagsAllowed,
-		OmitEmpty:     OmitEmptyGoValue,
-		String:        StringToByteString,
-		FieldName:     FieldNameToByteString,
-		ByteSlice:     ByteSliceToByteStringWithExpectedConversionToBase16,
-		ByteArray:     ByteArrayToArray,
+		Sort:            SortBytewiseLexical,
+		ShortestFloat:   ShortestFloat16,
+		NaNConvert:      NaNConvertPreserveSignal,
+		InfConvert:      InfConvertNone,
+		BigIntConvert:   BigIntConvertNone,
+		Time:            TimeRFC3339Nano,
+		TimeTag:         EncTagRequired,
+		IndefLength:     IndefLengthForbidden,
+		NilContainers:   NilContainerAsEmpty,
+		TagsMd:          TagsAllowed,
+		OmitEmpty:       OmitEmptyGoValue,
+		String:          StringToByteString,
+		FieldName:       FieldNameToByteString,
+		ByteSlice:       ByteSliceToByteStringWithExpectedConversionToBase16,
+		ByteArray:       ByteArrayToArray,
+		BinaryMarshaler: BinaryMarshalerNone,
 	}
 	ov := reflect.ValueOf(opts1)
 	for i := 0; i < ov.NumField(); i++ {
@@ -4670,6 +4671,105 @@ func TestMarshalByteSliceMode(t *testing.T) {
 
 			if string(out) != string(tc.expected) {
 				t.Errorf("unexpected output, got 0x%x want 0x%x", out, tc.expected)
+			}
+		})
+	}
+}
+
+func TestEncModeInvalidBinaryMarshalerMode(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         EncOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "",
+			opts:         EncOptions{BinaryMarshaler: -1},
+			wantErrorMsg: "cbor: invalid BinaryMarshaler -1",
+		},
+		{
+			name:         "",
+			opts:         EncOptions{BinaryMarshaler: 101},
+			wantErrorMsg: "cbor: invalid BinaryMarshaler 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.EncMode()
+			if err == nil {
+				t.Errorf("EncMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+type testBinaryMarshaler struct {
+	StringField  string `cbor:"s"`
+	IntegerField int64  `cbor:"i"`
+}
+
+func (testBinaryMarshaler) MarshalBinary() ([]byte, error) {
+	return []byte("MarshalBinary"), nil
+}
+
+func TestBinaryMarshalerMode(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		opts EncOptions
+		in   interface{}
+		want []byte
+	}{
+		{
+			name: "struct implementing BinaryMarshaler is encoded as MarshalBinary's output in a byte string by default",
+			opts: EncOptions{},
+			in: testBinaryMarshaler{
+				StringField:  "z",
+				IntegerField: 3,
+			},
+			want: []byte("\x4dMarshalBinary"), // 'MarshalBinary'
+		},
+		{
+			name: "struct implementing BinaryMarshaler is encoded as MarshalBinary's output in a byte string with BinaryMarshalerByteString",
+			opts: EncOptions{BinaryMarshaler: BinaryMarshalerByteString},
+			in: testBinaryMarshaler{
+				StringField:  "z",
+				IntegerField: 3,
+			},
+			want: []byte("\x4dMarshalBinary"), // 'MarshalBinary'
+		},
+		{
+			name: "struct implementing BinaryMarshaler is encoded to map with BinaryMarshalerNone",
+			opts: EncOptions{BinaryMarshaler: BinaryMarshalerNone},
+			in: testBinaryMarshaler{
+				StringField:  "z",
+				IntegerField: 3,
+			},
+			want: hexDecode("a26173617a616903"), // {"s": "z", "i": 3}
+		},
+		{
+			name: "struct implementing BinaryMarshaler is encoded to map with BinaryMarshalerNone",
+			opts: EncOptions{BinaryMarshaler: BinaryMarshalerNone},
+			in: testBinaryMarshaler{
+				StringField:  "z",
+				IntegerField: 3,
+			},
+			want: hexDecode("a26173617a616903"), // {"s": "z", "i": 3}
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			em, err := tc.opts.EncMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			got, err := em.Marshal(tc.in)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !bytes.Equal(tc.want, got) {
+				t.Errorf("unexpected output, want: 0x%x, got 0x%x", tc.want, got)
 			}
 		})
 	}

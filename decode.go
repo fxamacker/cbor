@@ -630,6 +630,25 @@ func (bseem ByteSliceExpectedEncodingMode) valid() bool {
 	return bseem >= 0 && bseem < maxByteSliceExpectedEncodingMode
 }
 
+// BinaryUnmarshalerMode specifies how to decode into types that implement
+// encoding.BinaryUnmarshaler.
+type BinaryUnmarshalerMode int
+
+const (
+	// BinaryUnmarshalerByteString will invoke UnmarshalBinary on the contents of a CBOR byte
+	// string when decoding into a value that implements BinaryUnmarshaler.
+	BinaryUnmarshalerByteString BinaryUnmarshalerMode = iota
+
+	// BinaryUnmarshalerNone does not recognize BinaryUnmarshaler implementations during decode.
+	BinaryUnmarshalerNone
+
+	maxBinaryUnmarshalerMode
+)
+
+func (bum BinaryUnmarshalerMode) valid() bool {
+	return bum >= 0 && bum < maxBinaryUnmarshalerMode
+}
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -751,6 +770,10 @@ type DecOptions struct {
 	// ByteSliceExpectedEncodingMode specifies how to decode a byte string NOT enclosed in an
 	// "expected later encoding" tag (RFC 8949 Section 3.4.5.2) into a Go byte slice.
 	ByteSliceExpectedEncoding ByteSliceExpectedEncodingMode
+
+	// BinaryUnmarshaler specifies how to decode into types that implement
+	// encoding.BinaryUnmarshaler.
+	BinaryUnmarshaler BinaryUnmarshalerMode
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -954,6 +977,10 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		return nil, errors.New("cbor: invalid ByteSliceExpectedEncoding " + strconv.Itoa(int(opts.ByteSliceExpectedEncoding)))
 	}
 
+	if !opts.BinaryUnmarshaler.valid() {
+		return nil, errors.New("cbor: invalid BinaryUnmarshaler " + strconv.Itoa(int(opts.BinaryUnmarshaler)))
+	}
+
 	dm := decMode{
 		dupMapKey:                 opts.DupMapKey,
 		timeTag:                   opts.TimeTag,
@@ -979,6 +1006,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 		infDec:                    opts.Inf,
 		byteStringToTime:          opts.ByteStringToTime,
 		byteSliceExpectedEncoding: opts.ByteSliceExpectedEncoding,
+		binaryUnmarshaler:         opts.BinaryUnmarshaler,
 	}
 
 	return &dm, nil
@@ -1056,6 +1084,7 @@ type decMode struct {
 	infDec                    InfMode
 	byteStringToTime          ByteStringToTimeMode
 	byteSliceExpectedEncoding ByteSliceExpectedEncodingMode
+	binaryUnmarshaler         BinaryUnmarshalerMode
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -1094,6 +1123,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		Inf:                       dm.infDec,
 		ByteStringToTime:          dm.byteStringToTime,
 		ByteSliceExpectedEncoding: dm.byteSliceExpectedEncoding,
+		BinaryUnmarshaler:         dm.binaryUnmarshaler,
 	}
 }
 
@@ -1413,7 +1443,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 			return err
 		}
 		copied = copied || converted
-		return fillByteString(t, b, !copied, v, d.dm.byteStringToString)
+		return fillByteString(t, b, !copied, v, d.dm.byteStringToString, d.dm.binaryUnmarshaler)
 
 	case cborTypeTextString:
 		b, err := d.parseTextString()
@@ -1465,7 +1495,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				return nil
 			}
 			if tInfo.nonPtrKind == reflect.Slice || tInfo.nonPtrKind == reflect.Array {
-				return fillByteString(t, b, !copied, v, ByteStringToStringForbidden)
+				return fillByteString(t, b, !copied, v, ByteStringToStringForbidden, d.dm.binaryUnmarshaler)
 			}
 			if bi.IsUint64() {
 				return fillPositiveInt(t, bi.Uint64(), v)
@@ -1487,7 +1517,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				return nil
 			}
 			if tInfo.nonPtrKind == reflect.Slice || tInfo.nonPtrKind == reflect.Array {
-				return fillByteString(t, b, !copied, v, ByteStringToStringForbidden)
+				return fillByteString(t, b, !copied, v, ByteStringToStringForbidden, d.dm.binaryUnmarshaler)
 			}
 			if bi.IsInt64() {
 				return fillNegativeInt(t, bi.Int64(), v)
@@ -2885,8 +2915,8 @@ func fillFloat(t cborType, val float64, v reflect.Value) error {
 	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
 }
 
-func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, bsts ByteStringToStringMode) error {
-	if reflect.PtrTo(v.Type()).Implements(typeBinaryUnmarshaler) {
+func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, bsts ByteStringToStringMode, bum BinaryUnmarshalerMode) error {
+	if bum == BinaryUnmarshalerByteString && reflect.PtrTo(v.Type()).Implements(typeBinaryUnmarshaler) {
 		if v.CanAddr() {
 			v = v.Addr()
 			if u, ok := v.Interface().(encoding.BinaryUnmarshaler); ok {
