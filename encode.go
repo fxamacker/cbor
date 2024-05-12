@@ -318,6 +318,9 @@ const (
 	// converting it to another CBOR type.
 	BigIntConvertNone
 
+	// BigIntConvertReject returns an UnsupportedTypeError instead of marshaling a big.Int.
+	BigIntConvertReject
+
 	maxBigIntConvert
 )
 
@@ -1505,6 +1508,10 @@ func encodeTime(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 }
 
 func encodeBigInt(e *bytes.Buffer, em *encMode, v reflect.Value) error {
+	if em.bigIntConvert == BigIntConvertReject {
+		return &UnsupportedTypeError{Type: typeBigInt}
+	}
+
 	vbi := v.Interface().(big.Int)
 	sign := vbi.Sign()
 	bi := new(big.Int).SetBytes(vbi.Bytes()) // bi is absolute value of v

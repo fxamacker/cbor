@@ -4923,6 +4923,7 @@ func TestDecOptions(t *testing.T) {
 		Inf:                       InfDecodeForbidden,
 		ByteStringToTime:          ByteStringToTimeAllowed,
 		ByteSliceExpectedEncoding: ByteSliceToByteStringWithExpectedConversionToBase64,
+		BignumTag:                 BignumTagForbidden,
 		BinaryUnmarshaler:         BinaryUnmarshalerNone,
 	}
 	ov := reflect.ValueOf(opts1)
@@ -10003,6 +10004,98 @@ func TestBinaryUnmarshalerMode(t *testing.T) {
 			got := gotrv.Elem().Interface()
 			if !reflect.DeepEqual(tc.want, got) {
 				t.Errorf("want: %v, got: %v", tc.want, got)
+			}
+		})
+	}
+}
+
+func TestDecModeInvalidBignumTag(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{BignumTag: -1},
+			wantErrorMsg: "cbor: invalid BignumTag -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{BignumTag: 101},
+			wantErrorMsg: "cbor: invalid BignumTag 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("Expected non nil error from DecMode()")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("Expected error: %q, want: %q \n", tc.wantErrorMsg, err.Error())
+			}
+		})
+	}
+}
+
+func TestBignumTagMode(t *testing.T) {
+	for _, tc := range []struct {
+		name           string
+		opt            DecOptions
+		input          []byte
+		wantErrMessage string // if "" then expect nil error
+	}{
+		{
+			name:  "default options decode unsigned bignum without error",
+			opt:   DecOptions{},
+			input: hexDecode("c240"), // 2(0) i.e. unsigned bignum 0
+		},
+		{
+			name:  "default options decode negative bignum without error",
+			opt:   DecOptions{},
+			input: hexDecode("c340"), // 3(0) i.e. negative bignum -1
+		},
+		{
+			name:           "BignumTagForbidden returns UnacceptableDataItemError on unsigned bignum",
+			opt:            DecOptions{BignumTag: BignumTagForbidden},
+			input:          hexDecode("c240"), // 2(0) i.e. unsigned bignum 0
+			wantErrMessage: "cbor: data item of cbor type tag is not accepted by protocol: bignum",
+		},
+		{
+			name:           "BignumTagForbidden returns UnacceptableDataItemError on negative bignum",
+			opt:            DecOptions{BignumTag: BignumTagForbidden},
+			input:          hexDecode("c340"), // 3(0) i.e. negative bignum -1
+			wantErrMessage: "cbor: data item of cbor type tag is not accepted by protocol: bignum",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, err := tc.opt.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			for _, dstType := range []reflect.Type{
+				typeInt64,
+				typeFloat64,
+				typeByteArray,
+				typeByteSlice,
+				typeBigInt,
+				typeIntf,
+			} {
+				t.Run(dstType.String(), func(t *testing.T) {
+					dstv := reflect.New(dstType)
+					err = dm.Unmarshal(tc.input, dstv.Interface())
+					if err != nil {
+						if tc.wantErrMessage == "" {
+							t.Errorf("want nil error, got: %v", err)
+						} else if gotErrMessage := err.Error(); gotErrMessage != tc.wantErrMessage {
+							t.Errorf("want error: %q, got error: %q", tc.wantErrMessage, gotErrMessage)
+						}
+					} else {
+						if tc.wantErrMessage != "" {
+							t.Errorf("got nil error, want: %s", tc.wantErrMessage)
+						}
+					}
+				})
 			}
 		})
 	}

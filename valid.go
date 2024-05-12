@@ -99,7 +99,7 @@ func (d *decoder) wellformed(allowExtraData bool, checkBuiltinTags bool) error {
 }
 
 // wellformedInternal checks data's well-formedness and returns max depth and error.
-func (d *decoder) wellformedInternal(depth int, checkBuiltinTags bool) (int, error) {
+func (d *decoder) wellformedInternal(depth int, checkBuiltinTags bool) (int, error) { // nolint:gocyclo
 	t, ai, val, err := d.wellformedHead()
 	if err != nil {
 		return 0, err
@@ -186,6 +186,12 @@ func (d *decoder) wellformedInternal(depth int, checkBuiltinTags bool) (int, err
 				err = validBuiltinTag(tagNum, d.data[d.off])
 				if err != nil {
 					return 0, err
+				}
+			}
+			if d.dm.bignumTag == BignumTagForbidden && (tagNum == 2 || tagNum == 3) {
+				return 0, &UnacceptableDataItemError{
+					CBORType: cborTypeTag.String(),
+					Message:  "bignum",
 				}
 			}
 			if cborType(d.data[d.off]&0xe0) != cborTypeTag {
