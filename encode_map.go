@@ -6,6 +6,7 @@
 package cbor
 
 import (
+	"bytes"
 	"reflect"
 	"sync"
 )
@@ -15,7 +16,7 @@ type mapKeyValueEncodeFunc struct {
 	kpool, vpool sync.Pool
 }
 
-func (me *mapKeyValueEncodeFunc) encodeKeyValues(e *encoderBuffer, em *encMode, v reflect.Value, kvs []keyValue) error {
+func (me *mapKeyValueEncodeFunc) encodeKeyValues(e *bytes.Buffer, em *encMode, v reflect.Value, kvs []keyValue) error {
 	trackKeyValueLength := len(kvs) == v.Len()
 	iterk := me.kpool.Get().(*reflect.Value)
 	defer func() {

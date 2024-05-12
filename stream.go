@@ -187,14 +187,14 @@ func (enc *Encoder) Encode(v interface{}) error {
 		}
 	}
 
-	buf := getEncoderBuffer()
+	buf := getEncodeBuffer()
 
 	err := encode(buf, enc.em, reflect.ValueOf(v))
 	if err == nil {
 		_, err = enc.w.Write(buf.Bytes())
 	}
 
-	putEncoderBuffer(buf)
+	putEncodeBuffer(buf)
 	return err
 }
 
