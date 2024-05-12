@@ -4690,7 +4690,7 @@ func TestBigIntConvertReject(t *testing.T) {
 
 	if _, err := em.Marshal(&big.Int{}); !reflect.DeepEqual(want, err) {
 		t.Errorf("want: %v, got: %v", want, err)
-  }
+	}
 }
 
 func TestEncModeInvalidBinaryMarshalerMode(t *testing.T) {

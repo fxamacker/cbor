@@ -1005,7 +1005,7 @@ func (opts DecOptions) decMode() (*decMode, error) {
 	if !opts.BignumTag.valid() {
 		return nil, errors.New("cbor: invalid BignumTag " + strconv.Itoa(int(opts.BignumTag)))
 	}
-  
+
 	if !opts.BinaryUnmarshaler.valid() {
 		return nil, errors.New("cbor: invalid BinaryUnmarshaler " + strconv.Itoa(int(opts.BinaryUnmarshaler)))
 	}
