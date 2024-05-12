@@ -6,6 +6,7 @@
 package cbor
 
 import (
+	"bytes"
 	"reflect"
 )
 
@@ -13,7 +14,7 @@ type mapKeyValueEncodeFunc struct {
 	kf, ef encodeFunc
 }
 
-func (me *mapKeyValueEncodeFunc) encodeKeyValues(e *encoderBuffer, em *encMode, v reflect.Value, kvs []keyValue) error {
+func (me *mapKeyValueEncodeFunc) encodeKeyValues(e *bytes.Buffer, em *encMode, v reflect.Value, kvs []keyValue) error {
 	trackKeyValueLength := len(kvs) == v.Len()
 
 	iter := v.MapRange()

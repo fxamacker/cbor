@@ -56,7 +56,7 @@ func (t RawTag) MarshalCBOR() ([]byte, error) {
 		return b, nil
 	}
 
-	e := getEncoderBuffer()
+	e := getEncodeBuffer()
 
 	encodeHead(e, byte(cborTypeTag), t.Number)
 
@@ -69,7 +69,7 @@ func (t RawTag) MarshalCBOR() ([]byte, error) {
 	n := copy(buf, e.Bytes())
 	copy(buf[n:], content)
 
-	putEncoderBuffer(e)
+	putEncodeBuffer(e)
 	return buf, nil
 }
 
@@ -269,13 +269,13 @@ func newTagItem(opts TagOptions, contentType reflect.Type, num uint64, nestedNum
 	te.num = append(te.num, nestedNum...)
 
 	// Cache encoded tag numbers
-	e := getEncoderBuffer()
+	e := getEncodeBuffer()
 	for _, n := range te.num {
 		encodeHead(e, byte(cborTypeTag), n)
 	}
 	te.cborTagNum = make([]byte, e.Len())
 	copy(te.cborTagNum, e.Bytes())
-	putEncoderBuffer(e)
+	putEncodeBuffer(e)
 
 	return &te, nil
 }
