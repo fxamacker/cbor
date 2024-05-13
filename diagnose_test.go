@@ -1102,3 +1102,49 @@ func TestDiagnoseEmptyData(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkDiagnose(b *testing.B) {
+	for _, tc := range []struct {
+		name  string
+		opts  DiagOptions
+		input []byte
+	}{
+		{
+			name:  "escaped character in text string",
+			opts:  DiagOptions{},
+			input: hexDecode("62c3bc"), // "\u00fc"
+		},
+		{
+			name:  "byte string base16 encoding",
+			opts:  DiagOptions{ByteStringEncoding: ByteStringBase16Encoding},
+			input: []byte("\x45hello"),
+		},
+		{
+			name:  "byte string base32 encoding",
+			opts:  DiagOptions{ByteStringEncoding: ByteStringBase32Encoding},
+			input: []byte("\x45hello"),
+		},
+		{
+			name:  "byte string base32hex encoding",
+			opts:  DiagOptions{ByteStringEncoding: ByteStringBase32HexEncoding},
+			input: []byte("\x45hello"),
+		},
+		{
+			name:  "byte string base64url encoding",
+			opts:  DiagOptions{ByteStringEncoding: ByteStringBase64Encoding},
+			input: []byte("\x45hello"),
+		},
+	} {
+		b.Run(tc.name, func(b *testing.B) {
+			dm, err := tc.opts.DiagMode()
+			if err != nil {
+				b.Fatal(err)
+			}
+
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				_, _ = dm.Diagnose(tc.input)
+			}
+		})
+	}
+}
