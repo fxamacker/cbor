@@ -2429,18 +2429,18 @@ func TestMarshalUnmarshalStructToArray(t *testing.T) {
 }
 
 func TestMapSort(t *testing.T) {
-	m := make(map[interface{}]bool)
+	m := make(map[interface{}]interface{})
 	m[10] = true
 	m[100] = true
 	m[-1] = true
-	m["z"] = true
+	m["z"] = "zzz"
 	m["aa"] = true
 	m[[1]int{100}] = true
 	m[[1]int{-1}] = true
 	m[false] = true
 
-	lenFirstSortedCborData := hexDecode("a80af520f5f4f51864f5617af58120f5626161f5811864f5") // sorted keys: 10, -1, false, 100, "z", [-1], "aa", [100]
-	bytewiseSortedCborData := hexDecode("a80af51864f520f5617af5626161f5811864f58120f5f4f5") // sorted keys: 10, 100, -1, "z", "aa", [100], [-1], false
+	lenFirstSortedCborData := hexDecode("a80af520f5f4f51864f5617a637a7a7a8120f5626161f5811864f5") // sorted keys: 10, -1, false, 100, "z", [-1], "aa", [100]
+	bytewiseSortedCborData := hexDecode("a80af51864f520f5617a637a7a7a626161f5811864f58120f5f4f5") // sorted keys: 10, 100, -1, "z", "aa", [100], [-1], false
 
 	testCases := []struct {
 		name         string
