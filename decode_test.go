@@ -8856,10 +8856,11 @@ func TestDecModeInvalidTimeTagToAnyMode(t *testing.T) {
 
 func TestDecModeTimeTagToAny(t *testing.T) {
 	for _, tc := range []struct {
-		name string
-		opts DecOptions
-		in   []byte
-		want interface{}
+		name           string
+		opts           DecOptions
+		in             []byte
+		want           interface{}
+		wantErrMessage string
 	}{
 		{
 			name: "Unmarshal tag 0 data to time.Time when TimeTagToAny is not set",
@@ -8897,6 +8898,30 @@ func TestDecModeTimeTagToAny(t *testing.T) {
 			in:   hexDecode("c1fb41d452d9ec200000"),
 			want: "2013-03-21T20:04:00.5Z",
 		},
+		{
+			name:           "error under TimeTagToRFC3339 when tag 0 contains an invalid RFC3339 timestamp",
+			opts:           DecOptions{TimeTagToAny: TimeTagToRFC3339},
+			in:             hexDecode("c07731303030302D30332D32315432303A30343A30302E355A"), // 0("10000-03-21T20:04:00.5Z")
+			wantErrMessage: `cbor: cannot set 10000-03-21T20:04:00.5Z for time.Time: parsing time "10000-03-21T20:04:00.5Z" as "2006-01-02T15:04:05Z07:00": cannot parse "0-03-21T20:04:00.5Z" as "-"`,
+		},
+		{
+			name:           "error under TimeTagToRFC3339Nano when tag 0 contains an invalid RFC3339 timestamp",
+			opts:           DecOptions{TimeTagToAny: TimeTagToRFC3339Nano},
+			in:             hexDecode("c07731303030302D30332D32315432303A30343A30302E355A"), // 0("10000-03-21T20:04:00.5Z")
+			wantErrMessage: `cbor: cannot set 10000-03-21T20:04:00.5Z for time.Time: parsing time "10000-03-21T20:04:00.5Z" as "2006-01-02T15:04:05Z07:00": cannot parse "0-03-21T20:04:00.5Z" as "-"`,
+		},
+		{
+			name:           "error under TimeTagToRFC3339 when tag 1 represents a time that can't be represented by valid RFC3339",
+			opts:           DecOptions{TimeTagToAny: TimeTagToRFC3339},
+			in:             hexDecode("c11b0000003afff44181"), // 1(253402300801)
+			wantErrMessage: "Time.MarshalText: year outside of range [0,9999]",
+		},
+		{
+			name:           "error under TimeTagToRFC3339Nano when tag 1 represents a time that can't be represented by valid RFC3339",
+			opts:           DecOptions{TimeTagToAny: TimeTagToRFC3339Nano},
+			in:             hexDecode("c11b0000003afff44181"), // 1(253402300801)
+			wantErrMessage: "Time.MarshalText: year outside of range [0,9999]",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, err := tc.opts.DecMode()
@@ -8906,7 +8931,13 @@ func TestDecModeTimeTagToAny(t *testing.T) {
 
 			var got interface{}
 			if err := dm.Unmarshal(tc.in, &got); err != nil {
-				t.Errorf("unexpected error: %v", err)
+				if tc.wantErrMessage == "" {
+					t.Fatalf("unexpected error: %v", err)
+				} else if gotErrMessage := err.Error(); tc.wantErrMessage != gotErrMessage {
+					t.Fatalf("want error %q, got %q", tc.wantErrMessage, gotErrMessage)
+				}
+			} else if tc.wantErrMessage != "" {
+				t.Fatalf("got nil error, want %q", tc.wantErrMessage)
 			}
 
 			compareNonFloats(t, tc.in, got, tc.want)

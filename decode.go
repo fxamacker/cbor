@@ -1890,12 +1890,24 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 				if tagNum == 1 {
 					tm = tm.UTC()
 				}
-				return tm.Format(time.RFC3339), nil
+				// Formats to RFC3339 and errors on time.Time values that cannot be
+				// represented by RFC3339.
+				text, err := tm.Truncate(time.Second).MarshalText()
+				if err != nil {
+					return nil, err
+				}
+				return string(text), nil
 			case TimeTagToRFC3339Nano:
 				if tagNum == 1 {
 					tm = tm.UTC()
 				}
-				return tm.Format(time.RFC3339Nano), nil
+				// Formats to RFC3339 with subsecond precision and errors on
+				// time.Time values that cannot be represented by RFC3339.
+				text, err := tm.MarshalText()
+				if err != nil {
+					return nil, err
+				}
+				return string(text), nil
 			default:
 				// not reachable
 			}
