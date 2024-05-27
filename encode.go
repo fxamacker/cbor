@@ -1642,34 +1642,46 @@ func encodeTag(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 
 // encodeHead writes CBOR head of specified type t and returns number of bytes written.
 func encodeHead(e *bytes.Buffer, t byte, n uint64) int {
-	if n <= 23 {
+	if n <= maxAdditionalInformationWithoutArgument {
+		const headSize = 1
 		e.WriteByte(t | byte(n))
-		return 1
+		return headSize
 	}
+
 	if n <= math.MaxUint8 {
-		scratch := [2]byte{t | byte(24), byte(n)}
-		e.Write(scratch[:2])
-		return 2
+		const headSize = 2
+		scratch := [headSize]byte{
+			t | byte(additionalInformationWith1ByteArgument),
+			byte(n),
+		}
+		e.Write(scratch[:])
+		return headSize
 	}
+
 	if n <= math.MaxUint16 {
-		var scratch [3]byte
-		scratch[0] = t | byte(25)
+		const headSize = 3
+		var scratch [headSize]byte
+		scratch[0] = t | byte(additionalInformationWith2ByteArgument)
 		binary.BigEndian.PutUint16(scratch[1:], uint16(n))
-		e.Write(scratch[:3])
-		return 3
+		e.Write(scratch[:])
+		return headSize
 	}
+
 	if n <= math.MaxUint32 {
-		var scratch [5]byte
-		scratch[0] = t | byte(26)
+		const headSize = 5
+		var scratch [headSize]byte
+		scratch[0] = t | byte(additionalInformationWith4ByteArgument)
 		binary.BigEndian.PutUint32(scratch[1:], uint32(n))
-		e.Write(scratch[:5])
-		return 5
+		e.Write(scratch[:])
+		return headSize
 	}
-	var scratch [9]byte
-	scratch[0] = t | byte(27)
+
+	const headSize = 9
+	var scratch [headSize]byte
+	scratch[0] = t | byte(additionalInformationWith8ByteArgument)
 	binary.BigEndian.PutUint64(scratch[1:], n)
-	e.Write(scratch[:9])
-	return 9
+	e.Write(scratch[:])
+	return headSize
 }
 
 var (

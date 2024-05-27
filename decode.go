@@ -1312,6 +1312,39 @@ func (t cborType) String() string {
 }
 
 const (
+	// From RFC 8949.3:
+	//   The initial byte of each encoded data item contains both information about the major type
+	//   (the high-order 3 bits, described in Section 3.1) and additional information
+	//   (the low-order 5 bits).
+
+	// typeMask is used to extract major type in initial byte of encoded data item.
+	typeMask = 0xe0
+
+	// additionalInformationMask is used to extract additional information in initial byte of encoded data item.
+	additionalInformationMask = 0x1f
+)
+
+func getType(b byte) cborType {
+	return cborType(b & typeMask)
+}
+
+func getAdditionalInformation(b byte) byte {
+	return b & additionalInformationMask
+}
+
+func parseInitialByte(b byte) (t cborType, ai byte) {
+	return getType(b), getAdditionalInformation(b)
+}
+
+const (
+	maxAdditionalInformationWithoutArgument = 23
+	additionalInformationWith1ByteArgument  = 24
+	additionalInformationWith2ByteArgument  = 25
+	additionalInformationWith4ByteArgument  = 26
+	additionalInformationWith8ByteArgument  = 27
+)
+
+const (
 	selfDescribedCBORTagNum              = 55799
 	expectedLaterEncodingBase64URLTagNum = 21
 	expectedLaterEncodingBase64TagNum    = 22
@@ -2791,32 +2824,38 @@ func (d *decoder) skip() {
 
 // getHead assumes data is well-formed, and does not perform bounds checking.
 func (d *decoder) getHead() (t cborType, ai byte, val uint64) {
-	t = cborType(d.data[d.off] & 0xe0)
-	ai = d.data[d.off] & 0x1f
+	t, ai = parseInitialByte(d.data[d.off])
 	val = uint64(ai)
 	d.off++
 
-	if ai < 24 {
+	if ai <= maxAdditionalInformationWithoutArgument {
 		return
 	}
-	if ai == 24 {
+
+	if ai == additionalInformationWith1ByteArgument {
 		val = uint64(d.data[d.off])
 		d.off++
 		return
 	}
-	if ai == 25 {
-		val = uint64(binary.BigEndian.Uint16(d.data[d.off : d.off+2]))
-		d.off += 2
+
+	if ai == additionalInformationWith2ByteArgument {
+		const argumentSize = 2
+		val = uint64(binary.BigEndian.Uint16(d.data[d.off : d.off+argumentSize]))
+		d.off += argumentSize
 		return
 	}
-	if ai == 26 {
-		val = uint64(binary.BigEndian.Uint32(d.data[d.off : d.off+4]))
-		d.off += 4
+
+	if ai == additionalInformationWith4ByteArgument {
+		const argumentSize = 4
+		val = uint64(binary.BigEndian.Uint32(d.data[d.off : d.off+argumentSize]))
+		d.off += argumentSize
 		return
 	}
-	if ai == 27 {
-		val = binary.BigEndian.Uint64(d.data[d.off : d.off+8])
-		d.off += 8
+
+	if ai == additionalInformationWith8ByteArgument {
+		const argumentSize = 8
+		val = binary.BigEndian.Uint64(d.data[d.off : d.off+argumentSize])
+		d.off += argumentSize
 		return
 	}
 	return
@@ -2849,7 +2888,7 @@ func (d *decoder) reset(data []byte) {
 }
 
 func (d *decoder) nextCBORType() cborType {
-	return cborType(d.data[d.off] & 0xe0)
+	return getType(d.data[d.off])
 }
 
 func (d *decoder) nextCBORNil() bool {
@@ -3069,7 +3108,7 @@ func convertByteSliceToByteString(v interface{}) (interface{}, bool) {
 
 // validBuiltinTag checks that supported built-in tag numbers are followed by expected content types.
 func validBuiltinTag(tagNum uint64, contentHead byte) error {
-	t := cborType(contentHead & 0xe0)
+	t := getType(contentHead)
 	switch tagNum {
 	case 0:
 		// Tag content (date/time text string in RFC 3339 format) must be string type.

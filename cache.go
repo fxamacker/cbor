@@ -276,7 +276,8 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 			copy(flds[i].cborNameByteString, flds[i].cborName)
 			// Reset encoded CBOR type to byte string, preserving the "additional
 			// information" bits:
-			flds[i].cborNameByteString[0] = byte(cborTypeByteString) | (flds[i].cborNameByteString[0] & 0x1f)
+			flds[i].cborNameByteString[0] = byte(cborTypeByteString) |
+				getAdditionalInformation(flds[i].cborNameByteString[0])
 
 			hasKeyAsStr = true
 		}
