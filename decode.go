@@ -1324,12 +1324,16 @@ const (
 	additionalInformationMask = 0x1f
 )
 
-func getType(b byte) cborType {
-	return cborType(b & typeMask)
+func getType(raw byte) cborType {
+	return cborType(raw & typeMask)
 }
 
-func getAdditionalInformation(b byte) byte {
-	return b & additionalInformationMask
+func getAdditionalInformation(raw byte) byte {
+	return raw & additionalInformationMask
+}
+
+func isIndefiniteLength(ai byte) bool {
+	return ai == additionalInformationAsIndefiniteLengthFlag
 }
 
 func parseInitialByte(b byte) (t cborType, ai byte) {
@@ -1337,11 +1341,12 @@ func parseInitialByte(b byte) (t cborType, ai byte) {
 }
 
 const (
-	maxAdditionalInformationWithoutArgument = 23
-	additionalInformationWith1ByteArgument  = 24
-	additionalInformationWith2ByteArgument  = 25
-	additionalInformationWith4ByteArgument  = 26
-	additionalInformationWith8ByteArgument  = 27
+	maxAdditionalInformationWithoutArgument     = 23
+	additionalInformationWith1ByteArgument      = 24
+	additionalInformationWith2ByteArgument      = 25
+	additionalInformationWith4ByteArgument      = 26
+	additionalInformationWith8ByteArgument      = 27
+	additionalInformationAsIndefiniteLengthFlag = 31
 )
 
 const (
@@ -2049,8 +2054,8 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 // and only if the slice is backed by a copy of the input. Callers are
 // responsible for making a copy if necessary.
 func (d *decoder) parseByteString() ([]byte, bool) {
-	_, ai, val := d.getHead()
-	if ai != 31 {
+	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	if !indefiniteLength {
 		b := d.data[d.off : d.off+int(val)]
 		d.off += int(val)
 		return b, false
@@ -2141,8 +2146,8 @@ func (d *decoder) applyByteStringTextConversion(
 // to prevent creating an extra copy of string.  Caller should wrap returned
 // byte slice as string when needed.
 func (d *decoder) parseTextString() ([]byte, error) {
-	_, ai, val := d.getHead()
-	if ai != 31 {
+	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	if !indefiniteLength {
 		b := d.data[d.off : d.off+int(val)]
 		d.off += int(val)
 		if d.dm.utf8 == UTF8RejectInvalid && !utf8.Valid(b) {
@@ -2168,8 +2173,8 @@ func (d *decoder) parseTextString() ([]byte, error) {
 }
 
 func (d *decoder) parseArray() ([]interface{}, error) {
-	_, ai, val := d.getHead()
-	hasSize := (ai != 31)
+	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	hasSize := !indefiniteLength
 	count := int(val)
 	if !hasSize {
 		count = d.numOfItemsUntilBreak() // peek ahead to get array size to preallocate slice for better performance
@@ -2190,8 +2195,8 @@ func (d *decoder) parseArray() ([]interface{}, error) {
 }
 
 func (d *decoder) parseArrayToSlice(v reflect.Value, tInfo *typeInfo) error {
-	_, ai, val := d.getHead()
-	hasSize := (ai != 31)
+	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	hasSize := !indefiniteLength
 	count := int(val)
 	if !hasSize {
 		count = d.numOfItemsUntilBreak() // peek ahead to get array size to preallocate slice for better performance
@@ -2212,8 +2217,8 @@ func (d *decoder) parseArrayToSlice(v reflect.Value, tInfo *typeInfo) error {
 }
 
 func (d *decoder) parseArrayToArray(v reflect.Value, tInfo *typeInfo) error {
-	_, ai, val := d.getHead()
-	hasSize := (ai != 31)
+	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	hasSize := !indefiniteLength
 	count := int(val)
 	gi := 0
 	vLen := v.Len()
@@ -2242,8 +2247,8 @@ func (d *decoder) parseArrayToArray(v reflect.Value, tInfo *typeInfo) error {
 }
 
 func (d *decoder) parseMap() (interface{}, error) {
-	_, ai, val := d.getHead()
-	hasSize := (ai != 31)
+	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	hasSize := !indefiniteLength
 	count := int(val)
 	m := make(map[interface{}]interface{})
 	var k, e interface{}
@@ -2307,8 +2312,8 @@ func (d *decoder) parseMap() (interface{}, error) {
 }
 
 func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
-	_, ai, val := d.getHead()
-	hasSize := (ai != 31)
+	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	hasSize := !indefiniteLength
 	count := int(val)
 	if v.IsNil() {
 		mapsize := count
@@ -2432,8 +2437,8 @@ func (d *decoder) parseArrayToStruct(v reflect.Value, tInfo *typeInfo) error {
 	}
 
 	start := d.off
-	t, ai, val := d.getHead()
-	hasSize := (ai != 31)
+	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	hasSize := !indefiniteLength
 	count := int(val)
 	if !hasSize {
 		count = d.numOfItemsUntilBreak() // peek ahead to get array size
@@ -2442,7 +2447,7 @@ func (d *decoder) parseArrayToStruct(v reflect.Value, tInfo *typeInfo) error {
 		d.off = start
 		d.skip()
 		return &UnmarshalTypeError{
-			CBORType: t.String(),
+			CBORType: cborTypeArray.String(),
 			GoType:   tInfo.typ.String(),
 			errorMsg: "cannot decode CBOR array to struct with different number of elements",
 		}
@@ -2507,8 +2512,8 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 	var err, lastErr error
 
 	// Get CBOR map size
-	_, ai, val := d.getHead()
-	hasSize := (ai != 31)
+	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	hasSize := !indefiniteLength
 	count := int(val)
 
 	// Keeps track of matched struct fields
@@ -2791,9 +2796,9 @@ func (d *decoder) getRegisteredTagItem(vt reflect.Type) *tagItem {
 // skip moves data offset to the next item.  skip assumes data is well-formed,
 // and does not perform bounds checking.
 func (d *decoder) skip() {
-	t, ai, val := d.getHead()
+	t, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
 
-	if ai == 31 {
+	if indefiniteLength {
 		switch t {
 		case cborTypeByteString, cborTypeTextString, cborTypeArray, cborTypeMap:
 			for {
@@ -2820,6 +2825,17 @@ func (d *decoder) skip() {
 	case cborTypeTag:
 		d.skip()
 	}
+}
+
+func (d *decoder) getHeadWithIndefiniteLengthFlag() (
+	t cborType,
+	ai byte,
+	val uint64,
+	indefiniteLength bool,
+) {
+	t, ai, val = d.getHead()
+	indefiniteLength = isIndefiniteLength(ai)
+	return
 }
 
 // getHead assumes data is well-formed, and does not perform bounds checking.

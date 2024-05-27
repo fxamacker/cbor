@@ -100,14 +100,14 @@ func (d *decoder) wellformed(allowExtraData bool, checkBuiltinTags bool) error {
 
 // wellformedInternal checks data's well-formedness and returns max depth and error.
 func (d *decoder) wellformedInternal(depth int, checkBuiltinTags bool) (int, error) { //nolint:gocyclo
-	t, ai, val, err := d.wellformedHead()
+	t, _, val, indefiniteLength, err := d.wellformedHeadWithIndefiniteLengthFlag()
 	if err != nil {
 		return 0, err
 	}
 
 	switch t {
 	case cborTypeByteString, cborTypeTextString:
-		if ai == 31 {
+		if indefiniteLength {
 			if d.dm.indefLength == IndefLengthForbidden {
 				return 0, &IndefiniteLengthError{t}
 			}
@@ -129,7 +129,7 @@ func (d *decoder) wellformedInternal(depth int, checkBuiltinTags bool) (int, err
 			return 0, &MaxNestedLevelError{d.dm.maxNestedLevels}
 		}
 
-		if ai == 31 {
+		if indefiniteLength {
 			if d.dm.indefLength == IndefLengthForbidden {
 				return 0, &IndefiniteLengthError{t}
 			}
@@ -228,7 +228,7 @@ func (d *decoder) wellformedIndefiniteString(t cborType, depth int, checkBuiltin
 		if t != nt {
 			return 0, &SyntaxError{"cbor: wrong element type " + nt.String() + " for indefinite-length " + t.String()}
 		}
-		if ai == 31 {
+		if isIndefiniteLength(ai) {
 			return 0, &SyntaxError{"cbor: indefinite-length " + t.String() + " chunk is not definite-length"}
 		}
 		if depth, err = d.wellformedInternal(depth, checkBuiltinTags); err != nil {
@@ -273,6 +273,21 @@ func (d *decoder) wellformedIndefiniteArrayOrMap(t cborType, depth int, checkBui
 		return 0, &SyntaxError{"cbor: unexpected \"break\" code"}
 	}
 	return maxDepth, nil
+}
+
+func (d *decoder) wellformedHeadWithIndefiniteLengthFlag() (
+	t cborType,
+	ai byte,
+	val uint64,
+	indefiniteLength bool,
+	err error,
+) {
+	t, ai, val, err = d.wellformedHead()
+	if err != nil {
+		return
+	}
+	indefiniteLength = isIndefiniteLength(ai)
+	return
 }
 
 func (d *decoder) wellformedHead() (t cborType, ai byte, val uint64, err error) {
@@ -348,7 +363,7 @@ func (d *decoder) wellformedHead() (t cborType, ai byte, val uint64, err error) 
 		return t, ai, val, nil
 	}
 
-	if ai == 31 {
+	if isIndefiniteLength(ai) {
 		switch t {
 		case cborTypePositiveInt, cborTypeNegativeInt, cborTypeTag:
 			return 0, 0, 0, &SyntaxError{"cbor: invalid additional information " + strconv.Itoa(int(ai)) + " for type " + t.String()}
