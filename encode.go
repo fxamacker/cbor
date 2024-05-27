@@ -609,12 +609,12 @@ func PreferredUnsortedEncOptions() EncOptions {
 }
 
 // EncMode returns EncMode with immutable options and no tags (safe for concurrency).
-func (opts EncOptions) EncMode() (EncMode, error) {
+func (opts EncOptions) EncMode() (EncMode, error) { //nolint:gocritic // ignore hugeParam
 	return opts.encMode()
 }
 
 // EncModeWithTags returns EncMode with options and tags that are both immutable (safe for concurrency).
-func (opts EncOptions) EncModeWithTags(tags TagSet) (EncMode, error) {
+func (opts EncOptions) EncModeWithTags(tags TagSet) (EncMode, error) { //nolint:gocritic // ignore hugeParam
 	if opts.TagsMd == TagsForbidden {
 		return nil, errors.New("cbor: cannot create EncMode with TagSet when TagsMd is TagsForbidden")
 	}
@@ -642,7 +642,7 @@ func (opts EncOptions) EncModeWithTags(tags TagSet) (EncMode, error) {
 }
 
 // EncModeWithSharedTags returns EncMode with immutable options and mutable shared tags (safe for concurrency).
-func (opts EncOptions) EncModeWithSharedTags(tags TagSet) (EncMode, error) {
+func (opts EncOptions) EncModeWithSharedTags(tags TagSet) (EncMode, error) { //nolint:gocritic // ignore hugeParam
 	if opts.TagsMd == TagsForbidden {
 		return nil, errors.New("cbor: cannot create EncMode with TagSet when TagsMd is TagsForbidden")
 	}
@@ -657,7 +657,7 @@ func (opts EncOptions) EncModeWithSharedTags(tags TagSet) (EncMode, error) {
 	return em, nil
 }
 
-func (opts EncOptions) encMode() (*encMode, error) {
+func (opts EncOptions) encMode() (*encMode, error) { //nolint:gocritic // ignore hugeParam
 	if !opts.Sort.valid() {
 		return nil, errors.New("cbor: invalid SortMode " + strconv.Itoa(int(opts.Sort)))
 	}

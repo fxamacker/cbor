@@ -144,7 +144,15 @@ func getFields(t reflect.Type) (flds fields, structOptions string) {
 }
 
 // appendFields appends type t's exportable fields to flds and anonymous struct fields to nTypes .
-func appendFields(t reflect.Type, idx []int, flds fields, nTypes map[reflect.Type][][]int) (fields, map[reflect.Type][][]int) {
+func appendFields(
+	t reflect.Type,
+	idx []int,
+	flds fields,
+	nTypes map[reflect.Type][][]int,
+) (
+	_flds fields,
+	_nTypes map[reflect.Type][][]int,
+) {
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 
@@ -221,7 +229,7 @@ func appendFields(t reflect.Type, idx []int, flds fields, nTypes map[reflect.Typ
 // isFieldExportable returns true if f is an exportable (regular or anonymous) field or
 // a nonexportable anonymous field of struct type.
 // Nonexportable anonymous field of struct type can contain exportable fields.
-func isFieldExportable(f reflect.StructField, fk reflect.Kind) bool {
+func isFieldExportable(f reflect.StructField, fk reflect.Kind) bool { //nolint:gocritic // ignore hugeParam
 	exportable := f.PkgPath == ""
 	return exportable || (f.Anonymous && fk == reflect.Struct)
 }

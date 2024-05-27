@@ -802,13 +802,13 @@ type DecOptions struct {
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
-func (opts DecOptions) DecMode() (DecMode, error) {
+func (opts DecOptions) DecMode() (DecMode, error) { //nolint:gocritic // ignore hugeParam
 	return opts.decMode()
 }
 
 // validForTags checks that the provided tag set is compatible with these options and returns a
 // non-nil error if and only if the provided tag set is incompatible.
-func (opts DecOptions) validForTags(tags TagSet) error {
+func (opts DecOptions) validForTags(tags TagSet) error { //nolint:gocritic // ignore hugeParam
 	if opts.TagsMd == TagsForbidden {
 		return errors.New("cbor: cannot create DecMode with TagSet when TagsMd is TagsForbidden")
 	}
@@ -831,7 +831,7 @@ func (opts DecOptions) validForTags(tags TagSet) error {
 }
 
 // DecModeWithTags returns DecMode with options and tags that are both immutable (safe for concurrency).
-func (opts DecOptions) DecModeWithTags(tags TagSet) (DecMode, error) {
+func (opts DecOptions) DecModeWithTags(tags TagSet) (DecMode, error) { //nolint:gocritic // ignore hugeParam
 	if err := opts.validForTags(tags); err != nil {
 		return nil, err
 	}
@@ -859,7 +859,7 @@ func (opts DecOptions) DecModeWithTags(tags TagSet) (DecMode, error) {
 }
 
 // DecModeWithSharedTags returns DecMode with immutable options and mutable shared tags (safe for concurrency).
-func (opts DecOptions) DecModeWithSharedTags(tags TagSet) (DecMode, error) {
+func (opts DecOptions) DecModeWithSharedTags(tags TagSet) (DecMode, error) { //nolint:gocritic // ignore hugeParam
 	if err := opts.validForTags(tags); err != nil {
 		return nil, err
 	}
@@ -894,7 +894,7 @@ var defaultSimpleValues = func() *SimpleValueRegistry {
 }()
 
 //nolint:gocyclo // Each option comes with some manageable boilerplate
-func (opts DecOptions) decMode() (*decMode, error) {
+func (opts DecOptions) decMode() (*decMode, error) { //nolint:gocritic // ignore hugeParam
 	if !opts.DupMapKey.valid() {
 		return nil, errors.New("cbor: invalid DupMapKey " + strconv.Itoa(int(opts.DupMapKey)))
 	}
@@ -1334,7 +1334,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 			// Use value type
 			v = v.Elem()
 			tInfo = getTypeInfo(v.Type())
-		} else {
+		} else { //nolint:gocritic
 			// Create and use registered type if CBOR data is registered tag
 			if d.dm.tags != nil && d.nextCBORType() == cborTypeTag {
 
@@ -2036,7 +2036,14 @@ func (d *decoder) parseByteString() ([]byte, bool) {
 // encoding. If no transformation was performed (because it was not required), the original byte
 // slice is returned and the bool return value is false. Otherwise, a new slice containing the
 // converted bytes is returned along with the bool value true.
-func (d *decoder) applyByteStringTextConversion(src []byte, dstType reflect.Type) ([]byte, bool, error) {
+func (d *decoder) applyByteStringTextConversion(
+	src []byte,
+	dstType reflect.Type,
+) (
+	dst []byte,
+	transformed bool,
+	err error,
+) {
 	switch dstType.Kind() {
 	case reflect.String:
 		if d.dm.byteStringToString != ByteStringToStringAllowedWithExpectedLaterEncoding || len(d.expectedLaterEncodingTags) == 0 {

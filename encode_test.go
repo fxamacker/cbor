@@ -4467,7 +4467,7 @@ func TestSortModeFastShuffle(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if string(first) != string(next) {
+				if !bytes.Equal(first, next) {
 					return
 				}
 			}
@@ -4570,7 +4570,7 @@ func TestMarshalByteArrayMode(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if string(out) != string(tc.expected) {
+			if !bytes.Equal(out, tc.expected) {
 				t.Errorf("unexpected output, got 0x%x want 0x%x", out, tc.expected)
 			}
 		})
@@ -4669,7 +4669,7 @@ func TestMarshalByteSliceMode(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if string(out) != string(tc.expected) {
+			if !bytes.Equal(out, tc.expected) {
 				t.Errorf("unexpected output, got 0x%x want 0x%x", out, tc.expected)
 			}
 		})

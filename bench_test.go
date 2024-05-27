@@ -864,7 +864,7 @@ func BenchmarkUnmarshalMapToStruct(b *testing.B) {
 		reject bool
 	}
 
-	for _, tc := range []struct {
+	for _, tc := range []*struct {
 		name   string
 		opts   DecOptions
 		inputs []input

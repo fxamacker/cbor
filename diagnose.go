@@ -159,7 +159,7 @@ func (dm *diagMode) Diagnose(data []byte) (string, error) {
 }
 
 // DiagnoseFirst returns extended diagnostic notation (EDN) of the first CBOR data item using the DiagMode. Any remaining bytes are returned in rest.
-func (dm *diagMode) DiagnoseFirst(data []byte) (string, []byte, error) {
+func (dm *diagMode) DiagnoseFirst(data []byte) (diagNotation string, rest []byte, err error) {
 	return newDiagnose(data, dm.decMode, dm).diagFirst()
 }
 
@@ -174,7 +174,7 @@ func Diagnose(data []byte) (string, error) {
 }
 
 // Diagnose returns extended diagnostic notation (EDN) of the first CBOR data item using the DiagMode. Any remaining bytes are returned in rest.
-func DiagnoseFirst(data []byte) (string, []byte, error) {
+func DiagnoseFirst(data []byte) (diagNotation string, rest []byte, err error) {
 	return defaultDiagMode.DiagnoseFirst(data)
 }
 
@@ -202,8 +202,8 @@ func (di *diagnose) diag(cborSequence bool) (string, error) {
 				di.w.WriteString(", ")
 			}
 			firstItem = false
-			if err = di.item(); err != nil {
-				return di.w.String(), err
+			if itemErr := di.item(); itemErr != nil {
+				return di.w.String(), itemErr
 			}
 
 		case io.EOF:
@@ -218,8 +218,8 @@ func (di *diagnose) diag(cborSequence bool) (string, error) {
 	}
 }
 
-func (di *diagnose) diagFirst() (string, []byte, error) {
-	err := di.wellformed(true)
+func (di *diagnose) diagFirst() (diagNotation string, rest []byte, err error) {
+	err = di.wellformed(true)
 	if err == nil {
 		err = di.item()
 	}

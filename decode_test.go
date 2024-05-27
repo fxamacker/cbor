@@ -8255,7 +8255,7 @@ func TestDecodeBignumToEmptyInterface(t *testing.T) {
 			err := decMode.Unmarshal(tc.data, &v)
 			if err != nil {
 				t.Errorf("Unmarshal(0x%x) to empty interface returned error %v", tc.data, err)
-			} else {
+			} else { //nolint:gocritic // ignore elseif
 				if !reflect.DeepEqual(v, tc.wantValue) {
 					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.wantValue, tc.wantValue)
 				}
@@ -8706,10 +8706,11 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 
 	assertExactError := func(want error) func(*testing.T, error) {
 		return func(t *testing.T, got error) {
-			if reflect.DeepEqual(want, got) {
-				return
+			targetErr := reflect.New(reflect.TypeOf(want)).Interface()
+			if !errors.As(got, &targetErr) ||
+				got.Error() != want.Error() {
+				t.Errorf("want %#v, got %#v", want, got)
 			}
-			t.Errorf("want %#v, got %#v", want, got)
 		}
 	}
 
