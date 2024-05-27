@@ -231,7 +231,7 @@ func (enc *Encoder) EndIndefinite() error {
 	if len(enc.indefTypes) == 0 {
 		return errors.New("cbor: cannot encode \"break\" code outside indefinite length values")
 	}
-	_, err := enc.w.Write([]byte{0xff})
+	_, err := enc.w.Write([]byte{cborBreakFlag})
 	if err == nil {
 		enc.indefTypes = enc.indefTypes[:len(enc.indefTypes)-1]
 	}

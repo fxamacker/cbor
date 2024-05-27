@@ -219,7 +219,7 @@ func (d *decoder) wellformedIndefiniteString(t cborType, depth int, checkBuiltin
 		if len(d.data) == d.off {
 			return 0, io.ErrUnexpectedEOF
 		}
-		if d.data[d.off] == 0xff {
+		if isBreakFlag(d.data[d.off]) {
 			d.off++
 			break
 		}
@@ -247,7 +247,7 @@ func (d *decoder) wellformedIndefiniteArrayOrMap(t cborType, depth int, checkBui
 		if len(d.data) == d.off {
 			return 0, io.ErrUnexpectedEOF
 		}
-		if d.data[d.off] == 0xff {
+		if isBreakFlag(d.data[d.off]) {
 			d.off++
 			break
 		}

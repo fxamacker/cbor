@@ -244,7 +244,7 @@ func (di *diagnose) item() error { //nolint:gocyclo
 	switch initialByte {
 	case 0x5f, 0x7f: // indefinite-length byte/text string
 		di.d.off++
-		if di.d.data[di.d.off] == 0xff {
+		if isBreakFlag(di.d.data[di.d.off]) {
 			di.d.off++
 			switch initialByte {
 			case 0x5f:

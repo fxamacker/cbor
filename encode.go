@@ -914,6 +914,7 @@ type encodeFunc func(e *bytes.Buffer, em *encMode, v reflect.Value) error
 type isEmptyFunc func(em *encMode, v reflect.Value) (empty bool, err error)
 
 var (
+	cborBreakFlag        = byte(0xff)
 	cborFalse            = []byte{0xf4}
 	cborTrue             = []byte{0xf5}
 	cborNil              = []byte{0xf6}

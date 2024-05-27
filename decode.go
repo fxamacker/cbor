@@ -1336,6 +1336,10 @@ func isIndefiniteLength(ai byte) bool {
 	return ai == additionalInformationAsIndefiniteLengthFlag
 }
 
+func isBreakFlag(raw byte) bool {
+	return raw == cborBreakFlag
+}
+
 func parseInitialByte(b byte) (t cborType, ai byte) {
 	return getType(b), getAdditionalInformation(b)
 }
@@ -2802,7 +2806,7 @@ func (d *decoder) skip() {
 		switch t {
 		case cborTypeByteString, cborTypeTextString, cborTypeArray, cborTypeMap:
 			for {
-				if d.data[d.off] == 0xff {
+				if isBreakFlag(d.data[d.off]) {
 					d.off++
 					return
 				}
@@ -2888,9 +2892,11 @@ func (d *decoder) numOfItemsUntilBreak() int {
 	return i
 }
 
+// foundBreak returns true if next byte is CBOR break code and moves cursor by 1,
+// otherwise it returns false.
 // foundBreak assumes data is well-formed, and does not perform bounds checking.
 func (d *decoder) foundBreak() bool {
-	if d.data[d.off] == 0xff {
+	if isBreakFlag(d.data[d.off]) {
 		d.off++
 		return true
 	}
