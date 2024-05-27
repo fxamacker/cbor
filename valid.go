@@ -228,7 +228,7 @@ func (d *decoder) wellformedIndefiniteString(t cborType, depth int, checkBuiltin
 		if t != nt {
 			return 0, &SyntaxError{"cbor: wrong element type " + nt.String() + " for indefinite-length " + t.String()}
 		}
-		if isIndefiniteLength(ai) {
+		if additionalInformation(ai).isIndefiniteLength() {
 			return 0, &SyntaxError{"cbor: indefinite-length " + t.String() + " chunk is not definite-length"}
 		}
 		if depth, err = d.wellformedInternal(depth, checkBuiltinTags); err != nil {
@@ -286,7 +286,7 @@ func (d *decoder) wellformedHeadWithIndefiniteLengthFlag() (
 	if err != nil {
 		return
 	}
-	indefiniteLength = isIndefiniteLength(ai)
+	indefiniteLength = additionalInformation(ai).isIndefiniteLength()
 	return
 }
 
@@ -363,7 +363,7 @@ func (d *decoder) wellformedHead() (t cborType, ai byte, val uint64, err error) 
 		return t, ai, val, nil
 	}
 
-	if isIndefiniteLength(ai) {
+	if additionalInformation(ai).isIndefiniteLength() {
 		switch t {
 		case cborTypePositiveInt, cborTypeNegativeInt, cborTypeTag:
 			return 0, 0, 0, &SyntaxError{"cbor: invalid additional information " + strconv.Itoa(int(ai)) + " for type " + t.String()}

@@ -418,11 +418,11 @@ func (bsm ByteSliceMode) encodingTag() (uint64, error) {
 	case ByteSliceToByteString:
 		return 0, nil
 	case ByteSliceToByteStringWithExpectedConversionToBase64URL:
-		return expectedLaterEncodingBase64URLTagNum, nil
+		return tagNumExpectedLaterEncodingBase64URL, nil
 	case ByteSliceToByteStringWithExpectedConversionToBase64:
-		return expectedLaterEncodingBase64TagNum, nil
+		return tagNumExpectedLaterEncodingBase64, nil
 	case ByteSliceToByteStringWithExpectedConversionToBase16:
-		return expectedLaterEncodingBase16TagNum, nil
+		return tagNumExpectedLaterEncodingBase16, nil
 	}
 	return 0, errors.New("cbor: invalid ByteSlice " + strconv.Itoa(int(bsm)))
 }
@@ -912,16 +912,6 @@ func putEncodeBuffer(e *bytes.Buffer) {
 
 type encodeFunc func(e *bytes.Buffer, em *encMode, v reflect.Value) error
 type isEmptyFunc func(em *encMode, v reflect.Value) (empty bool, err error)
-
-var (
-	cborBreakFlag        = byte(0xff)
-	cborFalse            = []byte{0xf4}
-	cborTrue             = []byte{0xf5}
-	cborNil              = []byte{0xf6}
-	cborNaN              = []byte{0xf9, 0x7e, 0x00}
-	cborPositiveInfinity = []byte{0xf9, 0x7c, 0x00}
-	cborNegativeInfinity = []byte{0xf9, 0xfc, 0x00}
-)
 
 func encode(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if !v.IsValid() {

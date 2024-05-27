@@ -817,9 +817,9 @@ func (opts DecOptions) validForTags(tags TagSet) error { //nolint:gocritic // ig
 	}
 	if opts.ByteStringToString == ByteStringToStringAllowedWithExpectedLaterEncoding || opts.ByteSliceExpectedEncoding != ByteSliceExpectedEncodingIgnored {
 		for _, tagNum := range []uint64{
-			expectedLaterEncodingBase64URLTagNum,
-			expectedLaterEncodingBase64TagNum,
-			expectedLaterEncodingBase16TagNum,
+			tagNumExpectedLaterEncodingBase64URL,
+			tagNumExpectedLaterEncodingBase64,
+			tagNumExpectedLaterEncodingBase16,
 		} {
 			if rt := tags.getTypeFromTagNum([]uint64{tagNum}); rt != nil {
 				return fmt.Errorf("cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag %d as built-in and conflicts with the provided TagSet's registration of %v", tagNum, rt)
@@ -1275,91 +1275,6 @@ func (d *decoder) value(v interface{}) error {
 	return d.parseToValue(rv, getTypeInfo(rv.Type()))
 }
 
-type cborType uint8
-
-const (
-	cborTypePositiveInt cborType = 0x00
-	cborTypeNegativeInt cborType = 0x20
-	cborTypeByteString  cborType = 0x40
-	cborTypeTextString  cborType = 0x60
-	cborTypeArray       cborType = 0x80
-	cborTypeMap         cborType = 0xa0
-	cborTypeTag         cborType = 0xc0
-	cborTypePrimitives  cborType = 0xe0
-)
-
-func (t cborType) String() string {
-	switch t {
-	case cborTypePositiveInt:
-		return "positive integer"
-	case cborTypeNegativeInt:
-		return "negative integer"
-	case cborTypeByteString:
-		return "byte string"
-	case cborTypeTextString:
-		return "UTF-8 text string"
-	case cborTypeArray:
-		return "array"
-	case cborTypeMap:
-		return "map"
-	case cborTypeTag:
-		return "tag"
-	case cborTypePrimitives:
-		return "primitives"
-	default:
-		return "Invalid type " + strconv.Itoa(int(t))
-	}
-}
-
-const (
-	// From RFC 8949.3:
-	//   The initial byte of each encoded data item contains both information about the major type
-	//   (the high-order 3 bits, described in Section 3.1) and additional information
-	//   (the low-order 5 bits).
-
-	// typeMask is used to extract major type in initial byte of encoded data item.
-	typeMask = 0xe0
-
-	// additionalInformationMask is used to extract additional information in initial byte of encoded data item.
-	additionalInformationMask = 0x1f
-)
-
-func getType(raw byte) cborType {
-	return cborType(raw & typeMask)
-}
-
-func getAdditionalInformation(raw byte) byte {
-	return raw & additionalInformationMask
-}
-
-func isIndefiniteLength(ai byte) bool {
-	return ai == additionalInformationAsIndefiniteLengthFlag
-}
-
-func isBreakFlag(raw byte) bool {
-	return raw == cborBreakFlag
-}
-
-func parseInitialByte(b byte) (t cborType, ai byte) {
-	return getType(b), getAdditionalInformation(b)
-}
-
-const (
-	maxAdditionalInformationWithoutArgument     = 23
-	additionalInformationWith1ByteArgument      = 24
-	additionalInformationWith2ByteArgument      = 25
-	additionalInformationWith4ByteArgument      = 26
-	additionalInformationWith8ByteArgument      = 27
-	additionalInformationAsIndefiniteLengthFlag = 31
-)
-
-const (
-	selfDescribedCBORTagNum              = 55799
-	expectedLaterEncodingBase64URLTagNum = 21
-	expectedLaterEncodingBase64TagNum    = 22
-	expectedLaterEncodingBase16TagNum    = 23
-)
-
 // parseToValue decodes CBOR data to value.  It assumes data is well-formed,
 // and does not perform bounds checking.
 func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
@@ -1418,7 +1333,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 	for d.nextCBORType() == cborTypeTag {
 		off := d.off
 		_, _, tagNum := d.getHead()
-		if tagNum != selfDescribedCBORTagNum {
+		if tagNum != tagNumSelfDescribedCBOR {
 			d.off = off
 			break
 		}
@@ -1601,7 +1516,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				GoType:   tInfo.nonPtrType.String(),
 				errorMsg: bi.String() + " overflows " + v.Type().String(),
 			}
-		case expectedLaterEncodingBase64URLTagNum, expectedLaterEncodingBase64TagNum, expectedLaterEncodingBase16TagNum:
+		case tagNumExpectedLaterEncodingBase64URL, tagNumExpectedLaterEncodingBase64, tagNumExpectedLaterEncodingBase16:
 			// If conversion for interoperability with text encodings is not configured,
 			// treat tags 21-23 as unregistered tags.
 			if d.dm.byteStringToString == ByteStringToStringAllowedWithExpectedLaterEncoding || d.dm.byteSliceExpectedEncoding != ByteSliceExpectedEncodingIgnored {
@@ -1796,7 +1711,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 		for d.nextCBORType() == cborTypeTag {
 			off := d.off
 			_, _, tagNum := d.getHead()
-			if tagNum != selfDescribedCBORTagNum {
+			if tagNum != tagNumSelfDescribedCBOR {
 				d.off = off
 				break
 			}
@@ -1971,7 +1886,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 				return bi, nil
 			}
 			return *bi, nil
-		case expectedLaterEncodingBase64URLTagNum, expectedLaterEncodingBase64TagNum, expectedLaterEncodingBase16TagNum:
+		case tagNumExpectedLaterEncodingBase64URL, tagNumExpectedLaterEncodingBase64, tagNumExpectedLaterEncodingBase16:
 			// If conversion for interoperability with text encodings is not configured,
 			// treat tags 21-23 as unregistered tags.
 			if d.dm.byteStringToString == ByteStringToStringAllowedWithExpectedLaterEncoding || d.dm.byteSliceExpectedEncoding != ByteSliceExpectedEncodingIgnored {
@@ -2093,15 +2008,15 @@ func (d *decoder) applyByteStringTextConversion(
 		}
 
 		switch d.expectedLaterEncodingTags[len(d.expectedLaterEncodingTags)-1] {
-		case expectedLaterEncodingBase64URLTagNum:
+		case tagNumExpectedLaterEncodingBase64URL:
 			encoded := make([]byte, base64.RawURLEncoding.EncodedLen(len(src)))
 			base64.RawURLEncoding.Encode(encoded, src)
 			return encoded, true, nil
-		case expectedLaterEncodingBase64TagNum:
+		case tagNumExpectedLaterEncodingBase64:
 			encoded := make([]byte, base64.StdEncoding.EncodedLen(len(src)))
 			base64.StdEncoding.Encode(encoded, src)
 			return encoded, true, nil
-		case expectedLaterEncodingBase16TagNum:
+		case tagNumExpectedLaterEncodingBase16:
 			encoded := make([]byte, hex.EncodedLen(len(src)))
 			hex.Encode(encoded, src)
 			return encoded, true, nil
@@ -2838,7 +2753,7 @@ func (d *decoder) getHeadWithIndefiniteLengthFlag() (
 	indefiniteLength bool,
 ) {
 	t, ai, val = d.getHead()
-	indefiniteLength = isIndefiniteLength(ai)
+	indefiniteLength = additionalInformation(ai).isIndefiniteLength()
 	return
 }
 
@@ -3126,37 +3041,4 @@ func convertByteSliceToByteString(v interface{}) (interface{}, bool) {
 		}
 	}
 	return v, false
-}
-
-// validBuiltinTag checks that supported built-in tag numbers are followed by expected content types.
-func validBuiltinTag(tagNum uint64, contentHead byte) error {
-	t := getType(contentHead)
-	switch tagNum {
-	case 0:
-		// Tag content (date/time text string in RFC 3339 format) must be string type.
-		if t != cborTypeTextString {
-			return errors.New("cbor: tag number 0 must be followed by text string, got " + t.String())
-		}
-		return nil
-	case 1:
-		// Tag content (epoch date/time) must be uint, int, or float type.
-		if t != cborTypePositiveInt && t != cborTypeNegativeInt && (contentHead < 0xf9 || contentHead > 0xfb) {
-			return errors.New("cbor: tag number 1 must be followed by integer or floating-point number, got " + t.String())
-		}
-		return nil
-	case 2, 3:
-		// Tag content (bignum) must be byte type.
-		if t != cborTypeByteString {
-			return errors.New("cbor: tag number 2 or 3 must be followed by byte string, got " + t.String())
-		}
-		return nil
-	case expectedLaterEncodingBase64URLTagNum, expectedLaterEncodingBase64TagNum, expectedLaterEncodingBase16TagNum:
-		// From RFC 8949 3.4.5.2:
-		//   The data item tagged can be a byte string or any other data item. In the latter
-		//   case, the tag applies to all of the byte string data items contained in the data
-		//   item, except for those contained in a nested data item tagged with an expected
-		//   conversion.
-		return nil
-	}
-	return nil
 }
