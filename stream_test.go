@@ -699,7 +699,8 @@ func TestEncoderError(t *testing.T) {
 	encoder := NewEncoder(&w)
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := encoder.Encode(&tc.value)
+			v := tc.value
+			err := encoder.Encode(&v)
 			if err == nil {
 				t.Errorf("Encode(%v) didn't return an error, want error %q", tc.value, tc.wantErrorMsg)
 			} else if _, ok := err.(*UnsupportedTypeError); !ok {

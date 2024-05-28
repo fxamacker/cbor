@@ -173,12 +173,12 @@ func appendFields(
 			continue
 		}
 
-		tagged := len(tag) > 0
+		tagged := tag != ""
 
 		// Parse field tag options
 		var tagFieldName string
 		var omitempty, keyasint bool
-		for j := 0; len(tag) > 0; j++ {
+		for j := 0; tag != ""; j++ {
 			var token string
 			idx := strings.IndexByte(tag, ',')
 			if idx == -1 {
@@ -207,7 +207,7 @@ func appendFields(
 		copy(fIdx, idx)
 		fIdx[len(fIdx)-1] = i
 
-		if !f.Anonymous || ft.Kind() != reflect.Struct || len(tagFieldName) > 0 {
+		if !f.Anonymous || ft.Kind() != reflect.Struct || tagFieldName != "" {
 			flds = append(flds, &field{
 				name:      fieldName,
 				idx:       fIdx,

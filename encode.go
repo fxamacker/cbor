@@ -1347,7 +1347,7 @@ func encodeStructToArray(e *bytes.Buffer, em *encMode, v reflect.Value) (err err
 			fv = v.Field(f.idx[0])
 		} else {
 			// Get embedded field value.  No error is expected.
-			fv, _ = getFieldValue(v, f.idx, func(v reflect.Value) (reflect.Value, error) {
+			fv, _ = getFieldValue(v, f.idx, func(reflect.Value) (reflect.Value, error) {
 				// Write CBOR nil for null pointer to embedded struct
 				e.Write(cborNil)
 				return reflect.Value{}, nil
@@ -1395,7 +1395,7 @@ func encodeStruct(e *bytes.Buffer, em *encMode, v reflect.Value) (err error) {
 			fv = v.Field(f.idx[0])
 		} else {
 			// Get embedded field value.  No error is expected.
-			fv, _ = getFieldValue(v, f.idx, func(v reflect.Value) (reflect.Value, error) {
+			fv, _ = getFieldValue(v, f.idx, func(reflect.Value) (reflect.Value, error) {
 				// Skip null pointer to embedded struct
 				return reflect.Value{}, nil
 			})
@@ -1870,7 +1870,7 @@ func isEmptyStruct(em *encMode, v reflect.Value) (bool, error) {
 			fv = v.Field(f.idx[0])
 		} else {
 			// Get embedded field value.  No error is expected.
-			fv, _ = getFieldValue(v, f.idx, func(v reflect.Value) (reflect.Value, error) {
+			fv, _ = getFieldValue(v, f.idx, func(reflect.Value) (reflect.Value, error) {
 				// Skip null pointer to embedded struct
 				return reflect.Value{}, nil
 			})

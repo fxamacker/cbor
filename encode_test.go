@@ -328,7 +328,8 @@ func TestInvalidTypeMarshal(t *testing.T) {
 	}
 	for _, tc := range marshalErrorTests {
 		t.Run(tc.name, func(t *testing.T) {
-			b, err := Marshal(&tc.value)
+			v := tc.value
+			b, err := Marshal(&v)
 			if err == nil {
 				t.Errorf("Marshal(%v) didn't return an error, want error %q", tc.value, tc.wantErrorMsg)
 			} else if _, ok := err.(*UnsupportedTypeError); !ok {
@@ -339,7 +340,8 @@ func TestInvalidTypeMarshal(t *testing.T) {
 				t.Errorf("Marshal(%v) = 0x%x, want nil", tc.value, b)
 			}
 
-			b, err = em.Marshal(&tc.value)
+			v = tc.value
+			b, err = em.Marshal(&v)
 			if err == nil {
 				t.Errorf("Marshal(%v) didn't return an error, want error %q", tc.value, tc.wantErrorMsg)
 			} else if _, ok := err.(*UnsupportedTypeError); !ok {
