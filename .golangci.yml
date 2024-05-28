@@ -63,6 +63,7 @@ linters:
     - errcheck
     - exportloopref
     - goconst
+    - gocritic
     - gocyclo
     - gofmt
     - goimports
