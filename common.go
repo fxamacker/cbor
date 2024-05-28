@@ -53,7 +53,7 @@ const (
 	additionalInformationWith4ByteArgument  = 26
 	additionalInformationWith8ByteArgument  = 27
 
-	// additional information with major type 7
+	// For major type 7.
 	additionalInformationAsFalse     = 20
 	additionalInformationAsTrue      = 21
 	additionalInformationAsNull      = 22
@@ -62,7 +62,13 @@ const (
 	additionalInformationAsFloat32   = 26
 	additionalInformationAsFloat64   = 27
 
+	// For major type 2, 3, 4, 5.
 	additionalInformationAsIndefiniteLengthFlag = 31
+)
+
+const (
+	maxSimpleValueInAdditionalInformation = 23
+	minSimpleValueIn1ByteArgument         = 32
 )
 
 func (ai additionalInformation) isIndefiniteLength() bool {
@@ -110,7 +116,11 @@ const (
 )
 
 const (
-	cborBreakFlag = byte(0xff)
+	cborBreakFlag                          = byte(0xff)
+	cborByteStringWithIndefiniteLengthHead = byte(0x5f)
+	cborTextStringWithIndefiniteLengthHead = byte(0x7f)
+	cborArrayWithIndefiniteLengthHead      = byte(0x9f)
+	cborMapWithIndefiniteLengthHead        = byte(0xbf)
 )
 
 var (

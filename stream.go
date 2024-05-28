@@ -239,10 +239,10 @@ func (enc *Encoder) EndIndefinite() error {
 }
 
 var cborIndefHeader = map[cborType][]byte{
-	cborTypeByteString: {0x5f},
-	cborTypeTextString: {0x7f},
-	cborTypeArray:      {0x9f},
-	cborTypeMap:        {0xbf},
+	cborTypeByteString: {cborByteStringWithIndefiniteLengthHead},
+	cborTypeTextString: {cborTextStringWithIndefiniteLengthHead},
+	cborTypeArray:      {cborArrayWithIndefiniteLengthHead},
+	cborTypeMap:        {cborMapWithIndefiniteLengthHead},
 }
 
 func (enc *Encoder) startIndefinite(typ cborType) error {

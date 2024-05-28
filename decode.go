@@ -1358,8 +1358,10 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				v.Set(reflect.ValueOf(iv))
 			}
 			return err
+
 		case specialTypeTag:
 			return d.parseToTag(v)
+
 		case specialTypeTime:
 			if d.nextCBORNil() {
 				// Decoding CBOR null and undefined to time.Time is no-op.
@@ -1374,6 +1376,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				v.Set(reflect.ValueOf(tm))
 			}
 			return nil
+
 		case specialTypeUnmarshalerIface:
 			return d.parseToUnmarshaler(v)
 		}
@@ -1535,6 +1538,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				}()
 			}
 		}
+
 		return d.parseToValue(v, tInfo)
 
 	case cborTypeArray:
@@ -1628,6 +1632,7 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 			return t, true, nil
 		}
 		return time.Time{}, false, &UnmarshalTypeError{CBORType: t.String(), GoType: typeTime.String()}
+
 	case cborTypeTextString:
 		s, err := d.parseTextString()
 		if err != nil {
@@ -1638,6 +1643,7 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 			return time.Time{}, false, errors.New("cbor: cannot set " + string(s) + " for time.Time: " + err.Error())
 		}
 		return t, true, nil
+
 	case cborTypePositiveInt:
 		_, _, val := d.getHead()
 		if val > math.MaxInt64 {
@@ -1648,6 +1654,7 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 			}
 		}
 		return time.Unix(int64(val), 0), true, nil
+
 	case cborTypeNegativeInt:
 		_, _, val := d.getHead()
 		if val > math.MaxInt64 {
@@ -1667,6 +1674,7 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 			}
 		}
 		return time.Unix(int64(-1)^int64(val), 0), true, nil
+
 	case cborTypePrimitives:
 		_, ai, val := d.getHead()
 		var f float64
@@ -1690,6 +1698,7 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 		}
 		seconds, fractional := math.Modf(f)
 		return time.Unix(int64(seconds), int64(fractional*1e9)), true, nil
+
 	default:
 		return time.Time{}, false, &UnmarshalTypeError{CBORType: t.String(), GoType: typeTime.String()}
 	}
@@ -1822,8 +1831,10 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 			clone := make([]byte, len(b))
 			copy(clone, b)
 			return clone, nil
+
 		case typeString:
 			return string(b), nil
+
 		default:
 			if copied || d.dm.defaultByteStringType.Kind() == reflect.String {
 				// Avoid an unnecessary copy since the conversion to string must
@@ -1834,12 +1845,14 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 			copy(clone, b)
 			return reflect.ValueOf(clone).Convert(d.dm.defaultByteStringType).Interface(), nil
 		}
+
 	case cborTypeTextString:
 		b, err := d.parseTextString()
 		if err != nil {
 			return nil, err
 		}
 		return string(b), nil
+
 	case cborTypeTag:
 		tagOff := d.off
 		_, _, tagNum := d.getHead()
@@ -1852,9 +1865,11 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 			if err != nil {
 				return nil, err
 			}
+
 			switch d.dm.timeTagToAny {
 			case TimeTagToTime:
 				return tm, nil
+
 			case TimeTagToRFC3339:
 				if tagNum == 1 {
 					tm = tm.UTC()
@@ -1866,6 +1881,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 					return nil, err
 				}
 				return string(text), nil
+
 			case TimeTagToRFC3339Nano:
 				if tagNum == 1 {
 					tm = tm.UTC()
@@ -1877,6 +1893,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 					return nil, err
 				}
 				return string(text), nil
+
 			default:
 				// not reachable
 			}
@@ -1953,6 +1970,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 		if ai < 20 || ai == 24 {
 			return SimpleValue(val), nil
 		}
+
 		switch ai {
 		case additionalInformationAsFalse,
 			additionalInformationAsTrue:
@@ -1977,6 +1995,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 
 	case cborTypeArray:
 		return d.parseArray()
+
 	case cborTypeMap:
 		if d.dm.defaultMapType != nil {
 			m := reflect.New(d.dm.defaultMapType)
@@ -1988,6 +2007,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 		}
 		return d.parseMap()
 	}
+
 	return nil, nil
 }
 
@@ -2035,19 +2055,23 @@ func (d *decoder) applyByteStringTextConversion(
 			encoded := make([]byte, base64.RawURLEncoding.EncodedLen(len(src)))
 			base64.RawURLEncoding.Encode(encoded, src)
 			return encoded, true, nil
+
 		case tagNumExpectedLaterEncodingBase64:
 			encoded := make([]byte, base64.StdEncoding.EncodedLen(len(src)))
 			base64.StdEncoding.Encode(encoded, src)
 			return encoded, true, nil
+
 		case tagNumExpectedLaterEncodingBase16:
 			encoded := make([]byte, hex.EncodedLen(len(src)))
 			hex.Encode(encoded, src)
 			return encoded, true, nil
+
 		default:
 			// If this happens, there is a bug: the decoder has pushed an invalid
 			// "expected later encoding" tag to the stack.
 			panic(fmt.Sprintf("unrecognized expected later encoding tag: %d", d.expectedLaterEncodingTags))
 		}
+
 	case reflect.Slice:
 		if dstType.Elem().Kind() != reflect.Uint8 || len(d.expectedLaterEncodingTags) > 0 {
 			// Either the destination is not a slice of bytes, or the encoder that
@@ -2064,6 +2088,7 @@ func (d *decoder) applyByteStringTextConversion(
 				return nil, false, fmt.Errorf("cbor: failed to decode base64url string: %v", err)
 			}
 			return decoded[:n], true, nil
+
 		case ByteSliceExpectedEncodingBase64:
 			decoded := make([]byte, base64.StdEncoding.DecodedLen(len(src)))
 			n, err := base64.StdEncoding.Decode(decoded, src)
@@ -2071,6 +2096,7 @@ func (d *decoder) applyByteStringTextConversion(
 				return nil, false, fmt.Errorf("cbor: failed to decode base64 string: %v", err)
 			}
 			return decoded[:n], true, nil
+
 		case ByteSliceExpectedEncodingBase16:
 			decoded := make([]byte, hex.DecodedLen(len(src)))
 			n, err := hex.Decode(decoded, src)
@@ -2756,14 +2782,17 @@ func (d *decoder) skip() {
 	switch t {
 	case cborTypeByteString, cborTypeTextString:
 		d.off += int(val)
+
 	case cborTypeArray:
 		for i := 0; i < int(val); i++ {
 			d.skip()
 		}
+
 	case cborTypeMap:
 		for i := 0; i < int(val)*2; i++ {
 			d.skip()
 		}
+
 	case cborTypeTag:
 		d.skip()
 	}
@@ -2893,6 +2922,7 @@ func fillPositiveInt(t cborType, val uint64, v reflect.Value) error {
 		}
 		v.SetInt(int64(val))
 		return nil
+
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		if v.OverflowUint(val) {
 			return &UnmarshalTypeError{
@@ -2903,11 +2933,13 @@ func fillPositiveInt(t cborType, val uint64, v reflect.Value) error {
 		}
 		v.SetUint(val)
 		return nil
+
 	case reflect.Float32, reflect.Float64:
 		f := float64(val)
 		v.SetFloat(f)
 		return nil
 	}
+
 	if v.Type() == typeBigInt {
 		i := new(big.Int).SetUint64(val)
 		v.Set(reflect.ValueOf(*i))
@@ -2928,6 +2960,7 @@ func fillNegativeInt(t cborType, val int64, v reflect.Value) error {
 		}
 		v.SetInt(val)
 		return nil
+
 	case reflect.Float32, reflect.Float64:
 		f := float64(val)
 		v.SetFloat(f)
@@ -3026,6 +3059,7 @@ func isImmutableKind(k reflect.Kind) bool {
 		reflect.Float32, reflect.Float64,
 		reflect.String:
 		return true
+
 	default:
 		return false
 	}
@@ -3035,6 +3069,7 @@ func isHashableValue(rv reflect.Value) bool {
 	switch rv.Kind() {
 	case reflect.Slice, reflect.Map, reflect.Func:
 		return false
+
 	case reflect.Struct:
 		switch rv.Type() {
 		case typeTag:
@@ -3057,6 +3092,7 @@ func convertByteSliceToByteString(v interface{}) (interface{}, bool) {
 	switch v := v.(type) {
 	case []byte:
 		return ByteString(v), true
+
 	case Tag:
 		content, converted := convertByteSliceToByteString(v.Content)
 		if converted {
