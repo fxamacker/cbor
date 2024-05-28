@@ -441,23 +441,25 @@ func (di *diagnose) item() error { //nolint:gocyclo
 	case cborTypePrimitives:
 		_, ai, val := di.d.getHead()
 		switch ai {
-		case 20:
+		case additionalInformationAsFalse:
 			di.w.WriteString("false")
 			return nil
 
-		case 21:
+		case additionalInformationAsTrue:
 			di.w.WriteString("true")
 			return nil
 
-		case 22:
+		case additionalInformationAsNull:
 			di.w.WriteString("null")
 			return nil
 
-		case 23:
+		case additionalInformationAsUndefined:
 			di.w.WriteString("undefined")
 			return nil
 
-		case 25, 26, 27:
+		case additionalInformationAsFloat16,
+			additionalInformationAsFloat32,
+			additionalInformationAsFloat64:
 			return di.encodeFloat(ai, val)
 
 		default:
@@ -628,7 +630,7 @@ func (di *diagnose) encodeTextString(val string, quote byte) error {
 func (di *diagnose) encodeFloat(ai byte, val uint64) error {
 	f64 := float64(0)
 	switch ai {
-	case 25:
+	case additionalInformationAsFloat16:
 		f16 := float16.Frombits(uint16(val))
 		switch {
 		case f16.IsNaN():
@@ -644,7 +646,7 @@ func (di *diagnose) encodeFloat(ai byte, val uint64) error {
 			f64 = float64(f16.Float32())
 		}
 
-	case 26:
+	case additionalInformationAsFloat32:
 		f32 := math.Float32frombits(uint32(val))
 		switch {
 		case f32 != f32:
@@ -660,7 +662,7 @@ func (di *diagnose) encodeFloat(ai byte, val uint64) error {
 			f64 = float64(f32)
 		}
 
-	case 27:
+	case additionalInformationAsFloat64:
 		f64 = math.Float64frombits(val)
 		switch {
 		case f64 != f64:
@@ -703,13 +705,15 @@ func (di *diagnose) encodeFloat(ai byte, val uint64) error {
 
 	if di.dm.floatPrecisionIndicator {
 		switch ai {
-		case 25:
+		case additionalInformationAsFloat16:
 			di.w.WriteString("_1")
 			return nil
-		case 26:
+
+		case additionalInformationAsFloat32:
 			di.w.WriteString("_2")
 			return nil
-		case 27:
+
+		case additionalInformationAsFloat64:
 			di.w.WriteString("_3")
 			return nil
 		}

@@ -1444,15 +1444,18 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 	case cborTypePrimitives:
 		_, ai, val := d.getHead()
 		switch ai {
-		case 25:
+		case additionalInformationAsFloat16:
 			f := float64(float16.Frombits(uint16(val)).Float32())
 			return fillFloat(t, f, v)
-		case 26:
+
+		case additionalInformationAsFloat32:
 			f := float64(math.Float32frombits(uint32(val)))
 			return fillFloat(t, f, v)
-		case 27:
+
+		case additionalInformationAsFloat64:
 			f := math.Float64frombits(val)
 			return fillFloat(t, f, v)
+
 		default: // ai <= 24
 			if d.dm.simpleValues.rejected[SimpleValue(val)] {
 				return &UnacceptableDataItemError{
@@ -1462,10 +1465,14 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 			}
 
 			switch ai {
-			case 20, 21:
-				return fillBool(t, ai == 21, v)
-			case 22, 23:
+			case additionalInformationAsFalse,
+				additionalInformationAsTrue:
+				return fillBool(t, ai == additionalInformationAsTrue, v)
+
+			case additionalInformationAsNull,
+				additionalInformationAsUndefined:
 				return fillNil(t, v)
+
 			default:
 				return fillPositiveInt(t, val, v)
 			}
@@ -1664,12 +1671,15 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 		_, ai, val := d.getHead()
 		var f float64
 		switch ai {
-		case 25:
+		case additionalInformationAsFloat16:
 			f = float64(float16.Frombits(uint16(val)).Float32())
-		case 26:
+
+		case additionalInformationAsFloat32:
 			f = float64(math.Float32frombits(uint32(val)))
-		case 27:
+
+		case additionalInformationAsFloat64:
 			f = math.Float64frombits(val)
+
 		default:
 			return time.Time{}, false, &UnmarshalTypeError{CBORType: t.String(), GoType: typeTime.String()}
 		}
@@ -1931,6 +1941,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 			return content, nil
 		}
 		return Tag{tagNum, content}, nil
+
 	case cborTypePrimitives:
 		_, ai, val := d.getHead()
 		if ai <= 24 && d.dm.simpleValues.rejected[SimpleValue(val)] {
@@ -1943,20 +1954,27 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 			return SimpleValue(val), nil
 		}
 		switch ai {
-		case 20, 21:
-			return (ai == 21), nil
-		case 22, 23:
+		case additionalInformationAsFalse,
+			additionalInformationAsTrue:
+			return (ai == additionalInformationAsTrue), nil
+
+		case additionalInformationAsNull,
+			additionalInformationAsUndefined:
 			return nil, nil
-		case 25:
+
+		case additionalInformationAsFloat16:
 			f := float64(float16.Frombits(uint16(val)).Float32())
 			return f, nil
-		case 26:
+
+		case additionalInformationAsFloat32:
 			f := float64(math.Float32frombits(uint32(val)))
 			return f, nil
-		case 27:
+
+		case additionalInformationAsFloat64:
 			f := math.Float64frombits(val)
 			return f, nil
 		}
+
 	case cborTypeArray:
 		return d.parseArray()
 	case cborTypeMap:

@@ -47,11 +47,21 @@ func (t cborType) String() string {
 type additionalInformation uint8
 
 const (
-	maxAdditionalInformationWithoutArgument     = 23
-	additionalInformationWith1ByteArgument      = 24
-	additionalInformationWith2ByteArgument      = 25
-	additionalInformationWith4ByteArgument      = 26
-	additionalInformationWith8ByteArgument      = 27
+	maxAdditionalInformationWithoutArgument = 23
+	additionalInformationWith1ByteArgument  = 24
+	additionalInformationWith2ByteArgument  = 25
+	additionalInformationWith4ByteArgument  = 26
+	additionalInformationWith8ByteArgument  = 27
+
+	// additional information with major type 7
+	additionalInformationAsFalse     = 20
+	additionalInformationAsTrue      = 21
+	additionalInformationAsNull      = 22
+	additionalInformationAsUndefined = 23
+	additionalInformationAsFloat16   = 25
+	additionalInformationAsFloat32   = 26
+	additionalInformationAsFloat64   = 27
+
 	additionalInformationAsIndefiniteLengthFlag = 31
 )
 
