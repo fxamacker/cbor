@@ -76,10 +76,10 @@ func (ai additionalInformation) isIndefiniteLength() bool {
 }
 
 const (
-	// From RFC 8949.3:
-	//   The initial byte of each encoded data item contains both information about the major type
+	// From RFC 8949 Section 3:
+	//   "The initial byte of each encoded data item contains both information about the major type
 	//   (the high-order 3 bits, described in Section 3.1) and additional information
-	//   (the low-order 5 bits).
+	//   (the low-order 5 bits)."
 
 	// typeMask is used to extract major type in initial byte of encoded data item.
 	typeMask = 0xe0
@@ -109,10 +109,10 @@ const (
 	tagNumEpochTime                      = 1
 	tagNumUnsignedBignum                 = 2
 	tagNumNegativeBignum                 = 3
-	tagNumSelfDescribedCBOR              = 55799
 	tagNumExpectedLaterEncodingBase64URL = 21
 	tagNumExpectedLaterEncodingBase64    = 22
 	tagNumExpectedLaterEncodingBase16    = 23
+	tagNumSelfDescribedCBOR              = 55799
 )
 
 const (
