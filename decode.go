@@ -802,13 +802,13 @@ type DecOptions struct {
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
-func (opts DecOptions) DecMode() (DecMode, error) {
+func (opts DecOptions) DecMode() (DecMode, error) { //nolint:gocritic // ignore hugeParam
 	return opts.decMode()
 }
 
 // validForTags checks that the provided tag set is compatible with these options and returns a
 // non-nil error if and only if the provided tag set is incompatible.
-func (opts DecOptions) validForTags(tags TagSet) error {
+func (opts DecOptions) validForTags(tags TagSet) error { //nolint:gocritic // ignore hugeParam
 	if opts.TagsMd == TagsForbidden {
 		return errors.New("cbor: cannot create DecMode with TagSet when TagsMd is TagsForbidden")
 	}
@@ -817,9 +817,9 @@ func (opts DecOptions) validForTags(tags TagSet) error {
 	}
 	if opts.ByteStringToString == ByteStringToStringAllowedWithExpectedLaterEncoding || opts.ByteSliceExpectedEncoding != ByteSliceExpectedEncodingIgnored {
 		for _, tagNum := range []uint64{
-			expectedLaterEncodingBase64URLTagNum,
-			expectedLaterEncodingBase64TagNum,
-			expectedLaterEncodingBase16TagNum,
+			tagNumExpectedLaterEncodingBase64URL,
+			tagNumExpectedLaterEncodingBase64,
+			tagNumExpectedLaterEncodingBase16,
 		} {
 			if rt := tags.getTypeFromTagNum([]uint64{tagNum}); rt != nil {
 				return fmt.Errorf("cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag %d as built-in and conflicts with the provided TagSet's registration of %v", tagNum, rt)
@@ -831,7 +831,7 @@ func (opts DecOptions) validForTags(tags TagSet) error {
 }
 
 // DecModeWithTags returns DecMode with options and tags that are both immutable (safe for concurrency).
-func (opts DecOptions) DecModeWithTags(tags TagSet) (DecMode, error) {
+func (opts DecOptions) DecModeWithTags(tags TagSet) (DecMode, error) { //nolint:gocritic // ignore hugeParam
 	if err := opts.validForTags(tags); err != nil {
 		return nil, err
 	}
@@ -859,7 +859,7 @@ func (opts DecOptions) DecModeWithTags(tags TagSet) (DecMode, error) {
 }
 
 // DecModeWithSharedTags returns DecMode with immutable options and mutable shared tags (safe for concurrency).
-func (opts DecOptions) DecModeWithSharedTags(tags TagSet) (DecMode, error) {
+func (opts DecOptions) DecModeWithSharedTags(tags TagSet) (DecMode, error) { //nolint:gocritic // ignore hugeParam
 	if err := opts.validForTags(tags); err != nil {
 		return nil, err
 	}
@@ -894,7 +894,7 @@ var defaultSimpleValues = func() *SimpleValueRegistry {
 }()
 
 //nolint:gocyclo // Each option comes with some manageable boilerplate
-func (opts DecOptions) decMode() (*decMode, error) {
+func (opts DecOptions) decMode() (*decMode, error) { //nolint:gocritic // ignore hugeParam
 	if !opts.DupMapKey.valid() {
 		return nil, errors.New("cbor: invalid DupMapKey " + strconv.Itoa(int(opts.DupMapKey)))
 	}
@@ -1275,49 +1275,6 @@ func (d *decoder) value(v interface{}) error {
 	return d.parseToValue(rv, getTypeInfo(rv.Type()))
 }
 
-type cborType uint8
-
-const (
-	cborTypePositiveInt cborType = 0x00
-	cborTypeNegativeInt cborType = 0x20
-	cborTypeByteString  cborType = 0x40
-	cborTypeTextString  cborType = 0x60
-	cborTypeArray       cborType = 0x80
-	cborTypeMap         cborType = 0xa0
-	cborTypeTag         cborType = 0xc0
-	cborTypePrimitives  cborType = 0xe0
-)
-
-func (t cborType) String() string {
-	switch t {
-	case cborTypePositiveInt:
-		return "positive integer"
-	case cborTypeNegativeInt:
-		return "negative integer"
-	case cborTypeByteString:
-		return "byte string"
-	case cborTypeTextString:
-		return "UTF-8 text string"
-	case cborTypeArray:
-		return "array"
-	case cborTypeMap:
-		return "map"
-	case cborTypeTag:
-		return "tag"
-	case cborTypePrimitives:
-		return "primitives"
-	default:
-		return "Invalid type " + strconv.Itoa(int(t))
-	}
-}
-
-const (
-	selfDescribedCBORTagNum              = 55799
-	expectedLaterEncodingBase64URLTagNum = 21
-	expectedLaterEncodingBase64TagNum    = 22
-	expectedLaterEncodingBase16TagNum    = 23
-)
-
 // parseToValue decodes CBOR data to value.  It assumes data is well-formed,
 // and does not perform bounds checking.
 func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
@@ -1334,7 +1291,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 			// Use value type
 			v = v.Elem()
 			tInfo = getTypeInfo(v.Type())
-		} else {
+		} else { //nolint:gocritic
 			// Create and use registered type if CBOR data is registered tag
 			if d.dm.tags != nil && d.nextCBORType() == cborTypeTag {
 
@@ -1376,7 +1333,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 	for d.nextCBORType() == cborTypeTag {
 		off := d.off
 		_, _, tagNum := d.getHead()
-		if tagNum != selfDescribedCBORTagNum {
+		if tagNum != tagNumSelfDescribedCBOR {
 			d.off = off
 			break
 		}
@@ -1401,8 +1358,10 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				v.Set(reflect.ValueOf(iv))
 			}
 			return err
+
 		case specialTypeTag:
 			return d.parseToTag(v)
+
 		case specialTypeTime:
 			if d.nextCBORNil() {
 				// Decoding CBOR null and undefined to time.Time is no-op.
@@ -1417,6 +1376,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				v.Set(reflect.ValueOf(tm))
 			}
 			return nil
+
 		case specialTypeUnmarshalerIface:
 			return d.parseToUnmarshaler(v)
 		}
@@ -1487,15 +1447,18 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 	case cborTypePrimitives:
 		_, ai, val := d.getHead()
 		switch ai {
-		case 25:
+		case additionalInformationAsFloat16:
 			f := float64(float16.Frombits(uint16(val)).Float32())
 			return fillFloat(t, f, v)
-		case 26:
+
+		case additionalInformationAsFloat32:
 			f := float64(math.Float32frombits(uint32(val)))
 			return fillFloat(t, f, v)
-		case 27:
+
+		case additionalInformationAsFloat64:
 			f := math.Float64frombits(val)
 			return fillFloat(t, f, v)
+
 		default: // ai <= 24
 			if d.dm.simpleValues.rejected[SimpleValue(val)] {
 				return &UnacceptableDataItemError{
@@ -1505,10 +1468,14 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 			}
 
 			switch ai {
-			case 20, 21:
-				return fillBool(t, ai == 21, v)
-			case 22, 23:
+			case additionalInformationAsFalse,
+				additionalInformationAsTrue:
+				return fillBool(t, ai == additionalInformationAsTrue, v)
+
+			case additionalInformationAsNull,
+				additionalInformationAsUndefined:
 				return fillNil(t, v)
+
 			default:
 				return fillPositiveInt(t, val, v)
 			}
@@ -1517,7 +1484,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 	case cborTypeTag:
 		_, _, tagNum := d.getHead()
 		switch tagNum {
-		case 2:
+		case tagNumUnsignedBignum:
 			// Bignum (tag 2) can be decoded to uint, int, float, slice, array, or big.Int.
 			b, copied := d.parseByteString()
 			bi := new(big.Int).SetBytes(b)
@@ -1537,7 +1504,8 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				GoType:   tInfo.nonPtrType.String(),
 				errorMsg: bi.String() + " overflows " + v.Type().String(),
 			}
-		case 3:
+
+		case tagNumNegativeBignum:
 			// Bignum (tag 3) can be decoded to int, float, slice, array, or big.Int.
 			b, copied := d.parseByteString()
 			bi := new(big.Int).SetBytes(b)
@@ -1559,7 +1527,8 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				GoType:   tInfo.nonPtrType.String(),
 				errorMsg: bi.String() + " overflows " + v.Type().String(),
 			}
-		case expectedLaterEncodingBase64URLTagNum, expectedLaterEncodingBase64TagNum, expectedLaterEncodingBase16TagNum:
+
+		case tagNumExpectedLaterEncodingBase64URL, tagNumExpectedLaterEncodingBase64, tagNumExpectedLaterEncodingBase16:
 			// If conversion for interoperability with text encodings is not configured,
 			// treat tags 21-23 as unregistered tags.
 			if d.dm.byteStringToString == ByteStringToStringAllowedWithExpectedLaterEncoding || d.dm.byteSliceExpectedEncoding != ByteSliceExpectedEncodingIgnored {
@@ -1569,6 +1538,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				}()
 			}
 		}
+
 		return d.parseToValue(v, tInfo)
 
 	case cborTypeArray:
@@ -1662,6 +1632,7 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 			return t, true, nil
 		}
 		return time.Time{}, false, &UnmarshalTypeError{CBORType: t.String(), GoType: typeTime.String()}
+
 	case cborTypeTextString:
 		s, err := d.parseTextString()
 		if err != nil {
@@ -1672,6 +1643,7 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 			return time.Time{}, false, errors.New("cbor: cannot set " + string(s) + " for time.Time: " + err.Error())
 		}
 		return t, true, nil
+
 	case cborTypePositiveInt:
 		_, _, val := d.getHead()
 		if val > math.MaxInt64 {
@@ -1682,6 +1654,7 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 			}
 		}
 		return time.Unix(int64(val), 0), true, nil
+
 	case cborTypeNegativeInt:
 		_, _, val := d.getHead()
 		if val > math.MaxInt64 {
@@ -1701,16 +1674,20 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 			}
 		}
 		return time.Unix(int64(-1)^int64(val), 0), true, nil
+
 	case cborTypePrimitives:
 		_, ai, val := d.getHead()
 		var f float64
 		switch ai {
-		case 25:
+		case additionalInformationAsFloat16:
 			f = float64(float16.Frombits(uint16(val)).Float32())
-		case 26:
+
+		case additionalInformationAsFloat32:
 			f = float64(math.Float32frombits(uint32(val)))
-		case 27:
+
+		case additionalInformationAsFloat64:
 			f = math.Float64frombits(val)
+
 		default:
 			return time.Time{}, false, &UnmarshalTypeError{CBORType: t.String(), GoType: typeTime.String()}
 		}
@@ -1721,6 +1698,7 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 		}
 		seconds, fractional := math.Modf(f)
 		return time.Unix(int64(seconds), int64(fractional*1e9)), true, nil
+
 	default:
 		return time.Time{}, false, &UnmarshalTypeError{CBORType: t.String(), GoType: typeTime.String()}
 	}
@@ -1754,7 +1732,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 		for d.nextCBORType() == cborTypeTag {
 			off := d.off
 			_, _, tagNum := d.getHead()
-			if tagNum != selfDescribedCBORTagNum {
+			if tagNum != tagNumSelfDescribedCBOR {
 				d.off = off
 				break
 			}
@@ -1853,8 +1831,10 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 			clone := make([]byte, len(b))
 			copy(clone, b)
 			return clone, nil
+
 		case typeString:
 			return string(b), nil
+
 		default:
 			if copied || d.dm.defaultByteStringType.Kind() == reflect.String {
 				// Avoid an unnecessary copy since the conversion to string must
@@ -1865,27 +1845,31 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 			copy(clone, b)
 			return reflect.ValueOf(clone).Convert(d.dm.defaultByteStringType).Interface(), nil
 		}
+
 	case cborTypeTextString:
 		b, err := d.parseTextString()
 		if err != nil {
 			return nil, err
 		}
 		return string(b), nil
+
 	case cborTypeTag:
 		tagOff := d.off
 		_, _, tagNum := d.getHead()
 		contentOff := d.off
 
 		switch tagNum {
-		case 0, 1:
+		case tagNumRFC3339Time, tagNumEpochTime:
 			d.off = tagOff
 			tm, _, err := d.parseToTime()
 			if err != nil {
 				return nil, err
 			}
+
 			switch d.dm.timeTagToAny {
 			case TimeTagToTime:
 				return tm, nil
+
 			case TimeTagToRFC3339:
 				if tagNum == 1 {
 					tm = tm.UTC()
@@ -1897,6 +1881,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 					return nil, err
 				}
 				return string(text), nil
+
 			case TimeTagToRFC3339Nano:
 				if tagNum == 1 {
 					tm = tm.UTC()
@@ -1908,10 +1893,12 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 					return nil, err
 				}
 				return string(text), nil
+
 			default:
 				// not reachable
 			}
-		case 2:
+
+		case tagNumUnsignedBignum:
 			b, _ := d.parseByteString()
 			bi := new(big.Int).SetBytes(b)
 
@@ -1919,7 +1906,8 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 				return bi, nil
 			}
 			return *bi, nil
-		case 3:
+
+		case tagNumNegativeBignum:
 			b, _ := d.parseByteString()
 			bi := new(big.Int).SetBytes(b)
 			bi.Add(bi, big.NewInt(1))
@@ -1929,7 +1917,8 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 				return bi, nil
 			}
 			return *bi, nil
-		case expectedLaterEncodingBase64URLTagNum, expectedLaterEncodingBase64TagNum, expectedLaterEncodingBase16TagNum:
+
+		case tagNumExpectedLaterEncodingBase64URL, tagNumExpectedLaterEncodingBase64, tagNumExpectedLaterEncodingBase16:
 			// If conversion for interoperability with text encodings is not configured,
 			// treat tags 21-23 as unregistered tags.
 			if d.dm.byteStringToString == ByteStringToStringAllowedWithExpectedLaterEncoding || d.dm.byteSliceExpectedEncoding != ByteSliceExpectedEncodingIgnored {
@@ -1969,6 +1958,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 			return content, nil
 		}
 		return Tag{tagNum, content}, nil
+
 	case cborTypePrimitives:
 		_, ai, val := d.getHead()
 		if ai <= 24 && d.dm.simpleValues.rejected[SimpleValue(val)] {
@@ -1980,23 +1970,32 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 		if ai < 20 || ai == 24 {
 			return SimpleValue(val), nil
 		}
+
 		switch ai {
-		case 20, 21:
-			return (ai == 21), nil
-		case 22, 23:
+		case additionalInformationAsFalse,
+			additionalInformationAsTrue:
+			return (ai == additionalInformationAsTrue), nil
+
+		case additionalInformationAsNull,
+			additionalInformationAsUndefined:
 			return nil, nil
-		case 25:
+
+		case additionalInformationAsFloat16:
 			f := float64(float16.Frombits(uint16(val)).Float32())
 			return f, nil
-		case 26:
+
+		case additionalInformationAsFloat32:
 			f := float64(math.Float32frombits(uint32(val)))
 			return f, nil
-		case 27:
+
+		case additionalInformationAsFloat64:
 			f := math.Float64frombits(val)
 			return f, nil
 		}
+
 	case cborTypeArray:
 		return d.parseArray()
+
 	case cborTypeMap:
 		if d.dm.defaultMapType != nil {
 			m := reflect.New(d.dm.defaultMapType)
@@ -2008,6 +2007,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 		}
 		return d.parseMap()
 	}
+
 	return nil, nil
 }
 
@@ -2016,8 +2016,8 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 // and only if the slice is backed by a copy of the input. Callers are
 // responsible for making a copy if necessary.
 func (d *decoder) parseByteString() ([]byte, bool) {
-	_, ai, val := d.getHead()
-	if ai != 31 {
+	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	if !indefiniteLength {
 		b := d.data[d.off : d.off+int(val)]
 		d.off += int(val)
 		return b, false
@@ -2036,7 +2036,14 @@ func (d *decoder) parseByteString() ([]byte, bool) {
 // encoding. If no transformation was performed (because it was not required), the original byte
 // slice is returned and the bool return value is false. Otherwise, a new slice containing the
 // converted bytes is returned along with the bool value true.
-func (d *decoder) applyByteStringTextConversion(src []byte, dstType reflect.Type) ([]byte, bool, error) {
+func (d *decoder) applyByteStringTextConversion(
+	src []byte,
+	dstType reflect.Type,
+) (
+	dst []byte,
+	transformed bool,
+	err error,
+) {
 	switch dstType.Kind() {
 	case reflect.String:
 		if d.dm.byteStringToString != ByteStringToStringAllowedWithExpectedLaterEncoding || len(d.expectedLaterEncodingTags) == 0 {
@@ -2044,23 +2051,27 @@ func (d *decoder) applyByteStringTextConversion(src []byte, dstType reflect.Type
 		}
 
 		switch d.expectedLaterEncodingTags[len(d.expectedLaterEncodingTags)-1] {
-		case expectedLaterEncodingBase64URLTagNum:
+		case tagNumExpectedLaterEncodingBase64URL:
 			encoded := make([]byte, base64.RawURLEncoding.EncodedLen(len(src)))
 			base64.RawURLEncoding.Encode(encoded, src)
 			return encoded, true, nil
-		case expectedLaterEncodingBase64TagNum:
+
+		case tagNumExpectedLaterEncodingBase64:
 			encoded := make([]byte, base64.StdEncoding.EncodedLen(len(src)))
 			base64.StdEncoding.Encode(encoded, src)
 			return encoded, true, nil
-		case expectedLaterEncodingBase16TagNum:
+
+		case tagNumExpectedLaterEncodingBase16:
 			encoded := make([]byte, hex.EncodedLen(len(src)))
 			hex.Encode(encoded, src)
 			return encoded, true, nil
+
 		default:
 			// If this happens, there is a bug: the decoder has pushed an invalid
 			// "expected later encoding" tag to the stack.
 			panic(fmt.Sprintf("unrecognized expected later encoding tag: %d", d.expectedLaterEncodingTags))
 		}
+
 	case reflect.Slice:
 		if dstType.Elem().Kind() != reflect.Uint8 || len(d.expectedLaterEncodingTags) > 0 {
 			// Either the destination is not a slice of bytes, or the encoder that
@@ -2077,6 +2088,7 @@ func (d *decoder) applyByteStringTextConversion(src []byte, dstType reflect.Type
 				return nil, false, fmt.Errorf("cbor: failed to decode base64url string: %v", err)
 			}
 			return decoded[:n], true, nil
+
 		case ByteSliceExpectedEncodingBase64:
 			decoded := make([]byte, base64.StdEncoding.DecodedLen(len(src)))
 			n, err := base64.StdEncoding.Decode(decoded, src)
@@ -2084,6 +2096,7 @@ func (d *decoder) applyByteStringTextConversion(src []byte, dstType reflect.Type
 				return nil, false, fmt.Errorf("cbor: failed to decode base64 string: %v", err)
 			}
 			return decoded[:n], true, nil
+
 		case ByteSliceExpectedEncodingBase16:
 			decoded := make([]byte, hex.DecodedLen(len(src)))
 			n, err := hex.Decode(decoded, src)
@@ -2101,8 +2114,8 @@ func (d *decoder) applyByteStringTextConversion(src []byte, dstType reflect.Type
 // to prevent creating an extra copy of string.  Caller should wrap returned
 // byte slice as string when needed.
 func (d *decoder) parseTextString() ([]byte, error) {
-	_, ai, val := d.getHead()
-	if ai != 31 {
+	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	if !indefiniteLength {
 		b := d.data[d.off : d.off+int(val)]
 		d.off += int(val)
 		if d.dm.utf8 == UTF8RejectInvalid && !utf8.Valid(b) {
@@ -2128,8 +2141,8 @@ func (d *decoder) parseTextString() ([]byte, error) {
 }
 
 func (d *decoder) parseArray() ([]interface{}, error) {
-	_, ai, val := d.getHead()
-	hasSize := (ai != 31)
+	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	hasSize := !indefiniteLength
 	count := int(val)
 	if !hasSize {
 		count = d.numOfItemsUntilBreak() // peek ahead to get array size to preallocate slice for better performance
@@ -2150,8 +2163,8 @@ func (d *decoder) parseArray() ([]interface{}, error) {
 }
 
 func (d *decoder) parseArrayToSlice(v reflect.Value, tInfo *typeInfo) error {
-	_, ai, val := d.getHead()
-	hasSize := (ai != 31)
+	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	hasSize := !indefiniteLength
 	count := int(val)
 	if !hasSize {
 		count = d.numOfItemsUntilBreak() // peek ahead to get array size to preallocate slice for better performance
@@ -2172,8 +2185,8 @@ func (d *decoder) parseArrayToSlice(v reflect.Value, tInfo *typeInfo) error {
 }
 
 func (d *decoder) parseArrayToArray(v reflect.Value, tInfo *typeInfo) error {
-	_, ai, val := d.getHead()
-	hasSize := (ai != 31)
+	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	hasSize := !indefiniteLength
 	count := int(val)
 	gi := 0
 	vLen := v.Len()
@@ -2202,8 +2215,8 @@ func (d *decoder) parseArrayToArray(v reflect.Value, tInfo *typeInfo) error {
 }
 
 func (d *decoder) parseMap() (interface{}, error) {
-	_, ai, val := d.getHead()
-	hasSize := (ai != 31)
+	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	hasSize := !indefiniteLength
 	count := int(val)
 	m := make(map[interface{}]interface{})
 	var k, e interface{}
@@ -2267,8 +2280,8 @@ func (d *decoder) parseMap() (interface{}, error) {
 }
 
 func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
-	_, ai, val := d.getHead()
-	hasSize := (ai != 31)
+	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	hasSize := !indefiniteLength
 	count := int(val)
 	if v.IsNil() {
 		mapsize := count
@@ -2392,8 +2405,8 @@ func (d *decoder) parseArrayToStruct(v reflect.Value, tInfo *typeInfo) error {
 	}
 
 	start := d.off
-	t, ai, val := d.getHead()
-	hasSize := (ai != 31)
+	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	hasSize := !indefiniteLength
 	count := int(val)
 	if !hasSize {
 		count = d.numOfItemsUntilBreak() // peek ahead to get array size
@@ -2402,7 +2415,7 @@ func (d *decoder) parseArrayToStruct(v reflect.Value, tInfo *typeInfo) error {
 		d.off = start
 		d.skip()
 		return &UnmarshalTypeError{
-			CBORType: t.String(),
+			CBORType: cborTypeArray.String(),
 			GoType:   tInfo.typ.String(),
 			errorMsg: "cannot decode CBOR array to struct with different number of elements",
 		}
@@ -2467,8 +2480,8 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 	var err, lastErr error
 
 	// Get CBOR map size
-	_, ai, val := d.getHead()
-	hasSize := (ai != 31)
+	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	hasSize := !indefiniteLength
 	count := int(val)
 
 	// Keeps track of matched struct fields
@@ -2751,13 +2764,13 @@ func (d *decoder) getRegisteredTagItem(vt reflect.Type) *tagItem {
 // skip moves data offset to the next item.  skip assumes data is well-formed,
 // and does not perform bounds checking.
 func (d *decoder) skip() {
-	t, ai, val := d.getHead()
+	t, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
 
-	if ai == 31 {
+	if indefiniteLength {
 		switch t {
 		case cborTypeByteString, cborTypeTextString, cborTypeArray, cborTypeMap:
 			for {
-				if d.data[d.off] == 0xff {
+				if isBreakFlag(d.data[d.off]) {
 					d.off++
 					return
 				}
@@ -2769,47 +2782,67 @@ func (d *decoder) skip() {
 	switch t {
 	case cborTypeByteString, cborTypeTextString:
 		d.off += int(val)
+
 	case cborTypeArray:
 		for i := 0; i < int(val); i++ {
 			d.skip()
 		}
+
 	case cborTypeMap:
 		for i := 0; i < int(val)*2; i++ {
 			d.skip()
 		}
+
 	case cborTypeTag:
 		d.skip()
 	}
 }
 
+func (d *decoder) getHeadWithIndefiniteLengthFlag() (
+	t cborType,
+	ai byte,
+	val uint64,
+	indefiniteLength bool,
+) {
+	t, ai, val = d.getHead()
+	indefiniteLength = additionalInformation(ai).isIndefiniteLength()
+	return
+}
+
 // getHead assumes data is well-formed, and does not perform bounds checking.
 func (d *decoder) getHead() (t cborType, ai byte, val uint64) {
-	t = cborType(d.data[d.off] & 0xe0)
-	ai = d.data[d.off] & 0x1f
+	t, ai = parseInitialByte(d.data[d.off])
 	val = uint64(ai)
 	d.off++
 
-	if ai < 24 {
+	if ai <= maxAdditionalInformationWithoutArgument {
 		return
 	}
-	if ai == 24 {
+
+	if ai == additionalInformationWith1ByteArgument {
 		val = uint64(d.data[d.off])
 		d.off++
 		return
 	}
-	if ai == 25 {
-		val = uint64(binary.BigEndian.Uint16(d.data[d.off : d.off+2]))
-		d.off += 2
+
+	if ai == additionalInformationWith2ByteArgument {
+		const argumentSize = 2
+		val = uint64(binary.BigEndian.Uint16(d.data[d.off : d.off+argumentSize]))
+		d.off += argumentSize
 		return
 	}
-	if ai == 26 {
-		val = uint64(binary.BigEndian.Uint32(d.data[d.off : d.off+4]))
-		d.off += 4
+
+	if ai == additionalInformationWith4ByteArgument {
+		const argumentSize = 4
+		val = uint64(binary.BigEndian.Uint32(d.data[d.off : d.off+argumentSize]))
+		d.off += argumentSize
 		return
 	}
-	if ai == 27 {
-		val = binary.BigEndian.Uint64(d.data[d.off : d.off+8])
-		d.off += 8
+
+	if ai == additionalInformationWith8ByteArgument {
+		const argumentSize = 8
+		val = binary.BigEndian.Uint64(d.data[d.off : d.off+argumentSize])
+		d.off += argumentSize
 		return
 	}
 	return
@@ -2826,9 +2859,11 @@ func (d *decoder) numOfItemsUntilBreak() int {
 	return i
 }
 
+// foundBreak returns true if next byte is CBOR break code and moves cursor by 1,
+// otherwise it returns false.
 // foundBreak assumes data is well-formed, and does not perform bounds checking.
 func (d *decoder) foundBreak() bool {
-	if d.data[d.off] == 0xff {
+	if isBreakFlag(d.data[d.off]) {
 		d.off++
 		return true
 	}
@@ -2842,7 +2877,7 @@ func (d *decoder) reset(data []byte) {
 }
 
 func (d *decoder) nextCBORType() cborType {
-	return cborType(d.data[d.off] & 0xe0)
+	return getType(d.data[d.off])
 }
 
 func (d *decoder) nextCBORNil() bool {
@@ -2887,6 +2922,7 @@ func fillPositiveInt(t cborType, val uint64, v reflect.Value) error {
 		}
 		v.SetInt(int64(val))
 		return nil
+
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		if v.OverflowUint(val) {
 			return &UnmarshalTypeError{
@@ -2897,11 +2933,13 @@ func fillPositiveInt(t cborType, val uint64, v reflect.Value) error {
 		}
 		v.SetUint(val)
 		return nil
+
 	case reflect.Float32, reflect.Float64:
 		f := float64(val)
 		v.SetFloat(f)
 		return nil
 	}
+
 	if v.Type() == typeBigInt {
 		i := new(big.Int).SetUint64(val)
 		v.Set(reflect.ValueOf(*i))
@@ -2922,6 +2960,7 @@ func fillNegativeInt(t cborType, val int64, v reflect.Value) error {
 		}
 		v.SetInt(val)
 		return nil
+
 	case reflect.Float32, reflect.Float64:
 		f := float64(val)
 		v.SetFloat(f)
@@ -3020,6 +3059,7 @@ func isImmutableKind(k reflect.Kind) bool {
 		reflect.Float32, reflect.Float64,
 		reflect.String:
 		return true
+
 	default:
 		return false
 	}
@@ -3029,6 +3069,7 @@ func isHashableValue(rv reflect.Value) bool {
 	switch rv.Kind() {
 	case reflect.Slice, reflect.Map, reflect.Func:
 		return false
+
 	case reflect.Struct:
 		switch rv.Type() {
 		case typeTag:
@@ -3051,6 +3092,7 @@ func convertByteSliceToByteString(v interface{}) (interface{}, bool) {
 	switch v := v.(type) {
 	case []byte:
 		return ByteString(v), true
+
 	case Tag:
 		content, converted := convertByteSliceToByteString(v.Content)
 		if converted {
@@ -3058,37 +3100,4 @@ func convertByteSliceToByteString(v interface{}) (interface{}, bool) {
 		}
 	}
 	return v, false
-}
-
-// validBuiltinTag checks that supported built-in tag numbers are followed by expected content types.
-func validBuiltinTag(tagNum uint64, contentHead byte) error {
-	t := cborType(contentHead & 0xe0)
-	switch tagNum {
-	case 0:
-		// Tag content (date/time text string in RFC 3339 format) must be string type.
-		if t != cborTypeTextString {
-			return errors.New("cbor: tag number 0 must be followed by text string, got " + t.String())
-		}
-		return nil
-	case 1:
-		// Tag content (epoch date/time) must be uint, int, or float type.
-		if t != cborTypePositiveInt && t != cborTypeNegativeInt && (contentHead < 0xf9 || contentHead > 0xfb) {
-			return errors.New("cbor: tag number 1 must be followed by integer or floating-point number, got " + t.String())
-		}
-		return nil
-	case 2, 3:
-		// Tag content (bignum) must be byte type.
-		if t != cborTypeByteString {
-			return errors.New("cbor: tag number 2 or 3 must be followed by byte string, got " + t.String())
-		}
-		return nil
-	case expectedLaterEncodingBase64URLTagNum, expectedLaterEncodingBase64TagNum, expectedLaterEncodingBase16TagNum:
-		// From RFC 8949 3.4.5.2:
-		//   The data item tagged can be a byte string or any other data item. In the latter
-		//   case, the tag applies to all of the byte string data items contained in the data
-		//   item, except for those contained in a nested data item tagged with an expected
-		//   conversion.
-		return nil
-	}
-	return nil
 }

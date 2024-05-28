@@ -159,7 +159,7 @@ func (dm *diagMode) Diagnose(data []byte) (string, error) {
 }
 
 // DiagnoseFirst returns extended diagnostic notation (EDN) of the first CBOR data item using the DiagMode. Any remaining bytes are returned in rest.
-func (dm *diagMode) DiagnoseFirst(data []byte) (string, []byte, error) {
+func (dm *diagMode) DiagnoseFirst(data []byte) (diagNotation string, rest []byte, err error) {
 	return newDiagnose(data, dm.decMode, dm).diagFirst()
 }
 
@@ -174,7 +174,7 @@ func Diagnose(data []byte) (string, error) {
 }
 
 // Diagnose returns extended diagnostic notation (EDN) of the first CBOR data item using the DiagMode. Any remaining bytes are returned in rest.
-func DiagnoseFirst(data []byte) (string, []byte, error) {
+func DiagnoseFirst(data []byte) (diagNotation string, rest []byte, err error) {
 	return defaultDiagMode.DiagnoseFirst(data)
 }
 
@@ -202,8 +202,8 @@ func (di *diagnose) diag(cborSequence bool) (string, error) {
 				di.w.WriteString(", ")
 			}
 			firstItem = false
-			if err = di.item(); err != nil {
-				return di.w.String(), err
+			if itemErr := di.item(); itemErr != nil {
+				return di.w.String(), itemErr
 			}
 
 		case io.EOF:
@@ -218,8 +218,8 @@ func (di *diagnose) diag(cborSequence bool) (string, error) {
 	}
 }
 
-func (di *diagnose) diagFirst() (string, []byte, error) {
-	err := di.wellformed(true)
+func (di *diagnose) diagFirst() (diagNotation string, rest []byte, err error) {
+	err = di.wellformed(true)
 	if err == nil {
 		err = di.item()
 	}
@@ -242,16 +242,17 @@ func (di *diagnose) wellformed(allowExtraData bool) error {
 func (di *diagnose) item() error { //nolint:gocyclo
 	initialByte := di.d.data[di.d.off]
 	switch initialByte {
-	case 0x5f, 0x7f: // indefinite-length byte/text string
+	case cborByteStringWithIndefiniteLengthHead,
+		cborTextStringWithIndefiniteLengthHead: // indefinite-length byte/text string
 		di.d.off++
-		if di.d.data[di.d.off] == 0xff {
+		if isBreakFlag(di.d.data[di.d.off]) {
 			di.d.off++
 			switch initialByte {
-			case 0x5f:
+			case cborByteStringWithIndefiniteLengthHead:
 				// indefinite-length bytes with no chunks.
 				di.w.WriteString(`''_`)
 				return nil
-			case 0x7f:
+			case cborTextStringWithIndefiniteLengthHead:
 				// indefinite-length text with no chunks.
 				di.w.WriteString(`""_`)
 				return nil
@@ -276,7 +277,7 @@ func (di *diagnose) item() error { //nolint:gocyclo
 		di.w.WriteByte(')')
 		return nil
 
-	case 0x9f: // indefinite-length array
+	case cborArrayWithIndefiniteLengthHead: // indefinite-length array
 		di.d.off++
 		di.w.WriteString("[_ ")
 
@@ -295,7 +296,7 @@ func (di *diagnose) item() error { //nolint:gocyclo
 		di.w.WriteByte(']')
 		return nil
 
-	case 0xbf: // indefinite-length map
+	case cborMapWithIndefiniteLengthHead: // indefinite-length map
 		di.d.off++
 		di.w.WriteString("{_ ")
 
@@ -398,9 +399,13 @@ func (di *diagnose) item() error { //nolint:gocyclo
 	case cborTypeTag:
 		_, _, tagNum := di.d.getHead()
 		switch tagNum {
-		case 2:
+		case tagNumUnsignedBignum:
 			if nt := di.d.nextCBORType(); nt != cborTypeByteString {
-				return errors.New("cbor: tag number 2 must be followed by byte string, got " + nt.String())
+				return fmt.Errorf(
+					"cbor: tag number %d must be followed by byte string, got %s",
+					tagNumUnsignedBignum,
+					nt.String(),
+				)
 			}
 
 			b, _ := di.d.parseByteString()
@@ -408,9 +413,13 @@ func (di *diagnose) item() error { //nolint:gocyclo
 			di.w.WriteString(bi.String())
 			return nil
 
-		case 3:
+		case tagNumNegativeBignum:
 			if nt := di.d.nextCBORType(); nt != cborTypeByteString {
-				return errors.New("cbor: tag number 3 must be followed by byte string, got " + nt.String())
+				return fmt.Errorf(
+					"cbor: tag number %d must be followed by byte string, got %s",
+					tagNumNegativeBignum,
+					nt.String(),
+				)
 			}
 
 			b, _ := di.d.parseByteString()
@@ -433,23 +442,25 @@ func (di *diagnose) item() error { //nolint:gocyclo
 	case cborTypePrimitives:
 		_, ai, val := di.d.getHead()
 		switch ai {
-		case 20:
+		case additionalInformationAsFalse:
 			di.w.WriteString("false")
 			return nil
 
-		case 21:
+		case additionalInformationAsTrue:
 			di.w.WriteString("true")
 			return nil
 
-		case 22:
+		case additionalInformationAsNull:
 			di.w.WriteString("null")
 			return nil
 
-		case 23:
+		case additionalInformationAsUndefined:
 			di.w.WriteString("undefined")
 			return nil
 
-		case 25, 26, 27:
+		case additionalInformationAsFloat16,
+			additionalInformationAsFloat32,
+			additionalInformationAsFloat64:
 			return di.encodeFloat(ai, val)
 
 		default:
@@ -563,7 +574,7 @@ func (di *diagnose) encodeByteString(val []byte) error {
 	}
 }
 
-var utf16SurrSelf = rune(0x10000)
+const utf16SurrSelf = rune(0x10000)
 
 // quote should be either `'` or `"`
 func (di *diagnose) encodeTextString(val string, quote byte) error {
@@ -620,7 +631,7 @@ func (di *diagnose) encodeTextString(val string, quote byte) error {
 func (di *diagnose) encodeFloat(ai byte, val uint64) error {
 	f64 := float64(0)
 	switch ai {
-	case 25:
+	case additionalInformationAsFloat16:
 		f16 := float16.Frombits(uint16(val))
 		switch {
 		case f16.IsNaN():
@@ -636,7 +647,7 @@ func (di *diagnose) encodeFloat(ai byte, val uint64) error {
 			f64 = float64(f16.Float32())
 		}
 
-	case 26:
+	case additionalInformationAsFloat32:
 		f32 := math.Float32frombits(uint32(val))
 		switch {
 		case f32 != f32:
@@ -652,7 +663,7 @@ func (di *diagnose) encodeFloat(ai byte, val uint64) error {
 			f64 = float64(f32)
 		}
 
-	case 27:
+	case additionalInformationAsFloat64:
 		f64 = math.Float64frombits(val)
 		switch {
 		case f64 != f64:
@@ -668,16 +679,17 @@ func (di *diagnose) encodeFloat(ai byte, val uint64) error {
 	}
 	// Use ES6 number to string conversion which should match most JSON generators.
 	// Inspired by https://github.com/golang/go/blob/4df10fba1687a6d4f51d7238a403f8f2298f6a16/src/encoding/json/encode.go#L585
+	const bitSize = 64
 	b := make([]byte, 0, 32)
 	if abs := math.Abs(f64); abs != 0 && (abs < 1e-6 || abs >= 1e21) {
-		b = strconv.AppendFloat(b, f64, 'e', -1, 64)
+		b = strconv.AppendFloat(b, f64, 'e', -1, bitSize)
 		// clean up e-09 to e-9
 		n := len(b)
 		if n >= 4 && string(b[n-4:n-1]) == "e-0" {
 			b = append(b[:n-2], b[n-1])
 		}
 	} else {
-		b = strconv.AppendFloat(b, f64, 'f', -1, 64)
+		b = strconv.AppendFloat(b, f64, 'f', -1, bitSize)
 	}
 
 	// add decimal point and trailing zero if needed
@@ -695,13 +707,15 @@ func (di *diagnose) encodeFloat(ai byte, val uint64) error {
 
 	if di.dm.floatPrecisionIndicator {
 		switch ai {
-		case 25:
+		case additionalInformationAsFloat16:
 			di.w.WriteString("_1")
 			return nil
-		case 26:
+
+		case additionalInformationAsFloat32:
 			di.w.WriteString("_2")
 			return nil
-		case 27:
+
+		case additionalInformationAsFloat64:
 			di.w.WriteString("_3")
 			return nil
 		}

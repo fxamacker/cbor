@@ -195,6 +195,7 @@ func (st StringMode) cborType() (cborType, error) {
 	switch st {
 	case StringToTextString:
 		return cborTypeTextString, nil
+
 	case StringToByteString:
 		return cborTypeByteString, nil
 	}
@@ -417,12 +418,15 @@ func (bsm ByteSliceMode) encodingTag() (uint64, error) {
 	switch bsm {
 	case ByteSliceToByteString:
 		return 0, nil
+
 	case ByteSliceToByteStringWithExpectedConversionToBase64URL:
-		return expectedLaterEncodingBase64URLTagNum, nil
+		return tagNumExpectedLaterEncodingBase64URL, nil
+
 	case ByteSliceToByteStringWithExpectedConversionToBase64:
-		return expectedLaterEncodingBase64TagNum, nil
+		return tagNumExpectedLaterEncodingBase64, nil
+
 	case ByteSliceToByteStringWithExpectedConversionToBase16:
-		return expectedLaterEncodingBase16TagNum, nil
+		return tagNumExpectedLaterEncodingBase16, nil
 	}
 	return 0, errors.New("cbor: invalid ByteSlice " + strconv.Itoa(int(bsm)))
 }
@@ -609,12 +613,12 @@ func PreferredUnsortedEncOptions() EncOptions {
 }
 
 // EncMode returns EncMode with immutable options and no tags (safe for concurrency).
-func (opts EncOptions) EncMode() (EncMode, error) {
+func (opts EncOptions) EncMode() (EncMode, error) { //nolint:gocritic // ignore hugeParam
 	return opts.encMode()
 }
 
 // EncModeWithTags returns EncMode with options and tags that are both immutable (safe for concurrency).
-func (opts EncOptions) EncModeWithTags(tags TagSet) (EncMode, error) {
+func (opts EncOptions) EncModeWithTags(tags TagSet) (EncMode, error) { //nolint:gocritic // ignore hugeParam
 	if opts.TagsMd == TagsForbidden {
 		return nil, errors.New("cbor: cannot create EncMode with TagSet when TagsMd is TagsForbidden")
 	}
@@ -642,7 +646,7 @@ func (opts EncOptions) EncModeWithTags(tags TagSet) (EncMode, error) {
 }
 
 // EncModeWithSharedTags returns EncMode with immutable options and mutable shared tags (safe for concurrency).
-func (opts EncOptions) EncModeWithSharedTags(tags TagSet) (EncMode, error) {
+func (opts EncOptions) EncModeWithSharedTags(tags TagSet) (EncMode, error) { //nolint:gocritic // ignore hugeParam
 	if opts.TagsMd == TagsForbidden {
 		return nil, errors.New("cbor: cannot create EncMode with TagSet when TagsMd is TagsForbidden")
 	}
@@ -657,7 +661,7 @@ func (opts EncOptions) EncModeWithSharedTags(tags TagSet) (EncMode, error) {
 	return em, nil
 }
 
-func (opts EncOptions) encMode() (*encMode, error) {
+func (opts EncOptions) encMode() (*encMode, error) { //nolint:gocritic // ignore hugeParam
 	if !opts.Sort.valid() {
 		return nil, errors.New("cbor: invalid SortMode " + strconv.Itoa(int(opts.Sort)))
 	}
@@ -913,15 +917,6 @@ func putEncodeBuffer(e *bytes.Buffer) {
 type encodeFunc func(e *bytes.Buffer, em *encMode, v reflect.Value) error
 type isEmptyFunc func(em *encMode, v reflect.Value) (empty bool, err error)
 
-var (
-	cborFalse            = []byte{0xf4}
-	cborTrue             = []byte{0xf5}
-	cborNil              = []byte{0xf6}
-	cborNaN              = []byte{0xf9, 0x7e, 0x00}
-	cborPositiveInfinity = []byte{0xf9, 0x7c, 0x00}
-	cborNegativeInfinity = []byte{0xf9, 0xfc, 0x00}
-)
-
 func encode(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if !v.IsValid() {
 		// v is zero value
@@ -987,9 +982,9 @@ func encodeFloat(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 		// Encode float64
 		// Don't use encodeFloat64() because it cannot be inlined.
 		var scratch [9]byte
-		scratch[0] = byte(cborTypePrimitives) | byte(27)
+		scratch[0] = byte(cborTypePrimitives) | byte(additionalInformationAsFloat64)
 		binary.BigEndian.PutUint64(scratch[1:], math.Float64bits(f64))
-		e.Write(scratch[:9])
+		e.Write(scratch[:])
 		return nil
 	}
 
@@ -1011,7 +1006,7 @@ func encodeFloat(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 			// Encode float16
 			// Don't use encodeFloat16() because it cannot be inlined.
 			var scratch [3]byte
-			scratch[0] = byte(cborTypePrimitives) | byte(25)
+			scratch[0] = byte(cborTypePrimitives) | additionalInformationAsFloat16
 			binary.BigEndian.PutUint16(scratch[1:], uint16(f16))
 			e.Write(scratch[:3])
 			return nil
@@ -1021,7 +1016,7 @@ func encodeFloat(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	// Encode float32
 	// Don't use encodeFloat32() because it cannot be inlined.
 	var scratch [5]byte
-	scratch[0] = byte(cborTypePrimitives) | byte(26)
+	scratch[0] = byte(cborTypePrimitives) | additionalInformationAsFloat32
 	binary.BigEndian.PutUint32(scratch[1:], math.Float32bits(f32))
 	e.Write(scratch[:5])
 	return nil
@@ -1032,6 +1027,7 @@ func encodeInf(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	switch em.infConvert {
 	case InfConvertReject:
 		return &UnsupportedValueError{msg: "floating-point infinity"}
+
 	case InfConvertFloat16:
 		if f64 > 0 {
 			e.Write(cborPositiveInfinity)
@@ -1109,7 +1105,7 @@ func encodeNaN(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 
 func encodeFloat16(e *bytes.Buffer, f16 float16.Float16) error {
 	var scratch [3]byte
-	scratch[0] = byte(cborTypePrimitives) | byte(25)
+	scratch[0] = byte(cborTypePrimitives) | additionalInformationAsFloat16
 	binary.BigEndian.PutUint16(scratch[1:], uint16(f16))
 	e.Write(scratch[:3])
 	return nil
@@ -1117,7 +1113,7 @@ func encodeFloat16(e *bytes.Buffer, f16 float16.Float16) error {
 
 func encodeFloat32(e *bytes.Buffer, f32 float32) error {
 	var scratch [5]byte
-	scratch[0] = byte(cborTypePrimitives) | byte(26)
+	scratch[0] = byte(cborTypePrimitives) | additionalInformationAsFloat32
 	binary.BigEndian.PutUint32(scratch[1:], math.Float32bits(f32))
 	e.Write(scratch[:5])
 	return nil
@@ -1125,7 +1121,7 @@ func encodeFloat32(e *bytes.Buffer, f32 float32) error {
 
 func encodeFloat64(e *bytes.Buffer, f64 float64) error {
 	var scratch [9]byte
-	scratch[0] = byte(cborTypePrimitives) | byte(27)
+	scratch[0] = byte(cborTypePrimitives) | additionalInformationAsFloat64
 	binary.BigEndian.PutUint64(scratch[1:], math.Float64bits(f64))
 	e.Write(scratch[:9])
 	return nil
@@ -1351,7 +1347,7 @@ func encodeStructToArray(e *bytes.Buffer, em *encMode, v reflect.Value) (err err
 			fv = v.Field(f.idx[0])
 		} else {
 			// Get embedded field value.  No error is expected.
-			fv, _ = getFieldValue(v, f.idx, func(v reflect.Value) (reflect.Value, error) {
+			fv, _ = getFieldValue(v, f.idx, func(reflect.Value) (reflect.Value, error) {
 				// Write CBOR nil for null pointer to embedded struct
 				e.Write(cborNil)
 				return reflect.Value{}, nil
@@ -1399,7 +1395,7 @@ func encodeStruct(e *bytes.Buffer, em *encMode, v reflect.Value) (err error) {
 			fv = v.Field(f.idx[0])
 		} else {
 			// Get embedded field value.  No error is expected.
-			fv, _ = getFieldValue(v, f.idx, func(v reflect.Value) (reflect.Value, error) {
+			fv, _ = getFieldValue(v, f.idx, func(reflect.Value) (reflect.Value, error) {
 				// Skip null pointer to embedded struct
 				return reflect.Value{}, nil
 			})
@@ -1487,10 +1483,12 @@ func encodeTime(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	case TimeUnix:
 		secs := t.Unix()
 		return encodeInt(e, em, reflect.ValueOf(secs))
+
 	case TimeUnixMicro:
 		t = t.UTC().Round(time.Microsecond)
 		f := float64(t.UnixNano()) / 1e9
 		return encodeFloat(e, em, reflect.ValueOf(f))
+
 	case TimeUnixDynamic:
 		t = t.UTC().Round(time.Microsecond)
 		secs, nsecs := t.Unix(), uint64(t.Nanosecond())
@@ -1499,9 +1497,11 @@ func encodeTime(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 		}
 		f := float64(secs) + float64(nsecs)/1e9
 		return encodeFloat(e, em, reflect.ValueOf(f))
+
 	case TimeRFC3339:
 		s := t.Format(time.RFC3339)
 		return encodeString(e, em, reflect.ValueOf(s))
+
 	default: // TimeRFC3339Nano
 		s := t.Format(time.RFC3339Nano)
 		return encodeString(e, em, reflect.ValueOf(s))
@@ -1642,34 +1642,46 @@ func encodeTag(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 
 // encodeHead writes CBOR head of specified type t and returns number of bytes written.
 func encodeHead(e *bytes.Buffer, t byte, n uint64) int {
-	if n <= 23 {
+	if n <= maxAdditionalInformationWithoutArgument {
+		const headSize = 1
 		e.WriteByte(t | byte(n))
-		return 1
+		return headSize
 	}
+
 	if n <= math.MaxUint8 {
-		scratch := [2]byte{t | byte(24), byte(n)}
-		e.Write(scratch[:2])
-		return 2
+		const headSize = 2
+		scratch := [headSize]byte{
+			t | byte(additionalInformationWith1ByteArgument),
+			byte(n),
+		}
+		e.Write(scratch[:])
+		return headSize
 	}
+
 	if n <= math.MaxUint16 {
-		var scratch [3]byte
-		scratch[0] = t | byte(25)
+		const headSize = 3
+		var scratch [headSize]byte
+		scratch[0] = t | byte(additionalInformationWith2ByteArgument)
 		binary.BigEndian.PutUint16(scratch[1:], uint16(n))
-		e.Write(scratch[:3])
-		return 3
+		e.Write(scratch[:])
+		return headSize
 	}
+
 	if n <= math.MaxUint32 {
-		var scratch [5]byte
-		scratch[0] = t | byte(26)
+		const headSize = 5
+		var scratch [headSize]byte
+		scratch[0] = t | byte(additionalInformationWith4ByteArgument)
 		binary.BigEndian.PutUint32(scratch[1:], uint32(n))
-		e.Write(scratch[:5])
-		return 5
+		e.Write(scratch[:])
+		return headSize
 	}
-	var scratch [9]byte
-	scratch[0] = t | byte(27)
+
+	const headSize = 9
+	var scratch [headSize]byte
+	scratch[0] = t | byte(additionalInformationWith8ByteArgument)
 	binary.BigEndian.PutUint64(scratch[1:], n)
-	e.Write(scratch[:9])
-	return 9
+	e.Write(scratch[:])
+	return headSize
 }
 
 var (
@@ -1687,14 +1699,19 @@ func getEncodeFuncInternal(t reflect.Type) (ef encodeFunc, ief isEmptyFunc) {
 	switch t {
 	case typeSimpleValue:
 		return encodeMarshalerType, isEmptyUint
+
 	case typeTag:
 		return encodeTag, alwaysNotEmpty
+
 	case typeTime:
 		return encodeTime, alwaysNotEmpty
+
 	case typeBigInt:
 		return encodeBigInt, alwaysNotEmpty
+
 	case typeRawMessage:
 		return encodeMarshalerType, isEmptySlice
+
 	case typeByteString:
 		return encodeMarshalerType, isEmptyString
 	}
@@ -1715,31 +1732,39 @@ func getEncodeFuncInternal(t reflect.Type) (ef encodeFunc, ief isEmptyFunc) {
 	switch k {
 	case reflect.Bool:
 		return encodeBool, isEmptyBool
+
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return encodeInt, isEmptyInt
+
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return encodeUint, isEmptyUint
+
 	case reflect.Float32, reflect.Float64:
 		return encodeFloat, isEmptyFloat
+
 	case reflect.String:
 		return encodeString, isEmptyString
+
 	case reflect.Slice:
 		if t.Elem().Kind() == reflect.Uint8 {
 			return encodeByteString, isEmptySlice
 		}
 		fallthrough
+
 	case reflect.Array:
 		f, _ := getEncodeFunc(t.Elem())
 		if f == nil {
 			return nil, nil
 		}
 		return arrayEncodeFunc{f: f}.encode, isEmptySlice
+
 	case reflect.Map:
 		f := getEncodeMapFunc(t)
 		if f == nil {
 			return nil, nil
 		}
 		return f, isEmptyMap
+
 	case reflect.Struct:
 		// Get struct's special field "_" tag options
 		if f, ok := t.FieldByName("_"); ok {
@@ -1751,6 +1776,7 @@ func getEncodeFuncInternal(t reflect.Type) (ef encodeFunc, ief isEmptyFunc) {
 			}
 		}
 		return encodeStruct, isEmptyStruct
+
 	case reflect.Interface:
 		return encodeIntf, isEmptyIntf
 	}
@@ -1844,7 +1870,7 @@ func isEmptyStruct(em *encMode, v reflect.Value) (bool, error) {
 			fv = v.Field(f.idx[0])
 		} else {
 			// Get embedded field value.  No error is expected.
-			fv, _ = getFieldValue(v, f.idx, func(v reflect.Value) (reflect.Value, error) {
+			fv, _ = getFieldValue(v, f.idx, func(reflect.Value) (reflect.Value, error) {
 				// Skip null pointer to embedded struct
 				return reflect.Value{}, nil
 			})

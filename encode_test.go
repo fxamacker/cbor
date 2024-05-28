@@ -328,7 +328,8 @@ func TestInvalidTypeMarshal(t *testing.T) {
 	}
 	for _, tc := range marshalErrorTests {
 		t.Run(tc.name, func(t *testing.T) {
-			b, err := Marshal(&tc.value)
+			v := tc.value
+			b, err := Marshal(&v)
 			if err == nil {
 				t.Errorf("Marshal(%v) didn't return an error, want error %q", tc.value, tc.wantErrorMsg)
 			} else if _, ok := err.(*UnsupportedTypeError); !ok {
@@ -339,7 +340,8 @@ func TestInvalidTypeMarshal(t *testing.T) {
 				t.Errorf("Marshal(%v) = 0x%x, want nil", tc.value, b)
 			}
 
-			b, err = em.Marshal(&tc.value)
+			v = tc.value
+			b, err = em.Marshal(&v)
 			if err == nil {
 				t.Errorf("Marshal(%v) didn't return an error, want error %q", tc.value, tc.wantErrorMsg)
 			} else if _, ok := err.(*UnsupportedTypeError); !ok {
@@ -449,27 +451,46 @@ func TestMarshalLargeMap(t *testing.T) {
 }
 
 func encodeCborHeader(t cborType, n uint64) []byte {
-	b := make([]byte, 9)
-	if n <= 23 {
+	if n <= maxAdditionalInformationWithoutArgument {
+		const headSize = 1
+		var b [headSize]byte
 		b[0] = byte(t) | byte(n)
-		return b[:1]
-	} else if n <= math.MaxUint8 {
-		b[0] = byte(t) | byte(24)
-		b[1] = byte(n)
-		return b[:2]
-	} else if n <= math.MaxUint16 {
-		b[0] = byte(t) | byte(25)
-		binary.BigEndian.PutUint16(b[1:], uint16(n))
-		return b[:3]
-	} else if n <= math.MaxUint32 {
-		b[0] = byte(t) | byte(26)
-		binary.BigEndian.PutUint32(b[1:], uint32(n))
-		return b[:5]
-	} else {
-		b[0] = byte(t) | byte(27)
-		binary.BigEndian.PutUint64(b[1:], n)
-		return b[:9]
+		return b[:]
 	}
+
+	if n <= math.MaxUint8 {
+		const argumentSize = 1
+		const headSize = 1 + argumentSize
+		var b [headSize]byte
+		b[0] = byte(t) | additionalInformationWith1ByteArgument
+		b[1] = byte(n)
+		return b[:]
+	}
+
+	if n <= math.MaxUint16 {
+		const argumentSize = 2
+		const headSize = 1 + argumentSize
+		var b [headSize]byte
+		b[0] = byte(t) | additionalInformationWith2ByteArgument
+		binary.BigEndian.PutUint16(b[1:], uint16(n))
+		return b[:]
+	}
+
+	if n <= math.MaxUint32 {
+		const argumentSize = 4
+		const headSize = 1 + argumentSize
+		var b [headSize]byte
+		b[0] = byte(t) | additionalInformationWith4ByteArgument
+		binary.BigEndian.PutUint32(b[1:], uint32(n))
+		return b[:]
+	}
+
+	const argumentSize = 8
+	const headSize = 1 + argumentSize
+	var b [headSize]byte
+	b[0] = byte(t) | additionalInformationWith8ByteArgument
+	binary.BigEndian.PutUint64(b[1:], n)
+	return b[:]
 }
 
 func testMarshal(t *testing.T, testCases []marshalTest) {
@@ -4467,7 +4488,7 @@ func TestSortModeFastShuffle(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if string(first) != string(next) {
+				if !bytes.Equal(first, next) {
 					return
 				}
 			}
@@ -4570,7 +4591,7 @@ func TestMarshalByteArrayMode(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if string(out) != string(tc.expected) {
+			if !bytes.Equal(out, tc.expected) {
 				t.Errorf("unexpected output, got 0x%x want 0x%x", out, tc.expected)
 			}
 		})
@@ -4669,7 +4690,7 @@ func TestMarshalByteSliceMode(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if string(out) != string(tc.expected) {
+			if !bytes.Equal(out, tc.expected) {
 				t.Errorf("unexpected output, got 0x%x want 0x%x", out, tc.expected)
 			}
 		})

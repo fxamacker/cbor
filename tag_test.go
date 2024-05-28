@@ -1388,7 +1388,7 @@ func (n *number3) UnmarshalCBOR(data []byte) (err error) {
 		return fmt.Errorf("wrong tag number %d, want %d", rawTag.Number, 100)
 	}
 
-	if rawTag.Content[0]&0xe0 != 0xa0 {
+	if getType(rawTag.Content[0]) != cborTypeMap {
 		return fmt.Errorf("wrong tag content type, want map")
 	}
 
