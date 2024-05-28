@@ -398,9 +398,13 @@ func (di *diagnose) item() error { //nolint:gocyclo
 	case cborTypeTag:
 		_, _, tagNum := di.d.getHead()
 		switch tagNum {
-		case 2:
+		case tagNumUnsignedBignum:
 			if nt := di.d.nextCBORType(); nt != cborTypeByteString {
-				return errors.New("cbor: tag number 2 must be followed by byte string, got " + nt.String())
+				return fmt.Errorf(
+					"cbor: tag number %d must be followed by byte string, got %s",
+					tagNumUnsignedBignum,
+					nt.String(),
+				)
 			}
 
 			b, _ := di.d.parseByteString()
@@ -408,9 +412,13 @@ func (di *diagnose) item() error { //nolint:gocyclo
 			di.w.WriteString(bi.String())
 			return nil
 
-		case 3:
+		case tagNumNegativeBignum:
 			if nt := di.d.nextCBORType(); nt != cborTypeByteString {
-				return errors.New("cbor: tag number 3 must be followed by byte string, got " + nt.String())
+				return fmt.Errorf(
+					"cbor: tag number %d must be followed by byte string, got %s",
+					tagNumNegativeBignum,
+					nt.String(),
+				)
 			}
 
 			b, _ := di.d.parseByteString()

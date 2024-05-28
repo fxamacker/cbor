@@ -1474,7 +1474,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 	case cborTypeTag:
 		_, _, tagNum := d.getHead()
 		switch tagNum {
-		case 2:
+		case tagNumUnsignedBignum:
 			// Bignum (tag 2) can be decoded to uint, int, float, slice, array, or big.Int.
 			b, copied := d.parseByteString()
 			bi := new(big.Int).SetBytes(b)
@@ -1494,7 +1494,8 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				GoType:   tInfo.nonPtrType.String(),
 				errorMsg: bi.String() + " overflows " + v.Type().String(),
 			}
-		case 3:
+
+		case tagNumNegativeBignum:
 			// Bignum (tag 3) can be decoded to int, float, slice, array, or big.Int.
 			b, copied := d.parseByteString()
 			bi := new(big.Int).SetBytes(b)
@@ -1516,6 +1517,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				GoType:   tInfo.nonPtrType.String(),
 				errorMsg: bi.String() + " overflows " + v.Type().String(),
 			}
+
 		case tagNumExpectedLaterEncodingBase64URL, tagNumExpectedLaterEncodingBase64, tagNumExpectedLaterEncodingBase16:
 			// If conversion for interoperability with text encodings is not configured,
 			// treat tags 21-23 as unregistered tags.
@@ -1834,7 +1836,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 		contentOff := d.off
 
 		switch tagNum {
-		case 0, 1:
+		case tagNumRFC3339Time, tagNumEpochTime:
 			d.off = tagOff
 			tm, _, err := d.parseToTime()
 			if err != nil {
@@ -1868,7 +1870,8 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 			default:
 				// not reachable
 			}
-		case 2:
+
+		case tagNumUnsignedBignum:
 			b, _ := d.parseByteString()
 			bi := new(big.Int).SetBytes(b)
 
@@ -1876,7 +1879,8 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 				return bi, nil
 			}
 			return *bi, nil
-		case 3:
+
+		case tagNumNegativeBignum:
 			b, _ := d.parseByteString()
 			bi := new(big.Int).SetBytes(b)
 			bi.Add(bi, big.NewInt(1))
@@ -1886,6 +1890,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 				return bi, nil
 			}
 			return *bi, nil
+
 		case tagNumExpectedLaterEncodingBase64URL, tagNumExpectedLaterEncodingBase64, tagNumExpectedLaterEncodingBase16:
 			// If conversion for interoperability with text encodings is not configured,
 			// treat tags 21-23 as unregistered tags.

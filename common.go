@@ -4,7 +4,7 @@
 package cbor
 
 import (
-	"errors"
+	"fmt"
 	"strconv"
 )
 
@@ -89,14 +89,21 @@ func parseInitialByte(b byte) (t cborType, ai byte) {
 }
 
 const (
+	tagNumRFC3339Time                    = 0
+	tagNumEpochTime                      = 1
+	tagNumUnsignedBignum                 = 2
+	tagNumNegativeBignum                 = 3
 	tagNumSelfDescribedCBOR              = 55799
 	tagNumExpectedLaterEncodingBase64URL = 21
 	tagNumExpectedLaterEncodingBase64    = 22
 	tagNumExpectedLaterEncodingBase16    = 23
 )
 
+const (
+	cborBreakFlag = byte(0xff)
+)
+
 var (
-	cborBreakFlag        = byte(0xff)
 	cborFalse            = []byte{0xf4}
 	cborTrue             = []byte{0xf5}
 	cborNil              = []byte{0xf6}
@@ -109,24 +116,40 @@ var (
 func validBuiltinTag(tagNum uint64, contentHead byte) error {
 	t := getType(contentHead)
 	switch tagNum {
-	case 0:
+	case tagNumRFC3339Time:
 		// Tag content (date/time text string in RFC 3339 format) must be string type.
 		if t != cborTypeTextString {
-			return errors.New("cbor: tag number 0 must be followed by text string, got " + t.String())
+			return fmt.Errorf(
+				"cbor: tag number %d must be followed by text string, got %s",
+				tagNumRFC3339Time,
+				t.String(),
+			)
 		}
 		return nil
-	case 1:
+
+	case tagNumEpochTime:
 		// Tag content (epoch date/time) must be uint, int, or float type.
 		if t != cborTypePositiveInt && t != cborTypeNegativeInt && (contentHead < 0xf9 || contentHead > 0xfb) {
-			return errors.New("cbor: tag number 1 must be followed by integer or floating-point number, got " + t.String())
+			return fmt.Errorf(
+				"cbor: tag number %d must be followed by integer or floating-point number, got %s",
+				tagNumEpochTime,
+				t.String(),
+			)
 		}
 		return nil
-	case 2, 3:
+
+	case tagNumUnsignedBignum, tagNumNegativeBignum:
 		// Tag content (bignum) must be byte type.
 		if t != cborTypeByteString {
-			return errors.New("cbor: tag number 2 or 3 must be followed by byte string, got " + t.String())
+			return fmt.Errorf(
+				"cbor: tag number %d or %d must be followed by byte string, got %s",
+				tagNumUnsignedBignum,
+				tagNumNegativeBignum,
+				t.String(),
+			)
 		}
 		return nil
+
 	case tagNumExpectedLaterEncodingBase64URL, tagNumExpectedLaterEncodingBase64, tagNumExpectedLaterEncodingBase16:
 		// From RFC 8949 3.4.5.2:
 		//   The data item tagged can be a byte string or any other data item. In the latter
@@ -135,5 +158,6 @@ func validBuiltinTag(tagNum uint64, contentHead byte) error {
 		//   conversion.
 		return nil
 	}
+
 	return nil
 }
