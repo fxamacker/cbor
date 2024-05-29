@@ -8915,13 +8915,13 @@ func TestDecModeTimeTagToAny(t *testing.T) {
 			name:           "error under TimeTagToRFC3339 when tag 1 represents a time that can't be represented by valid RFC3339",
 			opts:           DecOptions{TimeTagToAny: TimeTagToRFC3339},
 			in:             hexDecode("c11b0000003afff44181"), // 1(253402300801)
-			wantErrMessage: "Time.MarshalText: year outside of range [0,9999]",
+			wantErrMessage: "cbor: decoded time cannot be represented in RFC3339 format: Time.MarshalText: year outside of range [0,9999]",
 		},
 		{
 			name:           "error under TimeTagToRFC3339Nano when tag 1 represents a time that can't be represented by valid RFC3339",
 			opts:           DecOptions{TimeTagToAny: TimeTagToRFC3339Nano},
 			in:             hexDecode("c11b0000003afff44181"), // 1(253402300801)
-			wantErrMessage: "Time.MarshalText: year outside of range [0,9999]",
+			wantErrMessage: "cbor: decoded time cannot be represented in RFC3339 format with sub-second precision: Time.MarshalText: year outside of range [0,9999]",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

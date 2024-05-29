@@ -1874,11 +1874,12 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 				if tagNum == 1 {
 					tm = tm.UTC()
 				}
-				// Formats to RFC3339 and errors on time.Time values that cannot be
-				// represented by RFC3339.
+				// Call time.MarshalText() to format decoded time to RFC3339 format,
+				// and return error on time value that cannot be represented in
+				// RFC3339 format. E.g. year cannot exceed 9999, etc.
 				text, err := tm.Truncate(time.Second).MarshalText()
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("cbor: decoded time cannot be represented in RFC3339 format: %v", err)
 				}
 				return string(text), nil
 
@@ -1886,11 +1887,12 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 				if tagNum == 1 {
 					tm = tm.UTC()
 				}
-				// Formats to RFC3339 with subsecond precision and errors on
-				// time.Time values that cannot be represented by RFC3339.
+				// Call time.MarshalText() to format decoded time to RFC3339 format,
+				// and return error on time value that cannot be represented in
+				// RFC3339 format with sub-second precision.
 				text, err := tm.MarshalText()
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("cbor: decoded time cannot be represented in RFC3339 format with sub-second precision: %v", err)
 				}
 				return string(text), nil
 
