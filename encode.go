@@ -981,7 +981,9 @@ func encodeFloat(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if v.Kind() == reflect.Float64 && (fopt == ShortestFloatNone || cannotFitFloat32(f64)) {
 		// Encode float64
 		// Don't use encodeFloat64() because it cannot be inlined.
-		var scratch [9]byte
+		const argumentSize = 8
+		const headSize = 1 + argumentSize
+		var scratch [headSize]byte
 		scratch[0] = byte(cborTypePrimitives) | byte(additionalInformationAsFloat64)
 		binary.BigEndian.PutUint64(scratch[1:], math.Float64bits(f64))
 		e.Write(scratch[:])
@@ -1005,20 +1007,24 @@ func encodeFloat(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 		if p == float16.PrecisionExact {
 			// Encode float16
 			// Don't use encodeFloat16() because it cannot be inlined.
-			var scratch [3]byte
+			const argumentSize = 2
+			const headSize = 1 + argumentSize
+			var scratch [headSize]byte
 			scratch[0] = byte(cborTypePrimitives) | additionalInformationAsFloat16
 			binary.BigEndian.PutUint16(scratch[1:], uint16(f16))
-			e.Write(scratch[:3])
+			e.Write(scratch[:])
 			return nil
 		}
 	}
 
 	// Encode float32
 	// Don't use encodeFloat32() because it cannot be inlined.
-	var scratch [5]byte
+	const argumentSize = 4
+	const headSize = 1 + argumentSize
+	var scratch [headSize]byte
 	scratch[0] = byte(cborTypePrimitives) | additionalInformationAsFloat32
 	binary.BigEndian.PutUint32(scratch[1:], math.Float32bits(f32))
-	e.Write(scratch[:5])
+	e.Write(scratch[:])
 	return nil
 }
 
@@ -1104,26 +1110,32 @@ func encodeNaN(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 }
 
 func encodeFloat16(e *bytes.Buffer, f16 float16.Float16) error {
-	var scratch [3]byte
+	const argumentSize = 2
+	const headSize = 1 + argumentSize
+	var scratch [headSize]byte
 	scratch[0] = byte(cborTypePrimitives) | additionalInformationAsFloat16
 	binary.BigEndian.PutUint16(scratch[1:], uint16(f16))
-	e.Write(scratch[:3])
+	e.Write(scratch[:])
 	return nil
 }
 
 func encodeFloat32(e *bytes.Buffer, f32 float32) error {
-	var scratch [5]byte
+	const argumentSize = 4
+	const headSize = 1 + argumentSize
+	var scratch [headSize]byte
 	scratch[0] = byte(cborTypePrimitives) | additionalInformationAsFloat32
 	binary.BigEndian.PutUint32(scratch[1:], math.Float32bits(f32))
-	e.Write(scratch[:5])
+	e.Write(scratch[:])
 	return nil
 }
 
 func encodeFloat64(e *bytes.Buffer, f64 float64) error {
-	var scratch [9]byte
+	const argumentSize = 8
+	const headSize = 1 + argumentSize
+	var scratch [headSize]byte
 	scratch[0] = byte(cborTypePrimitives) | additionalInformationAsFloat64
 	binary.BigEndian.PutUint64(scratch[1:], math.Float64bits(f64))
-	e.Write(scratch[:9])
+	e.Write(scratch[:])
 	return nil
 }
 
