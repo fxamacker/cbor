@@ -7,7 +7,9 @@ import (
 	"sync"
 )
 
-// Tag represents CBOR tag data, including tag number and unmarshaled tag content.
+// Tag represents CBOR tag data, including tag number and unmarshaled tag content. Marshaling and
+// unmarshaling of tag content is subject to any encode and decode options that would apply to
+// enclosed data item if it were to appear outside of a tag.
 type Tag struct {
 	Number  uint64
 	Content interface{}
