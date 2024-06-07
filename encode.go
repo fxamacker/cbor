@@ -1648,8 +1648,21 @@ func encodeTag(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	// Marshal tag number
 	encodeHead(e, byte(cborTypeTag), t.Number)
 
+	vem := *em // shallow copy
+
+	// For built-in tags, disable settings that may introduce tag validity errors when
+	// marshaling certain Content values.
+	switch t.Number {
+	case tagNumRFC3339Time:
+		vem.stringType = StringToTextString
+		vem.stringMajorType = cborTypeTextString
+	case tagNumUnsignedBignum, tagNumNegativeBignum:
+		vem.byteSlice = ByteSliceToByteString
+		vem.byteSliceEncodingTag = 0
+	}
+
 	// Marshal tag content
-	return encode(e, em, reflect.ValueOf(t.Content))
+	return encode(e, &vem, reflect.ValueOf(t.Content))
 }
 
 // encodeHead writes CBOR head of specified type t and returns number of bytes written.

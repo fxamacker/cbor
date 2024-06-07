@@ -1490,3 +1490,49 @@ func TestMarshalRawTagContainingMalformedCBORData(t *testing.T) {
 		})
 	}
 }
+
+// TestEncodeBuiltinTag tests that marshaling a value of type Tag "does the right thing" when
+// marshaling the enclosed data item of a built-in tag number.
+func TestEncodeBuiltinTag(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		tag  Tag
+		opts EncOptions
+		want []byte
+	}{
+		{
+			name: "unsigned bignum content not enclosed in expected encoding tag",
+			tag:  Tag{Number: tagNumUnsignedBignum, Content: []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			opts: EncOptions{ByteSlice: ByteSliceExpectedEncodingBase16},
+			want: []byte{0xc2, 0x49, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		},
+		{
+			name: "negative bignum content not enclosed in expected encoding tag",
+			tag:  Tag{Number: tagNumNegativeBignum, Content: []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			opts: EncOptions{ByteSlice: ByteSliceExpectedEncodingBase16},
+			want: []byte{0xc3, 0x49, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		},
+		{
+			name: "rfc 3339 content is not encoded as byte string",
+			tag:  Tag{Number: tagNumRFC3339Time, Content: "2013-03-21T20:04:00Z"},
+			opts: EncOptions{String: StringToByteString},
+			want: hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			em, err := tc.opts.EncMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			got, err := em.Marshal(tc.tag)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !bytes.Equal(got, tc.want) {
+				t.Errorf("unexpected difference\ngot: 0x%x\nwant: 0x%x", got, tc.want)
+			}
+		})
+	}
+}
