@@ -1503,13 +1503,13 @@ func TestEncodeBuiltinTag(t *testing.T) {
 		{
 			name: "unsigned bignum content not enclosed in expected encoding tag",
 			tag:  Tag{Number: tagNumUnsignedBignum, Content: []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
-			opts: EncOptions{ByteSlice: ByteSliceExpectedEncodingBase16},
+			opts: EncOptions{ByteSlice: ByteSliceToByteStringWithExpectedConversionToBase16},
 			want: []byte{0xc2, 0x49, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 		},
 		{
 			name: "negative bignum content not enclosed in expected encoding tag",
 			tag:  Tag{Number: tagNumNegativeBignum, Content: []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
-			opts: EncOptions{ByteSlice: ByteSliceExpectedEncodingBase16},
+			opts: EncOptions{ByteSlice: ByteSliceToByteStringWithExpectedConversionToBase16},
 			want: []byte{0xc3, 0x49, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 		},
 		{
