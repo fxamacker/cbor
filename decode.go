@@ -222,6 +222,38 @@ func (e UnacceptableDataItemError) Error() string {
 	return fmt.Sprintf("cbor: data item of cbor type %s is not accepted by protocol: %s", e.CBORType, e.Message)
 }
 
+// ByteStringExpectedFormatError is returned when unmarshaling CBOR byte string fails when
+// using non-default ByteStringExpectedFormat decoding option that makes decoder expect
+// a specified format such as base64, hex, etc.
+type ByteStringExpectedFormatError struct {
+	expectedFormatOption ByteStringExpectedFormatMode
+	err                  error
+}
+
+func newByteStringExpectedFormatError(expectedFormatOption ByteStringExpectedFormatMode, err error) *ByteStringExpectedFormatError {
+	return &ByteStringExpectedFormatError{expectedFormatOption, err}
+}
+
+func (e *ByteStringExpectedFormatError) Error() string {
+	switch e.expectedFormatOption {
+	case ByteStringExpectedBase64URL:
+		return fmt.Sprintf("cbor: failed to decode base64url from byte string: %s", e.err)
+
+	case ByteStringExpectedBase64:
+		return fmt.Sprintf("cbor: failed to decode base64 from byte string: %s", e.err)
+
+	case ByteStringExpectedBase16:
+		return fmt.Sprintf("cbor: failed to decode hex from byte string: %s", e.err)
+
+	default:
+		return fmt.Sprintf("cbor: failed to decode byte string in expected format %d: %s", e.expectedFormatOption, e.err)
+	}
+}
+
+func (e *ByteStringExpectedFormatError) Unwrap() error {
+	return e.err
+}
+
 // DupMapKeyMode specifies how to enforce duplicate map key. Two map keys are considered duplicates if:
 //  1. When decoding into a struct, both keys match the same struct field. The keys are also
 //     considered duplicates if neither matches any field and decoding to interface{} would produce
@@ -1933,7 +1965,8 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //noli
 		case tagNumExpectedLaterEncodingBase64URL, tagNumExpectedLaterEncodingBase64, tagNumExpectedLaterEncodingBase16:
 			// If conversion for interoperability with text encodings is not configured,
 			// treat tags 21-23 as unregistered tags.
-			if d.dm.byteStringToString == ByteStringToStringAllowedWithExpectedLaterEncoding || d.dm.byteStringExpectedFormat != ByteStringExpectedFormatNone {
+			if d.dm.byteStringToString == ByteStringToStringAllowedWithExpectedLaterEncoding ||
+				d.dm.byteStringExpectedFormat != ByteStringExpectedFormatNone {
 				d.expectedLaterEncodingTags = append(d.expectedLaterEncodingTags, tagNum)
 				defer func() {
 					d.expectedLaterEncodingTags = d.expectedLaterEncodingTags[:len(d.expectedLaterEncodingTags)-1]
@@ -2097,7 +2130,7 @@ func (d *decoder) applyByteStringTextConversion(
 			decoded := make([]byte, base64.RawURLEncoding.DecodedLen(len(src)))
 			n, err := base64.RawURLEncoding.Decode(decoded, src)
 			if err != nil {
-				return nil, false, fmt.Errorf("cbor: failed to decode base64url string: %v", err)
+				return nil, false, newByteStringExpectedFormatError(ByteStringExpectedBase64URL, err)
 			}
 			return decoded[:n], true, nil
 
@@ -2105,7 +2138,7 @@ func (d *decoder) applyByteStringTextConversion(
 			decoded := make([]byte, base64.StdEncoding.DecodedLen(len(src)))
 			n, err := base64.StdEncoding.Decode(decoded, src)
 			if err != nil {
-				return nil, false, fmt.Errorf("cbor: failed to decode base64 string: %v", err)
+				return nil, false, newByteStringExpectedFormatError(ByteStringExpectedBase64, err)
 			}
 			return decoded[:n], true, nil
 
@@ -2113,7 +2146,7 @@ func (d *decoder) applyByteStringTextConversion(
 			decoded := make([]byte, hex.DecodedLen(len(src)))
 			n, err := hex.Decode(decoded, src)
 			if err != nil {
-				return nil, false, fmt.Errorf("cbor: failed to decode hex string: %v", err)
+				return nil, false, newByteStringExpectedFormatError(ByteStringExpectedBase16, err)
 			}
 			return decoded[:n], true, nil
 		}
