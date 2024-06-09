@@ -19,7 +19,7 @@ env:
   GO_VERSION: '1.22'
   GOLINTERS_VERSION: 1.56.2
   GOLINTERS_ARCH: linux-amd64
-  GOLINTERS_TGZ_DGST: e1c313fb5fc85a33890fdee5dbb1777d1f5829c84d655a47a55688f3aad5e501:q
+  GOLINTERS_TGZ_DGST: e1c313fb5fc85a33890fdee5dbb1777d1f5829c84d655a47a55688f3aad5e501
   GOLINTERS_TIMEOUT: 15m
   OPENSSL_DGST_CMD: openssl dgst -sha256 -r
   CURL_CMD: curl --proto =https --tlsv1.2 --location --silent --show-error --fail
