@@ -254,6 +254,45 @@ func (e *ByteStringExpectedFormatError) Unwrap() error {
 	return e.err
 }
 
+// InadmissibleTagContentTypeError is returned when unmarshaling built-in CBOR tags
+// fails because of inadmissible type for tag content. Currently, the built-in
+// CBOR tags in this codec are tags 0-3 and 21-23.
+// See "Tag validity" in RFC 8949 Section 5.3.2.
+type InadmissibleTagContentTypeError struct {
+	s                      string
+	tagNum                 int
+	expectedTagContentType string
+	gotTagContentType      string
+}
+
+func newInadmissibleTagContentTypeError(
+	tagNum int,
+	expectedTagContentType string,
+	gotTagContentType string,
+) *InadmissibleTagContentTypeError {
+	return &InadmissibleTagContentTypeError{
+		tagNum:                 tagNum,
+		expectedTagContentType: expectedTagContentType,
+		gotTagContentType:      gotTagContentType,
+	}
+}
+
+func newInadmissibleTagContentTypeErrorf(s string) *InadmissibleTagContentTypeError {
+	return &InadmissibleTagContentTypeError{s: "cbor: " + s} //nolint:goconst // ignore "cbor"
+}
+
+func (e *InadmissibleTagContentTypeError) Error() string {
+	if e.s == "" {
+		return fmt.Sprintf(
+			"cbor: tag number %d must be followed by %s, got %s",
+			e.tagNum,
+			e.expectedTagContentType,
+			e.gotTagContentType,
+		)
+	}
+	return e.s
+}
+
 // DupMapKeyMode specifies how to enforce duplicate map key. Two map keys are considered duplicates if:
 //  1. When decoding into a struct, both keys match the same struct field. The keys are also
 //     considered duplicates if neither matches any field and decoding to interface{} would produce

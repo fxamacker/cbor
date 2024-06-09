@@ -139,34 +139,33 @@ func validBuiltinTag(tagNum uint64, contentHead byte) error {
 	case tagNumRFC3339Time:
 		// Tag content (date/time text string in RFC 3339 format) must be string type.
 		if t != cborTypeTextString {
-			return fmt.Errorf(
-				"cbor: tag number %d must be followed by text string, got %s",
+			return newInadmissibleTagContentTypeError(
 				tagNumRFC3339Time,
-				t.String(),
-			)
+				"text string",
+				t.String())
 		}
 		return nil
 
 	case tagNumEpochTime:
 		// Tag content (epoch date/time) must be uint, int, or float type.
 		if t != cborTypePositiveInt && t != cborTypeNegativeInt && (contentHead < 0xf9 || contentHead > 0xfb) {
-			return fmt.Errorf(
-				"cbor: tag number %d must be followed by integer or floating-point number, got %s",
+			return newInadmissibleTagContentTypeError(
 				tagNumEpochTime,
-				t.String(),
-			)
+				"integer or floating-point number",
+				t.String())
 		}
 		return nil
 
 	case tagNumUnsignedBignum, tagNumNegativeBignum:
 		// Tag content (bignum) must be byte type.
 		if t != cborTypeByteString {
-			return fmt.Errorf(
-				"cbor: tag number %d or %d must be followed by byte string, got %s",
-				tagNumUnsignedBignum,
-				tagNumNegativeBignum,
-				t.String(),
-			)
+			return newInadmissibleTagContentTypeErrorf(
+				fmt.Sprintf(
+					"tag number %d or %d must be followed by byte string, got %s",
+					tagNumUnsignedBignum,
+					tagNumNegativeBignum,
+					t.String(),
+				))
 		}
 		return nil
 
