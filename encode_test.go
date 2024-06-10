@@ -4519,6 +4519,21 @@ func TestSortModeFastShuffle(t *testing.T) {
 	}
 }
 
+func TestSortModeFastShuffleEmptyStruct(t *testing.T) {
+	em, err := EncOptions{Sort: SortFastShuffle}.EncMode()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := em.Marshal(struct{}{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []byte{0xa0}; !bytes.Equal(got, want) {
+		t.Errorf("got 0x%x, want 0x%x", got, want)
+	}
+}
+
 func TestInvalidByteSliceExpectedFormat(t *testing.T) {
 	for _, tc := range []struct {
 		name         string
