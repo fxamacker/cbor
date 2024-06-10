@@ -24,9 +24,9 @@ func TestStdlibJSONCompatibility(t *testing.T) {
 	}
 
 	dec, err := cbor.DecOptions{
-		DefaultByteStringType:     reflect.TypeOf(""),
-		ByteStringToString:        cbor.ByteStringToStringAllowedWithExpectedLaterEncoding,
-		ByteSliceExpectedEncoding: cbor.ByteSliceExpectedEncodingBase64,
+		DefaultByteStringType:    reflect.TypeOf(""),
+		ByteStringToString:       cbor.ByteStringToStringAllowedWithExpectedLaterEncoding,
+		ByteStringExpectedFormat: cbor.ByteStringExpectedBase64,
 	}.DecMode()
 	if err != nil {
 		t.Fatal(err)

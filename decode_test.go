@@ -4899,32 +4899,32 @@ func TestDecOptions(t *testing.T) {
 	}
 
 	opts1 := DecOptions{
-		DupMapKey:                 DupMapKeyEnforcedAPF,
-		TimeTag:                   DecTagRequired,
-		MaxNestedLevels:           100,
-		MaxArrayElements:          102,
-		MaxMapPairs:               101,
-		IndefLength:               IndefLengthForbidden,
-		TagsMd:                    TagsForbidden,
-		IntDec:                    IntDecConvertSigned,
-		MapKeyByteString:          MapKeyByteStringForbidden,
-		ExtraReturnErrors:         ExtraDecErrorUnknownField,
-		DefaultMapType:            reflect.TypeOf(map[string]interface{}(nil)),
-		UTF8:                      UTF8DecodeInvalid,
-		FieldNameMatching:         FieldNameMatchingCaseSensitive,
-		BigIntDec:                 BigIntDecodePointer,
-		DefaultByteStringType:     reflect.TypeOf(""),
-		ByteStringToString:        ByteStringToStringAllowed,
-		FieldNameByteString:       FieldNameByteStringAllowed,
-		UnrecognizedTagToAny:      UnrecognizedTagContentToAny,
-		TimeTagToAny:              TimeTagToRFC3339,
-		SimpleValues:              simpleValues,
-		NaN:                       NaNDecodeForbidden,
-		Inf:                       InfDecodeForbidden,
-		ByteStringToTime:          ByteStringToTimeAllowed,
-		ByteSliceExpectedEncoding: ByteSliceToByteStringWithExpectedConversionToBase64,
-		BignumTag:                 BignumTagForbidden,
-		BinaryUnmarshaler:         BinaryUnmarshalerNone,
+		DupMapKey:                DupMapKeyEnforcedAPF,
+		TimeTag:                  DecTagRequired,
+		MaxNestedLevels:          100,
+		MaxArrayElements:         102,
+		MaxMapPairs:              101,
+		IndefLength:              IndefLengthForbidden,
+		TagsMd:                   TagsForbidden,
+		IntDec:                   IntDecConvertSigned,
+		MapKeyByteString:         MapKeyByteStringForbidden,
+		ExtraReturnErrors:        ExtraDecErrorUnknownField,
+		DefaultMapType:           reflect.TypeOf(map[string]interface{}(nil)),
+		UTF8:                     UTF8DecodeInvalid,
+		FieldNameMatching:        FieldNameMatchingCaseSensitive,
+		BigIntDec:                BigIntDecodePointer,
+		DefaultByteStringType:    reflect.TypeOf(""),
+		ByteStringToString:       ByteStringToStringAllowed,
+		FieldNameByteString:      FieldNameByteStringAllowed,
+		UnrecognizedTagToAny:     UnrecognizedTagContentToAny,
+		TimeTagToAny:             TimeTagToRFC3339,
+		SimpleValues:             simpleValues,
+		NaN:                      NaNDecodeForbidden,
+		Inf:                      InfDecodeForbidden,
+		ByteStringToTime:         ByteStringToTimeAllowed,
+		ByteStringExpectedFormat: ByteSliceToByteStringWithExpectedConversionToBase64,
+		BignumTag:                BignumTagForbidden,
+		BinaryUnmarshaler:        BinaryUnmarshalerNone,
 	}
 	ov := reflect.ValueOf(opts1)
 	for i := 0; i < ov.NumField(); i++ {
@@ -9556,13 +9556,13 @@ func TestInvalidByteSliceExpectedEncodingMode(t *testing.T) {
 	}{
 		{
 			name:         "below range of valid modes",
-			opts:         DecOptions{ByteSliceExpectedEncoding: -1},
-			wantErrorMsg: "cbor: invalid ByteSliceExpectedEncoding -1",
+			opts:         DecOptions{ByteStringExpectedFormat: -1},
+			wantErrorMsg: "cbor: invalid ByteStringExpectedFormat -1",
 		},
 		{
 			name:         "above range of valid modes",
-			opts:         DecOptions{ByteSliceExpectedEncoding: 101},
-			wantErrorMsg: "cbor: invalid ByteSliceExpectedEncoding 101",
+			opts:         DecOptions{ByteStringExpectedFormat: 101},
+			wantErrorMsg: "cbor: invalid ByteStringExpectedFormat 101",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -9603,7 +9603,7 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 		},
 		{
 			name: "base64url encoding tag conflicts with non-default ByteSliceExpectedEncoding option",
-			opts: DecOptions{ByteSliceExpectedEncoding: ByteSliceExpectedEncodingBase16},
+			opts: DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
 			tags: func(tags TagSet) error {
 				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 21)
 			},
@@ -9627,7 +9627,7 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 		},
 		{
 			name: "base64 encoding tag conflicts with non-default ByteSliceExpectedEncoding option",
-			opts: DecOptions{ByteSliceExpectedEncoding: ByteSliceExpectedEncodingBase16},
+			opts: DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
 			tags: func(tags TagSet) error {
 				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 22)
 			},
@@ -9651,7 +9651,7 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 		},
 		{
 			name: "base16 encoding tag conflicts with non-default ByteSliceExpectedEncoding option",
-			opts: DecOptions{ByteSliceExpectedEncoding: ByteSliceExpectedEncodingBase16},
+			opts: DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
 			tags: func(tags TagSet) error {
 				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 23)
 			},
@@ -9701,42 +9701,42 @@ func TestUnmarshalByteStringTextConversionError(t *testing.T) {
 	}{
 		{
 			name:    "reject untagged byte string containing invalid base64url",
-			opts:    DecOptions{ByteSliceExpectedEncoding: ByteSliceExpectedEncodingBase64URL},
+			opts:    DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase64URL},
 			dstType: reflect.TypeOf([]byte{}),
 			in:      []byte{0x41, 0x00},
-			wantErr: "cbor: failed to decode base64url string: illegal base64 data at input byte 0",
+			wantErr: "cbor: failed to decode base64url from byte string: illegal base64 data at input byte 0",
 		},
 		{
 			name:    "reject untagged byte string containing invalid base64url",
-			opts:    DecOptions{ByteSliceExpectedEncoding: ByteSliceExpectedEncodingBase64},
+			opts:    DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase64},
 			dstType: reflect.TypeOf([]byte{}),
 			in:      []byte{0x41, 0x00},
-			wantErr: "cbor: failed to decode base64 string: illegal base64 data at input byte 0",
+			wantErr: "cbor: failed to decode base64 from byte string: illegal base64 data at input byte 0",
 		},
 		{
 			name:    "reject untagged byte string containing invalid base16",
-			opts:    DecOptions{ByteSliceExpectedEncoding: ByteSliceExpectedEncodingBase16},
+			opts:    DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
 			dstType: reflect.TypeOf([]byte{}),
 			in:      []byte{0x41, 0x00},
-			wantErr: "cbor: failed to decode hex string: encoding/hex: invalid byte: U+0000",
+			wantErr: "cbor: failed to decode hex from byte string: encoding/hex: invalid byte: U+0000",
 		},
 		{
 			name:    "accept tagged byte string containing invalid base64url",
-			opts:    DecOptions{ByteSliceExpectedEncoding: ByteSliceExpectedEncodingBase64URL},
+			opts:    DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase64URL},
 			dstType: reflect.TypeOf([]byte{}),
 			in:      []byte{0xd5, 0x41, 0x00},
 			wantErr: "",
 		},
 		{
 			name:    "accept tagged byte string containing invalid base64url",
-			opts:    DecOptions{ByteSliceExpectedEncoding: ByteSliceExpectedEncodingBase64},
+			opts:    DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase64},
 			dstType: reflect.TypeOf([]byte{}),
 			in:      []byte{0xd5, 0x41, 0x00},
 			wantErr: "",
 		},
 		{
 			name:    "accept tagged byte string containing invalid base16",
-			opts:    DecOptions{ByteSliceExpectedEncoding: ByteSliceExpectedEncodingBase16},
+			opts:    DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
 			dstType: reflect.TypeOf([]byte{}),
 			in:      []byte{0xd5, 0x41, 0x00},
 			wantErr: "",
@@ -9810,7 +9810,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 		{
 			name: "tagged into []byte with default encoding base64url",
 			opts: DecOptions{
-				ByteSliceExpectedEncoding: ByteSliceExpectedEncodingBase64URL,
+				ByteStringExpectedFormat: ByteStringExpectedBase64URL,
 			},
 			dstType: reflect.TypeOf([]byte{}),
 			in:      []byte{0xd5, 0x41, 0xff}, // 21(h'ff')
@@ -9819,7 +9819,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 		{
 			name: "indirectly tagged into []byte with default encoding base64url",
 			opts: DecOptions{
-				ByteSliceExpectedEncoding: ByteSliceExpectedEncodingBase64URL,
+				ByteStringExpectedFormat: ByteStringExpectedBase64URL,
 			},
 			dstType: reflect.TypeOf([]byte{}),
 			in:      []byte{0xd5, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 21(55799(h'ff'))
@@ -9828,7 +9828,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 		{
 			name: "untagged base64url into []byte with default encoding base64url",
 			opts: DecOptions{
-				ByteSliceExpectedEncoding: ByteSliceExpectedEncodingBase64URL,
+				ByteStringExpectedFormat: ByteStringExpectedBase64URL,
 			},
 			dstType: reflect.TypeOf([]byte{}),
 			in:      []byte{0x42, '_', 'w'}, // '_w'
@@ -9864,7 +9864,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 		{
 			name: "tagged into []byte with default encoding base64",
 			opts: DecOptions{
-				ByteSliceExpectedEncoding: ByteSliceExpectedEncodingBase64,
+				ByteStringExpectedFormat: ByteStringExpectedBase64,
 			},
 			dstType: reflect.TypeOf([]byte{}),
 			in:      []byte{0xd6, 0x41, 0xff}, // 22(h'ff')
@@ -9873,7 +9873,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 		{
 			name: "indirectly tagged into []byte with default encoding base64",
 			opts: DecOptions{
-				ByteSliceExpectedEncoding: ByteSliceExpectedEncodingBase64,
+				ByteStringExpectedFormat: ByteStringExpectedBase64,
 			},
 			dstType: reflect.TypeOf([]byte{}),
 			in:      []byte{0xd6, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 22(55799(h'ff'))
@@ -9882,7 +9882,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 		{
 			name: "untagged base64 into []byte with default encoding base64",
 			opts: DecOptions{
-				ByteSliceExpectedEncoding: ByteSliceExpectedEncodingBase64,
+				ByteStringExpectedFormat: ByteStringExpectedBase64,
 			},
 			dstType: reflect.TypeOf([]byte{}),
 			in:      []byte{0x44, '/', 'w', '=', '='}, // '/w=='
@@ -9918,7 +9918,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 		{
 			name: "tagged into []byte with default encoding base16",
 			opts: DecOptions{
-				ByteSliceExpectedEncoding: ByteSliceExpectedEncodingBase16,
+				ByteStringExpectedFormat: ByteStringExpectedBase16,
 			},
 			dstType: reflect.TypeOf([]byte{}),
 			in:      []byte{0xd7, 0x41, 0xff}, // 23(h'ff')
@@ -9927,7 +9927,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 		{
 			name: "indirectly tagged into []byte with default encoding base16",
 			opts: DecOptions{
-				ByteSliceExpectedEncoding: ByteSliceExpectedEncodingBase16,
+				ByteStringExpectedFormat: ByteStringExpectedBase16,
 			},
 			dstType: reflect.TypeOf([]byte{}),
 			in:      []byte{0xd7, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 23(55799(h'ff'))
@@ -9936,7 +9936,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 		{
 			name: "untagged base16 into []byte with default encoding base16",
 			opts: DecOptions{
-				ByteSliceExpectedEncoding: ByteSliceExpectedEncodingBase16,
+				ByteStringExpectedFormat: ByteStringExpectedBase16,
 			},
 			dstType: reflect.TypeOf([]byte{}),
 			in:      []byte{0x42, 'f', 'f'},
