@@ -403,44 +403,46 @@ func (fnm FieldNameMode) valid() bool {
 	return fnm >= 0 && fnm < maxFieldNameMode
 }
 
-// ByteSliceMode specifies how to encode slices of bytes.
-type ByteSliceMode int
+// ByteSliceLaterFormatMode specifies which later format conversion hint (CBOR tag 21-23)
+// to include (if any) when encoding Go byte slice to CBOR byte string. The encoder will
+// always encode unmodified bytes from the byte slice and just wrap it within
+// CBOR tag 21, 22, or 23 if specified.
+// See "Expected Later Encoding for CBOR-to-JSON Converters" in RFC 8949 Section 3.4.5.2.
+type ByteSliceLaterFormatMode int
 
 const (
-	// ByteSliceToByteString encodes slices of bytes to CBOR byte string (major type 2).
-	ByteSliceToByteString = iota
+	// ByteSliceLaterFormatNone encodes unmodified bytes from Go byte slice to CBOR byte string (major type 2)
+	// without adding CBOR tag 21, 22, or 23.
+	ByteSliceLaterFormatNone ByteSliceLaterFormatMode = iota
 
-	// ByteSliceToByteStringWithExpectedConversionToBase64URL encodes slices of bytes to CBOR
-	// byte string (major type 2) inside tag 21 (expected conversion to base64url encoding, see
-	// RFC 8949 Section 3.4.5.2).
-	ByteSliceToByteStringWithExpectedConversionToBase64URL
+	// ByteSliceLaterFormatBase64URL encodes unmodified bytes from Go byte slice to CBOR byte string (major type 2)
+	// inside CBOR tag 21 (expected later conversion to base64url encoding, see RFC 8949 Section 3.4.5.2).
+	ByteSliceLaterFormatBase64URL
 
-	// ByteSliceToByteStringWithExpectedConversionToBase64 encodes slices of bytes to CBOR byte
-	// string (major type 2) inside tag 22 (expected conversion to base64 encoding, see RFC 8949
-	// Section 3.4.5.2).
-	ByteSliceToByteStringWithExpectedConversionToBase64
+	// ByteSliceLaterFormatBase64 encodes unmodified bytes from Go byte slice to CBOR byte string (major type 2)
+	// inside CBOR tag 22 (expected later conversion to base64 encoding, see RFC 8949 Section 3.4.5.2).
+	ByteSliceLaterFormatBase64
 
-	// ByteSliceToByteStringWithExpectedConversionToBase16 encodes slices of bytes to CBOR byte
-	// string (major type 2) inside tag 23 (expected conversion to base16 encoding, see RFC 8949
-	// Section 3.4.5.2).
-	ByteSliceToByteStringWithExpectedConversionToBase16
+	// ByteSliceLaterFormatBase16 encodes unmodified bytes from Go byte slice to CBOR byte string (major type 2)
+	// inside CBOR tag 23 (expected later conversion to base16 encoding, see RFC 8949 Section 3.4.5.2).
+	ByteSliceLaterFormatBase16
 )
 
-func (bsm ByteSliceMode) encodingTag() (uint64, error) {
-	switch bsm {
-	case ByteSliceToByteString:
+func (bsefm ByteSliceLaterFormatMode) encodingTag() (uint64, error) {
+	switch bsefm {
+	case ByteSliceLaterFormatNone:
 		return 0, nil
 
-	case ByteSliceToByteStringWithExpectedConversionToBase64URL:
+	case ByteSliceLaterFormatBase64URL:
 		return tagNumExpectedLaterEncodingBase64URL, nil
 
-	case ByteSliceToByteStringWithExpectedConversionToBase64:
+	case ByteSliceLaterFormatBase64:
 		return tagNumExpectedLaterEncodingBase64, nil
 
-	case ByteSliceToByteStringWithExpectedConversionToBase16:
+	case ByteSliceLaterFormatBase16:
 		return tagNumExpectedLaterEncodingBase16, nil
 	}
-	return 0, errors.New("cbor: invalid ByteSlice " + strconv.Itoa(int(bsm)))
+	return 0, errors.New("cbor: invalid ByteSliceLaterFormat " + strconv.Itoa(int(bsefm)))
 }
 
 // ByteArrayMode specifies how to encode byte arrays.
@@ -449,7 +451,7 @@ type ByteArrayMode int
 const (
 	// ByteArrayToByteSlice encodes byte arrays the same way that a byte slice with identical
 	// length and contents is encoded.
-	ByteArrayToByteSlice = iota
+	ByteArrayToByteSlice ByteArrayMode = iota
 
 	// ByteArrayToArray encodes byte arrays to the CBOR array type with one unsigned integer
 	// item for each byte in the array.
@@ -524,8 +526,12 @@ type EncOptions struct {
 	// FieldName specifies the CBOR type to use when encoding struct field names.
 	FieldName FieldNameMode
 
-	// ByteSlice specifies how to encode byte slices.
-	ByteSlice ByteSliceMode
+	// ByteSliceLaterFormat specifies which later format conversion hint (CBOR tag 21-23)
+	// to include (if any) when encoding Go byte slice to CBOR byte string. The encoder will
+	// always encode unmodified bytes from the byte slice and just wrap it within
+	// CBOR tag 21, 22, or 23 if specified.
+	// See "Expected Later Encoding for CBOR-to-JSON Converters" in RFC 8949 Section 3.4.5.2.
+	ByteSliceLaterFormat ByteSliceLaterFormatMode
 
 	// ByteArray specifies how to encode byte arrays.
 	ByteArray ByteArrayMode
@@ -732,7 +738,7 @@ func (opts EncOptions) encMode() (*encMode, error) { //nolint:gocritic // ignore
 	if !opts.FieldName.valid() {
 		return nil, errors.New("cbor: invalid FieldName " + strconv.Itoa(int(opts.FieldName)))
 	}
-	byteSliceEncodingTag, err := opts.ByteSlice.encodingTag()
+	byteSliceLaterEncodingTag, err := opts.ByteSliceLaterFormat.encodingTag()
 	if err != nil {
 		return nil, err
 	}
@@ -743,24 +749,24 @@ func (opts EncOptions) encMode() (*encMode, error) { //nolint:gocritic // ignore
 		return nil, errors.New("cbor: invalid BinaryMarshaler " + strconv.Itoa(int(opts.BinaryMarshaler)))
 	}
 	em := encMode{
-		sort:                 opts.Sort,
-		shortestFloat:        opts.ShortestFloat,
-		nanConvert:           opts.NaNConvert,
-		infConvert:           opts.InfConvert,
-		bigIntConvert:        opts.BigIntConvert,
-		time:                 opts.Time,
-		timeTag:              opts.TimeTag,
-		indefLength:          opts.IndefLength,
-		nilContainers:        opts.NilContainers,
-		tagsMd:               opts.TagsMd,
-		omitEmpty:            opts.OmitEmpty,
-		stringType:           opts.String,
-		stringMajorType:      stringMajorType,
-		fieldName:            opts.FieldName,
-		byteSlice:            opts.ByteSlice,
-		byteSliceEncodingTag: byteSliceEncodingTag,
-		byteArray:            opts.ByteArray,
-		binaryMarshaler:      opts.BinaryMarshaler,
+		sort:                      opts.Sort,
+		shortestFloat:             opts.ShortestFloat,
+		nanConvert:                opts.NaNConvert,
+		infConvert:                opts.InfConvert,
+		bigIntConvert:             opts.BigIntConvert,
+		time:                      opts.Time,
+		timeTag:                   opts.TimeTag,
+		indefLength:               opts.IndefLength,
+		nilContainers:             opts.NilContainers,
+		tagsMd:                    opts.TagsMd,
+		omitEmpty:                 opts.OmitEmpty,
+		stringType:                opts.String,
+		stringMajorType:           stringMajorType,
+		fieldName:                 opts.FieldName,
+		byteSliceLaterFormat:      opts.ByteSliceLaterFormat,
+		byteSliceLaterEncodingTag: byteSliceLaterEncodingTag,
+		byteArray:                 opts.ByteArray,
+		binaryMarshaler:           opts.BinaryMarshaler,
 	}
 	return &em, nil
 }
@@ -787,25 +793,25 @@ type UserBufferEncMode interface {
 }
 
 type encMode struct {
-	tags                 tagProvider
-	sort                 SortMode
-	shortestFloat        ShortestFloatMode
-	nanConvert           NaNConvertMode
-	infConvert           InfConvertMode
-	bigIntConvert        BigIntConvertMode
-	time                 TimeMode
-	timeTag              EncTagMode
-	indefLength          IndefLengthMode
-	nilContainers        NilContainersMode
-	tagsMd               TagsMode
-	omitEmpty            OmitEmptyMode
-	stringType           StringMode
-	stringMajorType      cborType
-	fieldName            FieldNameMode
-	byteSlice            ByteSliceMode
-	byteSliceEncodingTag uint64
-	byteArray            ByteArrayMode
-	binaryMarshaler      BinaryMarshalerMode
+	tags                      tagProvider
+	sort                      SortMode
+	shortestFloat             ShortestFloatMode
+	nanConvert                NaNConvertMode
+	infConvert                InfConvertMode
+	bigIntConvert             BigIntConvertMode
+	time                      TimeMode
+	timeTag                   EncTagMode
+	indefLength               IndefLengthMode
+	nilContainers             NilContainersMode
+	tagsMd                    TagsMode
+	omitEmpty                 OmitEmptyMode
+	stringType                StringMode
+	stringMajorType           cborType
+	fieldName                 FieldNameMode
+	byteSliceLaterFormat      ByteSliceLaterFormatMode
+	byteSliceLaterEncodingTag uint64
+	byteArray                 ByteArrayMode
+	binaryMarshaler           BinaryMarshalerMode
 }
 
 var defaultEncMode, _ = EncOptions{}.encMode()
@@ -882,22 +888,22 @@ func getMarshalerDecMode(indefLength IndefLengthMode, tagsMd TagsMode) *decMode 
 // EncOptions returns user specified options used to create this EncMode.
 func (em *encMode) EncOptions() EncOptions {
 	return EncOptions{
-		Sort:            em.sort,
-		ShortestFloat:   em.shortestFloat,
-		NaNConvert:      em.nanConvert,
-		InfConvert:      em.infConvert,
-		BigIntConvert:   em.bigIntConvert,
-		Time:            em.time,
-		TimeTag:         em.timeTag,
-		IndefLength:     em.indefLength,
-		NilContainers:   em.nilContainers,
-		TagsMd:          em.tagsMd,
-		OmitEmpty:       em.omitEmpty,
-		String:          em.stringType,
-		FieldName:       em.fieldName,
-		ByteSlice:       em.byteSlice,
-		ByteArray:       em.byteArray,
-		BinaryMarshaler: em.binaryMarshaler,
+		Sort:                 em.sort,
+		ShortestFloat:        em.shortestFloat,
+		NaNConvert:           em.nanConvert,
+		InfConvert:           em.infConvert,
+		BigIntConvert:        em.bigIntConvert,
+		Time:                 em.time,
+		TimeTag:              em.timeTag,
+		IndefLength:          em.indefLength,
+		NilContainers:        em.nilContainers,
+		TagsMd:               em.tagsMd,
+		OmitEmpty:            em.omitEmpty,
+		String:               em.stringType,
+		FieldName:            em.fieldName,
+		ByteSliceLaterFormat: em.byteSliceLaterFormat,
+		ByteArray:            em.byteArray,
+		BinaryMarshaler:      em.binaryMarshaler,
 	}
 }
 
@@ -1198,8 +1204,8 @@ func encodeByteString(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 		e.Write(cborNil)
 		return nil
 	}
-	if vk == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8 && em.byteSliceEncodingTag != 0 {
-		encodeHead(e, byte(cborTypeTag), em.byteSliceEncodingTag)
+	if vk == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8 && em.byteSliceLaterEncodingTag != 0 {
+		encodeHead(e, byte(cborTypeTag), em.byteSliceLaterEncodingTag)
 	}
 	if b := em.encTagBytes(v.Type()); b != nil {
 		e.Write(b)
@@ -1710,8 +1716,8 @@ func encodeTag(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 		vem.stringType = StringToTextString
 		vem.stringMajorType = cborTypeTextString
 	case tagNumUnsignedBignum, tagNumNegativeBignum:
-		vem.byteSlice = ByteSliceToByteString
-		vem.byteSliceEncodingTag = 0
+		vem.byteSliceLaterFormat = ByteSliceLaterFormatNone
+		vem.byteSliceLaterEncodingTag = 0
 	}
 
 	// Marshal tag content
