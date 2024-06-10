@@ -401,11 +401,10 @@ func (di *diagnose) item() error { //nolint:gocyclo
 		switch tagNum {
 		case tagNumUnsignedBignum:
 			if nt := di.d.nextCBORType(); nt != cborTypeByteString {
-				return fmt.Errorf(
-					"cbor: tag number %d must be followed by byte string, got %s",
+				return newInadmissibleTagContentTypeError(
 					tagNumUnsignedBignum,
-					nt.String(),
-				)
+					"byte string",
+					nt.String())
 			}
 
 			b, _ := di.d.parseByteString()
@@ -415,9 +414,9 @@ func (di *diagnose) item() error { //nolint:gocyclo
 
 		case tagNumNegativeBignum:
 			if nt := di.d.nextCBORType(); nt != cborTypeByteString {
-				return fmt.Errorf(
-					"cbor: tag number %d must be followed by byte string, got %s",
+				return newInadmissibleTagContentTypeError(
 					tagNumNegativeBignum,
+					"byte string",
 					nt.String(),
 				)
 			}
