@@ -3764,22 +3764,22 @@ func TestEncOptionsTagsForbidden(t *testing.T) {
 
 func TestEncOptions(t *testing.T) {
 	opts1 := EncOptions{
-		Sort:            SortBytewiseLexical,
-		ShortestFloat:   ShortestFloat16,
-		NaNConvert:      NaNConvertPreserveSignal,
-		InfConvert:      InfConvertNone,
-		BigIntConvert:   BigIntConvertNone,
-		Time:            TimeRFC3339Nano,
-		TimeTag:         EncTagRequired,
-		IndefLength:     IndefLengthForbidden,
-		NilContainers:   NilContainerAsEmpty,
-		TagsMd:          TagsAllowed,
-		OmitEmpty:       OmitEmptyGoValue,
-		String:          StringToByteString,
-		FieldName:       FieldNameToByteString,
-		ByteSlice:       ByteSliceToByteStringWithExpectedConversionToBase16,
-		ByteArray:       ByteArrayToArray,
-		BinaryMarshaler: BinaryMarshalerNone,
+		Sort:                 SortBytewiseLexical,
+		ShortestFloat:        ShortestFloat16,
+		NaNConvert:           NaNConvertPreserveSignal,
+		InfConvert:           InfConvertNone,
+		BigIntConvert:        BigIntConvertNone,
+		Time:                 TimeRFC3339Nano,
+		TimeTag:              EncTagRequired,
+		IndefLength:          IndefLengthForbidden,
+		NilContainers:        NilContainerAsEmpty,
+		TagsMd:               TagsAllowed,
+		OmitEmpty:            OmitEmptyGoValue,
+		String:               StringToByteString,
+		FieldName:            FieldNameToByteString,
+		ByteSliceLaterFormat: ByteSliceLaterFormatBase16,
+		ByteArray:            ByteArrayToArray,
+		BinaryMarshaler:      BinaryMarshalerNone,
 	}
 	ov := reflect.ValueOf(opts1)
 	for i := 0; i < ov.NumField(); i++ {
@@ -4519,7 +4519,7 @@ func TestSortModeFastShuffle(t *testing.T) {
 	}
 }
 
-func TestInvalidByteSlice(t *testing.T) {
+func TestInvalidByteSliceExpectedFormat(t *testing.T) {
 	for _, tc := range []struct {
 		name         string
 		opts         EncOptions
@@ -4527,13 +4527,13 @@ func TestInvalidByteSlice(t *testing.T) {
 	}{
 		{
 			name:         "below range of valid modes",
-			opts:         EncOptions{ByteSlice: -1},
-			wantErrorMsg: "cbor: invalid ByteSlice -1",
+			opts:         EncOptions{ByteSliceLaterFormat: -1},
+			wantErrorMsg: "cbor: invalid ByteSliceLaterFormat -1",
 		},
 		{
 			name:         "above range of valid modes",
-			opts:         EncOptions{ByteSlice: 101},
-			wantErrorMsg: "cbor: invalid ByteSlice 101",
+			opts:         EncOptions{ByteSliceLaterFormat: 101},
+			wantErrorMsg: "cbor: invalid ByteSliceLaterFormat 101",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -4641,53 +4641,53 @@ func TestMarshalByteSliceMode(t *testing.T) {
 		},
 		{
 			name:     "byte slice marshals to byte string by with ByteSliceToByteString",
-			opts:     EncOptions{ByteSlice: ByteSliceToByteString},
+			opts:     EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatNone},
 			in:       []byte{0xbb},
 			expected: []byte{0x41, 0xbb},
 		},
 		{
 			name:     "byte slice marshaled to byte string enclosed in base64url expected encoding tag",
-			opts:     EncOptions{ByteSlice: ByteSliceToByteStringWithExpectedConversionToBase64URL},
+			opts:     EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64URL},
 			in:       []byte{0xbb},
 			expected: []byte{0xd5, 0x41, 0xbb},
 		},
 		{
 			name:     "byte slice marshaled to byte string enclosed in base64 expected encoding tag",
-			opts:     EncOptions{ByteSlice: ByteSliceToByteStringWithExpectedConversionToBase64},
+			opts:     EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64},
 			in:       []byte{0xbb},
 			expected: []byte{0xd6, 0x41, 0xbb},
 		},
 		{
 			name:     "byte slice marshaled to byte string enclosed in base16 expected encoding tag",
-			opts:     EncOptions{ByteSlice: ByteSliceToByteStringWithExpectedConversionToBase16},
+			opts:     EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase16},
 			in:       []byte{0xbb},
 			expected: []byte{0xd7, 0x41, 0xbb},
 		},
 		{
 			name:     "user-registered tag numbers are encoded with no expected encoding tag",
 			tags:     ts,
-			opts:     EncOptions{ByteSlice: ByteSliceToByteString},
+			opts:     EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatNone},
 			in:       namedByteSlice{0xbb},
 			expected: []byte{0xd8, 0xcc, 0x41, 0xbb},
 		},
 		{
 			name:     "user-registered tag numbers are encoded after base64url expected encoding tag",
 			tags:     ts,
-			opts:     EncOptions{ByteSlice: ByteSliceToByteStringWithExpectedConversionToBase64URL},
+			opts:     EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64URL},
 			in:       namedByteSlice{0xbb},
 			expected: []byte{0xd5, 0xd8, 0xcc, 0x41, 0xbb},
 		},
 		{
 			name:     "user-registered tag numbers are encoded after base64 expected encoding tag",
 			tags:     ts,
-			opts:     EncOptions{ByteSlice: ByteSliceToByteStringWithExpectedConversionToBase64},
+			opts:     EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64},
 			in:       namedByteSlice{0xbb},
 			expected: []byte{0xd6, 0xd8, 0xcc, 0x41, 0xbb},
 		},
 		{
 			name:     "user-registered tag numbers are encoded after base16 expected encoding tag",
 			tags:     ts,
-			opts:     EncOptions{ByteSlice: ByteSliceToByteStringWithExpectedConversionToBase16},
+			opts:     EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase16},
 			in:       namedByteSlice{0xbb},
 			expected: []byte{0xd7, 0xd8, 0xcc, 0x41, 0xbb},
 		},

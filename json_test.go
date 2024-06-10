@@ -15,9 +15,9 @@ func TestStdlibJSONCompatibility(t *testing.T) {
 	// configurations to users.
 
 	enc, err := cbor.EncOptions{
-		ByteSlice: cbor.ByteSliceToByteStringWithExpectedConversionToBase64,
-		String:    cbor.StringToByteString,
-		ByteArray: cbor.ByteArrayToArray,
+		ByteSliceLaterFormat: cbor.ByteSliceLaterFormatBase64,
+		String:               cbor.StringToByteString,
+		ByteArray:            cbor.ByteArrayToArray,
 	}.EncMode()
 	if err != nil {
 		t.Fatal(err)

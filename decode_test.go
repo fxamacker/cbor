@@ -4922,7 +4922,7 @@ func TestDecOptions(t *testing.T) {
 		NaN:                      NaNDecodeForbidden,
 		Inf:                      InfDecodeForbidden,
 		ByteStringToTime:         ByteStringToTimeAllowed,
-		ByteStringExpectedFormat: ByteSliceToByteStringWithExpectedConversionToBase64,
+		ByteStringExpectedFormat: ByteStringExpectedBase64URL,
 		BignumTag:                BignumTagForbidden,
 		BinaryUnmarshaler:        BinaryUnmarshalerNone,
 	}
