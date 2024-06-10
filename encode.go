@@ -8,6 +8,7 @@ import (
 	"encoding"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"math/big"
@@ -93,6 +94,17 @@ import (
 // to encode such a value causes Marshal to return an UnsupportedTypeError.
 func Marshal(v interface{}) ([]byte, error) {
 	return defaultEncMode.Marshal(v)
+}
+
+// MarshalToBuffer encodes v into provided buffer (instead of using built-in buffer pool)
+// and uses default encoding options.
+//
+// NOTE: Unlike Marshal, the buffer provided to MarshalToBuffer can contain
+// partially encoded data if error is returned.
+//
+// See Marshal for more details.
+func MarshalToBuffer(v interface{}, buf *bytes.Buffer) error {
+	return defaultEncMode.MarshalToBuffer(v, buf)
 }
 
 // Marshaler is the interface implemented by types that can marshal themselves
@@ -617,8 +629,18 @@ func (opts EncOptions) EncMode() (EncMode, error) { //nolint:gocritic // ignore 
 	return opts.encMode()
 }
 
+// UserBufferEncMode returns UserBufferEncMode with immutable options and no tags (safe for concurrency).
+func (opts EncOptions) UserBufferEncMode() (UserBufferEncMode, error) { //nolint:gocritic // ignore hugeParam
+	return opts.encMode()
+}
+
 // EncModeWithTags returns EncMode with options and tags that are both immutable (safe for concurrency).
 func (opts EncOptions) EncModeWithTags(tags TagSet) (EncMode, error) { //nolint:gocritic // ignore hugeParam
+	return opts.UserBufferEncModeWithTags(tags)
+}
+
+// UserBufferEncModeWithTags returns UserBufferEncMode with options and tags that are both immutable (safe for concurrency).
+func (opts EncOptions) UserBufferEncModeWithTags(tags TagSet) (UserBufferEncMode, error) { //nolint:gocritic // ignore hugeParam
 	if opts.TagsMd == TagsForbidden {
 		return nil, errors.New("cbor: cannot create EncMode with TagSet when TagsMd is TagsForbidden")
 	}
@@ -647,6 +669,11 @@ func (opts EncOptions) EncModeWithTags(tags TagSet) (EncMode, error) { //nolint:
 
 // EncModeWithSharedTags returns EncMode with immutable options and mutable shared tags (safe for concurrency).
 func (opts EncOptions) EncModeWithSharedTags(tags TagSet) (EncMode, error) { //nolint:gocritic // ignore hugeParam
+	return opts.UserBufferEncModeWithSharedTags(tags)
+}
+
+// UserBufferEncModeWithSharedTags returns UserBufferEncMode with immutable options and mutable shared tags (safe for concurrency).
+func (opts EncOptions) UserBufferEncModeWithSharedTags(tags TagSet) (UserBufferEncMode, error) { //nolint:gocritic // ignore hugeParam
 	if opts.TagsMd == TagsForbidden {
 		return nil, errors.New("cbor: cannot create EncMode with TagSet when TagsMd is TagsForbidden")
 	}
@@ -743,6 +770,20 @@ type EncMode interface {
 	Marshal(v interface{}) ([]byte, error)
 	NewEncoder(w io.Writer) *Encoder
 	EncOptions() EncOptions
+}
+
+// UserBufferEncMode is an interface for CBOR encoding, which extends EncMode by
+// adding MarshalToBuffer to support user specified buffer rather than encoding
+// into the built-in buffer pool.
+type UserBufferEncMode interface {
+	EncMode
+	MarshalToBuffer(v interface{}, buf *bytes.Buffer) error
+
+	// This private method is to prevent users implementing
+	// this interface and so future additions to it will
+	// not be breaking changes.
+	// See https://go.dev/blog/module-compatibility
+	unexport()
 }
 
 type encMode struct {
@@ -860,6 +901,8 @@ func (em *encMode) EncOptions() EncOptions {
 	}
 }
 
+func (em *encMode) unexport() {}
+
 func (em *encMode) encTagBytes(t reflect.Type) []byte {
 	if em.tags != nil {
 		if tagItem := em.tags.getTagItemFromType(t); tagItem != nil {
@@ -887,7 +930,17 @@ func (em *encMode) Marshal(v interface{}) ([]byte, error) {
 	return buf, nil
 }
 
+// MarshalToBuffer encodes v into provided buffer (instead of using built-in buffer pool)
+// and uses em encoding mode.
+//
+// NOTE: Unlike Marshal, the buffer provided to MarshalToBuffer can contain
+// partially encoded data if error is returned.
+//
+// See Marshal for more details.
 func (em *encMode) MarshalToBuffer(v interface{}, buf *bytes.Buffer) error {
+	if buf == nil {
+		return fmt.Errorf("cbor: encoding buffer provided by user is nil")
+	}
 	return encode(buf, em, reflect.ValueOf(v))
 }
 
