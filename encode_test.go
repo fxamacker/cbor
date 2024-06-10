@@ -498,15 +498,36 @@ func testMarshal(t *testing.T, testCases []marshalTest) {
 	if err != nil {
 		t.Errorf("EncMode() returned an error %v", err)
 	}
+	bem, err := EncOptions{Sort: SortCanonical}.UserBufferEncMode()
+	if err != nil {
+		t.Errorf("UserBufferEncMode() returned an error %v", err)
+	}
 	for _, tc := range testCases {
 		for _, value := range tc.values {
+			// Encode value using default options
 			if _, err := Marshal(value); err != nil {
 				t.Errorf("Marshal(%v) returned error %v", value, err)
 			}
+
+			// Encode value to provided buffer using default options
+			var buf1 bytes.Buffer
+			if err := MarshalToBuffer(value, &buf1); err != nil {
+				t.Errorf("MarshalToBuffer(%v) returned error %v", value, err)
+			}
+
+			// Encode value using specified options
 			if b, err := em.Marshal(value); err != nil {
 				t.Errorf("Marshal(%v) returned error %v", value, err)
 			} else if !bytes.Equal(b, tc.wantData) {
 				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", value, b, tc.wantData)
+			}
+
+			// Encode value to provided buffer using specified options
+			var buf2 bytes.Buffer
+			if err := bem.MarshalToBuffer(value, &buf2); err != nil {
+				t.Errorf("MarshalToBuffer(%v) returned error %v", value, err)
+			} else if !bytes.Equal(buf2.Bytes(), tc.wantData) {
+				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", value, buf2.Bytes(), tc.wantData)
 			}
 		}
 		r := RawMessage(tc.wantData)
