@@ -15,5 +15,5 @@ const (
 
 func implements(concreteType reflect.Type, interfaceType reflect.Type) bool {
 	return concreteType.Implements(interfaceType) ||
-		reflect.PointerTo(concreteType).Implements(interfaceType)
+		reflect.PtrTo(concreteType).Implements(interfaceType)
 }
