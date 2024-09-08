@@ -216,6 +216,29 @@ API is mostly same as `encoding/json`, plus interfaces that simplify concurrency
 
 __Install__: `go get github.com/fxamacker/cbor/v2` and `import "github.com/fxamacker/cbor/v2"`.
 
+Tinygo users can try beta/experimental branch [feature/cbor-tinygo-beta](https://github.com/fxamacker/cbor/tree/feature/cbor-tinygo-beta).
+
+<details><summary>More about tinygo feature branch</summary>
+
+### Tinygo
+
+Branch [feature/cbor-tinygo-beta](https://github.com/fxamacker/cbor/tree/feature/cbor-tinygo-beta) is based on fxamacker/cbor v2.7.0 and it can be compiled using tinygo v0.33 (also compiles with golang/go).
+
+It passes unit tests (with both go1.22 and tinygo v0.33) and is considered beta/experimental for tinygo.
+
+:warning: The `feature/cbor-tinygo-beta` branch does not get fuzz tested yet.
+
+Changes in this feature branch only affect tinygo compiled software.  Summary of changes:
+- default `DecOptions.MaxNestedLevels` is reduced to 16 (was 32).  User can specify higher limit but 24+ crashes tests when compiled with tinygo v0.33.
+- disabled decoding CBOR tag data to Go interface because tinygo v0.33 is missing needed feature.
+- encoding error message can be different when encoding function type.
+
+Related tinygo issues:
+- https://github.com/tinygo-org/tinygo/issues/4277
+- https://github.com/tinygo-org/tinygo/issues/4458
+
+</details>
+
 ### Key Points
 
 This library can encode and decode CBOR (RFC 8949) and CBOR Sequences (RFC 8742).
