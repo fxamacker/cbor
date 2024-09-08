@@ -960,10 +960,6 @@ const (
 	defaultMaxMapPairs = 131072
 	minMaxMapPairs     = 16
 	maxMaxMapPairs     = 2147483647
-
-	defaultMaxNestedLevels = 32
-	minMaxNestedLevels     = 4
-	maxMaxNestedLevels     = 65535
 )
 
 var defaultSimpleValues = func() *SimpleValueRegistry {

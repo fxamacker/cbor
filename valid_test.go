@@ -5,6 +5,7 @@ package cbor
 
 import (
 	"bytes"
+	"strconv"
 	"testing"
 )
 
@@ -102,11 +103,11 @@ func TestDepth(t *testing.T) {
 		{"tagged map and array", hexDecode("d864a26161016162d865820203"), 2},                                    // 100({"a": 1, "b": 101([2, 3])})
 		{"tagged map and array", hexDecode("d864a26161016162d865d866820203"), 3},                                // 100({"a": 1, "b": 101(102([2, 3]))})
 		{"nested tag", hexDecode("d864d865d86674323031332d30332d32315432303a30343a30305a"), 2},                  // 100(101(102("2013-03-21T20:04:00Z")))
-		{"32-level array", hexDecode("82018181818181818181818181818181818181818181818181818181818181818101"), 32},
-		{"32-level indefinite length array", hexDecode("9f018181818181818181818181818181818181818181818181818181818181818101ff"), 32},
-		{"32-level map", hexDecode("a1018181818181818181818181818181818181818181818181818181818181818101"), 32},
-		{"32-level indefinite length map", hexDecode("bf018181818181818181818181818181818181818181818181818181818181818101ff"), 32},
-		{"32-level tag", hexDecode("d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d86474323031332d30332d32315432303a30343a30305a"), 32}, // 100(100(...("2013-03-21T20:04:00Z")))
+		{"16-level array", hexDecode("820181818181818181818181818181818101"), 16},
+		{"16-level indefinite length array", hexDecode("9f0181818181818181818181818181818101ff"), 16},
+		{"16-level map", hexDecode("a10181818181818181818181818181818101"), 16},
+		{"16-level indefinite length map", hexDecode("bf0181818181818181818181818181818101ff"), 16},
+		{"16-level tag", hexDecode("d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d86474323031332d30332d32315432303a30343a30305a"), 16}, // 100(100(...("2013-03-21T20:04:00Z")))
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -145,31 +146,31 @@ func TestDepthError(t *testing.T) {
 			name:         "33-level array",
 			data:         hexDecode("8201818181818181818181818181818181818181818181818181818181818181818101"),
 			opts:         DecOptions{},
-			wantErrorMsg: "cbor: exceeded max nested level 32",
+			wantErrorMsg: "cbor: exceeded max nested level " + strconv.Itoa(defaultMaxNestedLevels),
 		},
 		{
 			name:         "33-level indefinite length array",
 			data:         hexDecode("9f01818181818181818181818181818181818181818181818181818181818181818101ff"),
 			opts:         DecOptions{},
-			wantErrorMsg: "cbor: exceeded max nested level 32",
+			wantErrorMsg: "cbor: exceeded max nested level " + strconv.Itoa(defaultMaxNestedLevels),
 		},
 		{
 			name:         "33-level map",
 			data:         hexDecode("a101818181818181818181818181818181818181818181818181818181818181818101"),
 			opts:         DecOptions{},
-			wantErrorMsg: "cbor: exceeded max nested level 32",
+			wantErrorMsg: "cbor: exceeded max nested level " + strconv.Itoa(defaultMaxNestedLevels),
 		},
 		{
 			name:         "33-level indefinite length map",
 			data:         hexDecode("bf01818181818181818181818181818181818181818181818181818181818181818101ff"),
 			opts:         DecOptions{},
-			wantErrorMsg: "cbor: exceeded max nested level 32",
+			wantErrorMsg: "cbor: exceeded max nested level " + strconv.Itoa(defaultMaxNestedLevels),
 		},
 		{
 			name:         "33-level tag",
 			data:         hexDecode("d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d86474323031332d30332d32315432303a30343a30305a"),
 			opts:         DecOptions{},
-			wantErrorMsg: "cbor: exceeded max nested level 32",
+			wantErrorMsg: "cbor: exceeded max nested level " + strconv.Itoa(defaultMaxNestedLevels),
 		},
 	}
 	for _, tc := range testCases {

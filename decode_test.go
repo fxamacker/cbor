@@ -4995,8 +4995,8 @@ func TestDecModeDefaultMaxNestedLevel(t *testing.T) {
 		t.Errorf("DecMode() returned error %v", err)
 	} else {
 		maxNestedLevels := dm.DecOptions().MaxNestedLevels
-		if maxNestedLevels != 32 {
-			t.Errorf("DecOptions().MaxNestedLevels = %d, want %v", maxNestedLevels, 32)
+		if maxNestedLevels != defaultMaxNestedLevels {
+			t.Errorf("DecOptions().MaxNestedLevels = %d, want %v", maxNestedLevels, defaultMaxNestedLevels)
 		}
 	}
 }
