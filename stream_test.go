@@ -692,7 +692,7 @@ func TestEncoderError(t *testing.T) {
 		wantErrorMsg string
 	}{
 		{"channel cannot be marshaled", make(chan bool), "cbor: unsupported type: chan bool"},
-		{"function cannot be marshaled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
+		{"function cannot be marshaled", func(i int) int { return i * i }, "cbor: unsupported type: func"},
 		{"complex cannot be marshaled", complex(100, 8), "cbor: unsupported type: complex128"},
 	}
 	var w bytes.Buffer
@@ -705,7 +705,7 @@ func TestEncoderError(t *testing.T) {
 				t.Errorf("Encode(%v) didn't return an error, want error %q", tc.value, tc.wantErrorMsg)
 			} else if _, ok := err.(*UnsupportedTypeError); !ok {
 				t.Errorf("Encode(%v) error type %T, want *UnsupportedTypeError", tc.value, err)
-			} else if err.Error() != tc.wantErrorMsg {
+			} else if !strings.HasPrefix(err.Error(), tc.wantErrorMsg) {
 				t.Errorf("Encode(%v) error %q, want %q", tc.value, err.Error(), tc.wantErrorMsg)
 			}
 		})

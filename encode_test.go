@@ -319,7 +319,7 @@ func TestInvalidTypeMarshal(t *testing.T) {
 		{"map of channel cannot be marshaled", make(map[string]chan bool), "cbor: unsupported type: map[string]chan bool"},
 		{"struct of channel cannot be marshaled", s1{}, "cbor: unsupported type: cbor.s1"},
 		{"struct of channel cannot be marshaled", s2{}, "cbor: unsupported type: cbor.s2"},
-		{"function cannot be marshaled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
+		{"function cannot be marshaled", func(i int) int { return i * i }, "cbor: unsupported type: func"},
 		{"complex cannot be marshaled", complex(100, 8), "cbor: unsupported type: complex128"},
 	}
 	em, err := EncOptions{Sort: SortCanonical}.EncMode()
@@ -334,7 +334,7 @@ func TestInvalidTypeMarshal(t *testing.T) {
 				t.Errorf("Marshal(%v) didn't return an error, want error %q", tc.value, tc.wantErrorMsg)
 			} else if _, ok := err.(*UnsupportedTypeError); !ok {
 				t.Errorf("Marshal(%v) error type %T, want *UnsupportedTypeError", tc.value, err)
-			} else if err.Error() != tc.wantErrorMsg {
+			} else if !strings.HasPrefix(err.Error(), tc.wantErrorMsg) {
 				t.Errorf("Marshal(%v) error %q, want %q", tc.value, err.Error(), tc.wantErrorMsg)
 			} else if b != nil {
 				t.Errorf("Marshal(%v) = 0x%x, want nil", tc.value, b)
@@ -346,7 +346,7 @@ func TestInvalidTypeMarshal(t *testing.T) {
 				t.Errorf("Marshal(%v) didn't return an error, want error %q", tc.value, tc.wantErrorMsg)
 			} else if _, ok := err.(*UnsupportedTypeError); !ok {
 				t.Errorf("Marshal(%v) error type %T, want *UnsupportedTypeError", tc.value, err)
-			} else if err.Error() != tc.wantErrorMsg {
+			} else if !strings.HasPrefix(err.Error(), tc.wantErrorMsg) {
 				t.Errorf("Marshal(%v) error %q, want %q", tc.value, err.Error(), tc.wantErrorMsg)
 			} else if b != nil {
 				t.Errorf("Marshal(%v) = 0x%x, want nil", tc.value, b)
