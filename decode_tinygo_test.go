@@ -50,3 +50,62 @@ func TestUnmarshalDeepNesting(t *testing.T) {
 			&readback, root)
 	}
 }
+
+func TestUnmarshalRegisteredTagToInterface(t *testing.T) {
+	var err error
+	tags := NewTagSet()
+	err = tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeOf(C{}), 279)
+	if err != nil {
+		t.Error(err)
+	}
+	err = tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeOf(D{}), 280)
+	if err != nil {
+		t.Error(err)
+	}
+
+	encMode, _ := PreferredUnsortedEncOptions().EncModeWithTags(tags)
+	decMode, _ := DecOptions{}.DecModeWithTags(tags)
+
+	v1 := A1{Field: &C{Field: 5}}
+	data1, err := encMode.Marshal(v1)
+	if err != nil {
+		t.Fatalf("Marshal(%+v) returned error %v", v1, err)
+	}
+
+	v2 := A2{Fields: []B{&C{Field: 5}, &D{Field: "a"}}}
+	data2, err := encMode.Marshal(v2)
+	if err != nil {
+		t.Fatalf("Marshal(%+v) returned error %v", v2, err)
+	}
+
+	testCases := []struct {
+		name           string
+		data           []byte
+		unmarshalToObj interface{}
+		wantValue      interface{}
+	}{
+		{
+			name:           "interface type",
+			data:           data1,
+			unmarshalToObj: &A1{},
+			wantValue:      &v1,
+		},
+		{
+			name:           "slice of interface type",
+			data:           data2,
+			unmarshalToObj: &A2{},
+			wantValue:      &v2,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err = decMode.Unmarshal(tc.data, tc.unmarshalToObj)
+			if err == nil {
+				t.Errorf("Unmarshal(0x%x) returned no error, expect error", tc.data)
+			} else if _, ok := err.(*UnmarshalTypeError); !ok {
+				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.data, err)
+			}
+		})
+	}
+}

@@ -1386,8 +1386,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 
 				registeredType := d.dm.tags.getTypeFromTagNum(tagNums)
 				if registeredType != nil {
-					if registeredType.Implements(tInfo.nonPtrType) ||
-						reflect.PtrTo(registeredType).Implements(tInfo.nonPtrType) {
+					if implements(registeredType, tInfo.nonPtrType) {
 						v.Set(reflect.New(registeredType))
 						v = v.Elem()
 						tInfo = getTypeInfo(registeredType)
