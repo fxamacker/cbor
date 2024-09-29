@@ -11,11 +11,17 @@ on:
   pull_request:
   push:
     branches:
+      - 'main'
       - 'master'
       - 'release*'
       - 'feature/stream-mode'
     tags:
-      - 'v*'  
+      - 'v*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   # Test on various OS with default Go version. 
   tests:
