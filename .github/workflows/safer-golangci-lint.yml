@@ -17,12 +17,16 @@ on:
 
 env:
   GO_VERSION: '1.22'
-  GOLINTERS_VERSION: 1.56.2
+  GOLINTERS_VERSION: 1.59.1
   GOLINTERS_ARCH: linux-amd64
-  GOLINTERS_TGZ_DGST: e1c313fb5fc85a33890fdee5dbb1777d1f5829c84d655a47a55688f3aad5e501
+  GOLINTERS_TGZ_DGST: c30696f1292cff8778a495400745f0f9c0406a3f38d8bb12cef48d599f6c7791
   GOLINTERS_TIMEOUT: 15m
   OPENSSL_DGST_CMD: openssl dgst -sha256 -r
   CURL_CMD: curl --proto =https --tlsv1.2 --location --silent --show-error --fail
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   main:
@@ -32,7 +36,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout source
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
         with:
           fetch-depth: 1
 
