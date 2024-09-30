@@ -17,6 +17,7 @@ See [Quick&nbsp;Start](#quick-start) and [Releases](https://github.com/fxamacker
 [![CodeQL](https://github.com/fxamacker/cbor/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/fxamacker/cbor/actions/workflows/codeql-analysis.yml)
 [![](https://img.shields.io/badge/fuzzing-passing-44c010)](#fuzzing-and-code-coverage)
 [![Go Report Card](https://goreportcard.com/badge/github.com/fxamacker/cbor)](https://goreportcard.com/report/github.com/fxamacker/cbor)
+[![](https://img.shields.io/ossf-scorecard/github.com/fxamacker/cbor?label=openssf%20scorecard)](https://github.com/fxamacker/cbor#fuzzing-and-code-coverage)
 
 `fxamacker/cbor` is a CBOR codec in full conformance with [IETF STD&nbsp;94 (RFC&nbsp;8949)](https://www.rfc-editor.org/info/std94). It also supports CBOR Sequences ([RFC&nbsp;8742](https://www.rfc-editor.org/rfc/rfc8742.html)) and Extended Diagnostic Notation ([Appendix G of RFC&nbsp;8610](https://www.rfc-editor.org/rfc/rfc8610.html#appendix-G)).
 
@@ -24,7 +25,7 @@ Features include full support for CBOR tags, [Core Deterministic Encoding](https
 
 Design balances trade-offs between security, speed, concurrency, encoded data size, usability, etc.
 
-<details><summary>Highlights</summary><p/>
+<details><summary> 🔎&nbsp; Highlights</summary><p/>
 
 __🚀&nbsp; Speed__
 
@@ -58,157 +59,166 @@ Features include CBOR [extension points](https://www.rfc-editor.org/rfc/rfc8949.
 
 `fxamacker/cbor` has configurable limits, etc. that defend against malicious CBOR data.
 
-By contrast, `encoding/gob` is [not designed to be hardened against adversarial inputs](https://pkg.go.dev/encoding/gob#hdr-Security).
+Some other codecs can crash or use excessive resources while decoding untrusted data.
 
-<details><summary>Example decoding with encoding/gob 💥 fatal error (out of memory)</summary><p/>
+> [!WARNING]
+> Notably, `encoding/gob` is [not designed to be hardened against adversarial inputs](https://pkg.go.dev/encoding/gob#hdr-Security).
+> 
+> <details><summary> 🔎&nbsp; gob fatal error (out of memory) 💥 decoding 181 bytes</summary><p/>
+>
+> ```Go
+> // Example of encoding/gob having "fatal error: runtime: out of memory"
+> // while decoding 181 bytes (all Go versions as of Sept. 29, 2024).
+> package main
+> import (
+> 	"bytes"
+> 	"encoding/gob"
+> 	"encoding/hex"
+> 	"fmt"
+> )
+> 
+> // Example data is from https://github.com/golang/go/issues/24446
+> // (shortened to 181 bytes).
+> const data = "4dffb503010102303001ff30000109010130010800010130010800010130" +
+> 	"01ffb80001014a01ffb60001014b01ff860001013001ff860001013001ff" +
+> 	"860001013001ff860001013001ffb80000001eff850401010e3030303030" +
+> 	"30303030303030303001ff3000010c0104000016ffb70201010830303030" +
+> 	"3030303001ff3000010c000030ffb6040405fcff00303030303030303030" +
+> 	"303030303030303030303030303030303030303030303030303030303030" +
+> 	"30"
+> 
+> type X struct {
+> 	J *X
+> 	K map[string]int
+> }
+> 
+> func main() {
+> 	raw, _ := hex.DecodeString(data)
+> 	decoder := gob.NewDecoder(bytes.NewReader(raw))
+> 
+> 	var x X
+> 	decoder.Decode(&x) // fatal error: runtime: out of memory
+> 	fmt.Println("Decoding finished.")
+> }
+> ```
+>
+>
+> </details>
 
-```Go
-// Example of encoding/gob having "fatal error: runtime: out of memory"
-// while decoding 181 bytes.
-package main
-import (
-	"bytes"
-	"encoding/gob"
-	"encoding/hex"
-	"fmt"
-)
+`fxamacker/cbor` is fast at rejecting malformed CBOR data.
 
-// Example data is from https://github.com/golang/go/issues/24446
-// (shortened to 181 bytes).
-const data = "4dffb503010102303001ff30000109010130010800010130010800010130" +
-	"01ffb80001014a01ffb60001014b01ff860001013001ff860001013001ff" +
-	"860001013001ff860001013001ffb80000001eff850401010e3030303030" +
-	"30303030303030303001ff3000010c0104000016ffb70201010830303030" +
-	"3030303001ff3000010c000030ffb6040405fcff00303030303030303030" +
-	"303030303030303030303030303030303030303030303030303030303030" +
-	"30"
-
-type X struct {
-	J *X
-	K map[string]int
-}
-
-func main() {
-	raw, _ := hex.DecodeString(data)
-	decoder := gob.NewDecoder(bytes.NewReader(raw))
-
-	var x X
-	decoder.Decode(&x) // fatal error: runtime: out of memory
-	fmt.Println("Decoding finished.")
-}
-```
-
-<hr/>
-
-</details>
-
-`fxamacker/cbor` is fast at rejecting malformed CBOR data.  E.g. attempts to  
-decode 10 bytes of malicious CBOR data to `[]byte` (with default settings):
-
-| Codec | Speed (ns/op) | Memory | Allocs |
-| :---- | ------------: | -----: | -----: |
-| fxamacker/cbor 2.5.0 | 44 ± 5% | 32 B/op | 2 allocs/op |
-| ugorji/go 1.2.11 | 5353261 ± 4% | 67111321 B/op |  13 allocs/op |
-
-<details><summary>Benchmark details</summary><p/>
-
-Latest comparison used:
-- Input: `[]byte{0x9B, 0x00, 0x00, 0x42, 0xFA, 0x42, 0xFA, 0x42, 0xFA, 0x42}`
-- go1.19.10, linux/amd64, i5-13600K (disabled all e-cores, DDR4 @2933)
-- go test -bench=. -benchmem -count=20
-
-#### Prior comparisons
-
-| Codec | Speed (ns/op) | Memory | Allocs |
-| :---- | ------------: | -----: | -----: |
-| fxamacker/cbor 2.5.0-beta2 | 44.33 ± 2% | 32 B/op | 2 allocs/op |
-| fxamacker/cbor 0.1.0 - 2.4.0 | ~44.68 ± 6% | 32 B/op |  2 allocs/op |
-| ugorji/go 1.2.10 | 5524792.50 ± 3% | 67110491 B/op |  12 allocs/op |
-| ugorji/go 1.1.0 - 1.2.6 | 💥 runtime: | out of memory: | cannot allocate |
-
-- Input: `[]byte{0x9B, 0x00, 0x00, 0x42, 0xFA, 0x42, 0xFA, 0x42, 0xFA, 0x42}`
-- go1.19.6, linux/amd64, i5-13600K (DDR4)
-- go test -bench=. -benchmem -count=20
-
-<hr/>
-
-</details>
+> [!NOTE]
+> Benchmarks rejecting 10 bytes of malicious CBOR data decoding to `[]byte`:
+> 
+> | Codec | Speed (ns/op) | Memory | Allocs |
+> | :---- | ------------: | -----: | -----: |
+> | fxamacker/cbor 2.7.0 | 47 ± 7% | 32 B/op | 2 allocs/op |
+> | ugorji/go 1.2.12 | 5878187 ± 3% | 67111556 B/op |  13 allocs/op |
+> 
+> <details><summary> 🔎&nbsp; Benchmark details </summary><p/>
+> 
+> Latest comparison for decoding CBOR data to Go `[]byte`:
+> - Input: `[]byte{0x9B, 0x00, 0x00, 0x42, 0xFA, 0x42, 0xFA, 0x42, 0xFA, 0x42}`
+> - go1.22.7, linux/amd64, i5-13600K DDR4 @2933 (disabled e-cores)
+> - go test -bench=. -benchmem -count=20
+> 
+> #### Prior comparisons
+> 
+> | Codec | Speed (ns/op) | Memory | Allocs |
+> | :---- | ------------: | -----: | -----: |
+> | fxamacker/cbor 2.5.0-beta2 | 44.33 ± 2% | 32 B/op | 2 allocs/op |
+> | fxamacker/cbor 0.1.0 - 2.4.0 | ~44.68 ± 6% | 32 B/op |  2 allocs/op |
+> | ugorji/go 1.2.10 | 5524792.50 ± 3% | 67110491 B/op |  12 allocs/op |
+> | ugorji/go 1.1.0 - 1.2.6 | 💥 runtime: | out of memory: | cannot allocate |
+> 
+> - Input: `[]byte{0x9B, 0x00, 0x00, 0x42, 0xFA, 0x42, 0xFA, 0x42, 0xFA, 0x42}`
+> - go1.19.6, linux/amd64, i5-13600K (DDR4)
+> - go test -bench=. -benchmem -count=20
+> 
+> </details>
 
 ### Smaller Encodings with Struct Tags
 
-Struct tags (`toarray`, `keyasint`, `omitempty`) reduce encoded size of structs.
+Struct tags automatically reduce encoded size of structs and improve speed.
 
-<details><summary>Example encoding 3-level nested Go struct to 1 byte CBOR</summary><p/>
-
-https://go.dev/play/p/YxwvfPdFQG2
-
-```Go
-// Example encoding nested struct (with omitempty tag)
-// - encoding/json:  18 byte JSON
-// - fxamacker/cbor:  1 byte CBOR
-package main
-
-import (
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
-
-	"github.com/fxamacker/cbor/v2"
-)
-
-type GrandChild struct {
-	Quux int `json:",omitempty"`
-}
-
-type Child struct {
-	Baz int        `json:",omitempty"`
-	Qux GrandChild `json:",omitempty"`
-}
-
-type Parent struct {
-	Foo Child `json:",omitempty"`
-	Bar int   `json:",omitempty"`
-}
-
-func cb() {
-	results, _ := cbor.Marshal(Parent{})
-	fmt.Println("hex(CBOR): " + hex.EncodeToString(results))
-
-	text, _ := cbor.Diagnose(results) // Diagnostic Notation
-	fmt.Println("DN: " + text)
-}
-
-func js() {
-	results, _ := json.Marshal(Parent{})
-	fmt.Println("hex(JSON): " + hex.EncodeToString(results))
-
-	text := string(results) // JSON
-	fmt.Println("JSON: " + text)
-}
-
-func main() {
-	cb()
-	fmt.Println("-------------")
-	js()
-}
-```
-
-Output (DN is Diagnostic Notation):
-```
-hex(CBOR): a0
-DN: {}
--------------
-hex(JSON): 7b22466f6f223a7b22517578223a7b7d7d7d
-JSON: {"Foo":{"Qux":{}}}
-```
-
-<hr/>
-
-</details>
-
-Example using different struct tags together:
+We can write less code by using struct tags:
+- `toarray`: encode without field names (decode back to original struct)
+- `keyasint`: encode field names as integers (decode back to original struct)
+- `omitempty`: omit empty fields when encoding
 
 ![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.3.0/cbor_struct_tags_api.svg?sanitize=1 "CBOR API and Go Struct Tags")
+
+> [!NOTE]
+>  `fxamacker/cbor` can encode a 3-level nested Go struct to 1 byte!
+> - `encoding/json`:  18 bytes of JSON
+> - `fxamacker/cbor`:  1 byte of CBOR  
+>
+> <details><summary> 🔎&nbsp; Encoding 3-level nested Go struct with omitempty</summary><p/>
+>
+> https://go.dev/play/p/YxwvfPdFQG2
+> 
+> ```Go
+> // Example encoding nested struct (with omitempty tag)
+> // - encoding/json:  18 byte JSON
+> // - fxamacker/cbor:  1 byte CBOR
+> 
+> package main
+> 
+> import (
+> 	"encoding/hex"
+> 	"encoding/json"
+> 	"fmt"
+> 
+> 	"github.com/fxamacker/cbor/v2"
+> )
+> 
+> type GrandChild struct {
+> 	Quux int `json:",omitempty"`
+> }
+> 
+> type Child struct {
+> 	Baz int        `json:",omitempty"`
+> 	Qux GrandChild `json:",omitempty"`
+> }
+> 
+> type Parent struct {
+> 	Foo Child `json:",omitempty"`
+> 	Bar int   `json:",omitempty"`
+> }
+> 
+> func cb() {
+> 	results, _ := cbor.Marshal(Parent{})
+> 	fmt.Println("hex(CBOR): " + hex.EncodeToString(results))
+> 
+> 	text, _ := cbor.Diagnose(results) // Diagnostic Notation
+> 	fmt.Println("DN: " + text)
+> }
+> 
+> func js() {
+> 	results, _ := json.Marshal(Parent{})
+> 	fmt.Println("hex(JSON): " + hex.EncodeToString(results))
+> 
+> 	text := string(results) // JSON
+> 	fmt.Println("JSON: " + text)
+> }
+> 
+> func main() {
+> 	cb()
+> 	fmt.Println("-------------")
+> 	js()
+> }
+> ```
+> 
+> Output (DN is Diagnostic Notation):
+> ```
+> hex(CBOR): a0
+> DN: {}
+> -------------
+> hex(JSON): 7b22466f6f223a7b22517578223a7b7d7d7d
+> JSON: {"Foo":{"Qux":{}}}
+> ```
+> 
+> </details>
 
 API is mostly same as `encoding/json`, plus interfaces that simplify concurrency for CBOR options.
 
@@ -572,7 +582,7 @@ geomean                                                      2.782              
 
 ## Who uses fxamacker/cbor
 
-`fxamacker/cbor` is used in projects by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, Cisco, Confidential Computing Consortium, ConsenSys, Dapper&nbsp;Labs, EdgeX&nbsp;Foundry, F5, FIDO Alliance, Fraunhofer&#8209;AISEC, Kubernetes, Let's Encrypt (ISRG), Linux&nbsp;Foundation, Matrix.org, Microsoft, Mozilla, National&nbsp;Cybersecurity&nbsp;Agency&nbsp;of&nbsp;France (govt), Netherlands (govt), Oasis Protocol, Smallstep, Tailscale, Taurus SA, Teleport, TIBCO, and others.
+`fxamacker/cbor` is used in projects by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, Cisco, Confidential Computing Consortium, ConsenSys, EdgeX&nbsp;Foundry, F5, FIDO Alliance, Flow Foundation, Fraunhofer&#8209;AISEC, Kubernetes, Let's Encrypt (ISRG), Linux&nbsp;Foundation, Matrix.org, Microsoft, Mozilla, National&nbsp;Cybersecurity&nbsp;Agency&nbsp;of&nbsp;France (govt), Netherlands (govt), Oasis Protocol, Smallstep, Tailscale, Taurus SA, Teleport, TIBCO, and others.
 
 `fxamacker/cbor` passed multiple confidential security assessments.  A [nonconfidential security assessment](https://github.com/veraison/go-cose/blob/v1.0.0-rc.1/reports/NCC_Microsoft-go-cose-Report_2022-05-26_v1.0.pdf) (prepared by NCC Group for Microsoft Corporation) includes a subset of fxamacker/cbor v2.4.0 in its scope.
 
