@@ -5,18 +5,11 @@ permissions: {}
 
 on:
   push:
-    branches: [ main, master ]
+    # Run on push for all branches.
   pull_request:
-    # The branches below must be a subset of the branches above
-    branches: [ main, master ]
+    # Run on pull request for all branches.
   schedule:
-    - cron: '30 14 * * 0'
-      #       |  | | | |
-      #       |  | | | day of the week (0–6 with 0=Sunday) 
-      #       |  | | month (1–12)
-      #       |  | day of month (1–31)
-      #       | hour (0–23 in UTC)
-      #       minute (0–59)
+    - cron: '30 12 * * *' # Run daily at 12:30 UTC / 7:30 AM Central.
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
