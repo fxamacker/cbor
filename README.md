@@ -1,4 +1,4 @@
-<h1>CBOR Codec <a href="https://pkg.go.dev/github.com/fxamacker/cbor/v2"><img src="https://github.com/user-attachments/assets/7da530ba-80d6-45bf-81ef-c9b4bd0ad2ea" alt="Go logo" style="height: 1em;" align="right"></a></h1>
+<h1>CBOR Codec <a href="https://pkg.go.dev/github.com/fxamacker/cbor/v2"><img src="https://raw.githubusercontent.com/fxamacker/images/refs/heads/master/cbor/go-logo-blue.svg" alt="Go logo" style="height: 1em;" align="right"></a></h1>
 
 [fxamacker/cbor](https://github.com/fxamacker/cbor) is a library for encoding and decoding [CBOR](https://www.rfc-editor.org/info/std94) and [CBOR Sequences](https://www.rfc-editor.org/rfc/rfc8742.html).
 
