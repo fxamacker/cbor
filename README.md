@@ -114,6 +114,8 @@ Some other codecs can crash or use excessive resources while decoding untrusted 
 > | :---- | ------------: | -----: | -----: |
 > | fxamacker/cbor 2.7.0 | 47 ± 7% | 32 B/op | 2 allocs/op |
 > | ugorji/go 1.2.12 | 5878187 ± 3% | 67111556 B/op |  13 allocs/op |
+>
+> Faster hardware (overclocked DDR4 or DDR5) can reduce speed difference.
 > 
 > <details><summary> 🔎&nbsp; Benchmark details </summary><p/>
 > 
@@ -287,16 +289,17 @@ rest, err = cbor.UnmarshalFirst(b, &v)   // decode []byte b to v
 // DiagnoseFirst translates first CBOR data item to text and returns remaining bytes.
 text, rest, err = cbor.DiagnoseFirst(b)  // decode []byte b to Diagnostic Notation text
 
-// NOTE: Unmarshal returns ExtraneousDataError if there are remaining bytes,
-// but new funcs UnmarshalFirst and DiagnoseFirst do not.
+// NOTE: Unmarshal() returns ExtraneousDataError if there are remaining bytes, but
+// UnmarshalFirst() and DiagnoseFirst() allow trailing bytes.
 ```
 
-__IMPORTANT__: 👉  CBOR settings allow trade-offs between speed, security, encoding size, etc.
-
-- Different CBOR libraries may use different default settings.
-- CBOR-based formats or protocols usually require specific settings.
-
-For example, WebAuthn uses "CTAP2 Canonical CBOR" which is available as a preset.
+> [!IMPORTANT]  
+> CBOR settings allow trade-offs between speed, security, encoding size, etc.
+>
+> - Different CBOR libraries may use different default settings.
+> - CBOR-based formats or protocols usually require specific settings.
+>
+> For example, WebAuthn uses "CTAP2 Canonical CBOR" which is available as a preset.
 
 ### Presets
 
