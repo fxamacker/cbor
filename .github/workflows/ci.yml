@@ -13,10 +13,9 @@ on:
     branches:
       - 'main'
       - 'master'
-      - 'release*'
-      - 'feature/stream-mode'
-    tags:
-      - 'v*'
+      - 'release**'   # Match both 'release-v2.3.4' and 'release/*'.
+      - 'feature/**'
+      - 'v**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
