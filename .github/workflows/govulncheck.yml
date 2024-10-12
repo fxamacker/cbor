@@ -14,13 +14,7 @@ on:
   push:
     # Run govulncheck on push for all branches and paths.
   schedule:
-    - cron: '25 14 * * 0'
-      #       |  | | | |
-      #       |  | | | day of the week (0–6 with 0=Sunday) 
-      #       |  | | month (1–12)
-      #       |  | day of month (1–31)
-      #       | hour (0–23 in UTC)
-      #       minute (0–59)
+    - cron: '45 12 * * *' # Daily at 12:45 UTC / 7:45 AM Central
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
