@@ -59,16 +59,50 @@ Features include CBOR [extension points](https://www.rfc-editor.org/rfc/rfc8949.
 
 `fxamacker/cbor` has configurable limits, etc. that defend against malicious CBOR data.
 
-Some other codecs can crash or use excessive resources while decoding untrusted data.
+Notably, `fxamacker/cbor` is fast at rejecting malformed CBOR data.
+
+> [!NOTE]  
+> Benchmarks rejecting 10 bytes of malicious CBOR data decoding to `[]byte`:
+> 
+> | Codec | Speed (ns/op) | Memory | Allocs |
+> | :---- | ------------: | -----: | -----: |
+> | fxamacker/cbor 2.7.0 | 47 ± 7% | 32 B/op | 2 allocs/op |
+> | ugorji/go 1.2.12 | 5878187 ± 3% | 67111556 B/op |  13 allocs/op |
+>
+> Faster hardware (overclocked DDR4 or DDR5) can reduce speed difference.
+> 
+> <details><summary> 🔎&nbsp; Benchmark details </summary><p/>
+> 
+> Latest comparison for decoding CBOR data to Go `[]byte`:
+> - Input: `[]byte{0x9B, 0x00, 0x00, 0x42, 0xFA, 0x42, 0xFA, 0x42, 0xFA, 0x42}`
+> - go1.22.7, linux/amd64, i5-13600K (DDR4-2933, disabled e-cores)
+> - go test -bench=. -benchmem -count=20
+> 
+> #### Prior comparisons
+> 
+> | Codec | Speed (ns/op) | Memory | Allocs |
+> | :---- | ------------: | -----: | -----: |
+> | fxamacker/cbor 2.5.0-beta2 | 44.33 ± 2% | 32 B/op | 2 allocs/op |
+> | fxamacker/cbor 0.1.0 - 2.4.0 | ~44.68 ± 6% | 32 B/op |  2 allocs/op |
+> | ugorji/go 1.2.10 | 5524792.50 ± 3% | 67110491 B/op |  12 allocs/op |
+> | ugorji/go 1.1.0 - 1.2.6 | 💥 runtime: | out of memory: | cannot allocate |
+> 
+> - Input: `[]byte{0x9B, 0x00, 0x00, 0x42, 0xFA, 0x42, 0xFA, 0x42, 0xFA, 0x42}`
+> - go1.19.6, linux/amd64, i5-13600K (DDR4)
+> - go test -bench=. -benchmem -count=20
+> 
+> </details>
+
+In contrast, some codecs can crash or use excessive resources while decoding bad data.
 
 > [!WARNING]  
-> Notably, `encoding/gob` is [not designed to be hardened against adversarial inputs](https://pkg.go.dev/encoding/gob#hdr-Security).
+> Go's `encoding/gob` is [not designed to be hardened against adversarial inputs](https://pkg.go.dev/encoding/gob#hdr-Security).
 > 
 > <details><summary> 🔎&nbsp; gob fatal error (out of memory) 💥 decoding 181 bytes</summary><p/>
 >
 > ```Go
 > // Example of encoding/gob having "fatal error: runtime: out of memory"
-> // while decoding 181 bytes (all Go versions as of Oct. 5, 2024).
+> // while decoding 181 bytes (all Go versions as of Dec. 8, 2024).
 > package main
 > import (
 > 	"bytes"
@@ -103,40 +137,6 @@ Some other codecs can crash or use excessive resources while decoding untrusted 
 > ```
 >
 >
-> </details>
-
-`fxamacker/cbor` is fast at rejecting malformed CBOR data.
-
-> [!NOTE]  
-> Benchmarks rejecting 10 bytes of malicious CBOR data decoding to `[]byte`:
-> 
-> | Codec | Speed (ns/op) | Memory | Allocs |
-> | :---- | ------------: | -----: | -----: |
-> | fxamacker/cbor 2.7.0 | 47 ± 7% | 32 B/op | 2 allocs/op |
-> | ugorji/go 1.2.12 | 5878187 ± 3% | 67111556 B/op |  13 allocs/op |
->
-> Faster hardware (overclocked DDR4 or DDR5) can reduce speed difference.
-> 
-> <details><summary> 🔎&nbsp; Benchmark details </summary><p/>
-> 
-> Latest comparison for decoding CBOR data to Go `[]byte`:
-> - Input: `[]byte{0x9B, 0x00, 0x00, 0x42, 0xFA, 0x42, 0xFA, 0x42, 0xFA, 0x42}`
-> - go1.22.7, linux/amd64, i5-13600K (DDR4-2933, disabled e-cores)
-> - go test -bench=. -benchmem -count=20
-> 
-> #### Prior comparisons
-> 
-> | Codec | Speed (ns/op) | Memory | Allocs |
-> | :---- | ------------: | -----: | -----: |
-> | fxamacker/cbor 2.5.0-beta2 | 44.33 ± 2% | 32 B/op | 2 allocs/op |
-> | fxamacker/cbor 0.1.0 - 2.4.0 | ~44.68 ± 6% | 32 B/op |  2 allocs/op |
-> | ugorji/go 1.2.10 | 5524792.50 ± 3% | 67110491 B/op |  12 allocs/op |
-> | ugorji/go 1.1.0 - 1.2.6 | 💥 runtime: | out of memory: | cannot allocate |
-> 
-> - Input: `[]byte{0x9B, 0x00, 0x00, 0x42, 0xFA, 0x42, 0xFA, 0x42, 0xFA, 0x42}`
-> - go1.19.6, linux/amd64, i5-13600K (DDR4)
-> - go test -bench=. -benchmem -count=20
-> 
 > </details>
 
 ### Smaller Encodings with Struct Tags
@@ -587,7 +587,7 @@ geomean                                                      2.782              
 
 ## Who uses fxamacker/cbor
 
-`fxamacker/cbor` is used in projects by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, Cisco, Confidential Computing Consortium, ConsenSys, EdgeX&nbsp;Foundry, F5, FIDO Alliance, Flow Foundation, Fraunhofer&#8209;AISEC, Kubernetes, Let's Encrypt (ISRG), Linux&nbsp;Foundation, Matrix.org, Microsoft, Mozilla, National&nbsp;Cybersecurity&nbsp;Agency&nbsp;of&nbsp;France (govt), Netherlands (govt), Oasis Protocol, Smallstep, Tailscale, Taurus SA, Teleport, TIBCO, and others.
+`fxamacker/cbor` is used in projects by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, Cisco, Confidential&nbsp;Computing&nbsp;Consortium, ConsenSys, EdgeX&nbsp;Foundry, F5, Flow&nbsp;Foundation, Fraunhofer&#8209;AISEC, IBM, Kubernetes, Let's&nbsp;Encrypt&nbsp;(ISRG), Linux&nbsp;Foundation, Matrix.org, Microsoft, Mozilla, National&nbsp;Cybersecurity&nbsp;Agency&nbsp;of&nbsp;France&nbsp;(govt), Netherlands&nbsp;(govt), Oasis&nbsp;Protocol, Smallstep, Tailscale, Taurus SA, Teleport, TIBCO, and others.
 
 `fxamacker/cbor` passed multiple confidential security assessments.  A [nonconfidential security assessment](https://github.com/veraison/go-cose/blob/v1.0.0-rc.1/reports/NCC_Microsoft-go-cose-Report_2022-05-26_v1.0.pdf) (prepared by NCC Group for Microsoft Corporation) includes a subset of fxamacker/cbor v2.4.0 in its scope.
 
