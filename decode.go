@@ -1387,7 +1387,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				registeredType := d.dm.tags.getTypeFromTagNum(tagNums)
 				if registeredType != nil {
 					if registeredType.Implements(tInfo.nonPtrType) ||
-						reflect.PtrTo(registeredType).Implements(tInfo.nonPtrType) {
+						reflect.PointerTo(registeredType).Implements(tInfo.nonPtrType) {
 						v.Set(reflect.New(registeredType))
 						v = v.Elem()
 						tInfo = getTypeInfo(registeredType)
@@ -3083,7 +3083,7 @@ func fillFloat(t cborType, val float64, v reflect.Value) error {
 }
 
 func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, bsts ByteStringToStringMode, bum BinaryUnmarshalerMode) error {
-	if bum == BinaryUnmarshalerByteString && reflect.PtrTo(v.Type()).Implements(typeBinaryUnmarshaler) {
+	if bum == BinaryUnmarshalerByteString && reflect.PointerTo(v.Type()).Implements(typeBinaryUnmarshaler) {
 		if v.CanAddr() {
 			v = v.Addr()
 			if u, ok := v.Interface().(encoding.BinaryUnmarshaler); ok {

@@ -1799,10 +1799,10 @@ func getEncodeFuncInternal(t reflect.Type) (ef encodeFunc, ief isEmptyFunc) {
 	case typeByteString:
 		return encodeMarshalerType, isEmptyString
 	}
-	if reflect.PtrTo(t).Implements(typeMarshaler) {
+	if reflect.PointerTo(t).Implements(typeMarshaler) {
 		return encodeMarshalerType, alwaysNotEmpty
 	}
-	if reflect.PtrTo(t).Implements(typeBinaryMarshaler) {
+	if reflect.PointerTo(t).Implements(typeBinaryMarshaler) {
 		defer func() {
 			// capture encoding method used for modes that disable BinaryMarshaler
 			bme := binaryMarshalerEncoder{
