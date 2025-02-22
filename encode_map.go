@@ -74,13 +74,13 @@ func getEncodeMapFunc(t reflect.Type) encodeFunc {
 		kf: kf,
 		ef: ef,
 		kpool: sync.Pool{
-			New: func() interface{} {
+			New: func() any {
 				rk := reflect.New(t.Key()).Elem()
 				return &rk
 			},
 		},
 		vpool: sync.Pool{
-			New: func() interface{} {
+			New: func() any {
 				rv := reflect.New(t.Elem()).Elem()
 				return &rv
 			},

@@ -52,7 +52,7 @@ func TestUnmarshalSimpleValue(t *testing.T) {
 }
 
 func testUnmarshalInvalidSimpleValueToEmptyInterface(t *testing.T, data []byte) {
-	var v interface{}
+	var v any
 	if err := Unmarshal(data, v); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*SyntaxError); !ok {
@@ -69,8 +69,8 @@ func testUnmarshalInvalidSimpleValue(t *testing.T, data []byte) {
 	}
 }
 
-func testUnmarshalSimpleValueToEmptyInterface(t *testing.T, data []byte, want interface{}) {
-	var v interface{}
+func testUnmarshalSimpleValueToEmptyInterface(t *testing.T, data []byte, want any) {
+	var v any
 	if err := Unmarshal(data, &v); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		return
