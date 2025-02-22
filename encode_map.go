@@ -1,8 +1,6 @@
 // Copyright (c) Faye Amacker. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
-//go:build go1.20
-
 package cbor
 
 import (
