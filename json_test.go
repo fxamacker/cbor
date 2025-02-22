@@ -34,7 +34,7 @@ func TestStdlibJSONCompatibility(t *testing.T) {
 
 	for _, tc := range []struct {
 		name       string
-		original   interface{}
+		original   any
 		ifaceEqual bool // require equal intermediate interface{} values from both protocols
 	}{
 		{
@@ -67,14 +67,14 @@ func TestStdlibJSONCompatibility(t *testing.T) {
 			}
 			t.Logf("original to cbor: %s", diag1)
 
-			var jintf interface{}
+			var jintf any
 			err = json.Unmarshal(j1, &jintf)
 			if err != nil {
 				t.Fatal(err)
 			}
 			t.Logf("json to interface{} (%T): %#v", jintf, jintf)
 
-			var cintf interface{}
+			var cintf any
 			err = dec.Unmarshal(c1, &cintf)
 			if err != nil {
 				t.Fatal(err)

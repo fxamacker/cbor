@@ -12,7 +12,7 @@ import (
 // enclosed data item if it were to appear outside of a tag.
 type Tag struct {
 	Number  uint64
-	Content interface{}
+	Content any
 }
 
 // RawTag represents CBOR tag data, including tag number and raw tag content.

@@ -92,7 +92,7 @@ import (
 //
 // Values of other types cannot be encoded in CBOR.  Attempting
 // to encode such a value causes Marshal to return an UnsupportedTypeError.
-func Marshal(v interface{}) ([]byte, error) {
+func Marshal(v any) ([]byte, error) {
 	return defaultEncMode.Marshal(v)
 }
 
@@ -103,7 +103,7 @@ func Marshal(v interface{}) ([]byte, error) {
 // partially encoded data if error is returned.
 //
 // See Marshal for more details.
-func MarshalToBuffer(v interface{}, buf *bytes.Buffer) error {
+func MarshalToBuffer(v any, buf *bytes.Buffer) error {
 	return defaultEncMode.MarshalToBuffer(v, buf)
 }
 
@@ -773,7 +773,7 @@ func (opts EncOptions) encMode() (*encMode, error) { //nolint:gocritic // ignore
 
 // EncMode is the main interface for CBOR encoding.
 type EncMode interface {
-	Marshal(v interface{}) ([]byte, error)
+	Marshal(v any) ([]byte, error)
 	NewEncoder(w io.Writer) *Encoder
 	EncOptions() EncOptions
 }
@@ -783,7 +783,7 @@ type EncMode interface {
 // into the built-in buffer pool.
 type UserBufferEncMode interface {
 	EncMode
-	MarshalToBuffer(v interface{}, buf *bytes.Buffer) error
+	MarshalToBuffer(v any, buf *bytes.Buffer) error
 
 	// This private method is to prevent users implementing
 	// this interface and so future additions to it will
@@ -921,7 +921,7 @@ func (em *encMode) encTagBytes(t reflect.Type) []byte {
 // Marshal returns the CBOR encoding of v using em encoding mode.
 //
 // See the documentation for Marshal for details.
-func (em *encMode) Marshal(v interface{}) ([]byte, error) {
+func (em *encMode) Marshal(v any) ([]byte, error) {
 	e := getEncodeBuffer()
 
 	if err := encode(e, em, reflect.ValueOf(v)); err != nil {
@@ -943,7 +943,7 @@ func (em *encMode) Marshal(v interface{}) ([]byte, error) {
 // partially encoded data if error is returned.
 //
 // See Marshal for more details.
-func (em *encMode) MarshalToBuffer(v interface{}, buf *bytes.Buffer) error {
+func (em *encMode) MarshalToBuffer(v any, buf *bytes.Buffer) error {
 	if buf == nil {
 		return fmt.Errorf("cbor: encoding buffer provided by user is nil")
 	}
@@ -957,7 +957,7 @@ func (em *encMode) NewEncoder(w io.Writer) *Encoder {
 
 // encodeBufferPool caches unused bytes.Buffer objects for later reuse.
 var encodeBufferPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		e := new(bytes.Buffer)
 		e.Grow(32) // TODO: make this configurable
 		return e

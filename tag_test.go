@@ -905,7 +905,7 @@ func TestDecodeWrongTag(t *testing.T) {
 
 	testCases := []struct {
 		name         string
-		obj          interface{}
+		obj          any
 		data         []byte
 		wantErrorMsg string
 	}{
@@ -1240,7 +1240,7 @@ func TestMarshalRawTagWithEmptyContent(t *testing.T) {
 }
 
 func TestEncodeTag(t *testing.T) {
-	m := make(map[interface{}]bool)
+	m := make(map[any]bool)
 	m[10] = true
 	m[100] = true
 	m[-1] = true
@@ -1295,7 +1295,7 @@ func TestDecodeTagToEmptyIface(t *testing.T) {
 	testCases := []struct {
 		name    string
 		data    []byte
-		wantObj interface{}
+		wantObj any
 	}{
 		{
 			name:    "registered myBool",
@@ -1326,7 +1326,7 @@ func TestDecodeTagToEmptyIface(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v1 interface{}
+			var v1 any
 			if err := dm.Unmarshal(tc.data, &v1); err != nil {
 				t.Errorf("Unmarshal() returned error %v", err)
 			}
@@ -1334,7 +1334,7 @@ func TestDecodeTagToEmptyIface(t *testing.T) {
 				t.Errorf("Unmarshal to interface{} returned different values: %v, %v", tc.wantObj, v1)
 			}
 
-			var v2 interface{}
+			var v2 any
 			if err := dmSharedTags.Unmarshal(tc.data, &v2); err != nil {
 				t.Errorf("Unmarshal() returned error %v", err)
 			}
@@ -1359,7 +1359,7 @@ func TestDecodeRegisteredTagToEmptyIfaceError(t *testing.T) {
 
 	data := hexDecode("d865d8663bffffffffffffffff") // 101(102(-18446744073709551616))
 
-	var v interface{}
+	var v any
 	if err := dm.Unmarshal(data, &v); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
@@ -1415,7 +1415,7 @@ func TestDecodeRegisterTagForUnmarshaler(t *testing.T) {
 	em, _ := EncOptions{}.EncModeWithTags(tags)
 
 	// Decode to empty interface.  Unmarshal() should return object of registered type.
-	var v1 interface{}
+	var v1 any
 	if err := dm.Unmarshal(data, &v1); err != nil {
 		t.Errorf("Unmarshal() returned error %v", err)
 	}
@@ -1448,7 +1448,7 @@ func TestDecodeRegisterTagForUnmarshaler(t *testing.T) {
 func TestMarshalRawTagContainingMalformedCBORData(t *testing.T) {
 	testCases := []struct {
 		name         string
-		value        interface{}
+		value        any
 		wantErrorMsg string
 	}{
 		// Nil RawMessage and empty RawMessage are encoded as CBOR nil.

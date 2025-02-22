@@ -188,16 +188,16 @@ var decodeBenchmarks = []struct {
 var encodeBenchmarks = []struct {
 	name   string
 	data   []byte
-	values []interface{}
+	values []any
 }{
-	{"bool", hexDecode("f5"), []interface{}{true}},
-	{"positive int", hexDecode("1bffffffffffffffff"), []interface{}{uint64(18446744073709551615)}},
-	{"negative int", hexDecode("3903e7"), []interface{}{int64(-1000)}},
-	{"float", hexDecode("fbc010666666666666"), []interface{}{float64(-4.1)}},
-	{"bytes", hexDecode("581a0102030405060708090a0b0c0d0e0f101112131415161718191a"), []interface{}{[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}}},
-	{"text", hexDecode("782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"), []interface{}{"The quick brown fox jumps over the lazy dog"}},
-	{"array", hexDecode("981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a"), []interface{}{[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}}},
-	{"map", hexDecode("ad616161416162614261636143616461446165614561666146616761476168614861696149616a614a616c614c616d614d616e614e"), []interface{}{map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}}},
+	{"bool", hexDecode("f5"), []any{true}},
+	{"positive int", hexDecode("1bffffffffffffffff"), []any{uint64(18446744073709551615)}},
+	{"negative int", hexDecode("3903e7"), []any{int64(-1000)}},
+	{"float", hexDecode("fbc010666666666666"), []any{float64(-4.1)}},
+	{"bytes", hexDecode("581a0102030405060708090a0b0c0d0e0f101112131415161718191a"), []any{[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}}},
+	{"text", hexDecode("782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"), []any{"The quick brown fox jumps over the lazy dog"}},
+	{"array", hexDecode("981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a"), []any{[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}}},
+	{"map", hexDecode("ad616161416162614261636143616461446165614561666146616761476168614861696149616a614a616c614c616d614d616e614e"), []any{map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}}},
 }
 
 func BenchmarkUnmarshal(b *testing.B) {
@@ -226,7 +226,7 @@ func BenchmarkUnmarshal(b *testing.B) {
 		{
 			"CBOR map to Go map[string]interface{}",
 			hexDecode("a86154f56255691bffffffffffffffff61493903e76146fbc0106666666666666142581a0102030405060708090a0b0c0d0e0f101112131415161718191a6153782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6764536c6369981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a634d7373ad6163614361656145616661466167614761686148616e614e616d614d61616141616261426164614461696149616a614a616c614c"),
-			reflect.TypeOf(map[string]interface{}{}),
+			reflect.TypeOf(map[string]any{}),
 		},
 		// Unmarshal CBOR map with string key to struct.
 		{
@@ -238,7 +238,7 @@ func BenchmarkUnmarshal(b *testing.B) {
 		{
 			"CBOR map to Go map[int]interface{}",
 			hexDecode("a801f5021bffffffffffffffff033903e704fbc01066666666666605581a0102030405060708090a0b0c0d0e0f101112131415161718191a06782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6707981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a08ad61646144616661466167614761686148616d614d616e614e6161614161626142616361436165614561696149616a614a616c614c"),
-			reflect.TypeOf(map[int]interface{}{}),
+			reflect.TypeOf(map[int]any{}),
 		},
 		// Unmarshal CBOR map with integer key, such as COSE Key and SenML, to struct.
 		{
@@ -250,7 +250,7 @@ func BenchmarkUnmarshal(b *testing.B) {
 		{
 			"CBOR array to Go []interface{}",
 			hexDecode("88f51bffffffffffffffff3903e7fbc010666666666666581a0102030405060708090a0b0c0d0e0f101112131415161718191a782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67981a0102030405060708090a0b0c0d0e0f101112131415161718181819181aad616261426163614361646144616561456166614661696149616e614e616161416167614761686148616a614a616c614c616d614d"),
-			reflect.TypeOf([]interface{}{}),
+			reflect.TypeOf([]any{}),
 		},
 		// Unmarshal CBOR array of known sequence of data types, such as signed/maced/encrypted CWT, to struct.
 		{
@@ -384,7 +384,7 @@ func BenchmarkMarshal(b *testing.B) {
 		}
 	}
 	// Marshal map[string]interface{} to CBOR map
-	m1 := map[string]interface{}{ //nolint:dupl
+	m1 := map[string]any{
 		"T":    true,
 		"UI":   uint(18446744073709551615),
 		"I":    -1000,
@@ -406,7 +406,7 @@ func BenchmarkMarshal(b *testing.B) {
 		Mss:  map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"},
 	}
 	// Marshal map[int]interface{} to CBOR map
-	m2 := map[int]interface{}{ //nolint:dupl
+	m2 := map[int]any{
 		1: true,
 		2: uint(18446744073709551615),
 		3: -1000,
@@ -428,7 +428,7 @@ func BenchmarkMarshal(b *testing.B) {
 		Mss:  map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"},
 	}
 	// Marshal []interface to CBOR array.
-	slc := []interface{}{
+	slc := []any{
 		true,
 		uint(18446744073709551615),
 		-1000,
@@ -451,7 +451,7 @@ func BenchmarkMarshal(b *testing.B) {
 	}
 	var moreBenchmarks = []struct {
 		name  string
-		value interface{}
+		value any
 	}{
 		{"Go map[string]interface{} to CBOR map", m1},
 		{"Go struct to CBOR map", v1},
@@ -501,9 +501,9 @@ func BenchmarkMarshalCanonical(b *testing.B) {
 	for _, bm := range []struct {
 		name   string
 		data   []byte
-		values []interface{}
+		values []any
 	}{
-		{"map", hexDecode("ad616161416162614261636143616461446165614561666146616761476168614861696149616a614a616c614c616d614d616e614e"), []interface{}{map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}, strc{A: "A", B: "B", C: "C", D: "D", E: "E", F: "F", G: "G", H: "H", I: "I", J: "J", L: "L", M: "M", N: "N"}, map[int]int{0: 0} /* single-entry map */}},
+		{"map", hexDecode("ad616161416162614261636143616461446165614561666146616761476168614861696149616a614a616c614c616d614d616e614e"), []any{map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}, strc{A: "A", B: "B", C: "C", D: "D", E: "E", F: "F", G: "G", H: "H", I: "I", J: "J", L: "L", M: "M", N: "N"}, map[int]int{0: 0} /* single-entry map */}},
 	} {
 		for _, v := range bm.values {
 			name := "Go " + reflect.TypeOf(v).String() + " to CBOR " + bm.name
@@ -860,7 +860,7 @@ func BenchmarkUnmarshalMapToStruct(b *testing.B) {
 	type input struct {
 		name   string
 		data   []byte
-		into   interface{}
+		into   any
 		reject bool
 	}
 
