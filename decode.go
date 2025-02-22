@@ -1347,7 +1347,7 @@ func (d *decoder) value(v any) error {
 		return &InvalidUnmarshalError{"cbor: Unmarshal(nil)"}
 	}
 	rv := reflect.ValueOf(v)
-	if rv.Kind() != reflect.Ptr {
+	if rv.Kind() != reflect.Pointer {
 		return &InvalidUnmarshalError{"cbor: Unmarshal(non-pointer " + rv.Type().String() + ")"}
 	} else if rv.IsNil() {
 		return &InvalidUnmarshalError{"cbor: Unmarshal(nil " + rv.Type().String() + ")"}
@@ -1361,7 +1361,7 @@ func (d *decoder) value(v any) error {
 func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
 
 	// Decode CBOR nil or CBOR undefined to pointer value by setting pointer value to nil.
-	if d.nextCBORNil() && v.Kind() == reflect.Ptr {
+	if d.nextCBORNil() && v.Kind() == reflect.Pointer {
 		d.skip()
 		v.Set(reflect.Zero(v.Type()))
 		return nil
@@ -1399,7 +1399,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 
 	// Create new value for the pointer v to point to.
 	// At this point, CBOR value is not nil/undefined if v is a pointer.
-	for v.Kind() == reflect.Ptr {
+	for v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			if !v.CanSet() {
 				d.skip()
@@ -1788,12 +1788,12 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 // parseToUnmarshaler parses CBOR data to value implementing Unmarshaler interface.
 // It assumes data is well-formed, and does not perform bounds checking.
 func (d *decoder) parseToUnmarshaler(v reflect.Value) error {
-	if d.nextCBORNil() && v.Kind() == reflect.Ptr && v.IsNil() {
+	if d.nextCBORNil() && v.Kind() == reflect.Pointer && v.IsNil() {
 		d.skip()
 		return nil
 	}
 
-	if v.Kind() != reflect.Ptr && v.CanAddr() {
+	if v.Kind() != reflect.Pointer && v.CanAddr() {
 		v = v.Addr()
 	}
 	if u, ok := v.Interface().(Unmarshaler); ok {
@@ -2980,7 +2980,7 @@ var (
 
 func fillNil(_ cborType, v reflect.Value) error {
 	switch v.Kind() {
-	case reflect.Slice, reflect.Map, reflect.Interface, reflect.Ptr:
+	case reflect.Slice, reflect.Map, reflect.Interface, reflect.Pointer:
 		v.Set(reflect.Zero(v.Type()))
 		return nil
 	}
