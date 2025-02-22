@@ -2386,7 +2386,7 @@ func testUnmarshalToCompatibleType(t *testing.T, data []byte, wantValue any, com
 	//     var pv *wantType
 	//     Unmarshal(tc.data, &pv)
 
-	rv = reflect.New(reflect.PtrTo(wantType))
+	rv = reflect.New(reflect.PointerTo(wantType))
 	if err := Unmarshal(data, rv.Interface()); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		return
@@ -2405,7 +2405,7 @@ func testUnmarshalToCompatibleType(t *testing.T, data []byte, wantValue any, com
 	//     Unmarshal(tc.data, &pv)
 
 	irv := reflect.New(wantType)
-	rv = reflect.New(reflect.PtrTo(wantType))
+	rv = reflect.New(reflect.PointerTo(wantType))
 	rv.Elem().Set(irv)
 	if err := Unmarshal(data, rv.Interface()); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
@@ -2446,7 +2446,7 @@ func testUnmarshalToIncompatibleType(t *testing.T, data []byte, wrongType reflec
 	//     var pv *wrongType
 	//     Unmarshal(tc.data, &pv)
 
-	rv = reflect.New(reflect.PtrTo(wrongType))
+	rv = reflect.New(reflect.PointerTo(wrongType))
 	if err := Unmarshal(data, rv.Interface()); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
@@ -2459,7 +2459,7 @@ func testUnmarshalToIncompatibleType(t *testing.T, data []byte, wrongType reflec
 	//     Unmarshal(tc.data, &pv)
 
 	irv := reflect.New(wrongType)
-	rv = reflect.New(reflect.PtrTo(wrongType))
+	rv = reflect.New(reflect.PointerTo(wrongType))
 	rv.Elem().Set(irv)
 
 	if err := Unmarshal(data, rv.Interface()); err == nil {
