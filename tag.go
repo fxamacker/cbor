@@ -193,7 +193,7 @@ func (t *syncTagSet) Add(opts TagOptions, contentType reflect.Type, num uint64, 
 	if contentType == nil {
 		return errors.New("cbor: cannot add nil content type to TagSet")
 	}
-	for contentType.Kind() == reflect.Ptr {
+	for contentType.Kind() == reflect.Pointer {
 		contentType = contentType.Elem()
 	}
 	tag, err := newTagItem(opts, contentType, num, nestedNum...)
@@ -216,7 +216,7 @@ func (t *syncTagSet) Add(opts TagOptions, contentType reflect.Type, num uint64, 
 
 // Remove removes given tag content type from TagSet.
 func (t *syncTagSet) Remove(contentType reflect.Type) {
-	for contentType.Kind() == reflect.Ptr {
+	for contentType.Kind() == reflect.Pointer {
 		contentType = contentType.Elem()
 	}
 	t.Lock()

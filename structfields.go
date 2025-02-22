@@ -157,7 +157,7 @@ func appendFields(
 		f := t.Field(i)
 
 		ft := f.Type
-		for ft.Kind() == reflect.Ptr {
+		for ft.Kind() == reflect.Pointer {
 			ft = ft.Elem()
 		}
 
@@ -244,7 +244,7 @@ func getFieldValue(v reflect.Value, idx []int, f embeddedFieldNullPtrFunc) (fv r
 		fv = fv.Field(n)
 
 		if i < len(idx)-1 {
-			if fv.Kind() == reflect.Ptr && fv.Type().Elem().Kind() == reflect.Struct {
+			if fv.Kind() == reflect.Pointer && fv.Type().Elem().Kind() == reflect.Struct {
 				if fv.IsNil() {
 					// Null pointer to embedded struct field
 					fv, err = f(fv)
