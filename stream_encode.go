@@ -116,11 +116,11 @@ func (se *StreamEncoder) EncodeBool(b bool) error {
 	if se.closed {
 		return ErrStreamClosed
 	}
-	bytes := cborTrue
+	bBytes := cborTrue
 	if !b {
-		bytes = cborFalse
+		bBytes = cborFalse
 	}
-	se.buf.Write(bytes)
+	se.buf.Write(bBytes)
 	return nil
 }
 

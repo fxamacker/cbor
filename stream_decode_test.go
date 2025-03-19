@@ -1820,7 +1820,7 @@ func TestStreamDecodeWithDecOptions(t *testing.T) {
 
 type alwaysErrorReader struct{}
 
-func (r *alwaysErrorReader) Read(p []byte) (int, error) {
+func (r *alwaysErrorReader) Read([]byte) (int, error) {
 	return 0, errors.New("reader error")
 }
 
