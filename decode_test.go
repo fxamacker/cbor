@@ -5096,7 +5096,7 @@ func TestDecModeInvalidMaxMapPairs(t *testing.T) {
 		{
 			name:         "< min allowed max map pairs",
 			opts:         DecOptions{MaxMapPairs: 1},
-			wantErrorMsg: "cbor: invalid MaxMapPairs 1 (range is [16, 2147483647])",
+			wantErrorMsg: "cbor: invalid MaxMapPairs 1 (range is [16, 9223372036854775807])",
 		},
 	}
 	if bits.UintSize == 32 {
@@ -5107,7 +5107,7 @@ func TestDecModeInvalidMaxMapPairs(t *testing.T) {
 		}{
 			name:         "> max allowed max map pairs",
 			opts:         DecOptions{MaxMapPairs: 2147483648},
-			wantErrorMsg: "cbor: invalid MaxMapPairs 2147483648 (range is [16, 2147483647])",
+			wantErrorMsg: "cbor: invalid MaxMapPairs 2147483648 (range is [16, 9223372036854775807])",
 		})
 	}
 	for _, tc := range testCases {
