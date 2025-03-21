@@ -1,0 +1,47 @@
+# GitHub Actions workflow for govulncheck.
+# This file is licensed under MIT License.
+# https://github.com/fxamacker/cbor
+
+name: govulncheck
+
+# Revoke default permissions and grant what's needed in each job.
+permissions: {}
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '**'
+      - '!**.md'
+  push:
+    paths:
+      - '**'
+      - '!**.md'
+    branches:
+      - 'main'
+      - 'master'
+      - 'release*'
+      - 'feature/stream-mode'
+    tags:
+      - 'v*'
+
+jobs:
+  Check:
+    runs-on: ubuntu-latest
+    permissions:
+      # Grant permission to read content.
+      contents: read
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      with:
+        fetch-depth: 1
+    - name: Set up Go
+      uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
+      with:
+        go-version: 1.21.x
+        check-latest: true
+    - name: Install latest from golang.org
+      run: go install golang.org/x/vuln/cmd/govulncheck@5507063454b1b8c930db99818a88b52f1f143418 # v1.0.4
+    - name: Run govulncheck      
+      run: govulncheck -show=traces ./...

@@ -10,17 +10,18 @@ import (
 )
 
 type field struct {
-	name      string
-	nameAsInt int64 // used to decoder to match field name with CBOR int
-	cborName  []byte
-	idx       []int
-	typ       reflect.Type
-	ef        encodeFunc
-	ief       isEmptyFunc
-	typInfo   *typeInfo // used to decoder to reuse type info
-	tagged    bool      // used to choose dominant field (at the same level tagged fields dominate untagged fields)
-	omitEmpty bool      // used to skip empty field
-	keyAsInt  bool      // used to encode/decode field name as int
+	name               string
+	nameAsInt          int64 // used to decoder to match field name with CBOR int
+	cborName           []byte
+	cborNameByteString []byte // major type 2 name encoding iff cborName has major type 3
+	idx                []int
+	typ                reflect.Type
+	ef                 encodeFunc
+	ief                isEmptyFunc
+	typInfo            *typeInfo // used to decoder to reuse type info
+	tagged             bool      // used to choose dominant field (at the same level tagged fields dominate untagged fields)
+	omitEmpty          bool      // used to skip empty field
+	keyAsInt           bool      // used to encode/decode field name as int
 }
 
 type fields []*field
@@ -129,7 +130,7 @@ func getFields(t reflect.Type) (flds fields, structOptions string) {
 		}
 
 		// Skip fields with the same field name.
-		for i++; i < len(flds) && name == flds[i].name; i++ {
+		for i++; i < len(flds) && name == flds[i].name; i++ { //nolint:revive
 		}
 	}
 	if j != len(flds) {
@@ -143,7 +144,15 @@ func getFields(t reflect.Type) (flds fields, structOptions string) {
 }
 
 // appendFields appends type t's exportable fields to flds and anonymous struct fields to nTypes .
-func appendFields(t reflect.Type, idx []int, flds fields, nTypes map[reflect.Type][][]int) (fields, map[reflect.Type][][]int) {
+func appendFields(
+	t reflect.Type,
+	idx []int,
+	flds fields,
+	nTypes map[reflect.Type][][]int,
+) (
+	_flds fields,
+	_nTypes map[reflect.Type][][]int,
+) {
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 
@@ -164,12 +173,12 @@ func appendFields(t reflect.Type, idx []int, flds fields, nTypes map[reflect.Typ
 			continue
 		}
 
-		tagged := len(tag) > 0
+		tagged := tag != ""
 
 		// Parse field tag options
 		var tagFieldName string
 		var omitempty, keyasint bool
-		for j := 0; len(tag) > 0; j++ {
+		for j := 0; tag != ""; j++ {
 			var token string
 			idx := strings.IndexByte(tag, ',')
 			if idx == -1 {
@@ -198,7 +207,7 @@ func appendFields(t reflect.Type, idx []int, flds fields, nTypes map[reflect.Typ
 		copy(fIdx, idx)
 		fIdx[len(fIdx)-1] = i
 
-		if !f.Anonymous || ft.Kind() != reflect.Struct || len(tagFieldName) > 0 {
+		if !f.Anonymous || ft.Kind() != reflect.Struct || tagFieldName != "" {
 			flds = append(flds, &field{
 				name:      fieldName,
 				idx:       fIdx,
@@ -220,7 +229,7 @@ func appendFields(t reflect.Type, idx []int, flds fields, nTypes map[reflect.Typ
 // isFieldExportable returns true if f is an exportable (regular or anonymous) field or
 // a nonexportable anonymous field of struct type.
 // Nonexportable anonymous field of struct type can contain exportable fields.
-func isFieldExportable(f reflect.StructField, fk reflect.Kind) bool {
+func isFieldExportable(f reflect.StructField, fk reflect.Kind) bool { //nolint:gocritic // ignore hugeParam
 	exportable := f.PkgPath == ""
 	return exportable || (f.Anonymous && fk == reflect.Struct)
 }

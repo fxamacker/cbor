@@ -600,7 +600,7 @@ func (sd *StreamDecoder) _readAndValidateNext() (int, error) {
 		sd.dec.d.reset(sd.dec.buf[sd.dec.off:])
 
 		start := sd.dec.d.off
-		err := sd.dec.d.valid()
+		err := sd.dec.d.wellformed(true, false)
 		end := sd.dec.d.off
 
 		// Restore decoder offset after validation
