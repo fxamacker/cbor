@@ -468,7 +468,7 @@ if err := dm.Unmarshal(data, &v); err != nil {
 em, _ := cbor.EncOptions{}.EncModeWithTags(tags)
 
 // Marshal signedCWT with tag number.
-if data, err := cbor.Marshal(v); err != nil {
+if data, err := em.Marshal(v); err != nil {
 	return err
 }
 ```
