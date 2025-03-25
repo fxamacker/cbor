@@ -11,6 +11,7 @@ import (
 	"math"
 	"math/big"
 	"reflect"
+	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -1694,7 +1695,7 @@ func TestOmitZeroForStruct2(t *testing.T) {
 	}
 
 	v := T{}
-	want := []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0xa1, 0x65, 0x69, 0x6e, 0x74, 0x66, 0x6f, 0xf6} // {"stro": {intfo: nil}}
+	want := []byte{0xa0} // {}
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
@@ -1811,7 +1812,7 @@ func TestOmitZeroForStructWithPtrToAnonymousField(t *testing.T) {
 		{
 			name:         "not-null pointer to anonymous field",
 			obj:          T{T2{&T1{}}},
-			wantCborData: []byte{0xa0}, // {}
+			wantCborData: []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0xa0}, // {"stro":{}}
 		},
 		{
 			name:         "not empty value in field 1",
@@ -1956,32 +1957,384 @@ func TestOmitZeroForBinaryMarshaler2(t *testing.T) {
 	testRoundTrip(t, testCases, em, dm)
 }
 
-// omitzero is a no-op for time.Time.
 func TestOmitZeroForTime(t *testing.T) {
 	type T struct {
 		Tm time.Time `cbor:"t,omitzero"`
 	}
 
 	v := T{}
-	want := []byte{0xa1, 0x61, 0x74, 0xf6} // {"t": nil}
+	want := []byte{0xa0} // {}
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
 	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
 }
 
-// omitzero is a no-op for big.Int.
 func TestOmitZeroForBigInt(t *testing.T) {
 	type T struct {
 		I big.Int `cbor:"bi,omitzero"`
 	}
 
 	v := T{}
-	want := []byte{0xa1, 0x62, 0x62, 0x69, 0xc2, 0x40} // {"bi": 2([])}
+	want := []byte{0xa0} // {}
 
 	em, _ := EncOptions{BigIntConvert: BigIntConvertNone}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
 	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+}
+
+func TestIsZero(t *testing.T) {
+	var zeroStructZeroer isZeroer = zeroTestTypeCustom{value: 42}
+
+	testcases := []struct {
+		name string
+		t    reflect.Type
+		v    reflect.Value
+
+		expect    bool
+		expectErr bool
+	}{
+		{
+			name:   "nil",
+			t:      reflect.TypeOf(nil),
+			v:      reflect.ValueOf(nil),
+			expect: true,
+		},
+		{
+			name:   "string-zero",
+			t:      reflect.TypeOf(""),
+			v:      reflect.ValueOf(""),
+			expect: true,
+		},
+
+		{
+			name:   "string-nonzero",
+			t:      reflect.TypeOf(""),
+			v:      reflect.ValueOf("a"),
+			expect: false,
+		},
+		{
+			name:   "int-zero",
+			t:      reflect.TypeOf(0),
+			v:      reflect.ValueOf(0),
+			expect: true,
+		},
+		{
+			name:   "int-nonzero",
+			t:      reflect.TypeOf(0),
+			v:      reflect.ValueOf(1),
+			expect: false,
+		},
+
+		{
+			name:   "bool-zero",
+			t:      reflect.TypeOf(false),
+			v:      reflect.ValueOf(false),
+			expect: true,
+		},
+		{
+			name:   "bool-nonzero",
+			t:      reflect.TypeOf(false),
+			v:      reflect.ValueOf(true),
+			expect: false,
+		},
+
+		{
+			name:   "slice-zero",
+			t:      reflect.TypeOf([]string(nil)),
+			v:      reflect.ValueOf([]string(nil)),
+			expect: true,
+		},
+		{
+			name:   "slice-nonzero",
+			t:      reflect.TypeOf([]string(nil)),
+			v:      reflect.ValueOf([]string{}),
+			expect: false,
+		},
+
+		{
+			name:   "map-zero",
+			t:      reflect.TypeOf(map[string]string(nil)),
+			v:      reflect.ValueOf(map[string]string(nil)),
+			expect: true,
+		},
+		{
+			name:   "map-nonzero",
+			t:      reflect.TypeOf(map[string]string(nil)),
+			v:      reflect.ValueOf(map[string]string{}),
+			expect: false,
+		},
+
+		{
+			name:   "struct-zero",
+			t:      reflect.TypeOf(zeroTestType{}),
+			v:      reflect.ValueOf(zeroTestType{}),
+			expect: true,
+		},
+		{
+			name:   "struct-nonzero",
+			t:      reflect.TypeOf(zeroTestType{}),
+			v:      reflect.ValueOf(zeroTestType{value: 42}),
+			expect: false,
+		},
+
+		{
+			name:   "pointer-zero",
+			t:      reflect.TypeOf((*zeroTestType)(nil)),
+			v:      reflect.ValueOf((*zeroTestType)(nil)),
+			expect: true,
+		},
+		{
+			name:   "pointer-nonzero",
+			t:      reflect.TypeOf((*zeroTestType)(nil)),
+			v:      reflect.ValueOf(&zeroTestType{}),
+			expect: false,
+		},
+
+		{
+			name:   "any-struct-zero",
+			t:      reflect.TypeOf(any(nil)),
+			v:      reflect.ValueOf(zeroTestType{}),
+			expect: true,
+		},
+		{
+			name:   "any-struct-nonzero",
+			t:      reflect.TypeOf(any(nil)),
+			v:      reflect.ValueOf(zeroTestType{value: 42}),
+			expect: false,
+		},
+
+		{
+			name:   "any-pointer-zero",
+			t:      reflect.TypeOf(any(nil)),
+			v:      reflect.ValueOf((*zeroTestType)(nil)),
+			expect: true,
+		},
+		{
+			name:   "any-pointer-nonzero",
+			t:      reflect.TypeOf(any(nil)),
+			v:      reflect.ValueOf(&zeroTestType{}),
+			expect: false,
+		},
+
+		{
+			name:   "custom-structreceiver-zero-structvalue",
+			t:      reflect.TypeOf(zeroTestTypeCustom{}),
+			v:      reflect.ValueOf(zeroTestTypeCustom{value: 42}),
+			expect: true,
+		},
+		{
+			name:   "custom-structreceiver-nonzero-structvalue",
+			t:      reflect.TypeOf(zeroTestTypeCustom{}),
+			v:      reflect.ValueOf(zeroTestTypeCustom{value: 1}),
+			expect: false,
+		},
+		{
+			name:   "custom-structreceiver-zero-pointervalue",
+			t:      reflect.TypeOf(zeroTestTypeCustom{}),
+			v:      reflect.ValueOf(&zeroTestTypeCustom{value: 42}),
+			expect: true,
+		},
+		{
+			name:   "custom-structreceiver-nonzero-pointervalue",
+			t:      reflect.TypeOf(zeroTestTypeCustom{}),
+			v:      reflect.ValueOf(&zeroTestTypeCustom{value: 1}),
+			expect: false,
+		},
+
+		{
+			name:   "custom-structreceiver-zero-pointervalue",
+			t:      reflect.TypeOf(&zeroTestTypeCustom{}),
+			v:      reflect.ValueOf(&zeroTestTypeCustom{value: 42}),
+			expect: true,
+		},
+		{
+			name:   "custom-structreceiver-nonzero-pointervalue",
+			t:      reflect.TypeOf(&zeroTestTypeCustom{}),
+			v:      reflect.ValueOf(&zeroTestTypeCustom{value: 1}),
+			expect: false,
+		},
+		{
+			name:   "custom-structreceiver-zero-nil-pointervalue",
+			t:      reflect.TypeOf(&zeroTestTypeCustom{}),
+			v:      reflect.ValueOf((*zeroTestTypeCustom)(nil)),
+			expect: true,
+		},
+
+		{
+			name:   "custom-pointerreceiver-zero-structvalue",
+			t:      reflect.TypeOf(zeroTestTypeCustomPointer{}),
+			v:      reflect.ValueOf(zeroTestTypeCustomPointer{value: 42}),
+			expect: true,
+		},
+		{
+			name:   "custom-pointerreceiver-nonzero-structvalue",
+			t:      reflect.TypeOf(zeroTestTypeCustomPointer{}),
+			v:      reflect.ValueOf(zeroTestTypeCustomPointer{value: 1}),
+			expect: false,
+		},
+
+		{
+			name:   "custom-pointerreceiver-zero-pointervalue",
+			t:      reflect.TypeOf(&zeroTestTypeCustomPointer{}),
+			v:      reflect.ValueOf(&zeroTestTypeCustomPointer{value: 42}),
+			expect: true,
+		},
+		{
+			name:   "custom-pointerreceiver-nonzero-pointervalue",
+			t:      reflect.TypeOf(&zeroTestTypeCustomPointer{}),
+			v:      reflect.ValueOf(&zeroTestTypeCustomPointer{value: 1}),
+			expect: false,
+		},
+
+		{
+			name:   "custom-interface-nil-pointer",
+			t:      isZeroerType,
+			v:      reflect.ValueOf((*zeroTestTypeCustom)(nil)),
+			expect: true,
+		},
+		{
+			name:   "custom-interface-zero-structreceiver-pointer",
+			t:      isZeroerType,
+			v:      reflect.ValueOf(&zeroTestTypeCustom{value: 42}),
+			expect: true,
+		},
+		{
+			name:   "custom-interface-zero-structreceiver",
+			t:      isZeroerType,
+			v:      reflect.ValueOf(zeroStructZeroer),
+			expect: true,
+		},
+		{
+			name:   "custom-interface-nonzero-struct",
+			t:      isZeroerType,
+			v:      reflect.ValueOf(&zeroTestTypeCustom{value: 1}),
+			expect: false,
+		},
+		{
+			name:   "custom-interface-nil-pointerreceiver",
+			t:      isZeroerType,
+			v:      reflect.ValueOf((*zeroTestTypeCustomPointer)(nil)),
+			expect: true,
+		},
+		{
+			name:   "custom-interface-zero-pointerreceiver",
+			t:      isZeroerType,
+			v:      reflect.ValueOf(&zeroTestTypeCustomPointer{value: 42}),
+			expect: true,
+		},
+		{
+			name:   "custom-interface-nonzero-pointerreceiver",
+			t:      isZeroerType,
+			v:      reflect.ValueOf(&zeroTestTypeCustomPointer{value: 1}),
+			expect: false,
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			defer func() {
+				if err := recover(); err != nil {
+					t.Log(string(debug.Stack()))
+					t.Errorf("unexpected panic %v", err)
+				}
+			}()
+			got, err := getIsZeroFunc(tc.t)(tc.v)
+			if tc.expectErr != (err != nil) {
+				t.Errorf("got err=%v, expected %v", err, tc.expectErr)
+			}
+			if tc.expect != got {
+				t.Errorf("got %v, expected %v", got, tc.expect)
+			}
+		})
+	}
+}
+
+type zeroTestType struct {
+	value int
+}
+
+type zeroTestTypeCustom struct {
+	value int
+}
+
+func (z zeroTestTypeCustom) IsZero() bool {
+	return z.value == 42
+}
+
+type zeroTestTypeCustomPointer struct {
+	value int
+}
+
+func (z *zeroTestTypeCustomPointer) IsZero() bool {
+	return z.value == 42
+}
+
+func TestJSONStdlibOmitZero(t *testing.T) {
+	type CBOR struct {
+		S string `cbor:"s,omitzero"`
+	}
+	type JSON struct {
+		S string `json:"s,omitzero"`
+	}
+
+	testcases := []struct {
+		name   string
+		stdlib bool
+		obj    any
+		want   []byte
+	}{
+		{
+			name:   "cbor-stdlib-off",
+			stdlib: false,
+			obj:    CBOR{},
+			want:   []byte{0xa0}, // {}
+		},
+		{
+			name:   "cbor-stdlib-on",
+			stdlib: true,
+			obj:    CBOR{},
+			want:   []byte{0xa0}, // {}
+		},
+		{
+			name:   "json-stdlib-off",
+			stdlib: false,
+			obj:    JSON{},
+			want:   []byte{0xa1, 0x61, 0x73, 0x60}, // {"s":""}
+		},
+		{
+			name:   "json-stdlib-on",
+			stdlib: true,
+			obj:    JSON{},
+			want:   []byte{0xa0}, // {}
+		},
+	}
+
+	original := jsonStdlibSupportsOmitzero
+	reset := func() {
+		// reset to original
+		jsonStdlibSupportsOmitzero = original
+		// clear type caches
+		encodingStructTypeCache.Range(func(key, _ any) bool {
+			encodingStructTypeCache.Delete(key)
+			return true
+		})
+		typeInfoCache.Range(func(key, _ any) bool {
+			typeInfoCache.Delete(key)
+			return true
+		})
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			reset()
+			jsonStdlibSupportsOmitzero = tc.stdlib
+			t.Cleanup(reset)
+
+			em, _ := EncOptions{}.EncMode()
+			dm, _ := DecOptions{}.DecMode()
+			testRoundTrip(t, []roundTripTest{{tc.name, tc.obj, tc.want}}, em, dm)
+		})
+	}
 }
 
 func TestTaggedField(t *testing.T) {
