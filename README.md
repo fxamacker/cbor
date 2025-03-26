@@ -39,7 +39,7 @@ Codec passed multiple confidential security assessments in 2022.  No vulnerabili
 
 __🗜️&nbsp; Data Size__
 
-Struct tags (`toarray`, `keyasint`, `omitempty`) automatically reduce size of encoded structs. Encoding optionally shrinks float64→32→16 when values fit.
+Struct tags (`toarray`, `keyasint`, `omitempty`, `omitzero`) automatically reduce size of encoded structs. Encoding optionally shrinks float64→32→16 when values fit.
 
 __:jigsaw:&nbsp; Usability__
 
@@ -147,6 +147,7 @@ We can write less code by using struct tags:
 - `toarray`: encode without field names (decode back to original struct)
 - `keyasint`: encode field names as integers (decode back to original struct)
 - `omitempty`: omit empty fields when encoding
+- `omitzero`: omit zero-value fields when encoding
 
 ![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.3.0/cbor_struct_tags_api.svg?sanitize=1 "CBOR API and Go Struct Tags")
 
@@ -350,7 +351,7 @@ err = em.MarshalToBuffer(v, &buf) // encode v to provided buf
 
 ### Struct Tags
 
-Struct tags (`toarray`, `keyasint`, `omitempty`) reduce encoded size of structs.
+Struct tags (`toarray`, `keyasint`, `omitempty`, `omitzero`) reduce encoded size of structs.
 
 <details><summary> 🔎&nbsp; Example encoding 3-level nested Go struct to 1 byte CBOR</summary><p/>
 
