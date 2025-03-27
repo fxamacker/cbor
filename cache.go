@@ -31,6 +31,7 @@ type specialType int
 const (
 	specialTypeNone specialType = iota
 	specialTypeUnmarshalerIface
+	specialTypeUnexportedUnmarshalerIface
 	specialTypeEmptyIface
 	specialTypeIface
 	specialTypeTag
@@ -69,6 +70,8 @@ func newTypeInfo(t reflect.Type) *typeInfo {
 		tInfo.spclType = specialTypeTag
 	} else if t == typeTime {
 		tInfo.spclType = specialTypeTime
+	} else if reflect.PtrTo(t).Implements(typeUnexportedUnmarshaler) {
+		tInfo.spclType = specialTypeUnexportedUnmarshalerIface
 	} else if reflect.PtrTo(t).Implements(typeUnmarshaler) {
 		tInfo.spclType = specialTypeUnmarshalerIface
 	}
