@@ -52,6 +52,21 @@ func (bs *ByteString) UnmarshalCBOR(data []byte) error {
 
 	d := decoder{data: data, dm: defaultDecMode}
 
+	// Check well-formedness of CBOR data item.
+	// NOTE: well-formedness check here is redundant when
+	// Unmarshal() invokes ByteString.UnmarshalCBOR().
+	// However, ByteString.UnmarshalCBOR() is exported, so
+	// the codec needs to support same behavior for:
+	// - Unmarshal(data, *ByteString)
+	// - ByteString.UnmarshalCBOR(data)
+	err := d.wellformed(false, false)
+	if err != nil {
+		return err
+	}
+
+	// Restore decoder offset after well-formedness check.
+	d.off = 0
+
 	// Check if CBOR data type is byte string
 	if typ := d.nextCBORType(); typ != cborTypeByteString {
 		return &UnmarshalTypeError{CBORType: typ.String(), GoType: typeByteString.String()}

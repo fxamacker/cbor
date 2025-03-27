@@ -55,6 +55,21 @@ func (sv *SimpleValue) UnmarshalCBOR(data []byte) error {
 
 	d := decoder{data: data, dm: defaultDecMode}
 
+	// Check well-formedness of CBOR data item.
+	// NOTE: well-formedness check here is redundant when
+	// Unmarshal() invokes SimpleValue.UnmarshalCBOR().
+	// However, SimpleValue.UnmarshalCBOR() is exported, so
+	// the codec needs to support same behavior for:
+	// - Unmarshal(data, *SimpleValue)
+	// - SimpleValue.UnmarshalCBOR(data)
+	err := d.wellformed(false, false)
+	if err != nil {
+		return err
+	}
+
+	// Restore decoder offset after well-formedness check.
+	d.off = 0
+
 	typ, ai, val := d.getHead()
 
 	if typ != cborTypePrimitives {

@@ -5,7 +5,9 @@ package cbor
 
 import (
 	"bytes"
+	"io"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -49,6 +51,125 @@ func TestUnmarshalSimpleValue(t *testing.T) {
 			testUnmarshalSimpleValue(t, data, want)
 		}
 	})
+}
+
+func TestUnmarshalSimpleValueOnBadData(t *testing.T) {
+	testCases := []struct {
+		name   string
+		data   []byte
+		errMsg string
+	}{
+		// Empty data
+		{
+			name:   "nil data",
+			data:   nil,
+			errMsg: io.EOF.Error(),
+		},
+		{
+			name:   "empty data",
+			data:   []byte{},
+			errMsg: io.EOF.Error(),
+		},
+
+		// Wrong CBOR types
+		{
+			name:   "uint type",
+			data:   hexDecode("01"),
+			errMsg: "cbor: cannot unmarshal positive integer into Go value of type SimpleValue",
+		},
+		{
+			name:   "int type",
+			data:   hexDecode("20"),
+			errMsg: "cbor: cannot unmarshal negative integer into Go value of type SimpleValue",
+		},
+		{
+			name:   "byte string type",
+			data:   hexDecode("40"),
+			errMsg: "cbor: cannot unmarshal byte string into Go value of type SimpleValue",
+		},
+		{
+			name:   "string type",
+			data:   hexDecode("60"),
+			errMsg: "cbor: cannot unmarshal UTF-8 text string into Go value of type SimpleValue",
+		},
+		{
+			name:   "array type",
+			data:   hexDecode("80"),
+			errMsg: "cbor: cannot unmarshal array into Go value of type SimpleValue",
+		},
+		{
+			name:   "map type",
+			data:   hexDecode("a0"),
+			errMsg: "cbor: cannot unmarshal map into Go value of type SimpleValue",
+		},
+		{
+			name:   "tag type",
+			data:   hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			errMsg: "cbor: cannot unmarshal tag into Go value of type SimpleValue",
+		},
+		{
+			name:   "float type",
+			data:   hexDecode("f90000"),
+			errMsg: "cbor: cannot unmarshal primitives into Go value of type SimpleValue",
+		},
+
+		// Truncated CBOR data
+		{
+			name:   "truncated head",
+			data:   hexDecode("18"),
+			errMsg: io.ErrUnexpectedEOF.Error(),
+		},
+
+		// Truncated CBOR simple value
+		{
+			name:   "truncated simple value",
+			data:   hexDecode("f8"),
+			errMsg: io.ErrUnexpectedEOF.Error(),
+		},
+
+		// Invalid simple value
+		{
+			name:   "invalid simple value",
+			data:   hexDecode("f800"),
+			errMsg: "cbor: invalid simple value 0 for type primitives",
+		},
+
+		// Extraneous CBOR data
+		{
+			name:   "extraneous data",
+			data:   hexDecode("f4f5"),
+			errMsg: "cbor: 1 bytes of extraneous data starting at index 1",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Test SimpleValue.UnmarshalCBOR(data)
+			{
+				var v SimpleValue
+
+				err := v.UnmarshalCBOR(tc.data)
+				if err == nil {
+					t.Errorf("UnmarshalCBOR(%x) didn't return error", tc.data)
+				}
+				if !strings.HasPrefix(err.Error(), tc.errMsg) {
+					t.Errorf("UnmarshalCBOR(%x) returned error %q, want %q", tc.data, err.Error(), tc.errMsg)
+				}
+			}
+			// Test Unmarshal(data, *SimpleValue), which calls SimpleValue.UnmarshalCBOR() under the hood
+			{
+				var v SimpleValue
+
+				err := Unmarshal(tc.data, &v)
+				if err == nil {
+					t.Errorf("UnmarshalCBOR(%x) didn't return error", tc.data)
+				}
+				if !strings.HasPrefix(err.Error(), tc.errMsg) {
+					t.Errorf("UnmarshalCBOR(%x) returned error %q, want %q", tc.data, err.Error(), tc.errMsg)
+				}
+			}
+		})
+	}
 }
 
 func testUnmarshalInvalidSimpleValueToEmptyInterface(t *testing.T, data []byte) {

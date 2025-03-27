@@ -1539,3 +1539,125 @@ func TestEncodeBuiltinTag(t *testing.T) {
 		})
 	}
 }
+
+func TestUnmarshalRawTagOnBadData(t *testing.T) {
+	testCases := []struct {
+		name   string
+		data   []byte
+		errMsg string
+	}{
+		// Empty data
+		{
+			name:   "nil data",
+			data:   nil,
+			errMsg: io.EOF.Error(),
+		},
+		{
+			name:   "empty data",
+			data:   []byte{},
+			errMsg: io.EOF.Error(),
+		},
+
+		// Wrong CBOR types
+		{
+			name:   "uint type",
+			data:   hexDecode("01"),
+			errMsg: "cbor: cannot unmarshal positive integer into Go value of type cbor.RawTag",
+		},
+		{
+			name:   "int type",
+			data:   hexDecode("20"),
+			errMsg: "cbor: cannot unmarshal negative integer into Go value of type cbor.RawTag",
+		},
+		{
+			name:   "byte string type",
+			data:   hexDecode("40"),
+			errMsg: "cbor: cannot unmarshal byte string into Go value of type cbor.RawTag",
+		},
+		{
+			name:   "string type",
+			data:   hexDecode("60"),
+			errMsg: "cbor: cannot unmarshal UTF-8 text string into Go value of type cbor.RawTag",
+		},
+		{
+			name:   "array type",
+			data:   hexDecode("80"),
+			errMsg: "cbor: cannot unmarshal array into Go value of type cbor.RawTag",
+		},
+		{
+			name:   "map type",
+			data:   hexDecode("a0"),
+			errMsg: "cbor: cannot unmarshal map into Go value of type cbor.RawTag",
+		},
+		{
+			name:   "primitive type",
+			data:   hexDecode("f4"),
+			errMsg: "cbor: cannot unmarshal primitives into Go value of type cbor.RawTag",
+		},
+		{
+			name:   "float type",
+			data:   hexDecode("f90000"),
+			errMsg: "cbor: cannot unmarshal primitives into Go value of type cbor.RawTag",
+		},
+
+		// Truncated CBOR data
+		{
+			name:   "truncated head",
+			data:   hexDecode("18"),
+			errMsg: io.ErrUnexpectedEOF.Error(),
+		},
+
+		// Truncated CBOR tag data
+		{
+			name:   "truncated tag number",
+			data:   hexDecode("d8"),
+			errMsg: io.ErrUnexpectedEOF.Error(),
+		},
+		{
+			name:   "tag number not followed by tag content",
+			data:   hexDecode("da"),
+			errMsg: io.ErrUnexpectedEOF.Error(),
+		},
+		{
+			name:   "truncated tag content",
+			data:   hexDecode("c074323031332d30332d32315432303a30343a3030"),
+			errMsg: io.ErrUnexpectedEOF.Error(),
+		},
+
+		// Extraneous CBOR data
+		{
+			name:   "extraneous data",
+			data:   hexDecode("c074323031332d30332d32315432303a30343a30305a00"),
+			errMsg: "cbor: 1 bytes of extraneous data starting at index 22",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Test RawTag.UnmarshalCBOR(data)
+			{
+				var v RawTag
+
+				err := v.UnmarshalCBOR(tc.data)
+				if err == nil {
+					t.Errorf("UnmarshalCBOR(%x) didn't return error", tc.data)
+				}
+				if !strings.HasPrefix(err.Error(), tc.errMsg) {
+					t.Errorf("UnmarshalCBOR(%x) returned error %q, want %q", tc.data, err.Error(), tc.errMsg)
+				}
+			}
+			// Test Unmarshal(data, *RawTag), which calls RawTag.UnmarshalCBOR() under the hood
+			{
+				var v RawTag
+
+				err := Unmarshal(tc.data, &v)
+				if err == nil {
+					t.Errorf("UnmarshalCBOR(%x) didn't return error", tc.data)
+				}
+				if !strings.HasPrefix(err.Error(), tc.errMsg) {
+					t.Errorf("UnmarshalCBOR(%x) returned error %q, want %q", tc.data, err.Error(), tc.errMsg)
+				}
+			}
+		})
+	}
+}
