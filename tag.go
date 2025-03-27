@@ -26,7 +26,33 @@ type RawTag struct {
 }
 
 // UnmarshalCBOR sets *t with tag number and raw tag content copied from data.
+//
+// Deprecated: No longer used by this codec; kept for compatibility
+// with user apps that directly call this function.
 func (t *RawTag) UnmarshalCBOR(data []byte) error {
+	if t == nil {
+		return errors.New("cbor.RawTag: UnmarshalCBOR on nil pointer")
+	}
+
+	d := decoder{data: data, dm: defaultDecMode}
+
+	// Check if data is a well-formed CBOR data item.
+	// RawTag.UnmarshalCBOR() is exported, so
+	// the codec needs to support same behavior for:
+	// - Unmarshal(data, *RawTag)
+	// - RawTag.UnmarshalCBOR(data)
+	err := d.wellformed(false, false)
+	if err != nil {
+		return err
+	}
+
+	return t.unmarshalCBOR(data)
+}
+
+// unmarshalCBOR sets *t with tag number and raw tag content copied from data.
+// This function assumes data is well-formed, and does not perform bounds checking.
+// This function is called by Unmarshal().
+func (t *RawTag) unmarshalCBOR(data []byte) error {
 	if t == nil {
 		return errors.New("cbor.RawTag: UnmarshalCBOR on nil pointer")
 	}
@@ -37,21 +63,6 @@ func (t *RawTag) UnmarshalCBOR(data []byte) error {
 	}
 
 	d := decoder{data: data, dm: defaultDecMode}
-
-	// Check if data is a well-formed CBOR data item.
-	// NOTE: well-formedness check here is redundant when
-	// Unmarshal() invokes RawTag.UnmarshalCBOR().
-	// However, RawTag.UnmarshalCBOR() is exported, so
-	// the codec needs to support same behavior for:
-	// - Unmarshal(data, *RawTag)
-	// - RawTag.UnmarshalCBOR(data)
-	err := d.wellformed(false, false)
-	if err != nil {
-		return err
-	}
-
-	// Restore decoder offset after well-formedness check.
-	d.off = 0
 
 	// Unmarshal tag number.
 	typ, _, num := d.getHead()
