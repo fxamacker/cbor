@@ -48,6 +48,9 @@ func (sv SimpleValue) MarshalCBOR() ([]byte, error) {
 }
 
 // UnmarshalCBOR decodes CBOR simple value (major type 7) to SimpleValue.
+//
+// Deprecated: No longer used by this codec; kept for compatibility
+// with user apps that directly call this function.
 func (sv *SimpleValue) UnmarshalCBOR(data []byte) error {
 	if sv == nil {
 		return errors.New("cbor.SimpleValue: UnmarshalCBOR on nil pointer")
@@ -56,9 +59,7 @@ func (sv *SimpleValue) UnmarshalCBOR(data []byte) error {
 	d := decoder{data: data, dm: defaultDecMode}
 
 	// Check well-formedness of CBOR data item.
-	// NOTE: well-formedness check here is redundant when
-	// Unmarshal() invokes SimpleValue.UnmarshalCBOR().
-	// However, SimpleValue.UnmarshalCBOR() is exported, so
+	// SimpleValue.UnmarshalCBOR() is exported, so
 	// the codec needs to support same behavior for:
 	// - Unmarshal(data, *SimpleValue)
 	// - SimpleValue.UnmarshalCBOR(data)
@@ -67,8 +68,18 @@ func (sv *SimpleValue) UnmarshalCBOR(data []byte) error {
 		return err
 	}
 
-	// Restore decoder offset after well-formedness check.
-	d.off = 0
+	return sv.unmarshalCBOR(data)
+}
+
+// unmarshalCBOR decodes CBOR simple value (major type 7) to SimpleValue.
+// This function assumes data is well-formed, and does not perform bounds checking.
+// This function is called by Unmarshal().
+func (sv *SimpleValue) unmarshalCBOR(data []byte) error {
+	if sv == nil {
+		return errors.New("cbor.SimpleValue: UnmarshalCBOR on nil pointer")
+	}
+
+	d := decoder{data: data, dm: defaultDecMode}
 
 	typ, ai, val := d.getHead()
 

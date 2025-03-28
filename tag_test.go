@@ -1646,16 +1646,16 @@ func TestUnmarshalRawTagOnBadData(t *testing.T) {
 					t.Errorf("UnmarshalCBOR(%x) returned error %q, want %q", tc.data, err.Error(), tc.errMsg)
 				}
 			}
-			// Test Unmarshal(data, *RawTag), which calls RawTag.UnmarshalCBOR() under the hood
+			// Test Unmarshal(data, *RawTag), which calls RawTag.unmarshalCBOR() under the hood
 			{
 				var v RawTag
 
 				err := Unmarshal(tc.data, &v)
 				if err == nil {
-					t.Errorf("UnmarshalCBOR(%x) didn't return error", tc.data)
+					t.Errorf("Unmarshal(%x) didn't return error", tc.data)
 				}
 				if !strings.HasPrefix(err.Error(), tc.errMsg) {
-					t.Errorf("UnmarshalCBOR(%x) returned error %q, want %q", tc.data, err.Error(), tc.errMsg)
+					t.Errorf("Unmarshal(%x) returned error %q, want %q", tc.data, err.Error(), tc.errMsg)
 				}
 			}
 		})
