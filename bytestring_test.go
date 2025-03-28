@@ -195,16 +195,16 @@ func TestUnmarshalByteStringOnBadData(t *testing.T) {
 					t.Errorf("UnmarshalCBOR(%x) returned error %q, want %q", tc.data, err.Error(), tc.errMsg)
 				}
 			}
-			// Test Unmarshal(data, *ByteString), which calls ByteString.UnmarshalCBOR() under the hood
+			// Test Unmarshal(data, *ByteString), which calls ByteString.unmarshalCBOR() under the hood
 			{
 				var v ByteString
 
 				err := Unmarshal(tc.data, &v)
 				if err == nil {
-					t.Errorf("UnmarshalCBOR(%x) didn't return error", tc.data)
+					t.Errorf("Unmarshal(%x) didn't return error", tc.data)
 				}
 				if !strings.HasPrefix(err.Error(), tc.errMsg) {
-					t.Errorf("UnmarshalCBOR(%x) returned error %q, want %q", tc.data, err.Error(), tc.errMsg)
+					t.Errorf("Unmarshal(%x) returned error %q, want %q", tc.data, err.Error(), tc.errMsg)
 				}
 			}
 		})
