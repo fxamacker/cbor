@@ -86,7 +86,7 @@ Using Default Decoding Mode
 	decoder := cbor.NewDecoder(r)
 	err = decoder.Decode(&v)
 
- Using Default Mode of UnmarshalFirst to Decode CBOR Sequences
+Using Default Mode of UnmarshalFirst to Decode CBOR Sequences
 
 	// Decode the first CBOR data item and return remaining bytes:
 	rest, err = cbor.UnmarshalFirst(b, &v)   // decode []byte b to v
