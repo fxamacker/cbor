@@ -3,13 +3,13 @@
 
 /*
 Package cbor is a modern CBOR codec (RFC 8949 & RFC 8742) with CBOR tags,
-Go struct tags (toarray/keyasint/omitempty), Core Deterministic Encoding,
+Go struct tag options (toarray/keyasint/omitempty/omitzero), Core Deterministic Encoding,
 CTAP2, Canonical CBOR, float64->32->16, and duplicate map key detection.
 
 Encoding options allow "preferred serialization" by encoding integers and floats
 to their smallest forms (e.g. float16) when values fit.
 
-Struct tags "keyasint", "toarray", "omitempty", and "omitzero" reduce encoding size
+Struct tag options "keyasint", "toarray", "omitempty", and "omitzero" reduce encoding size
 and reduce programming effort.
 
 For example, "toarray" tag makes struct fields encode to CBOR array elements.  And
@@ -129,7 +129,7 @@ Decoding Options: https://github.com/fxamacker/cbor#decoding-options
 Struct tags like `cbor:"name,omitempty"` and `json:"name,omitempty"` work as expected.
 If both struct tags are specified then `cbor` is used.
 
-Struct tags like "keyasint", "toarray", "omitempty", and "omitzero" make it easy to use
+Struct tag options like "keyasint", "toarray", "omitempty", and "omitzero" make it easy to use
 very compact formats like COSE and CWT (CBOR Web Tokens) with structs.
 
 The "omitzero" option omits zero values from encoding, matching
@@ -142,7 +142,7 @@ makes struct fields encode to elements of CBOR map with int keys.
 
 https://raw.githubusercontent.com/fxamacker/images/master/cbor/v2.0.0/cbor_easy_api.png
 
-Struct tags are listed at https://github.com/fxamacker/cbor#struct-tags-1
+Struct tag options are listed at https://github.com/fxamacker/cbor#struct-tags-1
 
 # Tests and Fuzzing
 
