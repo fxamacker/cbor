@@ -151,6 +151,10 @@ type Unmarshaler interface {
 	UnmarshalCBOR([]byte) error
 }
 
+type unmarshaler interface {
+	unmarshalCBOR([]byte) error
+}
+
 // InvalidUnmarshalError describes an invalid argument passed to Unmarshal.
 type InvalidUnmarshalError struct {
 	s string
@@ -1460,6 +1464,9 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 
 		case specialTypeUnmarshalerIface:
 			return d.parseToUnmarshaler(v)
+
+		case specialTypeUnexportedUnmarshalerIface:
+			return d.parseToUnexportedUnmarshaler(v)
 		}
 	}
 
@@ -1803,6 +1810,26 @@ func (d *decoder) parseToUnmarshaler(v reflect.Value) error {
 	}
 	d.skip()
 	return errors.New("cbor: failed to assert " + v.Type().String() + " as cbor.Unmarshaler")
+}
+
+// parseToUnexportedUnmarshaler parses CBOR data to value implementing unmarshaler interface.
+// It assumes data is well-formed, and does not perform bounds checking.
+func (d *decoder) parseToUnexportedUnmarshaler(v reflect.Value) error {
+	if d.nextCBORNil() && v.Kind() == reflect.Ptr && v.IsNil() {
+		d.skip()
+		return nil
+	}
+
+	if v.Kind() != reflect.Ptr && v.CanAddr() {
+		v = v.Addr()
+	}
+	if u, ok := v.Interface().(unmarshaler); ok {
+		start := d.off
+		d.skip()
+		return u.unmarshalCBOR(d.data[start:d.off])
+	}
+	d.skip()
+	return errors.New("cbor: failed to assert " + v.Type().String() + " as cbor.unmarshaler")
 }
 
 // parse parses CBOR data and returns value in default Go type.
@@ -2969,13 +2996,14 @@ func (d *decoder) nextCBORNil() bool {
 }
 
 var (
-	typeIntf              = reflect.TypeOf([]interface{}(nil)).Elem()
-	typeTime              = reflect.TypeOf(time.Time{})
-	typeBigInt            = reflect.TypeOf(big.Int{})
-	typeUnmarshaler       = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
-	typeBinaryUnmarshaler = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
-	typeString            = reflect.TypeOf("")
-	typeByteSlice         = reflect.TypeOf([]byte(nil))
+	typeIntf                  = reflect.TypeOf([]interface{}(nil)).Elem()
+	typeTime                  = reflect.TypeOf(time.Time{})
+	typeBigInt                = reflect.TypeOf(big.Int{})
+	typeUnmarshaler           = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
+	typeUnexportedUnmarshaler = reflect.TypeOf((*unmarshaler)(nil)).Elem()
+	typeBinaryUnmarshaler     = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
+	typeString                = reflect.TypeOf("")
+	typeByteSlice             = reflect.TypeOf([]byte(nil))
 )
 
 func fillNil(_ cborType, v reflect.Value) error {
