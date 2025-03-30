@@ -82,7 +82,7 @@ func ExampleMarshal_canonical() {
 	// a46341676504644d616c65f4644e616d656543616e647968436f6e7461637473a2634a6f656c3232322d3232322d32323232644d6172796c3131312d3131312d31313131
 }
 
-// This example uses "toarray" struct tag to encode struct as CBOR array.
+// This example uses "toarray" struct tag option to encode struct as CBOR array.
 func ExampleMarshal_toarray() {
 	type Record struct {
 		_           struct{} `cbor:",toarray"`
@@ -100,7 +100,7 @@ func ExampleMarshal_toarray() {
 	// 836763757272656e74615601
 }
 
-// This example uses "keyasint" struct tag to encode struct's fiele names as integer.
+// This example uses "keyasint" struct tag option to encode struct's field names as integer.
 // This feautre is very useful in handling COSE, CWT, SenML data.
 func ExampleMarshal_keyasint() {
 	type Record struct {
@@ -353,7 +353,7 @@ func ExampleDecoder() {
 }
 
 func Example_cWT() {
-	// Use "keyasint" struct tag to encode/decode struct to/from CBOR map.
+	// Use "keyasint" struct tag option to encode/decode struct to/from CBOR map.
 	type claims struct {
 		Iss string `cbor:"1,keyasint"`
 		Sub string `cbor:"2,keyasint"`
@@ -403,14 +403,14 @@ func Example_cWTWithDupMapKeyOption() {
 }
 
 func Example_signedCWT() {
-	// Use "keyasint" struct tag to encode/decode struct to/from CBOR map.
+	// Use "keyasint" struct tag option to encode/decode struct to/from CBOR map.
 	// Partial COSE header definition
 	type coseHeader struct {
 		Alg int    `cbor:"1,keyasint,omitempty"`
 		Kid []byte `cbor:"4,keyasint,omitempty"`
 		IV  []byte `cbor:"5,keyasint,omitempty"`
 	}
-	// Use "toarray" struct tag to encode/decode struct to/from CBOR array.
+	// Use "toarray" struct tag option to encode/decode struct to/from CBOR array.
 	type signedCWT struct {
 		_           struct{} `cbor:",toarray"`
 		Protected   []byte
@@ -433,14 +433,14 @@ func Example_signedCWT() {
 }
 
 func Example_signedCWTWithTag() {
-	// Use "keyasint" struct tag to encode/decode struct to/from CBOR map.
+	// Use "keyasint" struct tag option to encode/decode struct to/from CBOR map.
 	// Partial COSE header definition
 	type coseHeader struct {
 		Alg int    `cbor:"1,keyasint,omitempty"`
 		Kid []byte `cbor:"4,keyasint,omitempty"`
 		IV  []byte `cbor:"5,keyasint,omitempty"`
 	}
-	// Use "toarray" struct tag to encode/decode struct to/from CBOR array.
+	// Use "toarray" struct tag option to encode/decode struct to/from CBOR array.
 	type signedCWT struct {
 		_           struct{} `cbor:",toarray"`
 		Protected   []byte
@@ -478,7 +478,7 @@ func Example_signedCWTWithTag() {
 }
 
 func Example_cOSE() {
-	// Use "keyasint" struct tag to encode/decode struct to/from CBOR map.
+	// Use "keyasint" struct tag option to encode/decode struct to/from CBOR map.
 	// Use cbor.RawMessage to delay unmarshaling (CrvOrNOrK's data type depends on Kty's value).
 	type coseKey struct {
 		Kty       int             `cbor:"1,keyasint,omitempty"`
@@ -507,7 +507,7 @@ func Example_cOSE() {
 }
 
 func Example_senML() {
-	// Use "keyasint" struct tag to encode/decode struct to/from CBOR map.
+	// Use "keyasint" struct tag option to encode/decode struct to/from CBOR map.
 	type SenMLRecord struct {
 		BaseName    string  `cbor:"-2,keyasint,omitempty"`
 		BaseTime    float64 `cbor:"-3,keyasint,omitempty"`

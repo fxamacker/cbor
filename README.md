@@ -39,7 +39,7 @@ Codec passed multiple confidential security assessments in 2022.  No vulnerabili
 
 __🗜️&nbsp; Data Size__
 
-Struct tags (`toarray`, `keyasint`, `omitempty`, `omitzero`) automatically reduce size of encoded structs. Encoding optionally shrinks float64→32→16 when values fit.
+Struct tag options (`toarray`, `keyasint`, `omitempty`, `omitzero`) automatically reduce size of encoded structs. Encoding optionally shrinks float64→32→16 when values fit.
 
 __:jigsaw:&nbsp; Usability__
 
@@ -139,11 +139,11 @@ In contrast, some codecs can crash or use excessive resources while decoding bad
 >
 > </details>
 
-### Smaller Encodings with Struct Tags
+### Smaller Encodings with Struct Tag Options
 
 Struct tags automatically reduce encoded size of structs and improve speed.
 
-We can write less code by using struct tags:
+We can write less code by using struct tag options:
 - `toarray`: encode without field names (decode back to original struct)
 - `keyasint`: encode field names as integers (decode back to original struct)
 - `omitempty`: omit empty fields when encoding
@@ -351,7 +351,7 @@ err = em.MarshalToBuffer(v, &buf) // encode v to provided buf
 
 ### Struct Tags
 
-Struct tags (`toarray`, `keyasint`, `omitempty`, `omitzero`) reduce encoded size of structs.
+Struct tag options (`toarray`, `keyasint`, `omitempty`, `omitzero`) reduce encoded size of structs.
 
 <details><summary> 🔎&nbsp; Example encoding 3-level nested Go struct to 1 byte CBOR</summary><p/>
 
@@ -421,13 +421,13 @@ JSON: {"Foo":{"Qux":{}}}
 
 </details>
 
-<details><summary> 🔎&nbsp; Example using several struct tags</summary><p/>
+<details><summary> 🔎&nbsp; Example using struct tag options</summary><p/>
 	
 ![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.3.0/cbor_struct_tags_api.svg?sanitize=1 "CBOR API and Go Struct Tags")
 
 </details>
 
-Struct tags simplify use of CBOR-based protocols that require CBOR arrays or maps with integer keys.
+Struct tag options simplify use of CBOR-based protocols that require CBOR arrays or maps with integer keys.
 
 ### CBOR Tags
 
@@ -511,11 +511,24 @@ Default limits may need to be increased for systems handling very large data (e.
 
 ## Status
 
-v2.7.0 (June 23, 2024) adds features and improvements that help large projects (e.g. Kubernetes) use CBOR as an alternative to JSON and Protocol Buffers. Other improvements include speedups, improved memory use, bug fixes, new serialization options, etc.   It passed fuzz tests (5+ billion executions) and is production quality.
+v2.8.0 (March 30, 2025) is a small release primarily to add `omitzero` option to struct field tags and fix bugs.   It passed fuzz tests (billions of executions) and is production quality.
+
+v2.8.0 and v2.7.1 fixes these 3 functions (when called directly by user apps) to use same error handling on bad inputs as `cbor.Unmarshal()`:
+- `ByteString.UnmarshalCBOR()`
+- `RawTag.UnmarshalCBOR()`
+- `SimpleValue.UnmarshalCBOR()`
+
+The above 3 `UnmarshalCBOR()` functions were initially created for internal use and are deprecated now, so please use `Unmarshal()` or `UnmarshalFirst()` instead.  To preserve backward compatibility, these deprecated functions were added to fuzz tests and will not be removed in v2.
+
+The minimum version of Go required to build:
+- v2.8.0 requires go 1.20.
+- v2.7.1 and older releases require go 1.17.
 
 For more details, see [release notes](https://github.com/fxamacker/cbor/releases).
 
-### Prior Release
+### Prior Releases
+
+v2.7.0 (June 23, 2024) adds features and improvements that help large projects (e.g. Kubernetes) use CBOR as an alternative to JSON and Protocol Buffers. Other improvements include speedups, improved memory use, bug fixes, new serialization options, etc.   It passed fuzz tests (5+ billion executions) and is production quality.
 
 [v2.6.0](https://github.com/fxamacker/cbor/releases/tag/v2.6.0) (February 2024) adds important new features, optimizations, and bug fixes. It is especially useful to systems that need to convert data between CBOR and JSON.  New options and optimizations improve handling of bignum, integers, maps, and strings.
 
