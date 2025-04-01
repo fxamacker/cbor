@@ -11,6 +11,7 @@ import (
 	"math"
 	"math/big"
 	"reflect"
+	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -18,65 +19,65 @@ import (
 
 type marshalTest struct {
 	wantData []byte
-	values   []interface{}
+	values   []any
 }
 
 type marshalErrorTest struct {
 	name         string
-	value        interface{}
+	value        any
 	wantErrorMsg string
 }
 
 // CBOR test data are from https://tools.ietf.org/html/rfc7049#appendix-A.
 var marshalTests = []marshalTest{
 	// unsigned integer
-	{wantData: hexDecode("00"), values: []interface{}{uint(0), uint8(0), uint16(0), uint32(0), uint64(0), int(0), int8(0), int16(0), int32(0), int64(0)}},
-	{wantData: hexDecode("01"), values: []interface{}{uint(1), uint8(1), uint16(1), uint32(1), uint64(1), int(1), int8(1), int16(1), int32(1), int64(1)}},
-	{wantData: hexDecode("0a"), values: []interface{}{uint(10), uint8(10), uint16(10), uint32(10), uint64(10), int(10), int8(10), int16(10), int32(10), int64(10)}},
-	{wantData: hexDecode("17"), values: []interface{}{uint(23), uint8(23), uint16(23), uint32(23), uint64(23), int(23), int8(23), int16(23), int32(23), int64(23)}},
-	{wantData: hexDecode("1818"), values: []interface{}{uint(24), uint8(24), uint16(24), uint32(24), uint64(24), int(24), int8(24), int16(24), int32(24), int64(24)}},
-	{wantData: hexDecode("1819"), values: []interface{}{uint(25), uint8(25), uint16(25), uint32(25), uint64(25), int(25), int8(25), int16(25), int32(25), int64(25)}},
-	{wantData: hexDecode("1864"), values: []interface{}{uint(100), uint8(100), uint16(100), uint32(100), uint64(100), int(100), int8(100), int16(100), int32(100), int64(100)}},
-	{wantData: hexDecode("18ff"), values: []interface{}{uint(255), uint8(255), uint16(255), uint32(255), uint64(255), int(255), int16(255), int32(255), int64(255)}},
-	{wantData: hexDecode("190100"), values: []interface{}{uint(256), uint16(256), uint32(256), uint64(256), int(256), int16(256), int32(256), int64(256)}},
-	{wantData: hexDecode("1903e8"), values: []interface{}{uint(1000), uint16(1000), uint32(1000), uint64(1000), int(1000), int16(1000), int32(1000), int64(1000)}},
-	{wantData: hexDecode("19ffff"), values: []interface{}{uint(65535), uint16(65535), uint32(65535), uint64(65535), int(65535), int32(65535), int64(65535)}},
-	{wantData: hexDecode("1a00010000"), values: []interface{}{uint(65536), uint32(65536), uint64(65536), int(65536), int32(65536), int64(65536)}},
-	{wantData: hexDecode("1a000f4240"), values: []interface{}{uint(1000000), uint32(1000000), uint64(1000000), int(1000000), int32(1000000), int64(1000000)}},
-	{wantData: hexDecode("1affffffff"), values: []interface{}{uint(4294967295), uint32(4294967295), uint64(4294967295), int64(4294967295)}},
-	{wantData: hexDecode("1b000000e8d4a51000"), values: []interface{}{uint64(1000000000000), int64(1000000000000)}},
-	{wantData: hexDecode("1bffffffffffffffff"), values: []interface{}{uint64(18446744073709551615)}},
+	{wantData: hexDecode("00"), values: []any{uint(0), uint8(0), uint16(0), uint32(0), uint64(0), int(0), int8(0), int16(0), int32(0), int64(0)}},
+	{wantData: hexDecode("01"), values: []any{uint(1), uint8(1), uint16(1), uint32(1), uint64(1), int(1), int8(1), int16(1), int32(1), int64(1)}},
+	{wantData: hexDecode("0a"), values: []any{uint(10), uint8(10), uint16(10), uint32(10), uint64(10), int(10), int8(10), int16(10), int32(10), int64(10)}},
+	{wantData: hexDecode("17"), values: []any{uint(23), uint8(23), uint16(23), uint32(23), uint64(23), int(23), int8(23), int16(23), int32(23), int64(23)}},
+	{wantData: hexDecode("1818"), values: []any{uint(24), uint8(24), uint16(24), uint32(24), uint64(24), int(24), int8(24), int16(24), int32(24), int64(24)}},
+	{wantData: hexDecode("1819"), values: []any{uint(25), uint8(25), uint16(25), uint32(25), uint64(25), int(25), int8(25), int16(25), int32(25), int64(25)}},
+	{wantData: hexDecode("1864"), values: []any{uint(100), uint8(100), uint16(100), uint32(100), uint64(100), int(100), int8(100), int16(100), int32(100), int64(100)}},
+	{wantData: hexDecode("18ff"), values: []any{uint(255), uint8(255), uint16(255), uint32(255), uint64(255), int(255), int16(255), int32(255), int64(255)}},
+	{wantData: hexDecode("190100"), values: []any{uint(256), uint16(256), uint32(256), uint64(256), int(256), int16(256), int32(256), int64(256)}},
+	{wantData: hexDecode("1903e8"), values: []any{uint(1000), uint16(1000), uint32(1000), uint64(1000), int(1000), int16(1000), int32(1000), int64(1000)}},
+	{wantData: hexDecode("19ffff"), values: []any{uint(65535), uint16(65535), uint32(65535), uint64(65535), int(65535), int32(65535), int64(65535)}},
+	{wantData: hexDecode("1a00010000"), values: []any{uint(65536), uint32(65536), uint64(65536), int(65536), int32(65536), int64(65536)}},
+	{wantData: hexDecode("1a000f4240"), values: []any{uint(1000000), uint32(1000000), uint64(1000000), int(1000000), int32(1000000), int64(1000000)}},
+	{wantData: hexDecode("1affffffff"), values: []any{uint(4294967295), uint32(4294967295), uint64(4294967295), int64(4294967295)}},
+	{wantData: hexDecode("1b000000e8d4a51000"), values: []any{uint64(1000000000000), int64(1000000000000)}},
+	{wantData: hexDecode("1bffffffffffffffff"), values: []any{uint64(18446744073709551615)}},
 
 	// negative integer
-	{wantData: hexDecode("20"), values: []interface{}{int(-1), int8(-1), int16(-1), int32(-1), int64(-1)}},
-	{wantData: hexDecode("29"), values: []interface{}{int(-10), int8(-10), int16(-10), int32(-10), int64(-10)}},
-	{wantData: hexDecode("37"), values: []interface{}{int(-24), int8(-24), int16(-24), int32(-24), int64(-24)}},
-	{wantData: hexDecode("3818"), values: []interface{}{int(-25), int8(-25), int16(-25), int32(-25), int64(-25)}},
-	{wantData: hexDecode("3863"), values: []interface{}{int(-100), int8(-100), int16(-100), int32(-100), int64(-100)}},
-	{wantData: hexDecode("38ff"), values: []interface{}{int(-256), int16(-256), int32(-256), int64(-256)}},
-	{wantData: hexDecode("390100"), values: []interface{}{int(-257), int16(-257), int32(-257), int64(-257)}},
-	{wantData: hexDecode("3903e7"), values: []interface{}{int(-1000), int16(-1000), int32(-1000), int64(-1000)}},
-	{wantData: hexDecode("39ffff"), values: []interface{}{int(-65536), int32(-65536), int64(-65536)}},
-	{wantData: hexDecode("3a00010000"), values: []interface{}{int(-65537), int32(-65537), int64(-65537)}},
-	{wantData: hexDecode("3affffffff"), values: []interface{}{int64(-4294967296)}},
+	{wantData: hexDecode("20"), values: []any{int(-1), int8(-1), int16(-1), int32(-1), int64(-1)}},
+	{wantData: hexDecode("29"), values: []any{int(-10), int8(-10), int16(-10), int32(-10), int64(-10)}},
+	{wantData: hexDecode("37"), values: []any{int(-24), int8(-24), int16(-24), int32(-24), int64(-24)}},
+	{wantData: hexDecode("3818"), values: []any{int(-25), int8(-25), int16(-25), int32(-25), int64(-25)}},
+	{wantData: hexDecode("3863"), values: []any{int(-100), int8(-100), int16(-100), int32(-100), int64(-100)}},
+	{wantData: hexDecode("38ff"), values: []any{int(-256), int16(-256), int32(-256), int64(-256)}},
+	{wantData: hexDecode("390100"), values: []any{int(-257), int16(-257), int32(-257), int64(-257)}},
+	{wantData: hexDecode("3903e7"), values: []any{int(-1000), int16(-1000), int32(-1000), int64(-1000)}},
+	{wantData: hexDecode("39ffff"), values: []any{int(-65536), int32(-65536), int64(-65536)}},
+	{wantData: hexDecode("3a00010000"), values: []any{int(-65537), int32(-65537), int64(-65537)}},
+	{wantData: hexDecode("3affffffff"), values: []any{int64(-4294967296)}},
 
 	// byte string
-	{wantData: hexDecode("40"), values: []interface{}{[]byte{}}},
-	{wantData: hexDecode("4401020304"), values: []interface{}{[]byte{1, 2, 3, 4}, [...]byte{1, 2, 3, 4}}},
+	{wantData: hexDecode("40"), values: []any{[]byte{}}},
+	{wantData: hexDecode("4401020304"), values: []any{[]byte{1, 2, 3, 4}, [...]byte{1, 2, 3, 4}}},
 
 	// text string
-	{wantData: hexDecode("60"), values: []interface{}{""}},
-	{wantData: hexDecode("6161"), values: []interface{}{"a"}},
-	{wantData: hexDecode("6449455446"), values: []interface{}{"IETF"}},
-	{wantData: hexDecode("62225c"), values: []interface{}{"\"\\"}},
-	{wantData: hexDecode("62c3bc"), values: []interface{}{"ü"}},
-	{wantData: hexDecode("63e6b0b4"), values: []interface{}{"水"}},
-	{wantData: hexDecode("64f0908591"), values: []interface{}{"𐅑"}},
+	{wantData: hexDecode("60"), values: []any{""}},
+	{wantData: hexDecode("6161"), values: []any{"a"}},
+	{wantData: hexDecode("6449455446"), values: []any{"IETF"}},
+	{wantData: hexDecode("62225c"), values: []any{"\"\\"}},
+	{wantData: hexDecode("62c3bc"), values: []any{"ü"}},
+	{wantData: hexDecode("63e6b0b4"), values: []any{"水"}},
+	{wantData: hexDecode("64f0908591"), values: []any{"𐅑"}},
 
 	// array
 	{
 		wantData: hexDecode("80"),
-		values: []interface{}{
+		values: []any{
 			[0]int{},
 			[]uint{},
 			// []uint8{},
@@ -92,12 +93,12 @@ var marshalTests = []marshalTest{
 			[]bool{},
 			[]float32{},
 			[]float64{},
-			[]interface{}{},
+			[]any{},
 		},
 	},
 	{
 		wantData: hexDecode("83010203"),
-		values: []interface{}{
+		values: []any{
 			[...]int{1, 2, 3},
 			[]uint{1, 2, 3},
 			// []uint8{1, 2, 3},
@@ -109,29 +110,29 @@ var marshalTests = []marshalTest{
 			[]int16{1, 2, 3},
 			[]int32{1, 2, 3},
 			[]int64{1, 2, 3},
-			[]interface{}{1, 2, 3},
+			[]any{1, 2, 3},
 		},
 	},
 	{
 		wantData: hexDecode("8301820203820405"),
-		values: []interface{}{
-			[...]interface{}{1, [...]int{2, 3}, [...]int{4, 5}},
-			[]interface{}{1, []uint{2, 3}, []uint{4, 5}},
+		values: []any{
+			[...]any{1, [...]int{2, 3}, [...]int{4, 5}},
+			[]any{1, []uint{2, 3}, []uint{4, 5}},
 			// []interface{}{1, []uint8{2, 3}, []uint8{4, 5}},
-			[]interface{}{1, []uint16{2, 3}, []uint16{4, 5}},
-			[]interface{}{1, []uint32{2, 3}, []uint32{4, 5}},
-			[]interface{}{1, []uint64{2, 3}, []uint64{4, 5}},
-			[]interface{}{1, []int{2, 3}, []int{4, 5}},
-			[]interface{}{1, []int8{2, 3}, []int8{4, 5}},
-			[]interface{}{1, []int16{2, 3}, []int16{4, 5}},
-			[]interface{}{1, []int32{2, 3}, []int32{4, 5}},
-			[]interface{}{1, []int64{2, 3}, []int64{4, 5}},
-			[]interface{}{1, []interface{}{2, 3}, []interface{}{4, 5}},
+			[]any{1, []uint16{2, 3}, []uint16{4, 5}},
+			[]any{1, []uint32{2, 3}, []uint32{4, 5}},
+			[]any{1, []uint64{2, 3}, []uint64{4, 5}},
+			[]any{1, []int{2, 3}, []int{4, 5}},
+			[]any{1, []int8{2, 3}, []int8{4, 5}},
+			[]any{1, []int16{2, 3}, []int16{4, 5}},
+			[]any{1, []int32{2, 3}, []int32{4, 5}},
+			[]any{1, []int64{2, 3}, []int64{4, 5}},
+			[]any{1, []any{2, 3}, []any{4, 5}},
 		},
 	},
 	{
 		wantData: hexDecode("98190102030405060708090a0b0c0d0e0f101112131415161718181819"),
-		values: []interface{}{
+		values: []any{
 			[...]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			// []uint8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
@@ -143,22 +144,22 @@ var marshalTests = []marshalTest{
 			[]int16{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]int32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]int64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
-			[]interface{}{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
+			[]any{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 		},
 	},
 	{
 		wantData: hexDecode("826161a161626163"),
-		values: []interface{}{
-			[...]interface{}{"a", map[string]string{"b": "c"}},
-			[]interface{}{"a", map[string]string{"b": "c"}},
-			[]interface{}{"a", map[interface{}]interface{}{"b": "c"}},
+		values: []any{
+			[...]any{"a", map[string]string{"b": "c"}},
+			[]any{"a", map[string]string{"b": "c"}},
+			[]any{"a", map[any]any{"b": "c"}},
 		},
 	},
 
 	// map
 	{
 		wantData: hexDecode("a0"),
-		values: []interface{}{
+		values: []any{
 			map[uint]bool{},
 			map[uint8]bool{},
 			map[uint16]bool{},
@@ -173,12 +174,12 @@ var marshalTests = []marshalTest{
 			map[float64]bool{},
 			map[bool]bool{},
 			map[string]bool{},
-			map[interface{}]interface{}{},
+			map[any]any{},
 		},
 	},
 	{
 		wantData: hexDecode("a201020304"),
-		values: []interface{}{
+		values: []any{
 			map[uint]uint{3: 4, 1: 2},
 			map[uint8]uint8{3: 4, 1: 2},
 			map[uint16]uint16{3: 4, 1: 2},
@@ -189,42 +190,42 @@ var marshalTests = []marshalTest{
 			map[int16]int16{3: 4, 1: 2},
 			map[int32]int32{3: 4, 1: 2},
 			map[int64]int64{3: 4, 1: 2},
-			map[interface{}]interface{}{3: 4, 1: 2},
+			map[any]any{3: 4, 1: 2},
 		},
 	},
 	{
 		wantData: hexDecode("a26161016162820203"),
-		values: []interface{}{
-			map[string]interface{}{"a": 1, "b": []interface{}{2, 3}},
-			map[interface{}]interface{}{"b": []interface{}{2, 3}, "a": 1},
+		values: []any{
+			map[string]any{"a": 1, "b": []any{2, 3}},
+			map[any]any{"b": []any{2, 3}, "a": 1},
 		},
 	},
 	{
 		wantData: hexDecode("a56161614161626142616361436164614461656145"),
-		values: []interface{}{
+		values: []any{
 			map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
-			map[interface{}]interface{}{"b": "B", "a": "A", "c": "C", "e": "E", "d": "D"},
+			map[any]any{"b": "B", "a": "A", "c": "C", "e": "E", "d": "D"},
 		},
 	},
 
 	// tag
 	{
 		wantData: hexDecode("c074323031332d30332d32315432303a30343a30305a"),
-		values: []interface{}{
+		values: []any{
 			Tag{0, "2013-03-21T20:04:00Z"},
 			RawTag{0, hexDecode("74323031332d30332d32315432303a30343a30305a")},
 		},
 	}, // 0: standard date/time
 	{
 		wantData: hexDecode("c11a514b67b0"),
-		values: []interface{}{
+		values: []any{
 			Tag{1, uint64(1363896240)},
 			RawTag{1, hexDecode("1a514b67b0")},
 		},
 	}, // 1: epoch-based date/time
 	{
 		wantData: hexDecode("c249010000000000000000"),
-		values: []interface{}{
+		values: []any{
 			bigIntOrPanic("18446744073709551616"),
 			Tag{2, []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
 			RawTag{2, hexDecode("49010000000000000000")},
@@ -232,7 +233,7 @@ var marshalTests = []marshalTest{
 	}, // 2: positive bignum: 18446744073709551616
 	{
 		wantData: hexDecode("c349010000000000000000"),
-		values: []interface{}{
+		values: []any{
 			bigIntOrPanic("-18446744073709551617"),
 			Tag{3, []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
 			RawTag{3, hexDecode("49010000000000000000")},
@@ -240,64 +241,64 @@ var marshalTests = []marshalTest{
 	}, // 3: negative bignum: -18446744073709551617
 	{
 		wantData: hexDecode("c1fb41d452d9ec200000"),
-		values: []interface{}{
+		values: []any{
 			Tag{1, float64(1363896240.5)},
 			RawTag{1, hexDecode("fb41d452d9ec200000")},
 		},
 	}, // 1: epoch-based date/time
 	{
 		wantData: hexDecode("d74401020304"),
-		values: []interface{}{
+		values: []any{
 			Tag{23, []byte{0x01, 0x02, 0x03, 0x04}},
 			RawTag{23, hexDecode("4401020304")},
 		},
 	}, // 23: expected conversion to base16 encoding
 	{
 		wantData: hexDecode("d818456449455446"),
-		values: []interface{}{
+		values: []any{
 			Tag{24, []byte{0x64, 0x49, 0x45, 0x54, 0x46}},
 			RawTag{24, hexDecode("456449455446")},
 		},
 	}, // 24: encoded cborBytes data item
 	{
 		wantData: hexDecode("d82076687474703a2f2f7777772e6578616d706c652e636f6d"),
-		values: []interface{}{
+		values: []any{
 			Tag{32, "http://www.example.com"},
 			RawTag{32, hexDecode("76687474703a2f2f7777772e6578616d706c652e636f6d")},
 		},
 	}, // 32: URI
 
 	// primitives
-	{wantData: hexDecode("f4"), values: []interface{}{false}},
-	{wantData: hexDecode("f5"), values: []interface{}{true}},
-	{wantData: hexDecode("f6"), values: []interface{}{nil, []byte(nil), []int(nil), map[uint]bool(nil), (*int)(nil), io.Reader(nil)}},
+	{wantData: hexDecode("f4"), values: []any{false}},
+	{wantData: hexDecode("f5"), values: []any{true}},
+	{wantData: hexDecode("f6"), values: []any{nil, []byte(nil), []int(nil), map[uint]bool(nil), (*int)(nil), io.Reader(nil)}},
 	// simple values
-	{wantData: hexDecode("e0"), values: []interface{}{SimpleValue(0)}},
-	{wantData: hexDecode("f0"), values: []interface{}{SimpleValue(16)}},
-	{wantData: hexDecode("f820"), values: []interface{}{SimpleValue(32)}},
-	{wantData: hexDecode("f8ff"), values: []interface{}{SimpleValue(255)}},
+	{wantData: hexDecode("e0"), values: []any{SimpleValue(0)}},
+	{wantData: hexDecode("f0"), values: []any{SimpleValue(16)}},
+	{wantData: hexDecode("f820"), values: []any{SimpleValue(32)}},
+	{wantData: hexDecode("f8ff"), values: []any{SimpleValue(255)}},
 	// nan, positive and negative inf
-	{wantData: hexDecode("f97c00"), values: []interface{}{math.Inf(1)}},
-	{wantData: hexDecode("f97e00"), values: []interface{}{math.NaN()}},
-	{wantData: hexDecode("f9fc00"), values: []interface{}{math.Inf(-1)}},
+	{wantData: hexDecode("f97c00"), values: []any{math.Inf(1)}},
+	{wantData: hexDecode("f97e00"), values: []any{math.NaN()}},
+	{wantData: hexDecode("f9fc00"), values: []any{math.Inf(-1)}},
 	// float32
-	{wantData: hexDecode("fa47c35000"), values: []interface{}{float32(100000.0)}},
-	{wantData: hexDecode("fa7f7fffff"), values: []interface{}{float32(3.4028234663852886e+38)}},
+	{wantData: hexDecode("fa47c35000"), values: []any{float32(100000.0)}},
+	{wantData: hexDecode("fa7f7fffff"), values: []any{float32(3.4028234663852886e+38)}},
 	// float64
-	{wantData: hexDecode("fb3ff199999999999a"), values: []interface{}{float64(1.1)}},
-	{wantData: hexDecode("fb7e37e43c8800759c"), values: []interface{}{float64(1.0e+300)}},
-	{wantData: hexDecode("fbc010666666666666"), values: []interface{}{float64(-4.1)}},
+	{wantData: hexDecode("fb3ff199999999999a"), values: []any{float64(1.1)}},
+	{wantData: hexDecode("fb7e37e43c8800759c"), values: []any{float64(1.0e+300)}},
+	{wantData: hexDecode("fbc010666666666666"), values: []any{float64(-4.1)}},
 
 	// More testcases not covered by https://tools.ietf.org/html/rfc7049#appendix-A.
 	{
 		wantData: hexDecode("d83dd183010203"), // 61(17([1, 2, 3])), nested tags 61 and 17
-		values: []interface{}{
-			Tag{61, Tag{17, []interface{}{uint64(1), uint64(2), uint64(3)}}},
+		values: []any{
+			Tag{61, Tag{17, []any{uint64(1), uint64(2), uint64(3)}}},
 			RawTag{61, hexDecode("d183010203")},
 		},
 	},
 
-	{wantData: hexDecode("83f6f6f6"), values: []interface{}{[]interface{}{nil, nil, nil}}}, // [nil, nil, nil]
+	{wantData: hexDecode("83f6f6f6"), values: []any{[]any{nil, nil, nil}}}, // [nil, nil, nil]
 }
 
 func TestMarshal(t *testing.T) {
@@ -366,7 +367,7 @@ func TestMarshalLargeByteString(t *testing.T) {
 			data.WriteByte(100)
 			value[j] = 100
 		}
-		tests[i] = marshalTest{data.Bytes(), []interface{}{value}}
+		tests[i] = marshalTest{data.Bytes(), []any{value}}
 	}
 
 	testMarshal(t, tests)
@@ -383,7 +384,7 @@ func TestMarshalLargeTextString(t *testing.T) {
 			data.WriteByte(100)
 			value[j] = 100
 		}
-		tests[i] = marshalTest{data.Bytes(), []interface{}{string(value)}}
+		tests[i] = marshalTest{data.Bytes(), []any{string(value)}}
 	}
 
 	testMarshal(t, tests)
@@ -400,7 +401,7 @@ func TestMarshalLargeArray(t *testing.T) {
 			data.Write([]byte{0x63, 0xe6, 0xb0, 0xb4})
 			value[j] = "水"
 		}
-		tests[i] = marshalTest{data.Bytes(), []interface{}{value}}
+		tests[i] = marshalTest{data.Bytes(), []any{value}}
 	}
 
 	testMarshal(t, tests)
@@ -419,7 +420,7 @@ func TestMarshalLargeMapCanonical(t *testing.T) {
 			data.Write(d)
 			value[j] = j
 		}
-		tests[i] = marshalTest{data.Bytes(), []interface{}{value}}
+		tests[i] = marshalTest{data.Bytes(), []any{value}}
 	}
 
 	testMarshal(t, tests)
@@ -598,7 +599,7 @@ func TestMarshalStruct(t *testing.T) {
 func TestMarshalStructVariableLength(t *testing.T) {
 	for _, tc := range []struct {
 		name string
-		in   interface{}
+		in   any
 		want []byte
 	}{
 		{
@@ -1135,8 +1136,8 @@ func TestOmitEmptyForBuiltinType(t *testing.T) {
 		Mo    map[int]string `cbor:"mo,omitempty"`
 		P     *int           `cbor:"p"`
 		Po    *int           `cbor:"po,omitempty"`
-		Intf  interface{}    `cbor:"intf"`
-		Intfo interface{}    `cbor:"intfo,omitempty"`
+		Intf  any            `cbor:"intf"`
+		Intfo any            `cbor:"intfo,omitempty"`
 	}
 
 	v := T{}
@@ -1182,7 +1183,7 @@ func TestOmitEmptyForStruct1(t *testing.T) {
 		Slco  []string       `cbor:"slco,omitempty"`
 		Mo    map[int]string `cbor:"mo,omitempty"`
 		Po    *int           `cbor:"po,omitempty"`
-		Intfo interface{}    `cbor:"intfo,omitempty"`
+		Intfo any            `cbor:"intfo,omitempty"`
 	}
 	type T struct {
 		Str  T1 `cbor:"str"`
@@ -1207,7 +1208,7 @@ func TestOmitEmptyForStruct2(t *testing.T) {
 		Slco  []string       `cbor:"slco,omitempty"`
 		Mo    map[int]string `cbor:"mo,omitempty"`
 		Po    *int           `cbor:"po,omitempty"`
-		Intfo interface{}    `cbor:"intfo"`
+		Intfo any            `cbor:"intfo"`
 	}
 	type T struct {
 		Stro T1 `cbor:"stro,omitempty"`
@@ -1268,8 +1269,8 @@ func TestOmitEmptyMode(t *testing.T) {
 		Mo    map[int]string `cbor:"mo,omitempty"`
 		P     *int           `cbor:"p"`
 		Po    *int           `cbor:"po,omitempty"`
-		Intf  interface{}    `cbor:"intf"`
-		Intfo interface{}    `cbor:"intfo,omitempty"`
+		Intf  any            `cbor:"intf"`
+		Intfo any            `cbor:"intfo,omitempty"`
 		Str   T1             `cbor:"str"`
 		Stro  T1             `cbor:"stro,omitempty"`
 	}
@@ -1324,7 +1325,7 @@ func TestOmitEmptyForNestedStruct(t *testing.T) {
 		Slco  []string       `cbor:"slco,omitempty"`
 		Mo    map[int]string `cbor:"mo,omitempty"`
 		Po    *int           `cbor:"po,omitempty"`
-		Intfo interface{}    `cbor:"intfo,omitempty"`
+		Intfo any            `cbor:"intfo,omitempty"`
 	}
 	type T2 struct {
 		Stro T1 `cbor:"stro,omitempty"`
@@ -1353,7 +1354,7 @@ func TestOmitEmptyForToArrayStruct1(t *testing.T) {
 		slc  []string
 		m    map[int]string
 		p    *int
-		intf interface{}
+		intf any
 	}
 	type T struct {
 		Str  T1 `cbor:"str"`
@@ -1382,7 +1383,7 @@ func TestOmitEmptyForToArrayStruct2(t *testing.T) {
 		Slco  []string       `cbor:"slco"`
 		Mo    map[int]string `cbor:"mo"`
 		Po    *int           `cbor:"po"`
-		Intfo interface{}    `cbor:"intfo"`
+		Intfo any            `cbor:"intfo"`
 	}
 	type T struct {
 		Stro T1 `cbor:"stro,omitempty"`
@@ -1413,7 +1414,7 @@ func TestOmitEmptyForStructWithPtrToAnonymousField(t *testing.T) {
 
 	testCases := []struct {
 		name         string
-		obj          interface{}
+		obj          any
 		wantCborData []byte
 	}{
 		{
@@ -1472,7 +1473,7 @@ func TestOmitEmptyForStructWithAnonymousField(t *testing.T) {
 
 	testCases := []struct {
 		name         string
-		obj          interface{}
+		obj          any
 		wantCborData []byte
 	}{
 		{
@@ -1595,6 +1596,745 @@ func TestOmitEmptyForBigInt(t *testing.T) {
 	em, _ := EncOptions{BigIntConvert: BigIntConvertNone}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
 	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+}
+
+func TestOmitZeroForBuiltinType(t *testing.T) {
+	type T struct {
+		B     bool           `cbor:"b"`
+		Bo    bool           `cbor:"bo,omitzero"`
+		UI    uint           `cbor:"ui"`
+		UIo   uint           `cbor:"uio,omitzero"`
+		I     int            `cbor:"i"`
+		Io    int            `cbor:"io,omitzero"`
+		F     float64        `cbor:"f"`
+		Fo    float64        `cbor:"fo,omitzero"`
+		S     string         `cbor:"s"`
+		So    string         `cbor:"so,omitzero"`
+		Slc   []string       `cbor:"slc"`
+		Slco  []string       `cbor:"slco,omitzero"`
+		M     map[int]string `cbor:"m"`
+		Mo    map[int]string `cbor:"mo,omitzero"`
+		P     *int           `cbor:"p"`
+		Po    *int           `cbor:"po,omitzero"`
+		Intf  any            `cbor:"intf"`
+		Intfo any            `cbor:"intfo,omitzero"`
+	}
+
+	v := T{}
+	// {"b": false, "ui": 0, "i":0, "f": 0, "s": "", "slc": null, "m": {}, "p": nil, "intf": nil }
+	want := []byte{0xa9,
+		0x61, 0x62, 0xf4,
+		0x62, 0x75, 0x69, 0x00,
+		0x61, 0x69, 0x00,
+		0x61, 0x66, 0xfb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x61, 0x73, 0x60,
+		0x63, 0x73, 0x6c, 0x63, 0xf6,
+		0x61, 0x6d, 0xf6,
+		0x61, 0x70, 0xf6,
+		0x64, 0x69, 0x6e, 0x74, 0x66, 0xf6,
+	}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+}
+
+func TestOmitZeroForAnonymousStruct(t *testing.T) {
+	type T struct {
+		Str  struct{} `cbor:"str"`
+		Stro struct{} `cbor:"stro,omitzero"`
+	}
+
+	v := T{}
+	want := []byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0xa0} // {"str": {}}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+}
+
+func TestOmitZeroForStruct1(t *testing.T) {
+	type T1 struct {
+		Bo    bool           `cbor:"bo,omitzero"`
+		UIo   uint           `cbor:"uio,omitzero"`
+		Io    int            `cbor:"io,omitzero"`
+		Fo    float64        `cbor:"fo,omitzero"`
+		So    string         `cbor:"so,omitzero"`
+		Slco  []string       `cbor:"slco,omitzero"`
+		Mo    map[int]string `cbor:"mo,omitzero"`
+		Po    *int           `cbor:"po,omitzero"`
+		Intfo any            `cbor:"intfo,omitzero"`
+	}
+	type T struct {
+		Str  T1 `cbor:"str"`
+		Stro T1 `cbor:"stro,omitzero"`
+	}
+
+	v := T{}
+	want := []byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0xa0} // {"str": {}}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+}
+
+func TestOmitZeroForStruct2(t *testing.T) {
+	type T1 struct {
+		Bo    bool           `cbor:"bo,omitzero"`
+		UIo   uint           `cbor:"uio,omitzero"`
+		Io    int            `cbor:"io,omitzero"`
+		Fo    float64        `cbor:"fo,omitzero"`
+		So    string         `cbor:"so,omitzero"`
+		Slco  []string       `cbor:"slco,omitzero"`
+		Mo    map[int]string `cbor:"mo,omitzero"`
+		Po    *int           `cbor:"po,omitzero"`
+		Intfo any            `cbor:"intfo"`
+	}
+	type T struct {
+		Stro T1 `cbor:"stro,omitzero"`
+	}
+
+	v := T{}
+	want := []byte{0xa0} // {}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, []roundTripTest{{"non-default values", v, want}}, em, dm)
+}
+
+func TestOmitZeroForNestedStruct(t *testing.T) {
+	type T1 struct {
+		Bo    bool           `cbor:"bo,omitzero"`
+		UIo   uint           `cbor:"uio,omitzero"`
+		Io    int            `cbor:"io,omitzero"`
+		Fo    float64        `cbor:"fo,omitzero"`
+		So    string         `cbor:"so,omitzero"`
+		Slco  []string       `cbor:"slco,omitzero"`
+		Mo    map[int]string `cbor:"mo,omitzero"`
+		Po    *int           `cbor:"po,omitzero"`
+		Intfo any            `cbor:"intfo,omitzero"`
+	}
+	type T2 struct {
+		Stro T1 `cbor:"stro,omitzero"`
+	}
+	type T struct {
+		Str  T2 `cbor:"str"`
+		Stro T2 `cbor:"stro,omitzero"`
+	}
+
+	v := T{}
+	want := []byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0xa0} // {"str": {}}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+}
+
+func TestOmitZeroForToArrayStruct1(t *testing.T) {
+	type T1 struct {
+		_    struct{} `cbor:",toarray"`
+		b    bool
+		ui   uint
+		i    int
+		f    float64
+		s    string
+		slc  []string
+		m    map[int]string
+		p    *int
+		intf any
+	}
+	type T struct {
+		Str  T1 `cbor:"str"`
+		Stro T1 `cbor:"stro,omitzero"`
+	}
+
+	v := T{
+		Str:  T1{b: false, ui: 0, i: 0, f: 0.0, s: "", slc: nil, m: nil, p: nil, intf: nil},
+		Stro: T1{b: false, ui: 0, i: 0, f: 0.0, s: "", slc: nil, m: nil, p: nil, intf: nil},
+	}
+	want := []byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0x80} // {"str": []}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, []roundTripTest{{"no exportable fields", v, want}}, em, dm)
+}
+
+func TestOmitZeroForToArrayStruct2(t *testing.T) {
+	type T1 struct {
+		_     struct{}       `cbor:",toarray"`
+		Bo    bool           `cbor:"bo"`
+		UIo   uint           `cbor:"uio"`
+		Io    int            `cbor:"io"`
+		Fo    float64        `cbor:"fo"`
+		So    string         `cbor:"so"`
+		Slco  []string       `cbor:"slco"`
+		Mo    map[int]string `cbor:"mo"`
+		Po    *int           `cbor:"po"`
+		Intfo any            `cbor:"intfo"`
+	}
+	type T struct {
+		Stro T1 `cbor:"stro,omitzero"`
+	}
+
+	v := T{}
+	// {"stro": [false, 0, 0, 0.0, "", [], {}, nil, nil]}
+	want := []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0x89, 0xf4, 0x00, 0x00, 0xfb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60, 0xf6, 0xf6, 0xf6, 0xf6}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, []roundTripTest{{"has exportable fields", v, want}}, em, dm)
+}
+
+func TestOmitZeroForStructWithPtrToAnonymousField(t *testing.T) {
+	type (
+		T1 struct {
+			X int `cbor:"x,omitzero"`
+			Y int `cbor:"y,omitzero"`
+		}
+		T2 struct {
+			*T1
+		}
+		T struct {
+			Stro T2 `cbor:"stro,omitzero"`
+		}
+	)
+
+	testCases := []struct {
+		name         string
+		obj          any
+		wantCborData []byte
+	}{
+		{
+			name:         "null pointer to anonymous field",
+			obj:          T{},
+			wantCborData: []byte{0xa0}, // {}
+		},
+		{
+			name:         "not-null pointer to anonymous field",
+			obj:          T{T2{&T1{}}},
+			wantCborData: []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0xa0}, // {"stro":{}}
+		},
+		{
+			name:         "not empty value in field 1",
+			obj:          T{T2{&T1{X: 1}}},
+			wantCborData: []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0xa1, 0x61, 0x78, 0x01}, // {stro:{x:1}}
+		},
+		{
+			name:         "not empty value in field 2",
+			obj:          T{T2{&T1{Y: 2}}},
+			wantCborData: []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0xa1, 0x61, 0x79, 0x02}, // {stro:{y:2}}
+		},
+		{
+			name:         "not empty value in all fields",
+			obj:          T{T2{&T1{X: 1, Y: 2}}},
+			wantCborData: []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0xa2, 0x61, 0x78, 0x01, 0x61, 0x79, 0x02}, // {stro:{x:1, y:2}}
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := Marshal(tc.obj)
+			if err != nil {
+				t.Errorf("Marshal(%+v) returned error %v", tc.obj, err)
+			}
+			if !bytes.Equal(b, tc.wantCborData) {
+				t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.obj, b, tc.wantCborData)
+			}
+		})
+	}
+}
+
+func TestOmitZeroForStructWithAnonymousField(t *testing.T) {
+	type (
+		T1 struct {
+			X int `cbor:"x,omitzero"`
+			Y int `cbor:"y,omitzero"`
+		}
+		T2 struct {
+			T1
+		}
+		T struct {
+			Stro T2 `cbor:"stro,omitzero"`
+		}
+	)
+
+	testCases := []struct {
+		name         string
+		obj          any
+		wantCborData []byte
+	}{
+		{
+			name:         "default values",
+			obj:          T{},
+			wantCborData: []byte{0xa0}, // {}
+		},
+		{
+			name:         "default values",
+			obj:          T{T2{T1{}}},
+			wantCborData: []byte{0xa0}, // {}
+		},
+		{
+			name:         "not empty value in field 1",
+			obj:          T{T2{T1{X: 1}}},
+			wantCborData: []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0xa1, 0x61, 0x78, 0x01}, // {stro:{x:1}}
+		},
+		{
+			name:         "not empty value in field 2",
+			obj:          T{T2{T1{Y: 2}}},
+			wantCborData: []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0xa1, 0x61, 0x79, 0x02}, // {stro:{y:2}}
+		},
+		{
+			name:         "not empty value in all fields",
+			obj:          T{T2{T1{X: 1, Y: 2}}},
+			wantCborData: []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0xa2, 0x61, 0x78, 0x01, 0x61, 0x79, 0x02}, // {stro:{x:1, y:2}}
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := Marshal(tc.obj)
+			if err != nil {
+				t.Errorf("Marshal(%+v) returned error %v", tc.obj, err)
+			}
+			if !bytes.Equal(b, tc.wantCborData) {
+				t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.obj, b, tc.wantCborData)
+			}
+		})
+	}
+}
+
+func TestOmitZeroForBinaryMarshaler1(t *testing.T) {
+	type T1 struct {
+		No number `cbor:"no,omitzero"`
+	}
+	type T struct {
+		Str  T1 `cbor:"str"`
+		Stro T1 `cbor:"stro,omitzero"`
+	}
+
+	testCases := []roundTripTest{
+		{
+			"empty BinaryMarshaler",
+			T1{},
+			[]byte{0xa0}, // {}
+		},
+		{
+			"empty struct containing empty BinaryMarshaler",
+			T{},
+			[]byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0xa0}, // {str: {}}
+		},
+	}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, testCases, em, dm)
+}
+
+func TestOmitZeroForBinaryMarshaler2(t *testing.T) {
+	type T1 struct {
+		So stru `cbor:"so,omitzero"`
+	}
+	type T struct {
+		Str  T1 `cbor:"str"`
+		Stro T1 `cbor:"stro,omitzero"`
+	}
+
+	testCases := []roundTripTest{
+		{
+			"empty BinaryMarshaler",
+			T1{},
+			[]byte{0xa0}, // {}
+		},
+		{
+			"empty struct containing empty BinaryMarshaler",
+			T{},
+			[]byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0xa0}, // {str: {}}
+		},
+	}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, testCases, em, dm)
+}
+
+func TestOmitZeroForTime(t *testing.T) {
+	type T struct {
+		Tm time.Time `cbor:"t,omitzero"`
+	}
+
+	v := T{}
+	want := []byte{0xa0} // {}
+
+	em, _ := EncOptions{}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+}
+
+func TestOmitZeroForBigInt(t *testing.T) {
+	type T struct {
+		I big.Int `cbor:"bi,omitzero"`
+	}
+
+	v := T{}
+	want := []byte{0xa0} // {}
+
+	em, _ := EncOptions{BigIntConvert: BigIntConvertNone}.EncMode()
+	dm, _ := DecOptions{}.DecMode()
+	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+}
+
+func TestIsZero(t *testing.T) {
+	var zeroStructZeroer isZeroer = zeroTestTypeCustom{value: 42}
+
+	testcases := []struct {
+		name string
+		t    reflect.Type
+		v    reflect.Value
+
+		expect    bool
+		expectErr bool
+	}{
+		{
+			name:   "nil",
+			t:      reflect.TypeOf(nil),
+			v:      reflect.ValueOf(nil),
+			expect: true,
+		},
+		{
+			name:   "string-zero",
+			t:      reflect.TypeOf(""),
+			v:      reflect.ValueOf(""),
+			expect: true,
+		},
+
+		{
+			name:   "string-nonzero",
+			t:      reflect.TypeOf(""),
+			v:      reflect.ValueOf("a"),
+			expect: false,
+		},
+		{
+			name:   "int-zero",
+			t:      reflect.TypeOf(0),
+			v:      reflect.ValueOf(0),
+			expect: true,
+		},
+		{
+			name:   "int-nonzero",
+			t:      reflect.TypeOf(0),
+			v:      reflect.ValueOf(1),
+			expect: false,
+		},
+
+		{
+			name:   "bool-zero",
+			t:      reflect.TypeOf(false),
+			v:      reflect.ValueOf(false),
+			expect: true,
+		},
+		{
+			name:   "bool-nonzero",
+			t:      reflect.TypeOf(false),
+			v:      reflect.ValueOf(true),
+			expect: false,
+		},
+
+		{
+			name:   "slice-zero",
+			t:      reflect.TypeOf([]string(nil)),
+			v:      reflect.ValueOf([]string(nil)),
+			expect: true,
+		},
+		{
+			name:   "slice-nonzero",
+			t:      reflect.TypeOf([]string(nil)),
+			v:      reflect.ValueOf([]string{}),
+			expect: false,
+		},
+
+		{
+			name:   "map-zero",
+			t:      reflect.TypeOf(map[string]string(nil)),
+			v:      reflect.ValueOf(map[string]string(nil)),
+			expect: true,
+		},
+		{
+			name:   "map-nonzero",
+			t:      reflect.TypeOf(map[string]string(nil)),
+			v:      reflect.ValueOf(map[string]string{}),
+			expect: false,
+		},
+
+		{
+			name:   "struct-zero",
+			t:      reflect.TypeOf(zeroTestType{}),
+			v:      reflect.ValueOf(zeroTestType{}),
+			expect: true,
+		},
+		{
+			name:   "struct-nonzero",
+			t:      reflect.TypeOf(zeroTestType{}),
+			v:      reflect.ValueOf(zeroTestType{value: 42}),
+			expect: false,
+		},
+
+		{
+			name:   "pointer-zero",
+			t:      reflect.TypeOf((*zeroTestType)(nil)),
+			v:      reflect.ValueOf((*zeroTestType)(nil)),
+			expect: true,
+		},
+		{
+			name:   "pointer-nonzero",
+			t:      reflect.TypeOf((*zeroTestType)(nil)),
+			v:      reflect.ValueOf(&zeroTestType{}),
+			expect: false,
+		},
+
+		{
+			name:   "any-struct-zero",
+			t:      reflect.TypeOf(any(nil)),
+			v:      reflect.ValueOf(zeroTestType{}),
+			expect: true,
+		},
+		{
+			name:   "any-struct-nonzero",
+			t:      reflect.TypeOf(any(nil)),
+			v:      reflect.ValueOf(zeroTestType{value: 42}),
+			expect: false,
+		},
+
+		{
+			name:   "any-pointer-zero",
+			t:      reflect.TypeOf(any(nil)),
+			v:      reflect.ValueOf((*zeroTestType)(nil)),
+			expect: true,
+		},
+		{
+			name:   "any-pointer-nonzero",
+			t:      reflect.TypeOf(any(nil)),
+			v:      reflect.ValueOf(&zeroTestType{}),
+			expect: false,
+		},
+
+		{
+			name:   "custom-structreceiver-zero-structvalue",
+			t:      reflect.TypeOf(zeroTestTypeCustom{}),
+			v:      reflect.ValueOf(zeroTestTypeCustom{value: 42}),
+			expect: true,
+		},
+		{
+			name:   "custom-structreceiver-nonzero-structvalue",
+			t:      reflect.TypeOf(zeroTestTypeCustom{}),
+			v:      reflect.ValueOf(zeroTestTypeCustom{value: 1}),
+			expect: false,
+		},
+		{
+			name:   "custom-structreceiver-zero-pointervalue",
+			t:      reflect.TypeOf(zeroTestTypeCustom{}),
+			v:      reflect.ValueOf(&zeroTestTypeCustom{value: 42}),
+			expect: true,
+		},
+		{
+			name:   "custom-structreceiver-nonzero-pointervalue",
+			t:      reflect.TypeOf(zeroTestTypeCustom{}),
+			v:      reflect.ValueOf(&zeroTestTypeCustom{value: 1}),
+			expect: false,
+		},
+
+		{
+			name:   "custom-structreceiver-zero-pointervalue",
+			t:      reflect.TypeOf(&zeroTestTypeCustom{}),
+			v:      reflect.ValueOf(&zeroTestTypeCustom{value: 42}),
+			expect: true,
+		},
+		{
+			name:   "custom-structreceiver-nonzero-pointervalue",
+			t:      reflect.TypeOf(&zeroTestTypeCustom{}),
+			v:      reflect.ValueOf(&zeroTestTypeCustom{value: 1}),
+			expect: false,
+		},
+		{
+			name:   "custom-structreceiver-zero-nil-pointervalue",
+			t:      reflect.TypeOf(&zeroTestTypeCustom{}),
+			v:      reflect.ValueOf((*zeroTestTypeCustom)(nil)),
+			expect: true,
+		},
+
+		{
+			name:   "custom-pointerreceiver-zero-structvalue",
+			t:      reflect.TypeOf(zeroTestTypeCustomPointer{}),
+			v:      reflect.ValueOf(zeroTestTypeCustomPointer{value: 42}),
+			expect: true,
+		},
+		{
+			name:   "custom-pointerreceiver-nonzero-structvalue",
+			t:      reflect.TypeOf(zeroTestTypeCustomPointer{}),
+			v:      reflect.ValueOf(zeroTestTypeCustomPointer{value: 1}),
+			expect: false,
+		},
+
+		{
+			name:   "custom-pointerreceiver-zero-pointervalue",
+			t:      reflect.TypeOf(&zeroTestTypeCustomPointer{}),
+			v:      reflect.ValueOf(&zeroTestTypeCustomPointer{value: 42}),
+			expect: true,
+		},
+		{
+			name:   "custom-pointerreceiver-nonzero-pointervalue",
+			t:      reflect.TypeOf(&zeroTestTypeCustomPointer{}),
+			v:      reflect.ValueOf(&zeroTestTypeCustomPointer{value: 1}),
+			expect: false,
+		},
+
+		{
+			name:   "custom-interface-nil-pointer",
+			t:      isZeroerType,
+			v:      reflect.ValueOf((*zeroTestTypeCustom)(nil)),
+			expect: true,
+		},
+		{
+			name:   "custom-interface-zero-structreceiver-pointer",
+			t:      isZeroerType,
+			v:      reflect.ValueOf(&zeroTestTypeCustom{value: 42}),
+			expect: true,
+		},
+		{
+			name:   "custom-interface-zero-structreceiver",
+			t:      isZeroerType,
+			v:      reflect.ValueOf(zeroStructZeroer),
+			expect: true,
+		},
+		{
+			name:   "custom-interface-nonzero-struct",
+			t:      isZeroerType,
+			v:      reflect.ValueOf(&zeroTestTypeCustom{value: 1}),
+			expect: false,
+		},
+		{
+			name:   "custom-interface-nil-pointerreceiver",
+			t:      isZeroerType,
+			v:      reflect.ValueOf((*zeroTestTypeCustomPointer)(nil)),
+			expect: true,
+		},
+		{
+			name:   "custom-interface-zero-pointerreceiver",
+			t:      isZeroerType,
+			v:      reflect.ValueOf(&zeroTestTypeCustomPointer{value: 42}),
+			expect: true,
+		},
+		{
+			name:   "custom-interface-nonzero-pointerreceiver",
+			t:      isZeroerType,
+			v:      reflect.ValueOf(&zeroTestTypeCustomPointer{value: 1}),
+			expect: false,
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			defer func() {
+				if err := recover(); err != nil {
+					t.Log(string(debug.Stack()))
+					t.Errorf("unexpected panic %v", err)
+				}
+			}()
+			got, err := getIsZeroFunc(tc.t)(tc.v)
+			if tc.expectErr != (err != nil) {
+				t.Errorf("got err=%v, expected %v", err, tc.expectErr)
+			}
+			if tc.expect != got {
+				t.Errorf("got %v, expected %v", got, tc.expect)
+			}
+		})
+	}
+}
+
+type zeroTestType struct {
+	value int
+}
+
+type zeroTestTypeCustom struct {
+	value int
+}
+
+func (z zeroTestTypeCustom) IsZero() bool {
+	return z.value == 42
+}
+
+type zeroTestTypeCustomPointer struct {
+	value int
+}
+
+func (z *zeroTestTypeCustomPointer) IsZero() bool {
+	return z.value == 42
+}
+
+func TestJSONStdlibOmitZero(t *testing.T) {
+	type CBOR struct {
+		S string `cbor:"s,omitzero"`
+	}
+	type JSON struct {
+		S string `json:"s,omitzero"`
+	}
+
+	testcases := []struct {
+		name   string
+		stdlib bool
+		obj    any
+		want   []byte
+	}{
+		{
+			name:   "cbor-stdlib-off",
+			stdlib: false,
+			obj:    CBOR{},
+			want:   []byte{0xa0}, // {}
+		},
+		{
+			name:   "cbor-stdlib-on",
+			stdlib: true,
+			obj:    CBOR{},
+			want:   []byte{0xa0}, // {}
+		},
+		{
+			name:   "json-stdlib-off",
+			stdlib: false,
+			obj:    JSON{},
+			want:   []byte{0xa1, 0x61, 0x73, 0x60}, // {"s":""}
+		},
+		{
+			name:   "json-stdlib-on",
+			stdlib: true,
+			obj:    JSON{},
+			want:   []byte{0xa0}, // {}
+		},
+	}
+
+	original := jsonStdlibSupportsOmitzero
+	reset := func() {
+		// reset to original
+		jsonStdlibSupportsOmitzero = original
+		// clear type caches
+		encodingStructTypeCache.Range(func(key, _ any) bool {
+			encodingStructTypeCache.Delete(key)
+			return true
+		})
+		typeInfoCache.Range(func(key, _ any) bool {
+			typeInfoCache.Delete(key)
+			return true
+		})
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			reset()
+			jsonStdlibSupportsOmitzero = tc.stdlib
+			t.Cleanup(reset)
+
+			em, _ := EncOptions{}.EncMode()
+			dm, _ := DecOptions{}.DecMode()
+			testRoundTrip(t, []roundTripTest{{tc.name, tc.obj, tc.want}}, em, dm)
+		})
+	}
 }
 
 func TestTaggedField(t *testing.T) {
@@ -2212,24 +2952,24 @@ func TestMarshalRawMessageValue(t *testing.T) {
 	)
 
 	tests := []struct {
-		obj  interface{}
+		obj  any
 		want []byte
 	}{
 		// Test with nil RawMessage.
 		{rawNil, []byte{0xf6}},
 		{&rawNil, []byte{0xf6}},
-		{[]interface{}{rawNil}, []byte{0x81, 0xf6}},
-		{&[]interface{}{rawNil}, []byte{0x81, 0xf6}},
-		{[]interface{}{&rawNil}, []byte{0x81, 0xf6}},
-		{&[]interface{}{&rawNil}, []byte{0x81, 0xf6}},
+		{[]any{rawNil}, []byte{0x81, 0xf6}},
+		{&[]any{rawNil}, []byte{0x81, 0xf6}},
+		{[]any{&rawNil}, []byte{0x81, 0xf6}},
+		{&[]any{&rawNil}, []byte{0x81, 0xf6}},
 		{struct{ M RawMessage }{rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
 		{&struct{ M RawMessage }{rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
 		{struct{ M *RawMessage }{&rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
 		{&struct{ M *RawMessage }{&rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{map[string]interface{}{"M": rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{&map[string]interface{}{"M": rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{map[string]interface{}{"M": &rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{&map[string]interface{}{"M": &rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{map[string]any{"M": rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{&map[string]any{"M": rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{map[string]any{"M": &rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{&map[string]any{"M": &rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
 		{T1{rawNil}, []byte{0xa0}},
 		{T2{&rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
 		{&T1{rawNil}, []byte{0xa0}},
@@ -2238,18 +2978,18 @@ func TestMarshalRawMessageValue(t *testing.T) {
 		// Test with empty, but non-nil, RawMessage.
 		{rawEmpty, []byte{0xf6}},
 		{&rawEmpty, []byte{0xf6}},
-		{[]interface{}{rawEmpty}, []byte{0x81, 0xf6}},
-		{&[]interface{}{rawEmpty}, []byte{0x81, 0xf6}},
-		{[]interface{}{&rawEmpty}, []byte{0x81, 0xf6}},
-		{&[]interface{}{&rawEmpty}, []byte{0x81, 0xf6}},
+		{[]any{rawEmpty}, []byte{0x81, 0xf6}},
+		{&[]any{rawEmpty}, []byte{0x81, 0xf6}},
+		{[]any{&rawEmpty}, []byte{0x81, 0xf6}},
+		{&[]any{&rawEmpty}, []byte{0x81, 0xf6}},
 		{struct{ M RawMessage }{rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
 		{&struct{ M RawMessage }{rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
 		{struct{ M *RawMessage }{&rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
 		{&struct{ M *RawMessage }{&rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{map[string]interface{}{"M": rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{&map[string]interface{}{"M": rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{map[string]interface{}{"M": &rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{&map[string]interface{}{"M": &rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{map[string]any{"M": rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{&map[string]any{"M": rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{map[string]any{"M": &rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{&map[string]any{"M": &rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
 		{T1{rawEmpty}, []byte{0xa0}},
 		{T2{&rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
 		{&T1{rawEmpty}, []byte{0xa0}},
@@ -2258,18 +2998,18 @@ func TestMarshalRawMessageValue(t *testing.T) {
 		// Test with RawMessage with some data.
 		{raw, []byte{0x01}},
 		{&raw, []byte{0x01}},
-		{[]interface{}{raw}, []byte{0x81, 0x01}},
-		{&[]interface{}{raw}, []byte{0x81, 0x01}},
-		{[]interface{}{&raw}, []byte{0x81, 0x01}},
-		{&[]interface{}{&raw}, []byte{0x81, 0x01}},
+		{[]any{raw}, []byte{0x81, 0x01}},
+		{&[]any{raw}, []byte{0x81, 0x01}},
+		{[]any{&raw}, []byte{0x81, 0x01}},
+		{&[]any{&raw}, []byte{0x81, 0x01}},
 		{struct{ M RawMessage }{raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
 		{&struct{ M RawMessage }{raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
 		{struct{ M *RawMessage }{&raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
 		{&struct{ M *RawMessage }{&raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
-		{map[string]interface{}{"M": raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
-		{&map[string]interface{}{"M": raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
-		{map[string]interface{}{"M": &raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
-		{&map[string]interface{}{"M": &raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
+		{map[string]any{"M": raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
+		{&map[string]any{"M": raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
+		{map[string]any{"M": &raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
+		{&map[string]any{"M": &raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
 		{T1{raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
 		{T2{&raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
 		{&T1{raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
@@ -2318,7 +3058,7 @@ func TestMarshalUnmarshalStructKeyAsInt(t *testing.T) {
 	}
 	testCases := []struct {
 		name         string
-		obj          interface{}
+		obj          any
 		wantCborData []byte
 	}{
 		{
@@ -2366,7 +3106,7 @@ func TestMarshalStructKeyAsIntNumError(t *testing.T) {
 	}
 	testCases := []struct {
 		name         string
-		obj          interface{}
+		obj          any
 		wantErrorMsg string
 	}{
 		{
@@ -2471,7 +3211,7 @@ func TestMarshalUnmarshalStructToArray(t *testing.T) {
 }
 
 func TestMapSort(t *testing.T) {
-	m := make(map[interface{}]interface{})
+	m := make(map[any]any)
 	m[10] = true
 	m[100] = true
 	m[-1] = true
@@ -2981,7 +3721,7 @@ func TestShortestFloat16(t *testing.T) {
 func TestShortestFloatNone(t *testing.T) {
 	testCases := []struct {
 		name         string
-		f            interface{}
+		f            any
 		wantCborData []byte
 	}{
 		// Data from RFC 7049 appendix A
@@ -3081,7 +3821,7 @@ func TestInfConvert(t *testing.T) {
 	infConvertFloat16Opt := EncOptions{InfConvert: InfConvertFloat16}
 	testCases := []struct {
 		name         string
-		v            interface{}
+		v            any
 		opts         EncOptions
 		wantCborData []byte
 	}{
@@ -3161,7 +3901,7 @@ func TestNilContainers(t *testing.T) {
 
 	testCases := []struct {
 		name         string
-		v            interface{}
+		v            any
 		opts         EncOptions
 		wantCborData []byte
 	}{
@@ -3284,7 +4024,7 @@ func TestNaNConvert(t *testing.T) {
 		wantCborData []byte
 	}
 	testCases := []struct {
-		v       interface{}
+		v       any
 		convert []nanConvert
 	}{
 		// float32 qNaN dropped payload not zero
@@ -4182,7 +4922,7 @@ func TestMapWithSimpleValueKey(t *testing.T) {
 	}
 	decMode, _ := decOpts.DecMode()
 
-	var v map[interface{}]interface{}
+	var v map[any]any
 	err := decMode.Unmarshal(data, &v)
 	if err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
@@ -4247,7 +4987,7 @@ func TestMarshalFieldNameType(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		opts EncOptions
-		in   interface{}
+		in   any
 		want []byte
 	}{
 		{
@@ -4312,7 +5052,7 @@ func TestMarshalFieldNameType(t *testing.T) {
 func TestMarshalRawMessageContainingMalformedCBORData(t *testing.T) {
 	testCases := []struct {
 		name         string
-		value        interface{}
+		value        any
 		wantErrorMsg string
 	}{
 		// Nil RawMessage and empty RawMessage are encoded as CBOR nil.
@@ -4367,7 +5107,7 @@ func TestMarshalerReturnsMalformedCBORData(t *testing.T) {
 
 	testCases := []struct {
 		name         string
-		value        interface{}
+		value        any
 		wantErrorMsg string
 	}{
 		{
@@ -4414,7 +5154,7 @@ func TestMarshalerReturnsDisallowedCBORData(t *testing.T) {
 	testCases := []struct {
 		name         string
 		encOpts      EncOptions
-		value        interface{}
+		value        any
 		wantErrorMsg string
 	}{
 		{
@@ -4482,7 +5222,7 @@ func TestSortModeFastShuffle(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		trials int
-		in     interface{}
+		in     any
 	}{
 		{
 			name:   "fixed length struct",
@@ -4594,7 +5334,7 @@ func TestMarshalByteArrayMode(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
 		opts     EncOptions
-		in       interface{}
+		in       any
 		expected []byte
 	}{
 		{
@@ -4645,7 +5385,7 @@ func TestMarshalByteSliceMode(t *testing.T) {
 		name     string
 		tags     TagSet
 		opts     EncOptions
-		in       interface{}
+		in       any
 		expected []byte
 	}{
 		{
@@ -4791,7 +5531,7 @@ func TestBinaryMarshalerMode(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		opts EncOptions
-		in   interface{}
+		in   any
 		want []byte
 	}{
 		{
