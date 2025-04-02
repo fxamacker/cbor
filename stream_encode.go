@@ -4,9 +4,11 @@
 package cbor
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"math/big"
+	"reflect"
 )
 
 // ErrStreamClosed is the error indicating operations on a closed stream.
@@ -22,19 +24,13 @@ var ErrStreamClosed = errors.New("cbor: operation on closed stream")
 // complete and well-formed.
 type StreamEncoder struct {
 	*Encoder
+	buf    *bytes.Buffer
 	closed bool
 }
 
 // NewStreamEncoder returns a new StreamEncoder for sequential encoding.
 func NewStreamEncoder(w io.Writer) *StreamEncoder {
-	return &StreamEncoder{
-		Encoder: &Encoder{
-			w:      w,
-			em:     defaultEncMode,
-			e:      getEncoderBuffer(),
-			stream: true,
-		},
-	}
+	return defaultEncMode.NewStreamEncoder(w)
 }
 
 // Close closes StreamEncoder and subsequence operations (except for Close)
@@ -43,7 +39,7 @@ func (se *StreamEncoder) Close() {
 	if se.closed {
 		return
 	}
-	putEncoderBuffer(se.Encoder.e)
+	putEncodeBuffer(se.buf)
 	se.Encoder = nil
 	se.closed = true
 }
@@ -53,8 +49,17 @@ func (se *StreamEncoder) Flush() error {
 	if se.closed {
 		return ErrStreamClosed
 	}
-	_, err := se.Encoder.e.WriteTo(se.Encoder.w)
+	_, err := se.buf.WriteTo(se.Encoder.w)
 	return err
+}
+
+// Encode writes the CBOR encoding of v.
+func (se *StreamEncoder) Encode(v interface{}) error {
+	if err := se.checkIndefiniteLengthDataItemTypeIfNeeded(v); err != nil {
+		return err
+	}
+
+	return encode(se.buf, se.em, reflect.ValueOf(v))
 }
 
 // EncodeMapHead encodes CBOR map head of specified size.
@@ -62,7 +67,7 @@ func (se *StreamEncoder) EncodeMapHead(size uint64) error {
 	if se.closed {
 		return ErrStreamClosed
 	}
-	encodeHead(se.Encoder.e, byte(cborTypeMap), size)
+	encodeHead(se.buf, byte(cborTypeMap), size)
 	return nil
 }
 
@@ -71,7 +76,7 @@ func (se *StreamEncoder) EncodeArrayHead(size uint64) error {
 	if se.closed {
 		return ErrStreamClosed
 	}
-	encodeHead(se.Encoder.e, byte(cborTypeArray), size)
+	encodeHead(se.buf, byte(cborTypeArray), size)
 	return nil
 }
 
@@ -80,7 +85,7 @@ func (se *StreamEncoder) EncodeTagHead(num uint64) error {
 	if se.closed {
 		return ErrStreamClosed
 	}
-	encodeHead(se.Encoder.e, byte(cborTypeTag), num)
+	encodeHead(se.buf, byte(cborTypeTag), num)
 	return nil
 }
 
@@ -93,7 +98,7 @@ func (se *StreamEncoder) EncodeRawBytes(b []byte) error {
 	if len(b) == 0 {
 		return nil
 	}
-	se.e.Write(b)
+	se.buf.Write(b)
 	return nil
 }
 
@@ -102,7 +107,7 @@ func (se *StreamEncoder) EncodeNil() error {
 	if se.closed {
 		return ErrStreamClosed
 	}
-	se.e.Write(cborNil)
+	se.buf.Write(cborNil)
 	return nil
 }
 
@@ -111,11 +116,11 @@ func (se *StreamEncoder) EncodeBool(b bool) error {
 	if se.closed {
 		return ErrStreamClosed
 	}
-	bytes := cborTrue
+	bBytes := cborTrue
 	if !b {
-		bytes = cborFalse
+		bBytes = cborFalse
 	}
-	se.e.Write(bytes)
+	se.buf.Write(bBytes)
 	return nil
 }
 
@@ -124,7 +129,7 @@ func (se *StreamEncoder) EncodeUint(i uint) error {
 	if se.closed {
 		return ErrStreamClosed
 	}
-	encodeHead(se.e, byte(cborTypePositiveInt), uint64(i))
+	encodeHead(se.buf, byte(cborTypePositiveInt), uint64(i))
 	return nil
 }
 
@@ -133,7 +138,7 @@ func (se *StreamEncoder) EncodeUint8(i uint8) error {
 	if se.closed {
 		return ErrStreamClosed
 	}
-	encodeHead(se.e, byte(cborTypePositiveInt), uint64(i))
+	encodeHead(se.buf, byte(cborTypePositiveInt), uint64(i))
 	return nil
 }
 
@@ -142,7 +147,7 @@ func (se *StreamEncoder) EncodeUint16(i uint16) error {
 	if se.closed {
 		return ErrStreamClosed
 	}
-	encodeHead(se.e, byte(cborTypePositiveInt), uint64(i))
+	encodeHead(se.buf, byte(cborTypePositiveInt), uint64(i))
 	return nil
 }
 
@@ -151,7 +156,7 @@ func (se *StreamEncoder) EncodeUint32(i uint32) error {
 	if se.closed {
 		return ErrStreamClosed
 	}
-	encodeHead(se.e, byte(cborTypePositiveInt), uint64(i))
+	encodeHead(se.buf, byte(cborTypePositiveInt), uint64(i))
 	return nil
 }
 
@@ -160,7 +165,7 @@ func (se *StreamEncoder) EncodeUint64(i uint64) error {
 	if se.closed {
 		return ErrStreamClosed
 	}
-	encodeHead(se.e, byte(cborTypePositiveInt), i)
+	encodeHead(se.buf, byte(cborTypePositiveInt), i)
 	return nil
 }
 
@@ -194,7 +199,7 @@ func (se *StreamEncoder) EncodeInt64(i int64) error {
 		t = cborTypeNegativeInt
 		i = i*(-1) - 1
 	}
-	encodeHead(se.e, byte(t), uint64(i))
+	encodeHead(se.buf, byte(t), uint64(i))
 	return nil
 }
 
@@ -204,12 +209,12 @@ func (se *StreamEncoder) EncodeBytes(b []byte) error {
 		return ErrStreamClosed
 	}
 	if b == nil {
-		se.e.Write(cborNil)
+		se.buf.Write(cborNil)
 		return nil
 	}
 
-	encodeHead(se.e, byte(cborTypeByteString), uint64(len(b)))
-	se.e.Write(b)
+	encodeHead(se.buf, byte(cborTypeByteString), uint64(len(b)))
+	se.buf.Write(b)
 	return nil
 }
 
@@ -218,8 +223,8 @@ func (se *StreamEncoder) EncodeString(s string) error {
 	if se.closed {
 		return ErrStreamClosed
 	}
-	encodeHead(se.e, byte(cborTypeTextString), uint64(len(s)))
-	se.e.WriteString(s)
+	encodeHead(se.buf, byte(cborTypeTextString), uint64(len(s)))
+	se.buf.WriteString(s)
 	return nil
 }
 
@@ -232,7 +237,7 @@ func (se *StreamEncoder) EncodeBigInt(v *big.Int) error {
 	}
 	if se.em.bigIntConvert == BigIntConvertShortest {
 		if v.IsUint64() {
-			encodeHead(se.e, byte(cborTypePositiveInt), v.Uint64())
+			encodeHead(se.buf, byte(cborTypePositiveInt), v.Uint64())
 			return nil
 		}
 		if v.IsInt64() {
@@ -253,9 +258,9 @@ func (se *StreamEncoder) EncodeBigInt(v *big.Int) error {
 	b := v.Bytes()
 
 	// Write tag number
-	encodeHead(se.e, byte(cborTypeTag), uint64(tagNum))
+	encodeHead(se.buf, byte(cborTypeTag), uint64(tagNum))
 	// Write bignum byte string
-	encodeHead(se.e, byte(cborTypeByteString), uint64(len(b)))
-	se.e.Write(b)
+	encodeHead(se.buf, byte(cborTypeByteString), uint64(len(b)))
+	se.buf.Write(b)
 	return nil
 }

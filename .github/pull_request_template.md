@@ -2,22 +2,22 @@
 Thank you for your interest in contributing to fxamacker/cbor!
 -->
 
-#### Description (motivation)
+### Description
 
 
 <!-- For code contributions, please complete all the items below this line. -->
 <!-- For documentation-only contributions, please delete everything below this line. -->
 
 #### PR Was Proposed and Welcomed in Currently Open Issue
-This PR was proposed and welcomed by maintainer(s) in issue #
 
-Closes #
+- [ ] This PR was proposed and welcomed by maintainer(s) in issue #___
+- [ ] Closes or Updates Issue #___
 
 #### Checklist (for code PR only, ignore for docs PR)
 
 - [ ] Include unit tests that cover the new code
 - [ ] Pass all unit tests 
-- [ ] Pass all 18 ci linters (golint, gosec, staticcheck, etc.)
+- [ ] Pass all lint checks in CI (goimports, gosec, staticcheck, etc.)
 - [ ] Sign each commit with your real name and email.  
       Last line of each commit message should be in this format:  
       Signed-off-by: Firstname Lastname <firstname.lastname@example.com>
