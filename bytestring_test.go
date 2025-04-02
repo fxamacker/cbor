@@ -3,7 +3,11 @@
 
 package cbor
 
-import "testing"
+import (
+	"io"
+	"strings"
+	"testing"
+)
 
 func TestByteString(t *testing.T) {
 	type s1 struct {
@@ -98,4 +102,111 @@ func TestByteString(t *testing.T) {
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
 	testRoundTrip(t, testCases, em, dm)
+}
+
+func TestUnmarshalByteStringOnBadData(t *testing.T) {
+	testCases := []struct {
+		name   string
+		data   []byte
+		errMsg string
+	}{
+		// Empty data
+		{
+			name:   "nil data",
+			data:   nil,
+			errMsg: io.EOF.Error(),
+		},
+		{
+			name:   "empty data",
+			data:   []byte{},
+			errMsg: io.EOF.Error(),
+		},
+
+		// Wrong CBOR types
+		{
+			name:   "uint type",
+			data:   hexDecode("01"),
+			errMsg: "cbor: cannot unmarshal positive integer into Go value of type cbor.ByteString",
+		},
+		{
+			name:   "int type",
+			data:   hexDecode("20"),
+			errMsg: "cbor: cannot unmarshal negative integer into Go value of type cbor.ByteString",
+		},
+		{
+			name:   "string type",
+			data:   hexDecode("60"),
+			errMsg: "cbor: cannot unmarshal UTF-8 text string into Go value of type cbor.ByteString",
+		},
+		{
+			name:   "array type",
+			data:   hexDecode("80"),
+			errMsg: "cbor: cannot unmarshal array into Go value of type cbor.ByteString",
+		},
+		{
+			name:   "map type",
+			data:   hexDecode("a0"),
+			errMsg: "cbor: cannot unmarshal map into Go value of type cbor.ByteString",
+		},
+		{
+			name:   "tag type",
+			data:   hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			errMsg: "cbor: cannot unmarshal tag into Go value of type cbor.ByteString",
+		},
+		{
+			name:   "float type",
+			data:   hexDecode("f90000"),
+			errMsg: "cbor: cannot unmarshal primitives into Go value of type cbor.ByteString",
+		},
+
+		// Truncated CBOR data
+		{
+			name:   "truncated head",
+			data:   hexDecode("18"),
+			errMsg: io.ErrUnexpectedEOF.Error(),
+		},
+
+		// Truncated CBOR byte string
+		{
+			name:   "truncated byte string",
+			data:   hexDecode("44010203"),
+			errMsg: io.ErrUnexpectedEOF.Error(),
+		},
+
+		// Extraneous CBOR data
+		{
+			name:   "extraneous data",
+			data:   hexDecode("c074323031332d30332d32315432303a30343a30305a00"),
+			errMsg: "cbor: 1 bytes of extraneous data starting at index 22",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Test ByteString.UnmarshalCBOR(data)
+			{
+				var v ByteString
+
+				err := v.UnmarshalCBOR(tc.data)
+				if err == nil {
+					t.Errorf("UnmarshalCBOR(%x) didn't return error", tc.data)
+				}
+				if !strings.HasPrefix(err.Error(), tc.errMsg) {
+					t.Errorf("UnmarshalCBOR(%x) returned error %q, want %q", tc.data, err.Error(), tc.errMsg)
+				}
+			}
+			// Test Unmarshal(data, *ByteString), which calls ByteString.unmarshalCBOR() under the hood
+			{
+				var v ByteString
+
+				err := Unmarshal(tc.data, &v)
+				if err == nil {
+					t.Errorf("Unmarshal(%x) didn't return error", tc.data)
+				}
+				if !strings.HasPrefix(err.Error(), tc.errMsg) {
+					t.Errorf("Unmarshal(%x) returned error %q, want %q", tc.data, err.Error(), tc.errMsg)
+				}
+			}
+		})
+	}
 }

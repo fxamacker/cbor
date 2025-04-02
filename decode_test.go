@@ -34,16 +34,16 @@ var (
 	typeByteArray       = reflect.TypeOf([5]byte{})
 	typeIntSlice        = reflect.TypeOf([]int{})
 	typeStringSlice     = reflect.TypeOf([]string{})
-	typeMapIntfIntf     = reflect.TypeOf(map[interface{}]interface{}{})
+	typeMapIntfIntf     = reflect.TypeOf(map[any]any{})
 	typeMapStringInt    = reflect.TypeOf(map[string]int{})
 	typeMapStringString = reflect.TypeOf(map[string]string{})
-	typeMapStringIntf   = reflect.TypeOf(map[string]interface{}{})
+	typeMapStringIntf   = reflect.TypeOf(map[string]any{})
 )
 
 type unmarshalTest struct {
 	data               []byte
-	wantInterfaceValue interface{}
-	wantValues         []interface{}
+	wantInterfaceValue any
+	wantValues         []any
 	wrongTypes         []reflect.Type
 }
 
@@ -54,7 +54,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("00"),
 		wantInterfaceValue: uint64(0),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint8(0),
 			uint16(0),
 			uint32(0),
@@ -84,7 +84,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("01"),
 		wantInterfaceValue: uint64(1),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint8(1),
 			uint16(1),
 			uint32(1),
@@ -114,7 +114,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("0a"),
 		wantInterfaceValue: uint64(10),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint8(10),
 			uint16(10),
 			uint32(10),
@@ -144,7 +144,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("17"),
 		wantInterfaceValue: uint64(23),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint8(23),
 			uint16(23),
 			uint32(23),
@@ -174,7 +174,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("1818"),
 		wantInterfaceValue: uint64(24),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint8(24),
 			uint16(24),
 			uint32(24),
@@ -204,7 +204,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("1819"),
 		wantInterfaceValue: uint64(25),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint8(25),
 			uint16(25),
 			uint32(25),
@@ -234,7 +234,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("1864"),
 		wantInterfaceValue: uint64(100),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint8(100),
 			uint16(100),
 			uint32(100),
@@ -264,7 +264,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("1903e8"),
 		wantInterfaceValue: uint64(1000),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint16(1000),
 			uint32(1000),
 			uint64(1000),
@@ -294,7 +294,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("1a000f4240"),
 		wantInterfaceValue: uint64(1000000),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint32(1000000),
 			uint64(1000000),
 			uint(1000000),
@@ -324,7 +324,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("1b000000e8d4a51000"),
 		wantInterfaceValue: uint64(1000000000000),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint64(1000000000000),
 			uint(1000000000000),
 			int64(1000000000000),
@@ -354,7 +354,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("1bffffffffffffffff"),
 		wantInterfaceValue: uint64(18446744073709551615),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint64(18446744073709551615),
 			uint(18446744073709551615),
 			float32(18446744073709551615),
@@ -384,7 +384,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("20"),
 		wantInterfaceValue: int64(-1),
-		wantValues: []interface{}{
+		wantValues: []any{
 			int8(-1),
 			int16(-1),
 			int32(-1),
@@ -413,7 +413,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("29"),
 		wantInterfaceValue: int64(-10),
-		wantValues: []interface{}{
+		wantValues: []any{
 			int8(-10),
 			int16(-10),
 			int32(-10),
@@ -442,7 +442,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("3863"),
 		wantInterfaceValue: int64(-100),
-		wantValues: []interface{}{
+		wantValues: []any{
 			int8(-100),
 			int16(-100),
 			int32(-100),
@@ -471,7 +471,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("3903e7"),
 		wantInterfaceValue: int64(-1000),
-		wantValues: []interface{}{
+		wantValues: []any{
 			int16(-1000),
 			int32(-1000),
 			int64(-1000),
@@ -500,7 +500,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("3bffffffffffffffff"),
 		wantInterfaceValue: bigIntOrPanic("-18446744073709551616"),
-		wantValues: []interface{}{
+		wantValues: []any{
 			bigIntOrPanic("-18446744073709551616"),
 		},
 		wrongTypes: []reflect.Type{
@@ -528,7 +528,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("40"),
 		wantInterfaceValue: []byte{},
-		wantValues: []interface{}{
+		wantValues: []any{
 			[]byte{},
 			[0]byte{},
 			[1]byte{0},
@@ -558,7 +558,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("4401020304"),
 		wantInterfaceValue: []byte{1, 2, 3, 4},
-		wantValues: []interface{}{
+		wantValues: []any{
 			[]byte{1, 2, 3, 4},
 			[0]byte{},
 			[1]byte{1},
@@ -588,7 +588,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("5f42010243030405ff"),
 		wantInterfaceValue: []byte{1, 2, 3, 4, 5},
-		wantValues: []interface{}{
+		wantValues: []any{
 			[]byte{1, 2, 3, 4, 5},
 			[0]byte{},
 			[1]byte{1},
@@ -621,7 +621,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("60"),
 		wantInterfaceValue: "",
-		wantValues:         []interface{}{""},
+		wantValues:         []any{""},
 		wrongTypes: []reflect.Type{
 			typeUint8,
 			typeUint16,
@@ -647,7 +647,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("6161"),
 		wantInterfaceValue: "a",
-		wantValues:         []interface{}{"a"},
+		wantValues:         []any{"a"},
 		wrongTypes: []reflect.Type{
 			typeUint8,
 			typeUint16,
@@ -673,7 +673,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("6449455446"),
 		wantInterfaceValue: "IETF",
-		wantValues:         []interface{}{"IETF"},
+		wantValues:         []any{"IETF"},
 		wrongTypes: []reflect.Type{
 			typeUint8,
 			typeUint16,
@@ -699,7 +699,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("62225c"),
 		wantInterfaceValue: "\"\\",
-		wantValues:         []interface{}{"\"\\"},
+		wantValues:         []any{"\"\\"},
 		wrongTypes: []reflect.Type{
 			typeUint8,
 			typeUint16,
@@ -725,7 +725,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("62c3bc"),
 		wantInterfaceValue: "ü",
-		wantValues:         []interface{}{"ü"},
+		wantValues:         []any{"ü"},
 		wrongTypes: []reflect.Type{
 			typeUint8,
 			typeUint16,
@@ -751,7 +751,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("63e6b0b4"),
 		wantInterfaceValue: "水",
-		wantValues:         []interface{}{"水"},
+		wantValues:         []any{"水"},
 		wrongTypes: []reflect.Type{
 			typeUint8,
 			typeUint16,
@@ -777,7 +777,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("64f0908591"),
 		wantInterfaceValue: "𐅑",
-		wantValues:         []interface{}{"𐅑"},
+		wantValues:         []any{"𐅑"},
 		wrongTypes: []reflect.Type{
 			typeUint8,
 			typeUint16,
@@ -803,7 +803,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("7f657374726561646d696e67ff"),
 		wantInterfaceValue: "streaming",
-		wantValues:         []interface{}{"streaming"},
+		wantValues:         []any{"streaming"},
 		wrongTypes: []reflect.Type{
 			typeUint8,
 			typeUint16,
@@ -830,9 +830,9 @@ var unmarshalTests = []unmarshalTest{
 	// array
 	{
 		data:               hexDecode("80"),
-		wantInterfaceValue: []interface{}{},
-		wantValues: []interface{}{
-			[]interface{}{},
+		wantInterfaceValue: []any{},
+		wantValues: []any{
+			[]any{},
 			[]byte{},
 			[]string{},
 			[]int{},
@@ -865,9 +865,9 @@ var unmarshalTests = []unmarshalTest{
 	},
 	{
 		data:               hexDecode("83010203"),
-		wantInterfaceValue: []interface{}{uint64(1), uint64(2), uint64(3)},
-		wantValues: []interface{}{
-			[]interface{}{uint64(1), uint64(2), uint64(3)},
+		wantInterfaceValue: []any{uint64(1), uint64(2), uint64(3)},
+		wantValues: []any{
+			[]any{uint64(1), uint64(2), uint64(3)},
 			[]byte{1, 2, 3},
 			[]int{1, 2, 3},
 			[]uint{1, 2, 3},
@@ -903,10 +903,10 @@ var unmarshalTests = []unmarshalTest{
 	},
 	{
 		data:               hexDecode("8301820203820405"),
-		wantInterfaceValue: []interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-		wantValues: []interface{}{
-			[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-			[...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		wantInterfaceValue: []any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+		wantValues: []any{
+			[]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[...]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -933,10 +933,10 @@ var unmarshalTests = []unmarshalTest{
 	},
 	{
 		data:               hexDecode("83018202039f0405ff"),
-		wantInterfaceValue: []interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-		wantValues: []interface{}{
-			[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-			[...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		wantInterfaceValue: []any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+		wantValues: []any{
+			[]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[...]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -963,10 +963,10 @@ var unmarshalTests = []unmarshalTest{
 	},
 	{
 		data:               hexDecode("83019f0203ff820405"),
-		wantInterfaceValue: []interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-		wantValues: []interface{}{
-			[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-			[...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		wantInterfaceValue: []any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+		wantValues: []any{
+			[]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[...]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -993,9 +993,9 @@ var unmarshalTests = []unmarshalTest{
 	},
 	{
 		data:               hexDecode("98190102030405060708090a0b0c0d0e0f101112131415161718181819"),
-		wantInterfaceValue: []interface{}{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
-		wantValues: []interface{}{
-			[]interface{}{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
+		wantInterfaceValue: []any{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
+		wantValues: []any{
+			[]any{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
 			[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
@@ -1030,9 +1030,9 @@ var unmarshalTests = []unmarshalTest{
 	},
 	{
 		data:               hexDecode("9fff"),
-		wantInterfaceValue: []interface{}{},
-		wantValues: []interface{}{
-			[]interface{}{},
+		wantInterfaceValue: []any{},
+		wantValues: []any{
+			[]any{},
 			[]byte{},
 			[]string{},
 			[]int{},
@@ -1065,10 +1065,10 @@ var unmarshalTests = []unmarshalTest{
 	},
 	{
 		data:               hexDecode("9f018202039f0405ffff"),
-		wantInterfaceValue: []interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-		wantValues: []interface{}{
-			[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-			[...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		wantInterfaceValue: []any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+		wantValues: []any{
+			[]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[...]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1095,10 +1095,10 @@ var unmarshalTests = []unmarshalTest{
 	},
 	{
 		data:               hexDecode("9f01820203820405ff"),
-		wantInterfaceValue: []interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-		wantValues: []interface{}{
-			[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-			[...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		wantInterfaceValue: []any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+		wantValues: []any{
+			[]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[...]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1125,9 +1125,9 @@ var unmarshalTests = []unmarshalTest{
 	},
 	{
 		data:               hexDecode("9f0102030405060708090a0b0c0d0e0f101112131415161718181819ff"),
-		wantInterfaceValue: []interface{}{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
-		wantValues: []interface{}{
-			[]interface{}{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
+		wantInterfaceValue: []any{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
+		wantValues: []any{
+			[]any{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
 			[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
@@ -1162,10 +1162,10 @@ var unmarshalTests = []unmarshalTest{
 	},
 	{
 		data:               hexDecode("826161a161626163"),
-		wantInterfaceValue: []interface{}{"a", map[interface{}]interface{}{"b": "c"}},
-		wantValues: []interface{}{
-			[]interface{}{"a", map[interface{}]interface{}{"b": "c"}},
-			[...]interface{}{"a", map[interface{}]interface{}{"b": "c"}},
+		wantInterfaceValue: []any{"a", map[any]any{"b": "c"}},
+		wantValues: []any{
+			[]any{"a", map[any]any{"b": "c"}},
+			[...]any{"a", map[any]any{"b": "c"}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1193,10 +1193,10 @@ var unmarshalTests = []unmarshalTest{
 	},
 	{
 		data:               hexDecode("826161bf61626163ff"),
-		wantInterfaceValue: []interface{}{"a", map[interface{}]interface{}{"b": "c"}},
-		wantValues: []interface{}{
-			[]interface{}{"a", map[interface{}]interface{}{"b": "c"}},
-			[...]interface{}{"a", map[interface{}]interface{}{"b": "c"}},
+		wantInterfaceValue: []any{"a", map[any]any{"b": "c"}},
+		wantValues: []any{
+			[]any{"a", map[any]any{"b": "c"}},
+			[...]any{"a", map[any]any{"b": "c"}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1226,9 +1226,9 @@ var unmarshalTests = []unmarshalTest{
 	// map
 	{
 		data:               hexDecode("a0"),
-		wantInterfaceValue: map[interface{}]interface{}{},
-		wantValues: []interface{}{
-			map[interface{}]interface{}{},
+		wantInterfaceValue: map[any]any{},
+		wantValues: []any{
+			map[any]any{},
 			map[string]bool{},
 			map[string]int{},
 			map[int]string{},
@@ -1258,9 +1258,9 @@ var unmarshalTests = []unmarshalTest{
 	},
 	{
 		data:               hexDecode("a201020304"),
-		wantInterfaceValue: map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)},
-		wantValues: []interface{}{
-			map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)},
+		wantInterfaceValue: map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)},
+		wantValues: []any{
+			map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)},
 			map[uint]int{1: 2, 3: 4}, map[int]uint{1: 2, 3: 4},
 		},
 		wrongTypes: []reflect.Type{
@@ -1288,10 +1288,10 @@ var unmarshalTests = []unmarshalTest{
 	},
 	{
 		data:               hexDecode("a26161016162820203"),
-		wantInterfaceValue: map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
-		wantValues: []interface{}{
-			map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
-			map[string]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
+		wantInterfaceValue: map[any]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
+		wantValues: []any{
+			map[any]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
+			map[string]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1318,10 +1318,10 @@ var unmarshalTests = []unmarshalTest{
 	},
 	{
 		data:               hexDecode("a56161614161626142616361436164614461656145"),
-		wantInterfaceValue: map[interface{}]interface{}{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
-		wantValues: []interface{}{
-			map[interface{}]interface{}{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
-			map[string]interface{}{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
+		wantInterfaceValue: map[any]any{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
+		wantValues: []any{
+			map[any]any{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
+			map[string]any{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
 			map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
 		},
 		wrongTypes: []reflect.Type{
@@ -1349,10 +1349,10 @@ var unmarshalTests = []unmarshalTest{
 	},
 	{
 		data:               hexDecode("bf61610161629f0203ffff"),
-		wantInterfaceValue: map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
-		wantValues: []interface{}{
-			map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
-			map[string]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
+		wantInterfaceValue: map[any]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
+		wantValues: []any{
+			map[any]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
+			map[string]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1379,10 +1379,10 @@ var unmarshalTests = []unmarshalTest{
 	},
 	{
 		data:               hexDecode("bf6346756ef563416d7421ff"),
-		wantInterfaceValue: map[interface{}]interface{}{"Fun": true, "Amt": int64(-2)},
-		wantValues: []interface{}{
-			map[interface{}]interface{}{"Fun": true, "Amt": int64(-2)},
-			map[string]interface{}{"Fun": true, "Amt": int64(-2)},
+		wantInterfaceValue: map[any]any{"Fun": true, "Amt": int64(-2)},
+		wantValues: []any{
+			map[any]any{"Fun": true, "Amt": int64(-2)},
+			map[string]any{"Fun": true, "Amt": int64(-2)},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1412,7 +1412,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("c074323031332d30332d32315432303a30343a30305a"),
 		wantInterfaceValue: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), // 2013-03-21 20:04:00 +0000 UTC
-		wantValues: []interface{}{
+		wantValues: []any{
 			"2013-03-21T20:04:00Z",
 			time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
 			Tag{0, "2013-03-21T20:04:00Z"},
@@ -1441,7 +1441,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("c11a514b67b0"),
 		wantInterfaceValue: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), // 2013-03-21 20:04:00 +0000 UTC
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint32(1363896240),
 			uint64(1363896240),
 			int32(1363896240),
@@ -1470,7 +1470,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("c249010000000000000000"),
 		wantInterfaceValue: bigIntOrPanic("18446744073709551616"),
-		wantValues: []interface{}{
+		wantValues: []any{
 			// Decode to byte slice
 			[]byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 			// Decode to array of various lengths
@@ -1506,7 +1506,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("c349010000000000000000"),
 		wantInterfaceValue: bigIntOrPanic("-18446744073709551617"),
-		wantValues: []interface{}{
+		wantValues: []any{
 			// Decode to byte slice
 			[]byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 			// Decode to array of various lengths
@@ -1542,7 +1542,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("c1fb41d452d9ec200000"),
 		wantInterfaceValue: time.Date(2013, 3, 21, 20, 4, 0, 500000000, time.UTC), // 2013-03-21 20:04:00.5 +0000 UTC
-		wantValues: []interface{}{
+		wantValues: []any{
 			float32(1363896240.5),
 			float64(1363896240.5),
 			time.Date(2013, 3, 21, 20, 4, 0, 500000000, time.UTC),
@@ -1572,7 +1572,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("d74401020304"),
 		wantInterfaceValue: Tag{23, []byte{0x01, 0x02, 0x03, 0x04}},
-		wantValues: []interface{}{
+		wantValues: []any{
 			[]byte{0x01, 0x02, 0x03, 0x04},
 			[0]byte{},
 			[1]byte{0x01},
@@ -1604,7 +1604,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("d818456449455446"),
 		wantInterfaceValue: Tag{24, []byte{0x64, 0x49, 0x45, 0x54, 0x46}},
-		wantValues: []interface{}{
+		wantValues: []any{
 			[]byte{0x64, 0x49, 0x45, 0x54, 0x46},
 			[0]byte{},
 			[1]byte{0x64},
@@ -1636,7 +1636,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("d82076687474703a2f2f7777772e6578616d706c652e636f6d"),
 		wantInterfaceValue: Tag{32, "http://www.example.com"},
-		wantValues: []interface{}{
+		wantValues: []any{
 			"http://www.example.com",
 			Tag{32, "http://www.example.com"},
 			RawTag{32, hexDecode("76687474703a2f2f7777772e6578616d706c652e636f6d")},
@@ -1666,7 +1666,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("f4"),
 		wantInterfaceValue: false,
-		wantValues: []interface{}{
+		wantValues: []any{
 			false,
 			SimpleValue(20),
 		},
@@ -1695,7 +1695,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("f5"),
 		wantInterfaceValue: true,
-		wantValues: []interface{}{
+		wantValues: []any{
 			true,
 			SimpleValue(21),
 		},
@@ -1724,7 +1724,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("f6"),
 		wantInterfaceValue: nil,
-		wantValues: []interface{}{
+		wantValues: []any{
 			SimpleValue(22),
 			false,
 			uint(0),
@@ -1754,7 +1754,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("f7"),
 		wantInterfaceValue: nil,
-		wantValues: []interface{}{
+		wantValues: []any{
 			SimpleValue(23),
 			false,
 			uint(0),
@@ -1784,7 +1784,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("f0"),
 		wantInterfaceValue: SimpleValue(16),
-		wantValues: []interface{}{
+		wantValues: []any{
 			SimpleValue(16),
 			uint8(16),
 			uint16(16),
@@ -1824,7 +1824,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("f820"),
 		wantInterfaceValue: SimpleValue(32),
-		wantValues: []interface{}{
+		wantValues: []any{
 			SimpleValue(32),
 			uint8(32),
 			uint16(32),
@@ -1855,7 +1855,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("f8ff"),
 		wantInterfaceValue: SimpleValue(255),
-		wantValues: []interface{}{
+		wantValues: []any{
 			SimpleValue(255),
 			uint8(255),
 			uint16(255),
@@ -1887,7 +1887,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("5fff"), // empty indefinite length byte string
 		wantInterfaceValue: []byte{},
-		wantValues: []interface{}{
+		wantValues: []any{
 			[]byte{},
 			[0]byte{},
 			[1]byte{0x00},
@@ -1916,7 +1916,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("7fff"), // empty indefinite length text string
 		wantInterfaceValue: "",
-		wantValues:         []interface{}{""},
+		wantValues:         []any{""},
 		wrongTypes: []reflect.Type{
 			typeUint8,
 			typeUint16,
@@ -1941,9 +1941,9 @@ var unmarshalTests = []unmarshalTest{
 	},
 	{
 		data:               hexDecode("bfff"), // empty indefinite length map
-		wantInterfaceValue: map[interface{}]interface{}{},
-		wantValues: []interface{}{
-			map[interface{}]interface{}{},
+		wantInterfaceValue: map[any]any{},
+		wantValues: []any{
+			map[any]any{},
 			map[string]bool{},
 			map[string]int{},
 			map[int]string{},
@@ -1976,7 +1976,7 @@ var unmarshalTests = []unmarshalTest{
 	{
 		data:               hexDecode("c13a0177f2cf"), // 1969-03-21T20:04:00Z, tag 1 with negative integer as epoch time
 		wantInterfaceValue: time.Date(1969, 3, 21, 20, 4, 0, 0, time.UTC),
-		wantValues: []interface{}{
+		wantValues: []any{
 			int32(-24638160),
 			int64(-24638160),
 			int32(-24638160),
@@ -2004,9 +2004,9 @@ var unmarshalTests = []unmarshalTest{
 	},
 	{
 		data:               hexDecode("d83dd183010203"), // 61(17([1, 2, 3])), nested tags 61 and 17
-		wantInterfaceValue: Tag{61, Tag{17, []interface{}{uint64(1), uint64(2), uint64(3)}}},
-		wantValues: []interface{}{
-			[]interface{}{uint64(1), uint64(2), uint64(3)},
+		wantInterfaceValue: Tag{61, Tag{17, []any{uint64(1), uint64(2), uint64(3)}}},
+		wantValues: []any{
+			[]any{uint64(1), uint64(2), uint64(3)},
 			[]byte{1, 2, 3},
 			[0]byte{},
 			[1]byte{1},
@@ -2017,7 +2017,7 @@ var unmarshalTests = []unmarshalTest{
 			[...]int{1, 2, 3},
 			[]float32{1, 2, 3},
 			[]float64{1, 2, 3},
-			Tag{61, Tag{17, []interface{}{uint64(1), uint64(2), uint64(3)}}},
+			Tag{61, Tag{17, []any{uint64(1), uint64(2), uint64(3)}}},
 			RawTag{61, hexDecode("d183010203")},
 		},
 		wrongTypes: []reflect.Type{
@@ -2044,8 +2044,8 @@ var unmarshalTests = []unmarshalTest{
 
 type unmarshalFloatTest struct {
 	data               []byte
-	wantInterfaceValue interface{}
-	wantValues         []interface{}
+	wantInterfaceValue any
+	wantValues         []any
 	equalityThreshold  float64 // Not used for +inf, -inf, and NaN.
 }
 
@@ -2081,145 +2081,145 @@ var unmarshalFloatTests = []unmarshalFloatTest{
 	{
 		data:               hexDecode("f90000"),
 		wantInterfaceValue: float64(0.0),
-		wantValues:         []interface{}{float32(0.0), float64(0.0)},
+		wantValues:         []any{float32(0.0), float64(0.0)},
 	},
 	{
 		data:               hexDecode("f98000"),
-		wantInterfaceValue: float64(-0.0),                               //nolint:staticcheck // we know -0.0 is 0.0 in Go
-		wantValues:         []interface{}{float32(-0.0), float64(-0.0)}, //nolint:staticcheck // we know -0.0 is 0.0 in Go
+		wantInterfaceValue: float64(-0.0),                       //nolint:staticcheck // we know -0.0 is 0.0 in Go
+		wantValues:         []any{float32(-0.0), float64(-0.0)}, //nolint:staticcheck // we know -0.0 is 0.0 in Go
 	},
 	{
 		data:               hexDecode("f93c00"),
 		wantInterfaceValue: float64(1.0),
-		wantValues:         []interface{}{float32(1.0), float64(1.0)},
+		wantValues:         []any{float32(1.0), float64(1.0)},
 	},
 	{
 		data:               hexDecode("f93e00"),
 		wantInterfaceValue: float64(1.5),
-		wantValues:         []interface{}{float32(1.5), float64(1.5)},
+		wantValues:         []any{float32(1.5), float64(1.5)},
 	},
 	{
 		data:               hexDecode("f97bff"),
 		wantInterfaceValue: float64(65504.0),
-		wantValues:         []interface{}{float32(65504.0), float64(65504.0)},
+		wantValues:         []any{float32(65504.0), float64(65504.0)},
 	},
 	{
 		data:               hexDecode("f90001"), // float16 subnormal value
 		wantInterfaceValue: float64(5.960464477539063e-08),
-		wantValues:         []interface{}{float32(5.960464477539063e-08), float64(5.960464477539063e-08)},
+		wantValues:         []any{float32(5.960464477539063e-08), float64(5.960464477539063e-08)},
 		equalityThreshold:  1e-16,
 	},
 	{
 		data:               hexDecode("f90400"),
 		wantInterfaceValue: float64(6.103515625e-05),
-		wantValues:         []interface{}{float32(6.103515625e-05), float64(6.103515625e-05)},
+		wantValues:         []any{float32(6.103515625e-05), float64(6.103515625e-05)},
 		equalityThreshold:  1e-16,
 	},
 	{
 		data:               hexDecode("f9c400"),
 		wantInterfaceValue: float64(-4.0),
-		wantValues:         []interface{}{float32(-4.0), float64(-4.0)},
+		wantValues:         []any{float32(-4.0), float64(-4.0)},
 	},
 	{
 		data:               hexDecode("f97c00"),
 		wantInterfaceValue: math.Inf(1),
-		wantValues:         []interface{}{math.Float32frombits(0x7f800000), math.Inf(1)},
+		wantValues:         []any{math.Float32frombits(0x7f800000), math.Inf(1)},
 	},
 	{
 		data:               hexDecode("f97e00"),
 		wantInterfaceValue: math.NaN(),
-		wantValues:         []interface{}{math.Float32frombits(0x7fc00000), math.NaN()},
+		wantValues:         []any{math.Float32frombits(0x7fc00000), math.NaN()},
 	},
 	{
 		data:               hexDecode("f9fc00"),
 		wantInterfaceValue: math.Inf(-1),
-		wantValues:         []interface{}{math.Float32frombits(0xff800000), math.Inf(-1)},
+		wantValues:         []any{math.Float32frombits(0xff800000), math.Inf(-1)},
 	},
 
 	// float32
 	{
 		data:               hexDecode("fa47c35000"),
 		wantInterfaceValue: float64(100000.0),
-		wantValues:         []interface{}{float32(100000.0), float64(100000.0)},
+		wantValues:         []any{float32(100000.0), float64(100000.0)},
 	},
 	{
 		data:               hexDecode("fa7f7fffff"),
 		wantInterfaceValue: float64(3.4028234663852886e+38),
-		wantValues:         []interface{}{float32(3.4028234663852886e+38), float64(3.4028234663852886e+38)},
+		wantValues:         []any{float32(3.4028234663852886e+38), float64(3.4028234663852886e+38)},
 		equalityThreshold:  1e-9,
 	},
 	{
 		data:               hexDecode("fa7f800000"),
 		wantInterfaceValue: math.Inf(1),
-		wantValues:         []interface{}{math.Float32frombits(0x7f800000), math.Inf(1)},
+		wantValues:         []any{math.Float32frombits(0x7f800000), math.Inf(1)},
 	},
 	{
 		data:               hexDecode("fa7fc00000"),
 		wantInterfaceValue: math.NaN(),
-		wantValues:         []interface{}{math.Float32frombits(0x7fc00000), math.NaN()},
+		wantValues:         []any{math.Float32frombits(0x7fc00000), math.NaN()},
 	},
 	{
 		data:               hexDecode("faff800000"),
 		wantInterfaceValue: math.Inf(-1),
-		wantValues:         []interface{}{math.Float32frombits(0xff800000), math.Inf(-1)},
+		wantValues:         []any{math.Float32frombits(0xff800000), math.Inf(-1)},
 	},
 
 	// float64
 	{
 		data:               hexDecode("fb3ff199999999999a"),
 		wantInterfaceValue: float64(1.1),
-		wantValues:         []interface{}{float32(1.1), float64(1.1)},
+		wantValues:         []any{float32(1.1), float64(1.1)},
 	},
 	{
 		data:               hexDecode("fb7e37e43c8800759c"),
 		wantInterfaceValue: float64(1.0e+300),
-		wantValues:         []interface{}{float64(1.0e+300)},
+		wantValues:         []any{float64(1.0e+300)},
 		equalityThreshold:  1e-9,
 	},
 	{
 		data:               hexDecode("fbc010666666666666"),
 		wantInterfaceValue: float64(-4.1),
-		wantValues:         []interface{}{float32(-4.1), float64(-4.1)},
+		wantValues:         []any{float32(-4.1), float64(-4.1)},
 	},
 	{
 		data:               hexDecode("fb7ff0000000000000"),
 		wantInterfaceValue: math.Inf(1),
-		wantValues:         []interface{}{math.Float32frombits(0x7f800000), math.Inf(1)},
+		wantValues:         []any{math.Float32frombits(0x7f800000), math.Inf(1)},
 	},
 	{
 		data:               hexDecode("fb7ff8000000000000"),
 		wantInterfaceValue: math.NaN(),
-		wantValues:         []interface{}{math.Float32frombits(0x7fc00000), math.NaN()},
+		wantValues:         []any{math.Float32frombits(0x7fc00000), math.NaN()},
 	},
 	{
 		data:               hexDecode("fbfff0000000000000"),
 		wantInterfaceValue: math.Inf(-1),
-		wantValues:         []interface{}{math.Float32frombits(0xff800000), math.Inf(-1)},
+		wantValues:         []any{math.Float32frombits(0xff800000), math.Inf(-1)},
 	},
 
 	// float16 test data from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
 	{
 		data:               hexDecode("f903ff"),
 		wantInterfaceValue: float64(0.000060976),
-		wantValues:         []interface{}{float32(0.000060976), float64(0.000060976)},
+		wantValues:         []any{float32(0.000060976), float64(0.000060976)},
 		equalityThreshold:  1e-9,
 	},
 	{
 		data:               hexDecode("f93bff"),
 		wantInterfaceValue: float64(0.999511719),
-		wantValues:         []interface{}{float32(0.999511719), float64(0.999511719)},
+		wantValues:         []any{float32(0.999511719), float64(0.999511719)},
 		equalityThreshold:  1e-9,
 	},
 	{
 		data:               hexDecode("f93c01"),
 		wantInterfaceValue: float64(1.000976563),
-		wantValues:         []interface{}{float32(1.000976563), float64(1.000976563)},
+		wantValues:         []any{float32(1.000976563), float64(1.000976563)},
 		equalityThreshold:  1e-9,
 	},
 	{
 		data:               hexDecode("f93555"),
 		wantInterfaceValue: float64(0.333251953125),
-		wantValues:         []interface{}{float32(0.333251953125), float64(0.333251953125)},
+		wantValues:         []any{float32(0.333251953125), float64(0.333251953125)},
 		equalityThreshold:  1e-9,
 	},
 
@@ -2227,52 +2227,52 @@ var unmarshalFloatTests = []unmarshalFloatTest{
 	{
 		data:               hexDecode("f9bd00"),
 		wantInterfaceValue: float64(-1.25),
-		wantValues:         []interface{}{float32(-1.25), float64(-1.25)},
+		wantValues:         []any{float32(-1.25), float64(-1.25)},
 	},
 	{
 		data:               hexDecode("f93e00"),
 		wantInterfaceValue: float64(1.5),
-		wantValues:         []interface{}{float32(1.5), float64(1.5)},
+		wantValues:         []any{float32(1.5), float64(1.5)},
 	},
 	{
 		data:               hexDecode("fb4024333333333333"),
 		wantInterfaceValue: float64(10.1),
-		wantValues:         []interface{}{float32(10.1), float64(10.1)},
+		wantValues:         []any{float32(10.1), float64(10.1)},
 	},
 	{
 		data:               hexDecode("f90001"),
 		wantInterfaceValue: float64(5.960464477539063e-8),
-		wantValues:         []interface{}{float32(5.960464477539063e-8), float64(5.960464477539063e-8)},
+		wantValues:         []any{float32(5.960464477539063e-8), float64(5.960464477539063e-8)},
 	},
 	{
 		data:               hexDecode("fa7f7fffff"),
 		wantInterfaceValue: float64(3.4028234663852886e+38),
-		wantValues:         []interface{}{float32(3.4028234663852886e+38), float64(3.4028234663852886e+38)},
+		wantValues:         []any{float32(3.4028234663852886e+38), float64(3.4028234663852886e+38)},
 	},
 	{
 		data:               hexDecode("f90400"),
 		wantInterfaceValue: float64(0.00006103515625),
-		wantValues:         []interface{}{float32(0.00006103515625), float64(0.00006103515625)},
+		wantValues:         []any{float32(0.00006103515625), float64(0.00006103515625)},
 	},
 	{
 		data:               hexDecode("f933ff"),
 		wantInterfaceValue: float64(0.2498779296875),
-		wantValues:         []interface{}{float32(0.2498779296875), float64(0.2498779296875)},
+		wantValues:         []any{float32(0.2498779296875), float64(0.2498779296875)},
 	},
 	{
 		data:               hexDecode("fa33000000"),
 		wantInterfaceValue: float64(2.9802322387695312e-8),
-		wantValues:         []interface{}{float32(2.9802322387695312e-8), float64(2.9802322387695312e-8)},
+		wantValues:         []any{float32(2.9802322387695312e-8), float64(2.9802322387695312e-8)},
 	},
 	{
 		data:               hexDecode("fa33333866"),
 		wantInterfaceValue: float64(4.1727979294137185e-8),
-		wantValues:         []interface{}{float32(4.1727979294137185e-8), float64(4.1727979294137185e-8)},
+		wantValues:         []any{float32(4.1727979294137185e-8), float64(4.1727979294137185e-8)},
 	},
 	{
 		data:               hexDecode("fa37002000"),
 		wantInterfaceValue: float64(0.000007636845111846924),
-		wantValues:         []interface{}{float32(0.000007636845111846924), float64(0.000007636845111846924)},
+		wantValues:         []any{float32(0.000007636845111846924), float64(0.000007636845111846924)},
 	},
 }
 
@@ -2296,7 +2296,7 @@ func bigIntOrPanic(s string) big.Int {
 
 func TestUnmarshalToEmptyInterface(t *testing.T) {
 	for _, tc := range unmarshalTests {
-		var v interface{}
+		var v any
 		if err := Unmarshal(tc.data, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 			continue
@@ -2359,14 +2359,14 @@ func testUnmarshalToRawMessage(t *testing.T, data []byte) {
 func TestUnmarshalToCompatibleTypes(t *testing.T) {
 	for _, tc := range unmarshalTests {
 		for _, wantValue := range tc.wantValues {
-			testUnmarshalToCompatibleType(t, tc.data, wantValue, func(gotValue interface{}) {
+			testUnmarshalToCompatibleType(t, tc.data, wantValue, func(gotValue any) {
 				compareNonFloats(t, tc.data, gotValue, wantValue)
 			})
 		}
 	}
 }
 
-func testUnmarshalToCompatibleType(t *testing.T, data []byte, wantValue interface{}, compare func(gotValue interface{})) {
+func testUnmarshalToCompatibleType(t *testing.T, data []byte, wantValue any, compare func(gotValue any)) {
 	var rv reflect.Value
 
 	cborNil := isCBORNil(data)
@@ -2387,7 +2387,7 @@ func testUnmarshalToCompatibleType(t *testing.T, data []byte, wantValue interfac
 	//     var pv *wantType
 	//     Unmarshal(tc.data, &pv)
 
-	rv = reflect.New(reflect.PtrTo(wantType))
+	rv = reflect.New(reflect.PointerTo(wantType))
 	if err := Unmarshal(data, rv.Interface()); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		return
@@ -2406,7 +2406,7 @@ func testUnmarshalToCompatibleType(t *testing.T, data []byte, wantValue interfac
 	//     Unmarshal(tc.data, &pv)
 
 	irv := reflect.New(wantType)
-	rv = reflect.New(reflect.PtrTo(wantType))
+	rv = reflect.New(reflect.PointerTo(wantType))
 	rv.Elem().Set(irv)
 	if err := Unmarshal(data, rv.Interface()); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
@@ -2447,7 +2447,7 @@ func testUnmarshalToIncompatibleType(t *testing.T, data []byte, wrongType reflec
 	//     var pv *wrongType
 	//     Unmarshal(tc.data, &pv)
 
-	rv = reflect.New(reflect.PtrTo(wrongType))
+	rv = reflect.New(reflect.PointerTo(wrongType))
 	if err := Unmarshal(data, rv.Interface()); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
@@ -2460,7 +2460,7 @@ func testUnmarshalToIncompatibleType(t *testing.T, data []byte, wrongType reflec
 	//     Unmarshal(tc.data, &pv)
 
 	irv := reflect.New(wrongType)
-	rv = reflect.New(reflect.PtrTo(wrongType))
+	rv = reflect.New(reflect.PointerTo(wrongType))
 	rv.Elem().Set(irv)
 
 	if err := Unmarshal(data, rv.Interface()); err == nil {
@@ -2470,7 +2470,7 @@ func testUnmarshalToIncompatibleType(t *testing.T, data []byte, wrongType reflec
 	}
 }
 
-func compareNonFloats(t *testing.T, data []byte, got interface{}, want interface{}) {
+func compareNonFloats(t *testing.T, data []byte, got any, want any) {
 	switch tm := want.(type) {
 	case time.Time:
 		if vt, ok := got.(time.Time); !ok || !tm.Equal(vt) {
@@ -2486,7 +2486,7 @@ func compareNonFloats(t *testing.T, data []byte, got interface{}, want interface
 
 func TestUnmarshalFloatToEmptyInterface(t *testing.T) {
 	for _, tc := range unmarshalFloatTests {
-		var v interface{}
+		var v any
 		if err := Unmarshal(tc.data, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 			continue
@@ -2504,7 +2504,7 @@ func TestUnmarshalFloatToRawMessage(t *testing.T) {
 func TestUnmarshalFloatToCompatibleTypes(t *testing.T) {
 	for _, tc := range unmarshalFloatTests {
 		for _, wantValue := range tc.wantValues {
-			testUnmarshalToCompatibleType(t, tc.data, wantValue, func(gotValue interface{}) {
+			testUnmarshalToCompatibleType(t, tc.data, wantValue, func(gotValue any) {
 				compareFloats(t, tc.data, gotValue, wantValue, tc.equalityThreshold)
 			})
 		}
@@ -2519,7 +2519,7 @@ func TestUnmarshalFloatToIncompatibleTypes(t *testing.T) {
 	}
 }
 
-func compareFloats(t *testing.T, data []byte, got interface{}, want interface{}, equalityThreshold float64) {
+func compareFloats(t *testing.T, data []byte, got any, want any, equalityThreshold float64) {
 	var gotFloat64, wantFloat64 float64
 
 	switch want := want.(type) {
@@ -2562,7 +2562,7 @@ func TestNegIntOverflow(t *testing.T) {
 	data := hexDecode("3bffffffffffffffff") // -18446744073709551616
 
 	// Decode CBOR neg int that overflows Go int64 to empty interface
-	var v1 interface{}
+	var v1 any
 	wantObj := bigIntOrPanic("-18446744073709551616")
 	if err := Unmarshal(data, &v1); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %+v", data, err)
@@ -2788,8 +2788,8 @@ func TestUnmarshalNil(t *testing.T) {
 
 	testCases := []struct {
 		name      string
-		value     interface{}
-		wantValue interface{}
+		value     any
+		wantValue any
 	}{
 		// Unmarshalling CBOR null to the following types is a no-op.
 		{"bool", true, true},
@@ -2858,7 +2858,7 @@ func TestUnmarshalNil(t *testing.T) {
 
 var invalidUnmarshalTests = []struct {
 	name         string
-	v            interface{}
+	v            any
 	wantErrorMsg string
 }{
 	{"unmarshal into nil interface{}", nil, "cbor: Unmarshal(nil)"},
@@ -3001,7 +3001,7 @@ var invalidCBORUnmarshalTests = []struct {
 func TestInvalidCBORUnmarshal(t *testing.T) {
 	for _, tc := range invalidCBORUnmarshalTests {
 		t.Run(tc.name, func(t *testing.T) {
-			var i interface{}
+			var i any
 			err := Unmarshal(tc.data, &i)
 			if err == nil {
 				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
@@ -3028,7 +3028,7 @@ func TestValidUTF8String(t *testing.T) {
 		name    string
 		data    []byte
 		dm      DecMode
-		wantObj interface{}
+		wantObj any
 	}{
 		{
 			name:    "with UTF8RejectInvalid",
@@ -3058,7 +3058,7 @@ func TestValidUTF8String(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Decode to empty interface
-			var i interface{}
+			var i any
 			err = tc.dm.Unmarshal(tc.data, &i)
 			if err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
@@ -3094,7 +3094,7 @@ func TestInvalidUTF8String(t *testing.T) {
 		name         string
 		data         []byte
 		dm           DecMode
-		wantObj      interface{}
+		wantObj      any
 		wantErrorMsg string
 	}{
 		{
@@ -3126,7 +3126,7 @@ func TestInvalidUTF8String(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Decode to empty interface
-			var v interface{}
+			var v any
 			err = tc.dm.Unmarshal(tc.data, &v)
 			if tc.wantErrorMsg != "" {
 				if err == nil {
@@ -3210,7 +3210,7 @@ func TestUnmarshalStruct(t *testing.T) {
 	tests := []struct {
 		name string
 		data []byte
-		want interface{}
+		want any
 	}{
 		{"case-insensitive field name match", hexDecode("a868696e746669656c64187b6a666c6f61746669656c64fa47c3500069626f6f6c6669656c64f56b537472696e674669656c6464746573746f42797465537472696e674669656c64430103056a41727261794669656c64826568656c6c6f65776f726c64684d61704669656c64a2676d6f726e696e67f56961667465726e6f6f6ef4714e65737465645374727563744669656c64a261581903e861591a000f4240"), want},
 		{"exact field name match", hexDecode("a868496e744669656c64187b6a466c6f61744669656c64fa47c3500069426f6f6c4669656c64f56b537472696e674669656c6464746573746f42797465537472696e674669656c64430103056a41727261794669656c64826568656c6c6f65776f726c64684d61704669656c64a2676d6f726e696e67f56961667465726e6f6f6ef4714e65737465645374727563744669656c64a261581903e861591a000f4240"), want},
@@ -3453,7 +3453,7 @@ func TestLengthOverflowsInt(t *testing.T) {
 	}
 	wantErrorMsg := "is too large"
 	for _, data := range data {
-		var intf interface{}
+		var intf any
 		if err := Unmarshal(data, &intf); err == nil {
 			t.Errorf("Unmarshal(0x%x) didn't return an error, want error containing substring %q", data, wantErrorMsg)
 		} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -3479,14 +3479,14 @@ func TestMapKeyUnhashable(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v interface{}
+			var v any
 			if err := Unmarshal(tc.data, &v); err == nil {
 				t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, tc.wantErrorMsg)
 			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
 				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 			}
-			if _, ok := v.(map[interface{}]interface{}); ok {
-				var v map[interface{}]interface{}
+			if _, ok := v.(map[any]any); ok {
+				var v map[any]any
 				if err := Unmarshal(tc.data, &v); err == nil {
 					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, tc.wantErrorMsg)
 				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
@@ -3500,7 +3500,7 @@ func TestMapKeyUnhashable(t *testing.T) {
 func TestMapKeyNaN(t *testing.T) {
 	// Data is generating by go-fuzz.
 	data := hexDecode("b0303030303030303030303030303030303038303030faffff30303030303030303030303030") // {-17: -17, NaN: -17}
-	var intf interface{}
+	var intf any
 	if err := Unmarshal(data, &intf); err != nil {
 		t.Fatalf("Unmarshal(0x%x) returned error %v", data, err)
 	}
@@ -3516,7 +3516,7 @@ func TestMapKeyNaN(t *testing.T) {
 func TestUnmarshalUndefinedElement(t *testing.T) {
 	// Data is generating by go-fuzz.
 	data := hexDecode("bfd1a388f730303030303030303030303030ff") // {17({[undefined, -17, -17, -17, -17, -17, -17, -17]: -17, -17: -17}): -17}
-	var intf interface{}
+	var intf any
 	wantErrorMsg := "invalid map key type"
 	if err := Unmarshal(data, &intf); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error, want error containing substring %q", data, wantErrorMsg)
@@ -3529,9 +3529,9 @@ func TestMapKeyNil(t *testing.T) {
 	testData := [][]byte{
 		hexDecode("a1f630"), // {null: -17}
 	}
-	want := map[interface{}]interface{}{nil: int64(-17)}
+	want := map[any]any{nil: int64(-17)}
 	for _, data := range testData {
-		var intf interface{}
+		var intf any
 		if err := Unmarshal(data, &intf); err != nil {
 			t.Fatalf("Unmarshal(0x%x) returned error %v", data, err)
 		} else if !reflect.DeepEqual(intf, want) {
@@ -3541,7 +3541,7 @@ func TestMapKeyNil(t *testing.T) {
 			t.Errorf("Marshal(%v) returned error %v", intf, err)
 		}
 
-		var v map[interface{}]interface{}
+		var v map[any]any
 		if err := Unmarshal(data, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		} else if !reflect.DeepEqual(v, want) {
@@ -3677,7 +3677,7 @@ func TestDecodeTimeWithTag(t *testing.T) {
 				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborUnixTime, tm, tm, tc.wantTime, tc.wantTime)
 			}
 
-			var v interface{}
+			var v any
 			if err := Unmarshal(tc.cborRFC3339Time, &v); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborRFC3339Time, err)
 			} else if tm, ok := v.(time.Time); !ok || !tc.wantTime.Equal(tm) {
@@ -3855,7 +3855,7 @@ func TestDecodeTag0Error(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Decode to interface{}
-			var v interface{}
+			var v any
 			if err := tc.dm.Unmarshal(data, &v); err == nil {
 				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", data, wantErrorMsg)
 			} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -3901,7 +3901,7 @@ func TestDecodeTag1Error(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Decode to interface{}
-			var v interface{}
+			var v any
 			if err := tc.dm.Unmarshal(data, &v); err == nil {
 				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", data, wantErrorMsg)
 			} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -3975,7 +3975,7 @@ func TestDecodeTimeStreaming(t *testing.T) {
 	dm, _ := DecOptions{TimeTag: DecTagOptional}.DecMode()
 	dec := dm.NewDecoder(bytes.NewReader(data))
 	for _, tc := range testCases {
-		var v interface{}
+		var v any
 		err := dec.Decode(&v)
 		if tc.wantErrorMsg != "" {
 			if err == nil {
@@ -4472,7 +4472,7 @@ func TestCOSEExamples(t *testing.T) {
 		hexDecode("D18443A1010FA054546869732069732074686520636F6E74656E742E48726043745027214F"),
 	}
 	for _, d := range data {
-		var v interface{}
+		var v any
 		if err := Unmarshal(d, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", d, err)
 		}
@@ -4627,7 +4627,7 @@ func TestUnmarshalArrayToStructWrongFieldTypeError(t *testing.T) {
 		name         string
 		data         []byte
 		wantErrorMsg string
-		wantV        interface{}
+		wantV        any
 	}{
 		// [1, 2, 3]
 		{"wrong field type", hexDecode("83010203"), "cannot unmarshal", T{A: 1, C: 3}},
@@ -4683,11 +4683,11 @@ func TestUnmarshalArrayToStructCannotSetEmbeddedPointerError(t *testing.T) {
 func TestUnmarshalIntoSliceError(t *testing.T) {
 	data := []byte{0x83, 0x61, 0x61, 0x61, 0xfe, 0x61, 0x62} // ["a", 0xfe, "b"]
 	wantErrorMsg := invalidUTF8ErrorMsg
-	var want interface{}
+	var want any
 
 	// Unmarshal CBOR array into Go empty interface.
-	var v1 interface{}
-	want = []interface{}{"a", interface{}(nil), "b"}
+	var v1 any
+	want = []any{"a", any(nil), "b"}
 	if err := Unmarshal(data, &v1); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
 	} else if err.Error() != wantErrorMsg {
@@ -4740,12 +4740,12 @@ func TestUnmarshalIntoMapError(t *testing.T) {
 		{0xa3, 0x61, 0x61, 0x61, 0x41, 0x61, 0x63, 0x61, 0xfe, 0x61, 0x62, 0x61, 0x42}, // {"a":"A", "c": 0xfe, "b":"B"}
 	}
 	wantErrorMsg := invalidUTF8ErrorMsg
-	var want interface{}
+	var want any
 
 	for _, data := range data {
 		// Unmarshal CBOR map into Go empty interface.
-		var v1 interface{}
-		want = map[interface{}]interface{}{"a": "A", "b": "B"}
+		var v1 any
+		want = map[any]any{"a": "A", "b": "B"}
 		if err := Unmarshal(data, &v1); err == nil {
 			t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
 		} else if err.Error() != wantErrorMsg {
@@ -4756,8 +4756,8 @@ func TestUnmarshalIntoMapError(t *testing.T) {
 		}
 
 		// Unmarshal CBOR map into Go map[interface{}]interface{}.
-		var v2 map[interface{}]interface{}
-		want = map[interface{}]interface{}{"a": "A", "b": "B"}
+		var v2 map[any]any
+		want = map[any]any{"a": "A", "b": "B"}
 		if err := Unmarshal(data, &v2); err == nil {
 			t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
 		} else if err.Error() != wantErrorMsg {
@@ -4888,8 +4888,8 @@ func TestStructKeyAsIntError(t *testing.T) {
 func TestUnmarshalToNotNilInterface(t *testing.T) {
 	data := hexDecode("83010203") // []uint64{1, 2, 3}
 	s := "hello"                  //nolint:goconst
-	var v interface{} = s         // Unmarshal() sees v as type interface{} and sets CBOR data as default Go type.  s is unmodified.  Same behavior as encoding/json.
-	wantV := []interface{}{uint64(1), uint64(2), uint64(3)}
+	var v any = s                 // Unmarshal() sees v as type interface{} and sets CBOR data as default Go type.  s is unmodified.  Same behavior as encoding/json.
+	wantV := []any{uint64(1), uint64(2), uint64(3)}
 	if err := Unmarshal(data, &v); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	} else if !reflect.DeepEqual(v, wantV) {
@@ -4916,7 +4916,7 @@ func TestDecOptions(t *testing.T) {
 		IntDec:                   IntDecConvertSigned,
 		MapKeyByteString:         MapKeyByteStringForbidden,
 		ExtraReturnErrors:        ExtraDecErrorUnknownField,
-		DefaultMapType:           reflect.TypeOf(map[string]interface{}(nil)),
+		DefaultMapType:           reflect.TypeOf(map[string]any(nil)),
 		UTF8:                     UTF8DecodeInvalid,
 		FieldNameMatching:        FieldNameMatchingCaseSensitive,
 		BigIntDec:                BigIntDecodePointer,
@@ -4953,7 +4953,7 @@ func TestDecOptions(t *testing.T) {
 
 type roundTripTest struct {
 	name         string
-	obj          interface{}
+	obj          any
 	wantCborData []byte
 }
 
@@ -5235,7 +5235,7 @@ func TestUnmarshalStructKeyAsIntNumError(t *testing.T) {
 	testCases := []struct {
 		name         string
 		data         []byte
-		obj          interface{}
+		obj          any
 		wantErrorMsg string
 	}{
 		{
@@ -5268,17 +5268,17 @@ func TestUnmarshalEmptyMapWithDupMapKeyOpt(t *testing.T) {
 	testCases := []struct {
 		name  string
 		data  []byte
-		wantV interface{}
+		wantV any
 	}{
 		{
 			name:  "empty map",
 			data:  hexDecode("a0"),
-			wantV: map[interface{}]interface{}{},
+			wantV: map[any]any{},
 		},
 		{
 			name:  "indefinite empty map",
 			data:  hexDecode("bfff"),
-			wantV: map[interface{}]interface{}{},
+			wantV: map[any]any{},
 		},
 	}
 
@@ -5289,7 +5289,7 @@ func TestUnmarshalEmptyMapWithDupMapKeyOpt(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v interface{}
+			var v any
 			if err := dm.Unmarshal(tc.data, &v); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 			}
@@ -5304,8 +5304,8 @@ func TestUnmarshalDupMapKeyToEmptyInterface(t *testing.T) {
 	data := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	// Duplicate key overwrites previous value (default).
-	wantV := map[interface{}]interface{}{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
-	var v interface{}
+	wantV := map[any]any{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
+	var v any
 	if err := Unmarshal(data, &v); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
@@ -5314,10 +5314,10 @@ func TestUnmarshalDupMapKeyToEmptyInterface(t *testing.T) {
 	}
 
 	// Duplicate key triggers error.
-	wantV = map[interface{}]interface{}{"a": nil, "b": "B", "c": "C"}
+	wantV = map[any]any{"a": nil, "b": "B", "c": "C"}
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
-	var v2 interface{}
+	var v2 any
 	if err := dm.Unmarshal(data, &v2); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*DupMapKeyError); !ok {
@@ -5339,10 +5339,10 @@ func TestStreamDupMapKeyToEmptyInterface(t *testing.T) {
 	}
 
 	// Duplicate key overwrites previous value (default).
-	wantV := map[interface{}]interface{}{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
+	wantV := map[any]any{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
 	dec := NewDecoder(bytes.NewReader(b))
 	for i := 0; i < 3; i++ {
-		var v1 interface{}
+		var v1 any
 		if err := dec.Decode(&v1); err != nil {
 			t.Errorf("Decode() returned error %v", err)
 		}
@@ -5350,18 +5350,18 @@ func TestStreamDupMapKeyToEmptyInterface(t *testing.T) {
 			t.Errorf("Decode() = %v (%T), want %v (%T)", v1, v1, wantV, wantV)
 		}
 	}
-	var v interface{}
+	var v any
 	if err := dec.Decode(&v); err != io.EOF {
 		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
 	}
 
 	// Duplicate key triggers error.
-	wantV = map[interface{}]interface{}{"a": nil, "b": "B", "c": "C"}
+	wantV = map[any]any{"a": nil, "b": "B", "c": "C"}
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
 	for i := 0; i < 3; i++ {
-		var v2 interface{}
+		var v2 any
 		if err := dec.Decode(&v2); err == nil {
 			t.Errorf("Decode() didn't return an error")
 		} else if _, ok := err.(*DupMapKeyError); !ok {
@@ -5428,7 +5428,7 @@ func TestStreamDupMapKeyToEmptyMap(t *testing.T) {
 			t.Errorf("Decode() = %v (%T), want %v (%T)", m1, m1, wantM, wantM)
 		}
 	}
-	var v interface{}
+	var v any
 	if err := dec.Decode(&v); err != io.EOF {
 		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
 	}
@@ -5506,7 +5506,7 @@ func TestStreamDupMapKeyToNotEmptyMap(t *testing.T) {
 			t.Errorf("Decode() = %v (%T), want %v (%T)", m1, m1, wantM, wantM)
 		}
 	}
-	var v interface{}
+	var v any
 	if err := dec.Decode(&v); err != io.EOF {
 		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
 	}
@@ -5647,7 +5647,7 @@ func TestStreamDupMapKeyToStruct(t *testing.T) {
 			t.Errorf("Decode() = %v (%T), want %v (%T)", s1, s1, wantS, wantS)
 		}
 	}
-	var v interface{}
+	var v any
 	if err := dec.Decode(&v); err != io.EOF {
 		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
 	}
@@ -5736,7 +5736,7 @@ func TestStreamDupMapKeyToStructKeyAsInt(t *testing.T) {
 			t.Errorf("Decode() = %v (%T), want %v (%T)", s1, s1, wantS, wantS)
 		}
 	}
-	var v interface{}
+	var v any
 	if err := dec.Decode(&v); err != io.EOF {
 		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
 	}
@@ -5825,7 +5825,7 @@ func TestStreamDupMapKeyToStructNoMatchingField(t *testing.T) {
 			t.Errorf("Decode() = %v (%T), want %v (%T)", s1, s1, wantS, wantS)
 		}
 	}
-	var v interface{}
+	var v any
 	if err := dec.Decode(&v); err != io.EOF {
 		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
 	}
@@ -5910,7 +5910,7 @@ func TestStreamDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
 			t.Errorf("Decode() = %v (%T), want %v (%T)", s1, s1, wantS, wantS)
 		}
 	}
-	var v interface{}
+	var v any
 	if err := dec.Decode(&v); err != io.EOF {
 		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
 	}
@@ -6009,7 +6009,7 @@ func TestStreamDupMapKeyToStructWrongType(t *testing.T) {
 			t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
 		}
 	}
-	var v interface{}
+	var v any
 	if err := dec.Decode(&v); err != io.EOF {
 		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
 	}
@@ -6239,7 +6239,7 @@ func TestIndefiniteLengthArrayToArray(t *testing.T) {
 	testCases := []struct {
 		name  string
 		data  []byte
-		wantV interface{}
+		wantV any
 	}{
 		{
 			name:  "CBOR empty array to Go 5 elem array",
@@ -6294,7 +6294,7 @@ func TestExceedMaxArrayElements(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, _ := tc.opts.DecMode()
-			var v interface{}
+			var v any
 			if err := dm.Unmarshal(tc.data, &v); err == nil {
 				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
 			} else if err.Error() != tc.wantErrorMsg {
@@ -6327,7 +6327,7 @@ func TestExceedMaxMapPairs(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, _ := tc.opts.DecMode()
-			var v interface{}
+			var v any
 			if err := dm.Unmarshal(tc.data, &v); err == nil {
 				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
 			} else if err.Error() != tc.wantErrorMsg {
@@ -6372,7 +6372,7 @@ func TestDecIndefiniteLengthOption(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Default option allows indefinite length items
-			var v interface{}
+			var v any
 			if err := Unmarshal(tc.data, &v); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned an error %v", tc.data, err)
 			}
@@ -6392,7 +6392,7 @@ func TestDecTagsMdOption(t *testing.T) {
 	wantErrorMsg := "cbor: CBOR tag isn't allowed"
 
 	// Default option allows CBOR tags
-	var v interface{}
+	var v any
 	if err := Unmarshal(data, &v); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned an error %v", data, err)
 	}
@@ -6462,7 +6462,7 @@ func TestIntDecConvertNone(t *testing.T) {
 	testCases := []struct {
 		name    string
 		data    []byte
-		wantObj interface{}
+		wantObj any
 	}{
 		{
 			name:    "CBOR pos int",
@@ -6487,7 +6487,7 @@ func TestIntDecConvertNone(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v interface{}
+			var v any
 			err := dm.Unmarshal(tc.data, &v)
 			if err == nil {
 				if !reflect.DeepEqual(v, tc.wantObj) {
@@ -6512,7 +6512,7 @@ func TestIntDecConvertSigned(t *testing.T) {
 	testCases := []struct {
 		name         string
 		data         []byte
-		wantObj      interface{}
+		wantObj      any
 		wantErrorMsg string
 	}{
 		{
@@ -6538,7 +6538,7 @@ func TestIntDecConvertSigned(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v interface{}
+			var v any
 			err := dm.Unmarshal(tc.data, &v)
 			if err == nil {
 				if tc.wantErrorMsg != "" {
@@ -6569,7 +6569,7 @@ func TestIntDecConvertSignedOrBigInt(t *testing.T) {
 	testCases := []struct {
 		name    string
 		data    []byte
-		wantObj interface{}
+		wantObj any
 	}{
 		{
 			name:    "CBOR pos int",
@@ -6594,7 +6594,7 @@ func TestIntDecConvertSignedOrBigInt(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v interface{}
+			var v any
 			err := dm.Unmarshal(tc.data, &v)
 			if err == nil {
 				if !reflect.DeepEqual(v, tc.wantObj) {
@@ -6619,7 +6619,7 @@ func TestIntDecConvertSignedOrError(t *testing.T) {
 	testCases := []struct {
 		name         string
 		data         []byte
-		wantObj      interface{}
+		wantObj      any
 		wantErrorMsg string
 	}{
 		{
@@ -6645,7 +6645,7 @@ func TestIntDecConvertSignedOrError(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v interface{}
+			var v any
 			err := dm.Unmarshal(tc.data, &v)
 			if err == nil {
 				if tc.wantErrorMsg != "" {
@@ -6706,7 +6706,7 @@ func TestMapKeyByteString(t *testing.T) {
 	testCases := []struct {
 		name         string
 		data         []byte
-		wantObj      interface{}
+		wantObj      any
 		wantErrorMsg string
 		dm           DecMode
 	}{
@@ -6731,7 +6731,7 @@ func TestMapKeyByteString(t *testing.T) {
 		{
 			name: "byte string map key with MapKeyByteStringAllowed",
 			data: hexDecode("a143abcdef187b"),
-			wantObj: map[interface{}]interface{}{
+			wantObj: map[any]any{
 				ByteString("\xab\xcd\xef"): uint64(123),
 			},
 			dm: bsAllowedMode,
@@ -6739,7 +6739,7 @@ func TestMapKeyByteString(t *testing.T) {
 		{
 			name: "tagged byte string map key with MapKeyByteStringAllowed",
 			data: hexDecode("a1d86443abcdef187b"),
-			wantObj: map[interface{}]interface{}{
+			wantObj: map[any]any{
 				Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}: uint64(123),
 			},
 			dm: bsAllowedMode,
@@ -6747,7 +6747,7 @@ func TestMapKeyByteString(t *testing.T) {
 		{
 			name: "nested tagged byte string map key with MapKeyByteStringAllowed",
 			data: hexDecode("a1d865d86443abcdef187b"),
-			wantObj: map[interface{}]interface{}{
+			wantObj: map[any]any{
 				Tag{Number: 101, Content: Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}}: uint64(123),
 			},
 			dm: bsAllowedMode,
@@ -6801,7 +6801,7 @@ func TestExtraErrorCondUnknownField(t *testing.T) {
 		name         string
 		data         []byte
 		dm           DecMode
-		wantObj      interface{}
+		wantObj      any
 		wantErrorMsg string
 	}{
 		{
@@ -6940,7 +6940,7 @@ func TestUnmarshalTagNum55799(t *testing.T) {
 		copy(data[6:], tc.data)
 
 		// Test unmarshalling CBOR into empty interface.
-		var v interface{}
+		var v any
 		if err := Unmarshal(data, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		} else {
@@ -7005,7 +7005,7 @@ func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
 		copy(data[3:], tc.data)
 
 		// Test unmarshalling CBOR into empty interface.
-		var v interface{}
+		var v any
 		if err := Unmarshal(tc.data, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 		} else {
@@ -7050,29 +7050,29 @@ func TestUnmarshalTagNum55799AsElement(t *testing.T) {
 	testCases := []struct {
 		name                string
 		data                []byte
-		emptyInterfaceValue interface{}
-		values              []interface{}
+		emptyInterfaceValue any
+		values              []any
 		wrongTypes          []reflect.Type
 	}{
 		{
 			"array",
 			hexDecode("d9d9f783d9d9f701d9d9f702d9d9f703"), // 55799([55799(1), 55799(2), 55799(3)])
-			[]interface{}{uint64(1), uint64(2), uint64(3)},
-			[]interface{}{[]interface{}{uint64(1), uint64(2), uint64(3)}, []byte{1, 2, 3}, []int{1, 2, 3}, []uint{1, 2, 3}, [0]int{}, [1]int{1}, [3]int{1, 2, 3}, [5]int{1, 2, 3, 0, 0}, []float32{1, 2, 3}, []float64{1, 2, 3}},
+			[]any{uint64(1), uint64(2), uint64(3)},
+			[]any{[]any{uint64(1), uint64(2), uint64(3)}, []byte{1, 2, 3}, []int{1, 2, 3}, []uint{1, 2, 3}, [0]int{}, [1]int{1}, [3]int{1, 2, 3}, [5]int{1, 2, 3, 0, 0}, []float32{1, 2, 3}, []float64{1, 2, 3}},
 			[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag},
 		},
 		{
 			"map",
 			hexDecode("d9d9f7a2d9d9f701d9d9f702d9d9f703d9d9f704"), // 55799({55799(1): 55799(2), 55799(3): 55799(4)})
-			map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)},
-			[]interface{}{map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)}, map[uint]int{1: 2, 3: 4}, map[int]uint{1: 2, 3: 4}},
+			map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)},
+			[]any{map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)}, map[uint]int{1: 2, 3: 4}, map[int]uint{1: 2, 3: 4}},
 			[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeByteArray, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Test unmarshalling CBOR into empty interface.
-			var v interface{}
+			var v any
 			if err := Unmarshal(tc.data, &v); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 			} else {
@@ -7170,7 +7170,7 @@ func TestUnmarshalNestedTagNum55799ToEmptyInterface(t *testing.T) {
 	data := hexDecode("d864d9d9f701") // 100(55799(1))
 	wantObj := Tag{100, Tag{55799, uint64(1)}}
 
-	var v interface{}
+	var v any
 	if err := Unmarshal(data, &v); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	} else if !reflect.DeepEqual(v, wantObj) {
@@ -7265,7 +7265,7 @@ func TestUnmarshalPosIntToBigInt(t *testing.T) {
 	wantEmptyInterfaceValue := uint64(18446744073709551615)
 	wantBigIntValue := bigIntOrPanic("18446744073709551615")
 
-	var v1 interface{}
+	var v1 any
 	if err := Unmarshal(data, &v1); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %+v", data, err)
 	} else if !reflect.DeepEqual(v1, wantEmptyInterfaceValue) {
@@ -7284,7 +7284,7 @@ func TestUnmarshalNegIntToBigInt(t *testing.T) {
 	testCases := []struct {
 		name                    string
 		data                    []byte
-		wantEmptyInterfaceValue interface{}
+		wantEmptyInterfaceValue any
 		wantBigIntValue         big.Int
 	}{
 		{
@@ -7302,7 +7302,7 @@ func TestUnmarshalNegIntToBigInt(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v1 interface{}
+			var v1 any
 			if err := Unmarshal(tc.data, &v1); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %+v", tc.data, err)
 			} else if !reflect.DeepEqual(v1, tc.wantEmptyInterfaceValue) {
@@ -7323,14 +7323,14 @@ func TestUnmarshalTag2(t *testing.T) {
 	testCases := []struct {
 		name                    string
 		data                    []byte
-		wantEmptyInterfaceValue interface{}
-		wantValues              []interface{}
+		wantEmptyInterfaceValue any
+		wantValues              []any
 	}{
 		{
 			name:                    "fit Go int64",
 			data:                    hexDecode("c2430f4240"), // 2(1000000)
 			wantEmptyInterfaceValue: bigIntOrPanic("1000000"),
-			wantValues: []interface{}{
+			wantValues: []any{
 				int64(1000000),
 				uint64(1000000),
 				float32(1000000),
@@ -7342,7 +7342,7 @@ func TestUnmarshalTag2(t *testing.T) {
 			name:                    "fit Go uint64",
 			data:                    hexDecode("c248ffffffffffffffff"), // 2(18446744073709551615)
 			wantEmptyInterfaceValue: bigIntOrPanic("18446744073709551615"),
-			wantValues: []interface{}{
+			wantValues: []any{
 				uint64(18446744073709551615),
 				float32(18446744073709551615),
 				float64(18446744073709551615),
@@ -7353,7 +7353,7 @@ func TestUnmarshalTag2(t *testing.T) {
 			name:                    "fit Go uint64 with leading zeros",
 			data:                    hexDecode("c24900ffffffffffffffff"), // 2(18446744073709551615)
 			wantEmptyInterfaceValue: bigIntOrPanic("18446744073709551615"),
-			wantValues: []interface{}{
+			wantValues: []any{
 				uint64(18446744073709551615),
 				float32(18446744073709551615),
 				float64(18446744073709551615),
@@ -7364,7 +7364,7 @@ func TestUnmarshalTag2(t *testing.T) {
 			name:                    "overflow Go uint64",
 			data:                    hexDecode("c249010000000000000000"), // 2(18446744073709551616)
 			wantEmptyInterfaceValue: bigIntOrPanic("18446744073709551616"),
-			wantValues: []interface{}{
+			wantValues: []any{
 				bigIntOrPanic("18446744073709551616"),
 			},
 		},
@@ -7372,14 +7372,14 @@ func TestUnmarshalTag2(t *testing.T) {
 			name:                    "overflow Go uint64 with leading zeros",
 			data:                    hexDecode("c24b0000010000000000000000"), // 2(18446744073709551616)
 			wantEmptyInterfaceValue: bigIntOrPanic("18446744073709551616"),
-			wantValues: []interface{}{
+			wantValues: []any{
 				bigIntOrPanic("18446744073709551616"),
 			},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v1 interface{}
+			var v1 any
 			if err := Unmarshal(tc.data, &v1); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %+v", tc.data, err)
 			} else if !reflect.DeepEqual(v1, tc.wantEmptyInterfaceValue) {
@@ -7402,14 +7402,14 @@ func TestUnmarshalTag3(t *testing.T) {
 	testCases := []struct {
 		name                    string
 		data                    []byte
-		wantEmptyInterfaceValue interface{}
-		wantValues              []interface{}
+		wantEmptyInterfaceValue any
+		wantValues              []any
 	}{
 		{
 			name:                    "fit Go int64",
 			data:                    hexDecode("c3487fffffffffffffff"), // 3(-9223372036854775808)
 			wantEmptyInterfaceValue: bigIntOrPanic("-9223372036854775808"),
-			wantValues: []interface{}{
+			wantValues: []any{
 				int64(-9223372036854775808),
 				float32(-9223372036854775808),
 				float64(-9223372036854775808),
@@ -7420,7 +7420,7 @@ func TestUnmarshalTag3(t *testing.T) {
 			name:                    "fit Go int64 with leading zeros",
 			data:                    hexDecode("c349007fffffffffffffff"), // 3(-9223372036854775808)
 			wantEmptyInterfaceValue: bigIntOrPanic("-9223372036854775808"),
-			wantValues: []interface{}{
+			wantValues: []any{
 				int64(-9223372036854775808),
 				float32(-9223372036854775808),
 				float64(-9223372036854775808),
@@ -7431,7 +7431,7 @@ func TestUnmarshalTag3(t *testing.T) {
 			name:                    "overflow Go int64",
 			data:                    hexDecode("c349010000000000000000"), // 3(-18446744073709551617)
 			wantEmptyInterfaceValue: bigIntOrPanic("-18446744073709551617"),
-			wantValues: []interface{}{
+			wantValues: []any{
 				bigIntOrPanic("-18446744073709551617"),
 			},
 		},
@@ -7439,14 +7439,14 @@ func TestUnmarshalTag3(t *testing.T) {
 			name:                    "overflow Go int64 with leading zeros",
 			data:                    hexDecode("c34b0000010000000000000000"), // 3(-18446744073709551617)
 			wantEmptyInterfaceValue: bigIntOrPanic("-18446744073709551617"),
-			wantValues: []interface{}{
+			wantValues: []any{
 				bigIntOrPanic("-18446744073709551617"),
 			},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v1 interface{}
+			var v1 any
 			if err := Unmarshal(tc.data, &v1); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %+v", tc.data, err)
 			} else if !reflect.DeepEqual(v1, tc.wantEmptyInterfaceValue) {
@@ -7785,8 +7785,8 @@ func TestUnmarshalRegisteredTagToInterface(t *testing.T) {
 	testCases := []struct {
 		name           string
 		data           []byte
-		unmarshalToObj interface{}
-		wantValue      interface{}
+		unmarshalToObj any
+		wantValue      any
 	}{
 		{
 			name:           "interface type",
@@ -7868,15 +7868,15 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 	cborDataNestedMap := hexDecode("a268496e744669656c6401684d61704669656c64a2616101616202") // {"IntField": 1, "MapField": {"a": 1, "b": 2}}
 
 	decOptionsDefault := DecOptions{}
-	decOptionsMapIntfIntfType := DecOptions{DefaultMapType: reflect.TypeOf(map[interface{}]interface{}(nil))}
+	decOptionsMapIntfIntfType := DecOptions{DefaultMapType: reflect.TypeOf(map[any]any(nil))}
 	decOptionsMapStringIntType := DecOptions{DefaultMapType: reflect.TypeOf(map[string]int(nil))}
-	decOptionsMapStringIntfType := DecOptions{DefaultMapType: reflect.TypeOf(map[string]interface{}(nil))}
+	decOptionsMapStringIntfType := DecOptions{DefaultMapType: reflect.TypeOf(map[string]any(nil))}
 
 	testCases := []struct {
 		name         string
 		opts         DecOptions
 		data         []byte
-		wantValue    interface{}
+		wantValue    any
 		wantErrorMsg string
 	}{
 		// Decode CBOR map to map[interface{}]interface{} using default options
@@ -7884,30 +7884,30 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 			name:      "decode CBOR map[int]int to Go map[interface{}]interface{} (default)",
 			opts:      decOptionsDefault,
 			data:      cborDataMapIntInt,
-			wantValue: map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)},
+			wantValue: map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)},
 		},
 		{
 			name:      "decode CBOR map[string]int to Go map[interface{}]interface{} (default)",
 			opts:      decOptionsDefault,
 			data:      cborDataMapStringInt,
-			wantValue: map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
+			wantValue: map[any]any{"a": uint64(1), "b": uint64(2)},
 		},
 		{
 			name: "decode CBOR array of map[string]int to Go []map[interface{}]interface{} (default)",
 			opts: decOptionsDefault,
 			data: cborDataArrayOfMapStringint,
-			wantValue: []interface{}{
-				map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
-				map[interface{}]interface{}{"c": uint64(3), "d": uint64(4)},
+			wantValue: []any{
+				map[any]any{"a": uint64(1), "b": uint64(2)},
+				map[any]any{"c": uint64(3), "d": uint64(4)},
 			},
 		},
 		{
 			name: "decode CBOR nested map to Go map[interface{}]interface{} (default)",
 			opts: decOptionsDefault,
 			data: cborDataNestedMap,
-			wantValue: map[interface{}]interface{}{
+			wantValue: map[any]any{
 				"IntField": uint64(1),
-				"MapField": map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
+				"MapField": map[any]any{"a": uint64(1), "b": uint64(2)},
 			},
 		},
 		// Decode CBOR map to map[interface{}]interface{} using default map type option
@@ -7915,30 +7915,30 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 			name:      "decode CBOR map[int]int to Go map[interface{}]interface{}",
 			opts:      decOptionsMapIntfIntfType,
 			data:      cborDataMapIntInt,
-			wantValue: map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)},
+			wantValue: map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)},
 		},
 		{
 			name:      "decode CBOR map[string]int to Go map[interface{}]interface{}",
 			opts:      decOptionsMapIntfIntfType,
 			data:      cborDataMapStringInt,
-			wantValue: map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
+			wantValue: map[any]any{"a": uint64(1), "b": uint64(2)},
 		},
 		{
 			name: "decode CBOR array of map[string]int to Go []map[interface{}]interface{}",
 			opts: decOptionsMapIntfIntfType,
 			data: cborDataArrayOfMapStringint,
-			wantValue: []interface{}{
-				map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
-				map[interface{}]interface{}{"c": uint64(3), "d": uint64(4)},
+			wantValue: []any{
+				map[any]any{"a": uint64(1), "b": uint64(2)},
+				map[any]any{"c": uint64(3), "d": uint64(4)},
 			},
 		},
 		{
 			name: "decode CBOR nested map to Go map[interface{}]interface{}",
 			opts: decOptionsMapIntfIntfType,
 			data: cborDataNestedMap,
-			wantValue: map[interface{}]interface{}{
+			wantValue: map[any]any{
 				"IntField": uint64(1),
-				"MapField": map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
+				"MapField": map[any]any{"a": uint64(1), "b": uint64(2)},
 			},
 		},
 		// Decode CBOR map to map[string]interface{} using default map type option
@@ -7952,24 +7952,24 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 			name:      "decode CBOR map[string]int to Go map[string]interface{}",
 			opts:      decOptionsMapStringIntfType,
 			data:      cborDataMapStringInt,
-			wantValue: map[string]interface{}{"a": uint64(1), "b": uint64(2)},
+			wantValue: map[string]any{"a": uint64(1), "b": uint64(2)},
 		},
 		{
 			name: "decode CBOR array of map[string]int to Go []map[string]interface{}",
 			opts: decOptionsMapStringIntfType,
 			data: cborDataArrayOfMapStringint,
-			wantValue: []interface{}{
-				map[string]interface{}{"a": uint64(1), "b": uint64(2)},
-				map[string]interface{}{"c": uint64(3), "d": uint64(4)},
+			wantValue: []any{
+				map[string]any{"a": uint64(1), "b": uint64(2)},
+				map[string]any{"c": uint64(3), "d": uint64(4)},
 			},
 		},
 		{
 			name: "decode CBOR nested map to Go map[string]interface{}",
 			opts: decOptionsMapStringIntfType,
 			data: cborDataNestedMap,
-			wantValue: map[string]interface{}{
+			wantValue: map[string]any{
 				"IntField": uint64(1),
-				"MapField": map[string]interface{}{"a": uint64(1), "b": uint64(2)},
+				"MapField": map[string]any{"a": uint64(1), "b": uint64(2)},
 			},
 		},
 		// Decode CBOR map to map[string]int using default map type option
@@ -7989,7 +7989,7 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 			name: "decode CBOR array of map[string]int to Go []map[string]int",
 			opts: decOptionsMapStringIntType,
 			data: cborDataArrayOfMapStringint,
-			wantValue: []interface{}{
+			wantValue: []any{
 				map[string]int{"a": 1, "b": 2},
 				map[string]int{"c": 3, "d": 4},
 			},
@@ -8006,7 +8006,7 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			decMode, _ := tc.opts.DecMode()
 
-			var v interface{}
+			var v any
 			err := decMode.Unmarshal(tc.data, &v)
 			if err != nil {
 				if tc.wantErrorMsg == "" {
@@ -8027,7 +8027,7 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 
 func TestUnmarshalFirstNoTrailing(t *testing.T) {
 	for _, tc := range unmarshalTests {
-		var v interface{}
+		var v any
 		if rest, err := UnmarshalFirst(tc.data, &v); err != nil {
 			t.Errorf("UnmarshalFirst(0x%x) returned error %v", tc.data, err)
 		} else {
@@ -8053,7 +8053,7 @@ func TestUnmarshalfirstTrailing(t *testing.T) {
 		data := make([]byte, 0, len(tc.data)+len(trailingData))
 		data = append(data, tc.data...)
 		data = append(data, trailingData...)
-		var v interface{}
+		var v any
 		if rest, err := UnmarshalFirst(data, &v); err != nil {
 			t.Errorf("UnmarshalFirst(0x%x) returned error %v", data, err)
 		} else {
@@ -8075,7 +8075,7 @@ func TestUnmarshalfirstTrailing(t *testing.T) {
 func TestUnmarshalFirstInvalidItem(t *testing.T) {
 	// UnmarshalFirst should not return "rest" if the item was not well-formed
 	invalidCBOR := hexDecode("83FF20030102")
-	var v interface{}
+	var v any
 	rest, err := UnmarshalFirst(invalidCBOR, &v)
 	if rest != nil || err == nil {
 		t.Errorf("UnmarshalFirst(0x%x) = (%x, %v), want (nil, err)", invalidCBOR, rest, err)
@@ -8226,7 +8226,7 @@ func TestDecodeBignumToEmptyInterface(t *testing.T) {
 		name      string
 		opts      DecOptions
 		data      []byte
-		wantValue interface{}
+		wantValue any
 	}{
 		{
 			name:      "decode positive bignum to big.Int",
@@ -8270,7 +8270,7 @@ func TestDecodeBignumToEmptyInterface(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			decMode, _ := tc.opts.DecMode()
 
-			var v interface{}
+			var v any
 			err := decMode.Unmarshal(tc.data, &v)
 			if err != nil {
 				t.Errorf("Unmarshal(0x%x) to empty interface returned error %v", tc.data, err)
@@ -8328,7 +8328,7 @@ func TestUnmarshalDefaultByteStringType(t *testing.T) {
 		name string
 		opts DecOptions
 		in   []byte
-		want interface{}
+		want any
 	}{
 		{
 			name: "default to []byte",
@@ -8367,7 +8367,7 @@ func TestUnmarshalDefaultByteStringType(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			var got interface{}
+			var got any
 			if err := dm.Unmarshal(tc.in, &got); err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
@@ -8534,7 +8534,7 @@ func TestUnmarshalWithUnrecognizedTagToAnyMode(t *testing.T) {
 		name string
 		opts DecOptions
 		in   []byte
-		want interface{}
+		want any
 	}{
 		{
 			name: "default to value of type Tag",
@@ -8555,7 +8555,7 @@ func TestUnmarshalWithUnrecognizedTagToAnyMode(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			var got interface{}
+			var got any
 			if err := dm.Unmarshal(tc.in, &got); err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
@@ -8572,7 +8572,7 @@ func TestUnmarshalWithUnrecognizedTagToAnyModeForSupportedTags(t *testing.T) {
 		name string
 		opts DecOptions
 		in   []byte
-		want interface{}
+		want any
 	}{
 		{
 			name: "Unmarshal with tag number 0 when UnrecognizedTagContentToAny option is not set",
@@ -8629,7 +8629,7 @@ func TestUnmarshalWithUnrecognizedTagToAnyModeForSupportedTags(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			var got interface{}
+			var got any
 			if err := dm.Unmarshal(tc.in, &got); err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
@@ -8654,7 +8654,7 @@ func TestUnmarshalWithUnrecognizedTagToAnyModeForSharedTag(t *testing.T) {
 		name string
 		opts DecOptions
 		in   []byte
-		want interface{}
+		want any
 	}{
 		{
 			name: "Unmarshal with a shared tag when UnrecognizedTagContentToAny option is not set",
@@ -8675,7 +8675,7 @@ func TestUnmarshalWithUnrecognizedTagToAnyModeForSharedTag(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			var got interface{}
+			var got any
 
 			if err := dm.Unmarshal(tc.in, &got); err != nil {
 				t.Errorf("unexpected error: %v", err)
@@ -8738,7 +8738,7 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 		fns           []func(*SimpleValueRegistry) error
 		in            []byte
 		into          reflect.Type
-		want          interface{}
+		want          any
 		assertOnError func(t *testing.T, e error)
 	}{
 		{
@@ -8879,7 +8879,7 @@ func TestDecModeTimeTagToAny(t *testing.T) {
 		name           string
 		opts           DecOptions
 		in             []byte
-		want           interface{}
+		want           any
 		wantErrMessage string
 	}{
 		{
@@ -8949,7 +8949,7 @@ func TestDecModeTimeTagToAny(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			var got interface{}
+			var got any
 			if err := dm.Unmarshal(tc.in, &got); err != nil {
 				if tc.wantErrMessage == "" {
 					t.Fatalf("unexpected error: %v", err)
@@ -8998,31 +8998,31 @@ func TestNaNDecMode(t *testing.T) {
 	for _, tc := range []struct {
 		opt    NaNMode
 		src    []byte
-		dst    interface{}
+		dst    any
 		reject bool
 	}{
 		{
 			opt:    NaNDecodeForbidden,
 			src:    hexDecode("197e00"),
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: false,
 		},
 		{
 			opt:    NaNDecodeForbidden,
 			src:    hexDecode("1a7fc00000"),
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: false,
 		},
 		{
 			opt:    NaNDecodeForbidden,
 			src:    hexDecode("1b7ff8000000000000"),
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: false,
 		},
 		{
 			opt:    NaNDecodeForbidden,
 			src:    hexDecode("f90000"), // 0.0
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: false,
 		},
 		{
@@ -9046,7 +9046,7 @@ func TestNaNDecMode(t *testing.T) {
 		{
 			opt:    NaNDecodeForbidden,
 			src:    hexDecode("fa47c35000"), // 100000.0
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: false,
 		},
 		{
@@ -9070,7 +9070,7 @@ func TestNaNDecMode(t *testing.T) {
 		{
 			opt:    NaNDecodeForbidden,
 			src:    hexDecode("fb3ff199999999999a"), // 1.1
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: false,
 		},
 		{
@@ -9094,7 +9094,7 @@ func TestNaNDecMode(t *testing.T) {
 		{
 			opt:    NaNDecodeForbidden,
 			src:    hexDecode("f97e00"),
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: true,
 		},
 		{
@@ -9118,7 +9118,7 @@ func TestNaNDecMode(t *testing.T) {
 		{
 			opt:    NaNDecodeForbidden,
 			src:    hexDecode("fa7fc00000"),
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: true,
 		},
 		{
@@ -9142,7 +9142,7 @@ func TestNaNDecMode(t *testing.T) {
 		{
 			opt:    NaNDecodeForbidden,
 			src:    hexDecode("fb7ff8000000000000"),
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: true,
 		},
 		{
@@ -9220,31 +9220,31 @@ func TestInfDecMode(t *testing.T) {
 	for _, tc := range []struct {
 		opt    InfMode
 		src    []byte
-		dst    interface{}
+		dst    any
 		reject bool
 	}{
 		{
 			opt:    InfDecodeForbidden,
 			src:    hexDecode("197c00"),
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: false,
 		},
 		{
 			opt:    InfDecodeForbidden,
 			src:    hexDecode("1a7f800000"), // Infinity
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: false,
 		},
 		{
 			opt:    InfDecodeForbidden,
 			src:    hexDecode("1b7ff0000000000000"), // Infinity
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: false,
 		},
 		{
 			opt:    InfDecodeForbidden,
 			src:    hexDecode("f90000"), // 0.0
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: false,
 		},
 		{
@@ -9268,7 +9268,7 @@ func TestInfDecMode(t *testing.T) {
 		{
 			opt:    InfDecodeForbidden,
 			src:    hexDecode("fa47c35000"), // 100000.0
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: false,
 		},
 		{
@@ -9292,7 +9292,7 @@ func TestInfDecMode(t *testing.T) {
 		{
 			opt:    InfDecodeForbidden,
 			src:    hexDecode("fb3ff199999999999a"), // 1.1
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: false,
 		},
 		{
@@ -9316,7 +9316,7 @@ func TestInfDecMode(t *testing.T) {
 		{
 			opt:    InfDecodeForbidden,
 			src:    hexDecode("f97c00"), // Infinity
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: true,
 		},
 		{
@@ -9340,7 +9340,7 @@ func TestInfDecMode(t *testing.T) {
 		{
 			opt:    InfDecodeForbidden,
 			src:    hexDecode("f9fc00"), // -Infinity
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: true,
 		},
 		{
@@ -9364,7 +9364,7 @@ func TestInfDecMode(t *testing.T) {
 		{
 			opt:    InfDecodeForbidden,
 			src:    hexDecode("fa7f800000"), // Infinity
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: true,
 		},
 		{
@@ -9388,7 +9388,7 @@ func TestInfDecMode(t *testing.T) {
 		{
 			opt:    InfDecodeForbidden,
 			src:    hexDecode("faff800000"), // -Infinity
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: true,
 		},
 		{
@@ -9412,7 +9412,7 @@ func TestInfDecMode(t *testing.T) {
 		{
 			opt:    InfDecodeForbidden,
 			src:    hexDecode("fb7ff0000000000000"), // Infinity
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: true,
 		},
 		{
@@ -9436,7 +9436,7 @@ func TestInfDecMode(t *testing.T) {
 		{
 			opt:    InfDecodeForbidden,
 			src:    hexDecode("fbfff0000000000000"), // -Infinity
-			dst:    new(interface{}),
+			dst:    new(any),
 			reject: true,
 		},
 		{
@@ -9788,7 +9788,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 		opts    DecOptions
 		dstType reflect.Type
 		in      []byte
-		want    interface{}
+		want    any
 	}{
 		{
 			name: "untagged into string",
@@ -10020,7 +10020,7 @@ func TestBinaryUnmarshalerMode(t *testing.T) {
 		name string
 		opts DecOptions
 		in   []byte
-		want interface{}
+		want any
 	}{
 		{
 			name: "UnmarshalBinary is called by default",

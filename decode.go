@@ -105,7 +105,7 @@ import (
 // if there are any remaining bytes following the first valid CBOR data item.
 // See UnmarshalFirst, if you want to unmarshal only the first
 // CBOR data item without ExtraneousDataError caused by remaining bytes.
-func Unmarshal(data []byte, v interface{}) error {
+func Unmarshal(data []byte, v any) error {
 	return defaultDecMode.Unmarshal(data, v)
 }
 
@@ -115,7 +115,7 @@ func Unmarshal(data []byte, v interface{}) error {
 // If v is nil, not a pointer, or a nil pointer, UnmarshalFirst returns an error.
 //
 // See the documentation for Unmarshal for details.
-func UnmarshalFirst(data []byte, v interface{}) (rest []byte, err error) {
+func UnmarshalFirst(data []byte, v any) (rest []byte, err error) {
 	return defaultDecMode.UnmarshalFirst(data, v)
 }
 
@@ -150,6 +150,10 @@ func Wellformed(data []byte) error {
 // must copy the CBOR data if it needs to use it after returning.
 type Unmarshaler interface {
 	UnmarshalCBOR([]byte) error
+}
+
+type unmarshaler interface {
+	unmarshalCBOR([]byte) error
 }
 
 // InvalidUnmarshalError describes an invalid argument passed to Unmarshal.
@@ -194,7 +198,7 @@ func (e *InvalidMapKeyTypeError) Error() string {
 
 // DupMapKeyError describes detected duplicate map key in CBOR map.
 type DupMapKeyError struct {
-	Key   interface{}
+	Key   any
 	Index int
 }
 
@@ -1135,7 +1139,7 @@ type DecMode interface {
 	// Unmarshal returns an error.
 	//
 	// See the documentation for Unmarshal for details.
-	Unmarshal(data []byte, v interface{}) error
+	Unmarshal(data []byte, v any) error
 
 	// UnmarshalFirst parses the first CBOR data item into the value pointed to by v
 	// using the decoding mode.  Any remaining bytes are returned in rest.
@@ -1143,7 +1147,7 @@ type DecMode interface {
 	// If v is nil, not a pointer, or a nil pointer, UnmarshalFirst returns an error.
 	//
 	// See the documentation for Unmarshal for details.
-	UnmarshalFirst(data []byte, v interface{}) (rest []byte, err error)
+	UnmarshalFirst(data []byte, v any) (rest []byte, err error)
 
 	// Valid checks whether data is a well-formed encoded CBOR data item and
 	// that it complies with configurable restrictions such as MaxNestedLevels,
@@ -1256,7 +1260,7 @@ func (dm *decMode) DecOptions() DecOptions {
 // Unmarshal returns an error.
 //
 // See the documentation for Unmarshal for details.
-func (dm *decMode) Unmarshal(data []byte, v interface{}) error {
+func (dm *decMode) Unmarshal(data []byte, v any) error {
 	d := decoder{data: data, dm: dm}
 
 	// Check well-formedness.
@@ -1276,7 +1280,7 @@ func (dm *decMode) Unmarshal(data []byte, v interface{}) error {
 // If v is nil, not a pointer, or a nil pointer, UnmarshalFirst returns an error.
 //
 // See the documentation for Unmarshal for details.
-func (dm *decMode) UnmarshalFirst(data []byte, v interface{}) (rest []byte, err error) {
+func (dm *decMode) UnmarshalFirst(data []byte, v any) (rest []byte, err error) {
 	d := decoder{data: data, dm: dm}
 
 	// check well-formedness.
@@ -1370,13 +1374,13 @@ type decoder struct {
 // If CBOR data item fails to be decoded into v,
 // error is returned and offset is moved to the next CBOR data item.
 // Precondition: d.data contains at least one well-formed CBOR data item.
-func (d *decoder) value(v interface{}) error {
+func (d *decoder) value(v any) error {
 	// v can't be nil, non-pointer, or nil pointer value.
 	if v == nil {
 		return &InvalidUnmarshalError{"cbor: Unmarshal(nil)"}
 	}
 	rv := reflect.ValueOf(v)
-	if rv.Kind() != reflect.Ptr {
+	if rv.Kind() != reflect.Pointer {
 		return &InvalidUnmarshalError{"cbor: Unmarshal(non-pointer " + rv.Type().String() + ")"}
 	} else if rv.IsNil() {
 		return &InvalidUnmarshalError{"cbor: Unmarshal(nil " + rv.Type().String() + ")"}
@@ -1390,7 +1394,7 @@ func (d *decoder) value(v interface{}) error {
 func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
 
 	// Decode CBOR nil or CBOR undefined to pointer value by setting pointer value to nil.
-	if d.nextCBORNil() && v.Kind() == reflect.Ptr {
+	if d.nextCBORNil() && v.Kind() == reflect.Pointer {
 		d.skip()
 		v.Set(reflect.Zero(v.Type()))
 		return nil
@@ -1416,7 +1420,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				registeredType := d.dm.tags.getTypeFromTagNum(tagNums)
 				if registeredType != nil {
 					if registeredType.Implements(tInfo.nonPtrType) ||
-						reflect.PtrTo(registeredType).Implements(tInfo.nonPtrType) {
+						reflect.PointerTo(registeredType).Implements(tInfo.nonPtrType) {
 						v.Set(reflect.New(registeredType))
 						v = v.Elem()
 						tInfo = getTypeInfo(registeredType)
@@ -1428,7 +1432,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 
 	// Create new value for the pointer v to point to.
 	// At this point, CBOR value is not nil/undefined if v is a pointer.
-	for v.Kind() == reflect.Ptr {
+	for v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			if !v.CanSet() {
 				d.skip()
@@ -1489,6 +1493,9 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 
 		case specialTypeUnmarshalerIface:
 			return d.parseToUnmarshaler(v)
+
+		case specialTypeUnexportedUnmarshalerIface:
+			return d.parseToUnexportedUnmarshaler(v)
 		}
 	}
 
@@ -1817,12 +1824,12 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 // parseToUnmarshaler parses CBOR data to value implementing Unmarshaler interface.
 // It assumes data is well-formed, and does not perform bounds checking.
 func (d *decoder) parseToUnmarshaler(v reflect.Value) error {
-	if d.nextCBORNil() && v.Kind() == reflect.Ptr && v.IsNil() {
+	if d.nextCBORNil() && v.Kind() == reflect.Pointer && v.IsNil() {
 		d.skip()
 		return nil
 	}
 
-	if v.Kind() != reflect.Ptr && v.CanAddr() {
+	if v.Kind() != reflect.Pointer && v.CanAddr() {
 		v = v.Addr()
 	}
 	if u, ok := v.Interface().(Unmarshaler); ok {
@@ -1834,9 +1841,29 @@ func (d *decoder) parseToUnmarshaler(v reflect.Value) error {
 	return errors.New("cbor: failed to assert " + v.Type().String() + " as cbor.Unmarshaler")
 }
 
+// parseToUnexportedUnmarshaler parses CBOR data to value implementing unmarshaler interface.
+// It assumes data is well-formed, and does not perform bounds checking.
+func (d *decoder) parseToUnexportedUnmarshaler(v reflect.Value) error {
+	if d.nextCBORNil() && v.Kind() == reflect.Pointer && v.IsNil() {
+		d.skip()
+		return nil
+	}
+
+	if v.Kind() != reflect.Pointer && v.CanAddr() {
+		v = v.Addr()
+	}
+	if u, ok := v.Interface().(unmarshaler); ok {
+		start := d.off
+		d.skip()
+		return u.unmarshalCBOR(d.data[start:d.off])
+	}
+	d.skip()
+	return errors.New("cbor: failed to assert " + v.Type().String() + " as cbor.unmarshaler")
+}
+
 // parse parses CBOR data and returns value in default Go type.
 // It assumes data is well-formed, and does not perform bounds checking.
-func (d *decoder) parse(skipSelfDescribedTag bool) (interface{}, error) { //nolint:gocyclo
+func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyclo
 	// Strip self-described CBOR tag number.
 	if skipSelfDescribedTag {
 		for d.nextCBORType() == cborTypeTag {
@@ -2253,15 +2280,15 @@ func (d *decoder) parseTextString() ([]byte, error) {
 	return b, nil
 }
 
-func (d *decoder) parseArray() ([]interface{}, error) {
+func (d *decoder) parseArray() ([]any, error) {
 	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
 	hasSize := !indefiniteLength
 	count := int(val)
 	if !hasSize {
 		count = d.numOfItemsUntilBreak() // peek ahead to get array size to preallocate slice for better performance
 	}
-	v := make([]interface{}, count)
-	var e interface{}
+	v := make([]any, count)
+	var e any
 	var err, lastErr error
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
 		if e, lastErr = d.parse(true); lastErr != nil {
@@ -2327,12 +2354,12 @@ func (d *decoder) parseArrayToArray(v reflect.Value, tInfo *typeInfo) error {
 	return err
 }
 
-func (d *decoder) parseMap() (interface{}, error) {
+func (d *decoder) parseMap() (any, error) {
 	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
 	hasSize := !indefiniteLength
 	count := int(val)
-	m := make(map[interface{}]interface{})
-	var k, e interface{}
+	m := make(map[any]any)
+	var k, e any
 	var err, lastErr error
 	keyCount := 0
 	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
@@ -2405,9 +2432,9 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 	keyIsInterfaceType := keyType == typeIntf // If key type is interface{}, need to check if key value is hashable.
 	var err, lastErr error
 	keyCount := v.Len()
-	var existingKeys map[interface{}]bool // Store existing map keys, used for detecting duplicate map key.
+	var existingKeys map[any]bool // Store existing map keys, used for detecting duplicate map key.
 	if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
-		existingKeys = make(map[interface{}]bool, keyCount)
+		existingKeys = make(map[any]bool, keyCount)
 		if keyCount > 0 {
 			vKeys := v.MapKeys()
 			for i := 0; i < len(vKeys); i++ {
@@ -2438,7 +2465,7 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 			if !isHashableValue(keyValue.Elem()) {
 				var converted bool
 				if d.dm.mapKeyByteString == MapKeyByteStringAllowed {
-					var k interface{}
+					var k any
 					k, converted = convertByteSliceToByteString(keyValue.Elem().Interface())
 					if converted {
 						keyValue.Set(reflect.ValueOf(k))
@@ -2609,7 +2636,7 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 
 	// Keeps track of CBOR map keys to detect duplicate map key
 	keyCount := 0
-	var mapKeys map[interface{}]struct{}
+	var mapKeys map[any]struct{}
 
 	errOnUnknownField := (d.dm.extraReturnErrors & ExtraDecErrorUnknownField) > 0
 
@@ -2619,7 +2646,7 @@ MapEntryLoop:
 
 		// If duplicate field detection is enabled and the key at index j did not match any
 		// field, k will hold the map key.
-		var k interface{}
+		var k any
 
 		t := d.nextCBORType()
 		if t == cborTypeTextString || (t == cborTypeByteString && d.dm.fieldNameByteString == FieldNameByteStringAllowed) {
@@ -2789,7 +2816,7 @@ MapEntryLoop:
 			// check is never reached.
 			if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
 				if mapKeys == nil {
-					mapKeys = make(map[interface{}]struct{}, 1)
+					mapKeys = make(map[any]struct{}, 1)
 				}
 				mapKeys[k] = struct{}{}
 				newKeyCount := len(mapKeys)
@@ -2994,18 +3021,19 @@ func (d *decoder) nextCBORNil() bool {
 }
 
 var (
-	typeIntf              = reflect.TypeOf([]interface{}(nil)).Elem()
-	typeTime              = reflect.TypeOf(time.Time{})
-	typeBigInt            = reflect.TypeOf(big.Int{})
-	typeUnmarshaler       = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
-	typeBinaryUnmarshaler = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
-	typeString            = reflect.TypeOf("")
-	typeByteSlice         = reflect.TypeOf([]byte(nil))
+	typeIntf                  = reflect.TypeOf([]any(nil)).Elem()
+	typeTime                  = reflect.TypeOf(time.Time{})
+	typeBigInt                = reflect.TypeOf(big.Int{})
+	typeUnmarshaler           = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
+	typeUnexportedUnmarshaler = reflect.TypeOf((*unmarshaler)(nil)).Elem()
+	typeBinaryUnmarshaler     = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
+	typeString                = reflect.TypeOf("")
+	typeByteSlice             = reflect.TypeOf([]byte(nil))
 )
 
 func fillNil(_ cborType, v reflect.Value) error {
 	switch v.Kind() {
-	case reflect.Slice, reflect.Map, reflect.Interface, reflect.Ptr:
+	case reflect.Slice, reflect.Map, reflect.Interface, reflect.Pointer:
 		v.Set(reflect.Zero(v.Type()))
 		return nil
 	}
@@ -3108,7 +3136,7 @@ func fillFloat(t cborType, val float64, v reflect.Value) error {
 }
 
 func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, bsts ByteStringToStringMode, bum BinaryUnmarshalerMode) error {
-	if bum == BinaryUnmarshalerByteString && reflect.PtrTo(v.Type()).Implements(typeBinaryUnmarshaler) {
+	if bum == BinaryUnmarshalerByteString && reflect.PointerTo(v.Type()).Implements(typeBinaryUnmarshaler) {
 		if v.CanAddr() {
 			v = v.Addr()
 			if u, ok := v.Interface().(encoding.BinaryUnmarshaler); ok {
@@ -3197,7 +3225,7 @@ func isHashableValue(rv reflect.Value) bool {
 // This function also handles nested tags.
 // CBOR data is already verified to be well-formed before this function is used,
 // so the recursion won't exceed max nested levels.
-func convertByteSliceToByteString(v interface{}) (interface{}, bool) {
+func convertByteSliceToByteString(v any) (any, bool) {
 	switch v := v.(type) {
 	case []byte:
 		return ByteString(v), true

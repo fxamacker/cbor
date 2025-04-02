@@ -1,3 +1,6 @@
+// Copyright (c) Faye Amacker. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root for license information.
+
 package cbor
 
 import (
@@ -905,7 +908,7 @@ func TestDecodeWrongTag(t *testing.T) {
 
 	testCases := []struct {
 		name         string
-		obj          interface{}
+		obj          any
 		data         []byte
 		wantErrorMsg string
 	}{
@@ -1240,7 +1243,7 @@ func TestMarshalRawTagWithEmptyContent(t *testing.T) {
 }
 
 func TestEncodeTag(t *testing.T) {
-	m := make(map[interface{}]bool)
+	m := make(map[any]bool)
 	m[10] = true
 	m[100] = true
 	m[-1] = true
@@ -1295,7 +1298,7 @@ func TestDecodeTagToEmptyIface(t *testing.T) {
 	testCases := []struct {
 		name    string
 		data    []byte
-		wantObj interface{}
+		wantObj any
 	}{
 		{
 			name:    "registered myBool",
@@ -1326,7 +1329,7 @@ func TestDecodeTagToEmptyIface(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v1 interface{}
+			var v1 any
 			if err := dm.Unmarshal(tc.data, &v1); err != nil {
 				t.Errorf("Unmarshal() returned error %v", err)
 			}
@@ -1334,7 +1337,7 @@ func TestDecodeTagToEmptyIface(t *testing.T) {
 				t.Errorf("Unmarshal to interface{} returned different values: %v, %v", tc.wantObj, v1)
 			}
 
-			var v2 interface{}
+			var v2 any
 			if err := dmSharedTags.Unmarshal(tc.data, &v2); err != nil {
 				t.Errorf("Unmarshal() returned error %v", err)
 			}
@@ -1359,7 +1362,7 @@ func TestDecodeRegisteredTagToEmptyIfaceError(t *testing.T) {
 
 	data := hexDecode("d865d8663bffffffffffffffff") // 101(102(-18446744073709551616))
 
-	var v interface{}
+	var v any
 	if err := dm.Unmarshal(data, &v); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
@@ -1415,7 +1418,7 @@ func TestDecodeRegisterTagForUnmarshaler(t *testing.T) {
 	em, _ := EncOptions{}.EncModeWithTags(tags)
 
 	// Decode to empty interface.  Unmarshal() should return object of registered type.
-	var v1 interface{}
+	var v1 any
 	if err := dm.Unmarshal(data, &v1); err != nil {
 		t.Errorf("Unmarshal() returned error %v", err)
 	}
@@ -1448,7 +1451,7 @@ func TestDecodeRegisterTagForUnmarshaler(t *testing.T) {
 func TestMarshalRawTagContainingMalformedCBORData(t *testing.T) {
 	testCases := []struct {
 		name         string
-		value        interface{}
+		value        any
 		wantErrorMsg string
 	}{
 		// Nil RawMessage and empty RawMessage are encoded as CBOR nil.
@@ -1532,6 +1535,128 @@ func TestEncodeBuiltinTag(t *testing.T) {
 
 			if !bytes.Equal(got, tc.want) {
 				t.Errorf("unexpected difference\ngot: 0x%x\nwant: 0x%x", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestUnmarshalRawTagOnBadData(t *testing.T) {
+	testCases := []struct {
+		name   string
+		data   []byte
+		errMsg string
+	}{
+		// Empty data
+		{
+			name:   "nil data",
+			data:   nil,
+			errMsg: io.EOF.Error(),
+		},
+		{
+			name:   "empty data",
+			data:   []byte{},
+			errMsg: io.EOF.Error(),
+		},
+
+		// Wrong CBOR types
+		{
+			name:   "uint type",
+			data:   hexDecode("01"),
+			errMsg: "cbor: cannot unmarshal positive integer into Go value of type cbor.RawTag",
+		},
+		{
+			name:   "int type",
+			data:   hexDecode("20"),
+			errMsg: "cbor: cannot unmarshal negative integer into Go value of type cbor.RawTag",
+		},
+		{
+			name:   "byte string type",
+			data:   hexDecode("40"),
+			errMsg: "cbor: cannot unmarshal byte string into Go value of type cbor.RawTag",
+		},
+		{
+			name:   "string type",
+			data:   hexDecode("60"),
+			errMsg: "cbor: cannot unmarshal UTF-8 text string into Go value of type cbor.RawTag",
+		},
+		{
+			name:   "array type",
+			data:   hexDecode("80"),
+			errMsg: "cbor: cannot unmarshal array into Go value of type cbor.RawTag",
+		},
+		{
+			name:   "map type",
+			data:   hexDecode("a0"),
+			errMsg: "cbor: cannot unmarshal map into Go value of type cbor.RawTag",
+		},
+		{
+			name:   "primitive type",
+			data:   hexDecode("f4"),
+			errMsg: "cbor: cannot unmarshal primitives into Go value of type cbor.RawTag",
+		},
+		{
+			name:   "float type",
+			data:   hexDecode("f90000"),
+			errMsg: "cbor: cannot unmarshal primitives into Go value of type cbor.RawTag",
+		},
+
+		// Truncated CBOR data
+		{
+			name:   "truncated head",
+			data:   hexDecode("18"),
+			errMsg: io.ErrUnexpectedEOF.Error(),
+		},
+
+		// Truncated CBOR tag data
+		{
+			name:   "truncated tag number",
+			data:   hexDecode("d8"),
+			errMsg: io.ErrUnexpectedEOF.Error(),
+		},
+		{
+			name:   "tag number not followed by tag content",
+			data:   hexDecode("da"),
+			errMsg: io.ErrUnexpectedEOF.Error(),
+		},
+		{
+			name:   "truncated tag content",
+			data:   hexDecode("c074323031332d30332d32315432303a30343a3030"),
+			errMsg: io.ErrUnexpectedEOF.Error(),
+		},
+
+		// Extraneous CBOR data
+		{
+			name:   "extraneous data",
+			data:   hexDecode("c074323031332d30332d32315432303a30343a30305a00"),
+			errMsg: "cbor: 1 bytes of extraneous data starting at index 22",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Test RawTag.UnmarshalCBOR(data)
+			{
+				var v RawTag
+
+				err := v.UnmarshalCBOR(tc.data)
+				if err == nil {
+					t.Errorf("UnmarshalCBOR(%x) didn't return error", tc.data)
+				}
+				if !strings.HasPrefix(err.Error(), tc.errMsg) {
+					t.Errorf("UnmarshalCBOR(%x) returned error %q, want %q", tc.data, err.Error(), tc.errMsg)
+				}
+			}
+			// Test Unmarshal(data, *RawTag), which calls RawTag.unmarshalCBOR() under the hood
+			{
+				var v RawTag
+
+				err := Unmarshal(tc.data, &v)
+				if err == nil {
+					t.Errorf("Unmarshal(%x) didn't return error", tc.data)
+				}
+				if !strings.HasPrefix(err.Error(), tc.errMsg) {
+					t.Errorf("Unmarshal(%x) returned error %q, want %q", tc.data, err.Error(), tc.errMsg)
+				}
 			}
 		})
 	}

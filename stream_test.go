@@ -37,7 +37,7 @@ func TestDecoder(t *testing.T) {
 			bytesRead := 0
 			for i := 0; i < 5; i++ {
 				for _, tc := range unmarshalTests {
-					var v interface{}
+					var v any
 					if err := decoder.Decode(&v); err != nil {
 						t.Fatalf("Decode() returned error %v", err)
 					}
@@ -56,7 +56,7 @@ func TestDecoder(t *testing.T) {
 			}
 			for i := 0; i < 2; i++ {
 				// no more data
-				var v interface{}
+				var v any
 				err := decoder.Decode(&v)
 				if v != nil {
 					t.Errorf("Decode() = %v (%T), want nil (no more data)", v, v)
@@ -106,7 +106,7 @@ func TestDecoderUnmarshalTypeError(t *testing.T) {
 							t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
 						}
 
-						var vi interface{}
+						var vi any
 						if err := decoder.Decode(&vi); err != nil {
 							t.Errorf("Decode() returned error %v", err)
 						}
@@ -126,7 +126,7 @@ func TestDecoderUnmarshalTypeError(t *testing.T) {
 			}
 			for i := 0; i < 2; i++ {
 				// no more data
-				var v interface{}
+				var v any
 				err := decoder.Decode(&v)
 				if v != nil {
 					t.Errorf("Decode() = %v (%T), want nil (no more data)", v, v)
@@ -162,7 +162,7 @@ func TestDecoderUnexpectedEOFError(t *testing.T) {
 			bytesRead := 0
 			for i := 0; i < len(unmarshalTests)-1; i++ {
 				tc := unmarshalTests[i]
-				var v interface{}
+				var v any
 				if err := decoder.Decode(&v); err != nil {
 					t.Fatalf("Decode() returned error %v", err)
 				}
@@ -180,7 +180,7 @@ func TestDecoderUnexpectedEOFError(t *testing.T) {
 			}
 			for i := 0; i < 2; i++ {
 				// truncated data
-				var v interface{}
+				var v any
 				err := decoder.Decode(&v)
 				if v != nil {
 					t.Errorf("Decode() = %v (%T), want nil (no more data)", v, v)
@@ -217,7 +217,7 @@ func TestDecoderReadError(t *testing.T) {
 			bytesRead := 0
 			for i := 0; i < len(unmarshalTests)-1; i++ {
 				tc := unmarshalTests[i]
-				var v interface{}
+				var v any
 				if err := decoder.Decode(&v); err != nil {
 					t.Fatalf("Decode() returned error %v", err)
 				}
@@ -235,7 +235,7 @@ func TestDecoderReadError(t *testing.T) {
 			}
 			for i := 0; i < 2; i++ {
 				// truncated data because Reader returned error
-				var v interface{}
+				var v any
 				err := decoder.Decode(&v)
 				if v != nil {
 					t.Errorf("Decode() = %v (%T), want nil (no more data)", v, v)
@@ -265,7 +265,7 @@ func TestDecoderNoData(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			decoder := NewDecoder(tc.reader)
 			for i := 0; i < 2; i++ {
-				var v interface{}
+				var v any
 				err := decoder.Decode(&v)
 				if v != nil {
 					t.Errorf("Decode() = %v (%T), want nil", v, v)
@@ -280,12 +280,12 @@ func TestDecoderNoData(t *testing.T) {
 
 func TestDecoderRecoverableReadError(t *testing.T) {
 	data := hexDecode("83010203") // [1,2,3]
-	wantValue := []interface{}{uint64(1), uint64(2), uint64(3)}
+	wantValue := []any{uint64(1), uint64(2), uint64(3)}
 	recoverableReaderErr := errors.New("recoverable reader error")
 
 	decoder := NewDecoder(newRecoverableReader(data, 1, recoverableReaderErr))
 
-	var v interface{}
+	var v any
 	err := decoder.Decode(&v)
 	if err != recoverableReaderErr {
 		t.Fatalf("Decode() returned error %v, want error %v", err, recoverableReaderErr)
@@ -303,7 +303,7 @@ func TestDecoderRecoverableReadError(t *testing.T) {
 	}
 
 	// no more data
-	v = interface{}(nil)
+	v = any(nil)
 	err = decoder.Decode(&v)
 	if v != nil {
 		t.Errorf("Decode() = %v (%T), want nil (no more data)", v, v)
@@ -317,13 +317,13 @@ func TestDecoderInvalidData(t *testing.T) {
 	data := []byte{0x01, 0x3e}
 	decoder := NewDecoder(bytes.NewReader(data))
 
-	var v1 interface{}
+	var v1 any
 	err := decoder.Decode(&v1)
 	if err != nil {
 		t.Errorf("Decode() returned error %v when decoding valid data item", err)
 	}
 
-	var v2 interface{}
+	var v2 any
 	err = decoder.Decode(&v2)
 	if err == nil {
 		t.Errorf("Decode() didn't return error when decoding invalid data item")
@@ -645,7 +645,7 @@ func TestDecoderBuffered(t *testing.T) {
 				t.Errorf("Buffered() = 0x%x (%d bytes), want 0 bytes", buffered, len(buffered))
 			}
 
-			var v interface{}
+			var v any
 			err = decoder.Decode(&v)
 			if err != tc.decodeErr {
 				t.Errorf("Decode() returned error %v, want %v", err, tc.decodeErr)
@@ -688,7 +688,7 @@ func TestEncoder(t *testing.T) {
 func TestEncoderError(t *testing.T) {
 	testcases := []struct {
 		name         string
-		value        interface{}
+		value        any
 		wantErrorMsg string
 	}{
 		{"channel cannot be marshaled", make(chan bool), "cbor: unsupported type: chan bool"},
