@@ -39,7 +39,7 @@ Codec passed multiple confidential security assessments in 2022.  No vulnerabili
 
 __🗜️&nbsp; Data Size__
 
-Struct tag options (`toarray`, `keyasint`, `omitempty`, `omitzero`) automatically reduce size of encoded structs. Encoding optionally shrinks float64→32→16 when values fit.
+Struct tag options (`toarray`, `keyasint`, `omitempty`, `omitzero`) and field tag "-" automatically reduce size of encoded structs. Encoding optionally shrinks float64→32→16 when values fit.
 
 __:jigsaw:&nbsp; Usability__
 
@@ -146,8 +146,10 @@ Struct tags automatically reduce encoded size of structs and improve speed.
 We can write less code by using struct tag options:
 - `toarray`: encode without field names (decode back to original struct)
 - `keyasint`: encode field names as integers (decode back to original struct)
-- `omitempty`: omit empty fields when encoding
-- `omitzero`: omit zero-value fields when encoding
+- `omitempty`: omit empty field when encoding
+- `omitzero`: omit zero-value field when encoding
+
+As a special case, struct field tag "-" omits the field.
 
 ![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.3.0/cbor_struct_tags_api.svg?sanitize=1 "CBOR API and Go Struct Tags")
 
@@ -352,6 +354,60 @@ err = em.MarshalToBuffer(v, &buf) // encode v to provided buf
 ### Struct Tags
 
 Struct tag options (`toarray`, `keyasint`, `omitempty`, `omitzero`) reduce encoded size of structs.
+
+As a special case, struct field tag "-" omits the field.
+
+<details><summary> 🔎&nbsp; Example encoding with struct field tag "-"</summary><p/>
+
+https://go.dev/play/p/aWEIFxd7InX
+
+```Go
+// https://github.com/fxamacker/cbor/issues/652
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/fxamacker/cbor/v2"
+)
+
+// The `cbor:"-"` tag omits the Type field when encoding to CBOR.
+type Entity struct {
+	_    struct{} `cbor:",toarray"`
+	ID   uint64   `json:"id"`
+	Type string   `cbor:"-" json:"typeOf"`
+	Name string   `json:"name"`
+}
+
+func main() {
+	entity := Entity{
+		ID:   1,
+		Type: "int64",
+		Name: "Identifier",
+	}
+
+	c, _ := cbor.Marshal(entity)
+	diag, _ := cbor.Diagnose(c)
+	fmt.Printf("CBOR in hex: %x\n", c)
+	fmt.Printf("CBOR in edn: %s\n", diag)
+
+	j, _ := json.Marshal(entity)
+	fmt.Printf("JSON: %s\n", string(j))
+
+	fmt.Printf("JSON encoding is %d bytes\n", len(j))
+	fmt.Printf("CBOR encoding is %d bytes\n", len(c))
+
+	// Output:
+	// CBOR in hex: 82016a4964656e746966696572
+	// CBOR in edn: [1, "Identifier"]
+	// JSON: {"id":1,"typeOf":"int64","name":"Identifier"}
+	// JSON encoding is 45 bytes
+	// CBOR encoding is 13 bytes
+}
+```
+
+</details>
 
 <details><summary> 🔎&nbsp; Example encoding 3-level nested Go struct to 1 byte CBOR</summary><p/>
 
