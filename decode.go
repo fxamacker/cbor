@@ -387,7 +387,7 @@ const (
 	// - return UnmarshalTypeError if value doesn't fit into int64
 	IntDecConvertSignedOrFail
 
-	// IntDecConvertSigned affects how CBOR integers (major type 0 and 1) decode to Go interface{}.
+	// IntDecConvertSignedOrBigInt affects how CBOR integers (major type 0 and 1) decode to Go interface{}.
 	// It makes CBOR integers (major type 0 and 1) decode to:
 	// - int64 if value fits
 	// - big.Int or *big.Int (see BigIntDecMode) if value doesn't fit into int64
@@ -797,7 +797,7 @@ type DecOptions struct {
 	// TagsMd specifies whether to allow CBOR tags (major type 6).
 	TagsMd TagsMode
 
-	// IntDec specifies which Go integer type (int64 or uint64) to use
+	// IntDec specifies which Go integer type (int64, uint64, or [big.Int]) to use
 	// when decoding CBOR int (major type 0 and 1) to Go interface{}.
 	IntDec IntDecMode
 
