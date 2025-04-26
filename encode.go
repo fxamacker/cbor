@@ -314,7 +314,7 @@ const (
 	// TimeUnixMicro causes time.Time to encode to a CBOR time (tag 1) with a floating point content
 	// representing seconds elapsed (with up to 1-microsecond precision) since UNIX Epoch UTC.
 	// NOTE: The floating point content is encoded to the shortest floating-point encoding that preserves
-	// the 64-bit floating point content. I.e., the floating point encoding can be IEEE 764:
+	// the 64-bit floating point value. I.e., the floating point encoding can be IEEE 764:
 	// binary64, binary32, or binary16 depending on the content's value.
 	TimeUnixMicro
 
