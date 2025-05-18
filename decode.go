@@ -1367,7 +1367,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 	// Decode CBOR nil or CBOR undefined to pointer value by setting pointer value to nil.
 	if d.nextCBORNil() && v.Kind() == reflect.Pointer {
 		d.skip()
-		v.Set(reflect.Zero(v.Type()))
+		v.SetZero()
 		return nil
 	}
 
@@ -2317,9 +2317,8 @@ func (d *decoder) parseArrayToArray(v reflect.Value, tInfo *typeInfo) error {
 	}
 	// Set remaining Go array elements to zero values.
 	if gi < vLen {
-		zeroV := reflect.Zero(tInfo.elemTypeInfo.typ)
 		for ; gi < vLen; gi++ {
-			v.Index(gi).Set(zeroV)
+			v.Index(gi).SetZero()
 		}
 	}
 	return err
@@ -2403,7 +2402,7 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 	}
 	keyType, eleType := tInfo.keyTypeInfo.typ, tInfo.elemTypeInfo.typ
 	reuseKey, reuseEle := isImmutableKind(tInfo.keyTypeInfo.kind), isImmutableKind(tInfo.elemTypeInfo.kind)
-	var keyValue, eleValue, zeroKeyValue, zeroEleValue reflect.Value
+	var keyValue, eleValue reflect.Value
 	keyIsInterfaceType := keyType == typeIntf // If key type is interface{}, need to check if key value is hashable.
 	var err, lastErr error
 	keyCount := v.Len()
@@ -2422,10 +2421,7 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 		if !keyValue.IsValid() {
 			keyValue = reflect.New(keyType).Elem()
 		} else if !reuseKey {
-			if !zeroKeyValue.IsValid() {
-				zeroKeyValue = reflect.Zero(keyType)
-			}
-			keyValue.Set(zeroKeyValue)
+			keyValue.SetZero()
 		}
 		if lastErr = d.parseToValue(keyValue, tInfo.keyTypeInfo); lastErr != nil {
 			if err == nil {
@@ -2460,10 +2456,7 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 		if !eleValue.IsValid() {
 			eleValue = reflect.New(eleType).Elem()
 		} else if !reuseEle {
-			if !zeroEleValue.IsValid() {
-				zeroEleValue = reflect.Zero(eleType)
-			}
-			eleValue.Set(zeroEleValue)
+			eleValue.SetZero()
 		}
 		if lastErr := d.parseToValue(eleValue, tInfo.elemTypeInfo); lastErr != nil {
 			if err == nil {
@@ -3009,7 +3002,7 @@ var (
 func fillNil(_ cborType, v reflect.Value) error {
 	switch v.Kind() {
 	case reflect.Slice, reflect.Map, reflect.Interface, reflect.Pointer:
-		v.Set(reflect.Zero(v.Type()))
+		v.SetZero()
 		return nil
 	}
 	return nil
@@ -3145,9 +3138,8 @@ func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, bsts B
 		}
 		// Set remaining Go array elements to zero values.
 		if i < vLen {
-			zeroV := reflect.Zero(reflect.TypeOf(byte(0)))
 			for ; i < vLen; i++ {
-				v.Index(i).Set(zeroV)
+				v.Index(i).SetZero()
 			}
 		}
 		return nil
