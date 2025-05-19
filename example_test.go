@@ -488,7 +488,7 @@ func Example_cOSE() {
 		IV        []byte          `cbor:"5,keyasint,omitempty"`
 		CrvOrNOrK cbor.RawMessage `cbor:"-1,keyasint,omitempty"` // K for symmetric keys, Crv for elliptic curve keys, N for RSA modulus
 		XOrE      cbor.RawMessage `cbor:"-2,keyasint,omitempty"` // X for curve x-coordinate, E for RSA public exponent
-		Y         cbor.RawMessage `cbor:"-3,keyasint,omitempty"` // Y for curve y-cooridate
+		Y         cbor.RawMessage `cbor:"-3,keyasint,omitempty"` // Y for curve y-coordinate
 		D         []byte          `cbor:"-4,keyasint,omitempty"`
 	}
 	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.2
