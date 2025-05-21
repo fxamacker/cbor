@@ -101,7 +101,7 @@ func ExampleMarshal_toarray() {
 }
 
 // This example uses "keyasint" struct tag option to encode struct's field names as integer.
-// This feautre is very useful in handling COSE, CWT, SenML data.
+// This feature is very useful in handling COSE, CWT, SenML data.
 func ExampleMarshal_keyasint() {
 	type Record struct {
 		Name        string `cbor:"1,keyasint"`
