@@ -207,11 +207,13 @@ func (e *DupMapKeyError) Error() string {
 
 // UnknownFieldError describes detected unknown field in CBOR map when decoding to Go struct.
 type UnknownFieldError struct {
-	Index int
+	Struct string // name of the struct being decoded
+	Field  string // field of the CBOR map that was unexpected
+	Index  int    // index of the field in the CBOR map
 }
 
 func (e *UnknownFieldError) Error() string {
-	return fmt.Sprintf("cbor: found unknown field at map element index %d", e.Index)
+	return fmt.Sprintf("cbor: found unknown field: struct '%s' has no field '%s', at map element index %d", e.Struct, e.Field, e.Index)
 }
 
 // UnacceptableDataItemError is returned when unmarshaling a CBOR input that contains a data item
@@ -2617,8 +2619,8 @@ MapEntryLoop:
 		var k any
 
 		t := d.nextCBORType()
+		var keyBytes []byte
 		if t == cborTypeTextString || (t == cborTypeByteString && d.dm.fieldNameByteString == FieldNameByteStringAllowed) {
-			var keyBytes []byte
 			if t == cborTypeTextString {
 				keyBytes, lastErr = d.parseTextString()
 				if lastErr != nil {
@@ -2767,7 +2769,7 @@ MapEntryLoop:
 
 		if f == nil {
 			if errOnUnknownField {
-				err = &UnknownFieldError{j}
+				err = &UnknownFieldError{Struct: tInfo.typ.String(), Field: string(keyBytes), Index: j}
 				d.skip() // Skip value
 				j++
 				// skip the rest of the map
