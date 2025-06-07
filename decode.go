@@ -36,7 +36,7 @@ import (
 //
 // To unmarshal CBOR into a pointer, Unmarshal sets the pointer to nil
 // if CBOR data is null (0xf6) or undefined (0xf7).  Otherwise, Unmarshal
-// unmarshals CBOR into the value pointed to by the pointer.  If the
+// unmarshalls CBOR into the value pointed to by the pointer.  If the
 // pointer is nil, Unmarshal creates a new value for it to point to.
 //
 // To unmarshal CBOR into an empty interface value, Unmarshal uses the
@@ -214,7 +214,7 @@ func (e *UnknownFieldError) Error() string {
 	return fmt.Sprintf("cbor: found unknown field at map element index %d", e.Index)
 }
 
-// UnacceptableDataItemError is returned when unmarshaling a CBOR input that contains a data item
+// UnacceptableDataItemError is returned when unmarshalling a CBOR input that contains a data item
 // that is not acceptable to a specific CBOR-based application protocol ("invalid or unexpected" as
 // described in RFC 8949 Section 5 Paragraph 3).
 type UnacceptableDataItemError struct {
@@ -226,7 +226,7 @@ func (e UnacceptableDataItemError) Error() string {
 	return fmt.Sprintf("cbor: data item of cbor type %s is not accepted by protocol: %s", e.CBORType, e.Message)
 }
 
-// ByteStringExpectedFormatError is returned when unmarshaling CBOR byte string fails when
+// ByteStringExpectedFormatError is returned when unmarshalling CBOR byte string fails when
 // using non-default ByteStringExpectedFormat decoding option that makes decoder expect
 // a specified format such as base64, hex, etc.
 type ByteStringExpectedFormatError struct {
@@ -258,7 +258,7 @@ func (e *ByteStringExpectedFormatError) Unwrap() error {
 	return e.err
 }
 
-// InadmissibleTagContentTypeError is returned when unmarshaling built-in CBOR tags
+// InadmissibleTagContentTypeError is returned when unmarshalling built-in CBOR tags
 // fails because of inadmissible type for tag content. Currently, the built-in
 // CBOR tags in this codec are tags 0-3 and 21-23.
 // See "Tag validity" in RFC 8949 Section 5.3.2.
@@ -592,14 +592,14 @@ func (tttam TimeTagToAnyMode) valid() bool {
 	return tttam >= 0 && tttam < maxTimeTagToAnyMode
 }
 
-// SimpleValueRegistry is a registry of unmarshaling behaviors for each possible CBOR simple value
+// SimpleValueRegistry is a registry of unmarshalling behaviors for each possible CBOR simple value
 // number (0...23 and 32...255).
 type SimpleValueRegistry struct {
 	rejected [256]bool
 }
 
 // WithRejectedSimpleValue registers the given simple value as rejected. If the simple value is
-// encountered in a CBOR input during unmarshaling, an UnacceptableDataItemError is returned.
+// encountered in a CBOR input during unmarshalling, an UnacceptableDataItemError is returned.
 func WithRejectedSimpleValue(sv SimpleValue) func(*SimpleValueRegistry) error {
 	return func(r *SimpleValueRegistry) error {
 		if sv >= 24 && sv <= 31 {
