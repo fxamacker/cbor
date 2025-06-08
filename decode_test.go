@@ -5677,7 +5677,7 @@ func TestUnmarshalDupMapKeyToStructKeyAsInt(t *testing.T) {
 
 	// Duplicate key triggers error.
 	wantS = s{A: 2, B: 4}
-	wantErrorMsg := "cbor: found duplicate map key \"1\" at map element index 2"
+	wantErrorMsg := "cbor: found duplicate map key 1 at map element index 2"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
@@ -5724,7 +5724,7 @@ func TestStreamDupMapKeyToStructKeyAsInt(t *testing.T) {
 
 	// Duplicate key triggers error.
 	wantS = s{A: 2, B: 4}
-	wantErrorMsg := "cbor: found duplicate map key \"1\" at map element index 2"
+	wantErrorMsg := "cbor: found duplicate map key 1 at map element index 2"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
 	for i := 0; i < 3; i++ {
@@ -5852,7 +5852,7 @@ func TestUnmarshalDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
 
 	// Duplicate key triggers error even though map key "a" doesn't have a corresponding struct field.
 	wantS = s{B: 4}
-	wantErrorMsg := "cbor: found duplicate map key \"1\" at map element index 2"
+	wantErrorMsg := "cbor: found duplicate map key 1 at map element index 2"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
@@ -5898,7 +5898,7 @@ func TestStreamDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
 
 	// Duplicate key triggers error.
 	wantS = s{B: 4}
-	wantErrorMsg := "cbor: found duplicate map key \"1\" at map element index 2"
+	wantErrorMsg := "cbor: found duplicate map key 1 at map element index 2"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
 	for i := 0; i < 3; i++ {
@@ -5944,7 +5944,7 @@ func TestUnmarshalDupMapKeyToStructWrongType(t *testing.T) {
 	}
 
 	wantS = s{A: "A", B: "B", C: "C"}
-	wantErrorMsg = "cbor: found duplicate map key \"100000\" at map element index 4"
+	wantErrorMsg = "cbor: found duplicate map key 100000 at map element index 4"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
@@ -5997,7 +5997,7 @@ func TestStreamDupMapKeyToStructWrongType(t *testing.T) {
 
 	// Duplicate key triggers error.
 	wantS = s{A: "A", B: "B", C: "C"}
-	wantErrorMsg = "cbor: found duplicate map key \"100000\" at map element index 4"
+	wantErrorMsg = "cbor: found duplicate map key 100000 at map element index 4"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
 	for i := 0; i < 3; i++ {

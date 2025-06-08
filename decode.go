@@ -202,7 +202,7 @@ type DupMapKeyError struct {
 }
 
 func (e *DupMapKeyError) Error() string {
-	return fmt.Sprintf("cbor: found duplicate map key \"%v\" at map element index %d", e.Key, e.Index)
+	return fmt.Sprintf("cbor: found duplicate map key %#v at map element index %d", e.Key, e.Index)
 }
 
 // UnknownFieldError describes detected unknown field in CBOR map when decoding to Go struct.
