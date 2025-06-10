@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
 
 	"github.com/fxamacker/cbor/v2"
 )
@@ -60,4 +61,25 @@ func ExampleTranscoder_fromJSON() {
 	diag, _ := cbor.Diagnose(got)
 	fmt.Println(diag)
 	// Output: {_ "a": [_ true, "z", {_ "y": 3.14}], "b": {_ "c": null}}
+}
+
+func ExampleTranscoder_toJSON() {
+	var dec cbor.DecMode
+	dec, _ = cbor.DecOptions{
+		DefaultMapType: reflect.TypeOf(map[string]any{}),
+		JSONUnmarshalerTranscoder: TranscoderFunc(func(w io.Writer, r io.Reader) error {
+			var tmp any
+			if err := dec.NewDecoder(r).Decode(&tmp); err != nil {
+				return err
+			}
+			return json.NewEncoder(w).Encode(tmp)
+		}),
+	}.DecMode()
+
+	var got json.RawMessage
+	if err := dec.Unmarshal(cbor.RawMessage{0xa2, 0x61, 'a', 0x01, 0x61, 'b', 0x83, 0xf4, 0xf5, 0xf6}, &got); err != nil {
+		panic(err)
+	}
+	fmt.Println(string(got))
+	// Output: {"a":1,"b":[false,true,null]}
 }

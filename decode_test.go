@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -4899,33 +4900,34 @@ func TestDecOptions(t *testing.T) {
 	}
 
 	opts1 := DecOptions{
-		DupMapKey:                DupMapKeyEnforcedAPF,
-		TimeTag:                  DecTagRequired,
-		MaxNestedLevels:          100,
-		MaxArrayElements:         102,
-		MaxMapPairs:              101,
-		IndefLength:              IndefLengthForbidden,
-		TagsMd:                   TagsForbidden,
-		IntDec:                   IntDecConvertSigned,
-		MapKeyByteString:         MapKeyByteStringForbidden,
-		ExtraReturnErrors:        ExtraDecErrorUnknownField,
-		DefaultMapType:           reflect.TypeOf(map[string]any(nil)),
-		UTF8:                     UTF8DecodeInvalid,
-		FieldNameMatching:        FieldNameMatchingCaseSensitive,
-		BigIntDec:                BigIntDecodePointer,
-		DefaultByteStringType:    reflect.TypeOf(""),
-		ByteStringToString:       ByteStringToStringAllowed,
-		FieldNameByteString:      FieldNameByteStringAllowed,
-		UnrecognizedTagToAny:     UnrecognizedTagContentToAny,
-		TimeTagToAny:             TimeTagToRFC3339,
-		SimpleValues:             simpleValues,
-		NaN:                      NaNDecodeForbidden,
-		Inf:                      InfDecodeForbidden,
-		ByteStringToTime:         ByteStringToTimeAllowed,
-		ByteStringExpectedFormat: ByteStringExpectedBase64URL,
-		BignumTag:                BignumTagForbidden,
-		BinaryUnmarshaler:        BinaryUnmarshalerNone,
-		TextUnmarshaler:          TextUnmarshalerTextString,
+		DupMapKey:                 DupMapKeyEnforcedAPF,
+		TimeTag:                   DecTagRequired,
+		MaxNestedLevels:           100,
+		MaxArrayElements:          102,
+		MaxMapPairs:               101,
+		IndefLength:               IndefLengthForbidden,
+		TagsMd:                    TagsForbidden,
+		IntDec:                    IntDecConvertSigned,
+		MapKeyByteString:          MapKeyByteStringForbidden,
+		ExtraReturnErrors:         ExtraDecErrorUnknownField,
+		DefaultMapType:            reflect.TypeOf(map[string]any(nil)),
+		UTF8:                      UTF8DecodeInvalid,
+		FieldNameMatching:         FieldNameMatchingCaseSensitive,
+		BigIntDec:                 BigIntDecodePointer,
+		DefaultByteStringType:     reflect.TypeOf(""),
+		ByteStringToString:        ByteStringToStringAllowed,
+		FieldNameByteString:       FieldNameByteStringAllowed,
+		UnrecognizedTagToAny:      UnrecognizedTagContentToAny,
+		TimeTagToAny:              TimeTagToRFC3339,
+		SimpleValues:              simpleValues,
+		NaN:                       NaNDecodeForbidden,
+		Inf:                       InfDecodeForbidden,
+		ByteStringToTime:          ByteStringToTimeAllowed,
+		ByteStringExpectedFormat:  ByteStringExpectedBase64URL,
+		BignumTag:                 BignumTagForbidden,
+		BinaryUnmarshaler:         BinaryUnmarshalerNone,
+		TextUnmarshaler:           TextUnmarshalerTextString,
+		JSONUnmarshalerTranscoder: stubTranscoder{},
 	}
 	ov := reflect.ValueOf(opts1)
 	for i := 0; i < ov.NumField(); i++ {
@@ -10233,5 +10235,86 @@ func TestTextUnmarshalerModeError(t *testing.T) {
 
 	if got, want := err.Error(), "cbor: cannot unmarshal text for *cbor.errorTextUnmarshaler: test"; got != want {
 		t.Errorf("want: %q, got: %q", want, got)
+	}
+}
+
+func TestJSONUnmarshalerTranscoder(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		in   []byte
+
+		transcodeInput  []byte
+		transcodeOutput []byte
+		transcodeError  error
+
+		want         any
+		wantErrorMsg string
+	}{
+		{
+			name: "successful transcode",
+			in:   []byte{0xf5},
+
+			transcodeInput:  []byte{0xf5},
+			transcodeOutput: []byte("true"),
+
+			want: json.RawMessage("true"),
+		},
+		{
+			name: "transcode returns non-nil error",
+			in:   []byte{0xf5},
+
+			transcodeInput: []byte{0xf5},
+			transcodeError: errors.New("test"),
+
+			want: json.RawMessage("true"),
+			wantErrorMsg: TranscodeError{
+				err:          errors.New("test"),
+				rtype:        reflect.TypeOf((*json.RawMessage)(nil)),
+				sourceFormat: "cbor",
+				targetFormat: "json",
+			}.Error(),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dec, err := DecOptions{
+				JSONUnmarshalerTranscoder: transcodeFunc(func(w io.Writer, r io.Reader) error {
+					source, err := io.ReadAll(r)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if got := string(source); got != string(tc.transcodeInput) {
+						t.Errorf("transcoder got input %q, want %q", got, string(tc.transcodeInput))
+					}
+
+					if tc.transcodeError != nil {
+						return tc.transcodeError
+					}
+
+					_, err = w.Write(tc.transcodeOutput)
+					return err
+
+				}),
+			}.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			gotrv := reflect.New(reflect.TypeOf(tc.want))
+			err = dec.Unmarshal(tc.in, gotrv.Interface())
+			if tc.wantErrorMsg != "" {
+				if err == nil {
+					t.Errorf("Unmarshal(0x%x) didn't return an error, want error %q", tc.in, tc.wantErrorMsg)
+				} else if gotErrorMsg := err.Error(); gotErrorMsg != tc.wantErrorMsg {
+					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.in, gotErrorMsg, tc.wantErrorMsg)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unmarshal(0x%x) returned non-nil error %v", tc.in, err)
+				} else if got := gotrv.Elem().Interface(); !reflect.DeepEqual(tc.want, got) {
+					t.Errorf("Unmarshal(0x%x): %v, want %v", tc.in, got, tc.want)
+				}
+			}
+
+		})
 	}
 }
