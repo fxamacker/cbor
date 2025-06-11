@@ -749,6 +749,25 @@ func (bum BinaryUnmarshalerMode) valid() bool {
 	return bum >= 0 && bum < maxBinaryUnmarshalerMode
 }
 
+// TextUnmarshalerMode specifies how to decode into types that implement
+// encoding.TextUnmarshaler.
+type TextUnmarshalerMode int
+
+const (
+	// TextUnmarshalerNone does not recognize TextUnmarshaler implementations during decode.
+	TextUnmarshalerNone TextUnmarshalerMode = iota
+
+	// TextUnmarshalerTextString will invoke UnmarshalText on the contents of a CBOR text
+	// string when decoding into a value that implements TextUnmarshaler.
+	TextUnmarshalerTextString
+
+	maxTextUnmarshalerMode
+)
+
+func (tum TextUnmarshalerMode) valid() bool {
+	return tum >= 0 && tum < maxTextUnmarshalerMode
+}
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -883,6 +902,10 @@ type DecOptions struct {
 	// BinaryUnmarshaler specifies how to decode into types that implement
 	// encoding.BinaryUnmarshaler.
 	BinaryUnmarshaler BinaryUnmarshalerMode
+
+	// TextUnmarshaler specifies how to decode into types that implement
+	// encoding.TextUnmarshaler.
+	TextUnmarshaler TextUnmarshalerMode
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -1095,6 +1118,10 @@ func (opts DecOptions) decMode() (*decMode, error) { //nolint:gocritic // ignore
 		return nil, errors.New("cbor: invalid BinaryUnmarshaler " + strconv.Itoa(int(opts.BinaryUnmarshaler)))
 	}
 
+	if !opts.TextUnmarshaler.valid() {
+		return nil, errors.New("cbor: invalid TextUnmarshaler " + strconv.Itoa(int(opts.TextUnmarshaler)))
+	}
+
 	dm := decMode{
 		dupMapKey:                opts.DupMapKey,
 		timeTag:                  opts.TimeTag,
@@ -1122,6 +1149,7 @@ func (opts DecOptions) decMode() (*decMode, error) { //nolint:gocritic // ignore
 		byteStringExpectedFormat: opts.ByteStringExpectedFormat,
 		bignumTag:                opts.BignumTag,
 		binaryUnmarshaler:        opts.BinaryUnmarshaler,
+		textUnmarshaler:          opts.TextUnmarshaler,
 	}
 
 	return &dm, nil
@@ -1201,6 +1229,7 @@ type decMode struct {
 	byteStringExpectedFormat ByteStringExpectedFormatMode
 	bignumTag                BignumTagMode
 	binaryUnmarshaler        BinaryUnmarshalerMode
+	textUnmarshaler          TextUnmarshalerMode
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -1241,6 +1270,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		ByteStringExpectedFormat: dm.byteStringExpectedFormat,
 		BignumTag:                dm.bignumTag,
 		BinaryUnmarshaler:        dm.binaryUnmarshaler,
+		TextUnmarshaler:          dm.textUnmarshaler,
 	}
 }
 
@@ -1530,7 +1560,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		if err != nil {
 			return err
 		}
-		return fillTextString(t, b, v)
+		return fillTextString(t, b, v, d.dm.textUnmarshaler)
 
 	case cborTypePrimitives:
 		_, ai, val := d.getHead()
@@ -2995,6 +3025,7 @@ var (
 	typeUnmarshaler           = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
 	typeUnexportedUnmarshaler = reflect.TypeOf((*unmarshaler)(nil)).Elem()
 	typeBinaryUnmarshaler     = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
+	typeTextUnmarshaler       = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
 	typeString                = reflect.TypeOf("")
 	typeByteSlice             = reflect.TypeOf([]byte(nil))
 )
@@ -3147,11 +3178,28 @@ func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, bsts B
 	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
 }
 
-func fillTextString(t cborType, val []byte, v reflect.Value) error {
+func fillTextString(t cborType, val []byte, v reflect.Value, tum TextUnmarshalerMode) error {
+	// Check if the value implements TextUnmarshaler and the mode allows it
+	if tum == TextUnmarshalerTextString && reflect.PointerTo(v.Type()).Implements(typeTextUnmarshaler) {
+		if v.CanAddr() {
+			v = v.Addr()
+			if u, ok := v.Interface().(encoding.TextUnmarshaler); ok {
+				// The contract of TextUnmarshaler forbids retaining the input
+				// bytes, so no copying is required even if val is shared.
+				if err := u.UnmarshalText(val); err != nil {
+					return fmt.Errorf("cbor: cannot unmarshal text for %s: %w", v.Type(), err)
+				}
+				return nil
+			}
+		}
+		return errors.New("cbor: cannot set new value for " + v.Type().String())
+	}
+
 	if v.Kind() == reflect.String {
 		v.SetString(string(val))
 		return nil
 	}
+
 	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
 }
 
