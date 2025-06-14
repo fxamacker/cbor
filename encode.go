@@ -319,7 +319,7 @@ const (
 	TimeUnixMicro
 
 	// TimeUnixDynamic causes time.Time to encode to a CBOR time (tag 1) with either an integer content or
-	// or a floating point content, depending on the content's value.  This option is equivalent to dynamically
+	// a floating point content, depending on the content's value.  This option is equivalent to dynamically
 	// choosing TimeUnix if time.Time doesn't have fractional seconds, and using TimeUnixMicro if time.Time
 	// has fractional seconds.
 	TimeUnixDynamic

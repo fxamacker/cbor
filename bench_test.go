@@ -45,7 +45,7 @@ type coseKey struct {
 	IV        []byte     `cbor:"5,keyasint,omitempty"`
 	CrvOrNOrK RawMessage `cbor:"-1,keyasint,omitempty"` // K for symmetric keys, Crv for elliptic curve keys, N for RSA modulus
 	XOrE      RawMessage `cbor:"-2,keyasint,omitempty"` // X for curve x-coordinate, E for RSA public exponent
-	Y         RawMessage `cbor:"-3,keyasint,omitempty"` // Y for curve y-cooridate
+	Y         RawMessage `cbor:"-3,keyasint,omitempty"` // Y for curve y-coordinate
 	D         []byte     `cbor:"-4,keyasint,omitempty"`
 }
 

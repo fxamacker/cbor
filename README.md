@@ -681,7 +681,7 @@ because RFC 8949 treats CBOR data item with remaining bytes as malformed.
 Other useful functions: 
 - `Diagnose`, `DiagnoseFirst` produce human-readable [Extended Diagnostic Notation](https://www.rfc-editor.org/rfc/rfc8610.html#appendix-G) from CBOR data.
 - `UnmarshalFirst` decodes first CBOR data item and return any remaining bytes.
-- `Wellformed` returns true if the the CBOR data item is well-formed.
+- `Wellformed` returns true if the CBOR data item is well-formed.
 
 Interfaces identical or comparable to Go `encoding` packages include:  
 `Marshaler`, `Unmarshaler`, `BinaryMarshaler`, and `BinaryUnmarshaler`.

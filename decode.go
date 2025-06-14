@@ -36,7 +36,7 @@ import (
 //
 // To unmarshal CBOR into a pointer, Unmarshal sets the pointer to nil
 // if CBOR data is null (0xf6) or undefined (0xf7).  Otherwise, Unmarshal
-// unmarshals CBOR into the value pointed to by the pointer.  If the
+// unmarshalls CBOR into the value pointed to by the pointer.  If the
 // pointer is nil, Unmarshal creates a new value for it to point to.
 //
 // To unmarshal CBOR into an empty interface value, Unmarshal uses the
