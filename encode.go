@@ -132,6 +132,20 @@ func (e *MarshalerError) Unwrap() error {
 	return e.err
 }
 
+type TranscodeError struct {
+	err            error
+	rtype          reflect.Type
+	source, target string
+}
+
+func (e TranscodeError) Error() string {
+	return "cbor: error transcoding " + e.rtype.String() + " from " + e.source + " to " + e.target + ": " + e.err.Error()
+}
+
+func (e TranscodeError) Unwrap() error {
+	return e.err
+}
+
 // UnsupportedTypeError is returned by Marshal when attempting to encode value
 // of an unsupported type.
 type UnsupportedTypeError struct {
@@ -567,6 +581,11 @@ type EncOptions struct {
 
 	// BinaryMarshaler specifies how to encode types that implement encoding.BinaryMarshaler.
 	BinaryMarshaler BinaryMarshalerMode
+
+	// JSONMarshalerTranscoder sets the transcoding scheme used to marshal types that implement
+	// json.Marshaler but do not also implement cbor.Marshaler. If nil, encoding behavior is not
+	// influenced by whether or not a type implements json.Marshaler.
+	JSONMarshalerTranscoder Transcoder
 }
 
 // CanonicalEncOptions returns EncOptions for "Canonical CBOR" encoding,
@@ -796,6 +815,7 @@ func (opts EncOptions) encMode() (*encMode, error) { //nolint:gocritic // ignore
 		byteSliceLaterEncodingTag: byteSliceLaterEncodingTag,
 		byteArray:                 opts.ByteArray,
 		binaryMarshaler:           opts.BinaryMarshaler,
+		jsonMarshalerTranscoder:   opts.JSONMarshalerTranscoder,
 	}
 	return &em, nil
 }
@@ -841,6 +861,7 @@ type encMode struct {
 	byteSliceLaterEncodingTag uint64
 	byteArray                 ByteArrayMode
 	binaryMarshaler           BinaryMarshalerMode
+	jsonMarshalerTranscoder   Transcoder
 }
 
 var defaultEncMode, _ = EncOptions{}.encMode()
@@ -917,22 +938,23 @@ func getMarshalerDecMode(indefLength IndefLengthMode, tagsMd TagsMode) *decMode 
 // EncOptions returns user specified options used to create this EncMode.
 func (em *encMode) EncOptions() EncOptions {
 	return EncOptions{
-		Sort:                 em.sort,
-		ShortestFloat:        em.shortestFloat,
-		NaNConvert:           em.nanConvert,
-		InfConvert:           em.infConvert,
-		BigIntConvert:        em.bigIntConvert,
-		Time:                 em.time,
-		TimeTag:              em.timeTag,
-		IndefLength:          em.indefLength,
-		NilContainers:        em.nilContainers,
-		TagsMd:               em.tagsMd,
-		OmitEmpty:            em.omitEmpty,
-		String:               em.stringType,
-		FieldName:            em.fieldName,
-		ByteSliceLaterFormat: em.byteSliceLaterFormat,
-		ByteArray:            em.byteArray,
-		BinaryMarshaler:      em.binaryMarshaler,
+		Sort:                    em.sort,
+		ShortestFloat:           em.shortestFloat,
+		NaNConvert:              em.nanConvert,
+		InfConvert:              em.infConvert,
+		BigIntConvert:           em.bigIntConvert,
+		Time:                    em.time,
+		TimeTag:                 em.timeTag,
+		IndefLength:             em.indefLength,
+		NilContainers:           em.nilContainers,
+		TagsMd:                  em.tagsMd,
+		OmitEmpty:               em.omitEmpty,
+		String:                  em.stringType,
+		FieldName:               em.fieldName,
+		ByteSliceLaterFormat:    em.byteSliceLaterFormat,
+		ByteArray:               em.byteArray,
+		BinaryMarshaler:         em.binaryMarshaler,
+		JSONMarshalerTranscoder: em.jsonMarshalerTranscoder,
 	}
 }
 
@@ -1704,6 +1726,59 @@ func (bme binaryMarshalerEncoder) isEmpty(em *encMode, v reflect.Value) (bool, e
 	return len(data) == 0, nil
 }
 
+type jsonMarshalerEncoder struct {
+	alternateEncode  encodeFunc
+	alternateIsEmpty isEmptyFunc
+}
+
+func (jme jsonMarshalerEncoder) encode(e *bytes.Buffer, em *encMode, v reflect.Value) error {
+	if em.jsonMarshalerTranscoder == nil {
+		return jme.alternateEncode(e, em, v)
+	}
+
+	vt := v.Type()
+	m, ok := v.Interface().(jsonMarshaler)
+	if !ok {
+		pv := reflect.New(vt)
+		pv.Elem().Set(v)
+		m = pv.Interface().(jsonMarshaler)
+	}
+
+	json, err := m.MarshalJSON()
+	if err != nil {
+		return err
+	}
+
+	offset := e.Len()
+
+	if b := em.encTagBytes(vt); b != nil {
+		e.Write(b)
+	}
+
+	if err := em.jsonMarshalerTranscoder.Transcode(e, bytes.NewReader(json)); err != nil {
+		return &TranscodeError{err: err, rtype: vt, source: "json", target: "cbor"}
+	}
+
+	// Validate that the transcode function has written exactly one well-formed data item.
+	d := decoder{data: e.Bytes()[offset:], dm: getMarshalerDecMode(em.indefLength, em.tagsMd)}
+	if err := d.wellformed(false, true); err != nil {
+		e.Truncate(offset)
+		return &TranscodeError{err: err, rtype: vt, source: "json", target: "cbor"}
+	}
+
+	return nil
+}
+
+func (jme jsonMarshalerEncoder) isEmpty(em *encMode, v reflect.Value) (bool, error) {
+	if em.jsonMarshalerTranscoder == nil {
+		return jme.alternateIsEmpty(em, v)
+	}
+
+	// As with types implementing cbor.Marshaler, transcoded json.Marshaler values always encode
+	// as exactly one complete CBOR data item.
+	return false, nil
+}
+
 func encodeMarshalerType(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if em.tagsMd == TagsForbidden && v.Type() == typeRawTag {
 		return errors.New("cbor: cannot encode cbor.RawTag when TagsMd is TagsForbidden")
@@ -1807,9 +1882,12 @@ func encodeHead(e *bytes.Buffer, t byte, n uint64) int {
 	return headSize
 }
 
+type jsonMarshaler interface{ MarshalJSON() ([]byte, error) }
+
 var (
 	typeMarshaler       = reflect.TypeOf((*Marshaler)(nil)).Elem()
 	typeBinaryMarshaler = reflect.TypeOf((*encoding.BinaryMarshaler)(nil)).Elem()
+	typeJSONMarshaler   = reflect.TypeOf((*jsonMarshaler)(nil)).Elem()
 	typeRawMessage      = reflect.TypeOf(RawMessage(nil))
 	typeByteString      = reflect.TypeOf(ByteString(""))
 )
@@ -1852,6 +1930,19 @@ func getEncodeFuncInternal(t reflect.Type) (ef encodeFunc, ief isEmptyFunc, izf 
 			ief = bme.isEmpty
 		}()
 	}
+	if reflect.PointerTo(t).Implements(typeJSONMarshaler) {
+		defer func() {
+			// capture encoding method used for modes that don't support transcoding
+			// from types that implement json.Marshaler.
+			jme := jsonMarshalerEncoder{
+				alternateEncode:  ef,
+				alternateIsEmpty: ief,
+			}
+			ef = jme.encode
+			ief = jme.isEmpty
+		}()
+	}
+
 	switch k {
 	case reflect.Bool:
 		return encodeBool, isEmptyBool, getIsZeroFunc(t)
