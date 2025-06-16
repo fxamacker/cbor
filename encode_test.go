@@ -6,6 +6,7 @@ package cbor
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -4520,6 +4521,7 @@ func TestEncOptions(t *testing.T) {
 		ByteSliceLaterFormat: ByteSliceLaterFormatBase16,
 		ByteArray:            ByteArrayToArray,
 		BinaryMarshaler:      BinaryMarshalerNone,
+		TextMarshaler:        TextMarshalerTextString,
 	}
 	ov := reflect.ValueOf(opts1)
 	for i := 0; i < ov.NumField(); i++ {
@@ -4581,7 +4583,7 @@ func TestEncModeStringType(t *testing.T) {
 		wantErrorMsg string
 	}{
 		{
-			name:         "",
+			name:         "invalid mode",
 			opts:         EncOptions{String: -1},
 			wantErrorMsg: "cbor: invalid StringType -1",
 		},
@@ -4604,12 +4606,12 @@ func TestEncModeInvalidFieldNameMode(t *testing.T) {
 		wantErrorMsg string
 	}{
 		{
-			name:         "",
+			name:         "below range of valid modes",
 			opts:         EncOptions{FieldName: -1},
 			wantErrorMsg: "cbor: invalid FieldName -1",
 		},
 		{
-			name:         "",
+			name:         "above range of valid modes",
 			opts:         EncOptions{FieldName: 101},
 			wantErrorMsg: "cbor: invalid FieldName 101",
 		},
@@ -5497,14 +5499,42 @@ func TestEncModeInvalidBinaryMarshalerMode(t *testing.T) {
 		wantErrorMsg string
 	}{
 		{
-			name:         "",
+			name:         "below range of valid modes",
 			opts:         EncOptions{BinaryMarshaler: -1},
 			wantErrorMsg: "cbor: invalid BinaryMarshaler -1",
 		},
 		{
-			name:         "",
+			name:         "above range of valid modes",
 			opts:         EncOptions{BinaryMarshaler: 101},
 			wantErrorMsg: "cbor: invalid BinaryMarshaler 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.EncMode()
+			if err == nil {
+				t.Errorf("EncMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestEncModeInvalidTextMarshalerMode(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         EncOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         EncOptions{TextMarshaler: -1},
+			wantErrorMsg: "cbor: invalid TextMarshaler -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         EncOptions{TextMarshaler: 101},
+			wantErrorMsg: "cbor: invalid TextMarshaler 101",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -5584,6 +5614,142 @@ func TestBinaryMarshalerMode(t *testing.T) {
 
 			if !bytes.Equal(tc.want, got) {
 				t.Errorf("unexpected output, want: 0x%x, got 0x%x", tc.want, got)
+			}
+		})
+	}
+}
+
+type testTextMarshaler struct {
+	String string `cbor:"s"`
+	Error  error  `cbor:"-"`
+}
+
+func (tm *testTextMarshaler) MarshalText() ([]byte, error) {
+	return []byte(tm.String), tm.Error
+}
+
+func TestTextMarshalerMode(t *testing.T) {
+	testTags := NewTagSet()
+	if err := testTags.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeOf(testTextMarshaler{}), 9999); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		name string
+		opts EncOptions
+		tags TagSet
+		in   any
+		want []byte
+	}{
+		{
+			name: "struct implementing TextMarshaler is encoded to map by default",
+			opts: EncOptions{},
+			in:   testTextMarshaler{String: "z"},
+			want: []byte{0xa1, 0x61, 's', 0x61, 'z'}, // {"s": "z"}
+		},
+		{
+			name: "struct implementing TextMarshaler is encoded to map with TextMarshalerNone",
+			opts: EncOptions{TextMarshaler: TextMarshalerNone},
+			in:   testTextMarshaler{String: "z"},
+			want: []byte{0xa1, 0x61, 's', 0x61, 'z'}, // {"s": "z"}
+		},
+		{
+			name: "struct implementing TextMarshaler is encoded as MarshalText's output in a text string with TextMarshalerTextString",
+			opts: EncOptions{TextMarshaler: TextMarshalerTextString},
+			tags: testTags,
+			in:   testTextMarshaler{String: "z"},
+			want: []byte{0xd9, 0x27, 0x0f, 0x61, 'z'}, // 9999("z")
+		},
+		{
+			name: "TextMarshaler struct field with omitempty is omitted if empty slice is returned using TextMarshalerTextString",
+			opts: EncOptions{TextMarshaler: TextMarshalerTextString},
+			in: struct {
+				M testTextMarshaler `cbor:"m,omitempty"`
+			}{
+				M: testTextMarshaler{String: ""},
+			},
+			want: []byte{0xa0}, // {}
+		},
+		{
+			name: "TextMarshaler struct field with omitempty is not omitted if empty slice is returned using TextMarshalerNone",
+			opts: EncOptions{TextMarshaler: TextMarshalerNone},
+			in: struct {
+				M testTextMarshaler `cbor:"m,omitempty"`
+			}{
+				M: testTextMarshaler{String: ""},
+			},
+			want: []byte{0xa1, 0x61, 'm', 0xa1, 0x61, 's', 0x60}, // {"m": {"s": ""}}
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var (
+				enc EncMode
+				err error
+			)
+
+			if tc.tags != nil {
+				enc, err = tc.opts.EncModeWithTags(tc.tags)
+			} else {
+				enc, err = tc.opts.EncMode()
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			got, err := enc.Marshal(tc.in)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !bytes.Equal(tc.want, got) {
+				t.Errorf("unexpected output, want: 0x%x, got 0x%x", tc.want, got)
+			}
+		})
+	}
+}
+
+func TestTextMarshalerModeError(t *testing.T) {
+	testTags := NewTagSet()
+	if err := testTags.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeOf(testTextMarshaler{}), 9999); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		name string
+		opts EncOptions
+		in   any
+		want string
+	}{
+		{
+			name: "non-nil error returned when MarshalText returns non-nil error",
+			opts: EncOptions{TextMarshaler: TextMarshalerTextString},
+			in:   testTextMarshaler{Error: errors.New("test")},
+			want: "cbor: cannot marshal text for cbor.testTextMarshaler: test",
+		},
+		{
+			name: "non-nil error returned when MarshalText returns non-nil error during struct field emptiness check",
+			opts: EncOptions{TextMarshaler: TextMarshalerTextString},
+			in: struct {
+				M testTextMarshaler `cbor:"m,omitempty"`
+			}{
+				M: testTextMarshaler{Error: errors.New("test")},
+			},
+			want: "cbor: cannot marshal text for cbor.testTextMarshaler: test",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			enc, err := tc.opts.EncMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = enc.Marshal(tc.in)
+			if err == nil {
+				t.Fatal("expected non-nil error")
+			}
+
+			if got := err.Error(); got != tc.want {
+				t.Errorf("want: %q, got: %q", tc.want, got)
 			}
 		})
 	}

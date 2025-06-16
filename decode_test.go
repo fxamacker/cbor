@@ -4925,6 +4925,7 @@ func TestDecOptions(t *testing.T) {
 		ByteStringExpectedFormat: ByteStringExpectedBase64URL,
 		BignumTag:                BignumTagForbidden,
 		BinaryUnmarshaler:        BinaryUnmarshalerNone,
+		TextUnmarshaler:          TextUnmarshalerTextString,
 	}
 	ov := reflect.ValueOf(opts1)
 	for i := 0; i < ov.NumField(); i++ {
@@ -10130,5 +10131,107 @@ func TestBignumTagMode(t *testing.T) {
 				})
 			}
 		})
+	}
+}
+
+func TestDecModeInvalidTextUnmarshaler(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{TextUnmarshaler: -1},
+			wantErrorMsg: "cbor: invalid TextUnmarshaler -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{TextUnmarshaler: 101},
+			wantErrorMsg: "cbor: invalid TextUnmarshaler 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+type testTextUnmarshaler string
+
+func (tu *testTextUnmarshaler) UnmarshalText(_ []byte) error {
+	*tu = "UnmarshalText"
+	return nil
+}
+
+func TestTextUnmarshalerMode(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		opts DecOptions
+		in   []byte
+		want any
+	}{
+		{
+			name: "UnmarshalText is not called by default",
+			opts: DecOptions{},
+			in:   []byte("\x65hello"), // "hello"
+			want: testTextUnmarshaler("hello"),
+		},
+		{
+			name: "UnmarshalText is called with TextUnmarshalerTextString",
+			opts: DecOptions{TextUnmarshaler: TextUnmarshalerTextString},
+			in:   []byte("\x65hello"), // "hello"
+			want: testTextUnmarshaler("UnmarshalText"),
+		},
+		{
+			name: "default text string unmarshaling behavior is used with TextUnmarshalerNone",
+			opts: DecOptions{TextUnmarshaler: TextUnmarshalerNone},
+			in:   []byte("\x65hello"), // "hello"
+			want: testTextUnmarshaler("hello"),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, err := tc.opts.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			gotrv := reflect.New(reflect.TypeOf(tc.want))
+			if err := dm.Unmarshal(tc.in, gotrv.Interface()); err != nil {
+				t.Fatal(err)
+			}
+
+			got := gotrv.Elem().Interface()
+			if !reflect.DeepEqual(tc.want, got) {
+				t.Errorf("want: %v, got: %v", tc.want, got)
+			}
+		})
+	}
+}
+
+type errorTextUnmarshaler struct{}
+
+func (u *errorTextUnmarshaler) UnmarshalText([]byte) error {
+	return errors.New("test")
+}
+
+func TestTextUnmarshalerModeError(t *testing.T) {
+	dec, err := DecOptions{TextUnmarshaler: TextUnmarshalerTextString}.DecMode()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = dec.Unmarshal([]byte{0x61, 'a'}, new(errorTextUnmarshaler))
+	if err == nil {
+		t.Fatal("expected non-nil error")
+	}
+
+	if got, want := err.Error(), "cbor: cannot unmarshal text for *cbor.errorTextUnmarshaler: test"; got != want {
+		t.Errorf("want: %q, got: %q", want, got)
 	}
 }

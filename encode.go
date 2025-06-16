@@ -510,6 +510,24 @@ func (bmm BinaryMarshalerMode) valid() bool {
 	return bmm >= 0 && bmm < maxBinaryMarshalerMode
 }
 
+// TextMarshalerMode specifies how to encode types that implement encoding.TextMarshaler.
+type TextMarshalerMode int
+
+const (
+	// TextMarshalerNone does not recognize TextMarshaler implementations during encode.
+	// This is the default behavior.
+	TextMarshalerNone TextMarshalerMode = iota
+
+	// TextMarshalerTextString encodes the output of MarshalText to a CBOR text string.
+	TextMarshalerTextString
+
+	maxTextMarshalerMode
+)
+
+func (tmm TextMarshalerMode) valid() bool {
+	return tmm >= 0 && tmm < maxTextMarshalerMode
+}
+
 // EncOptions specifies encoding options.
 type EncOptions struct {
 	// Sort specifies sorting order.
@@ -567,6 +585,9 @@ type EncOptions struct {
 
 	// BinaryMarshaler specifies how to encode types that implement encoding.BinaryMarshaler.
 	BinaryMarshaler BinaryMarshalerMode
+
+	// TextMarshaler specifies how to encode types that implement encoding.TextMarshaler.
+	TextMarshaler TextMarshalerMode
 }
 
 // CanonicalEncOptions returns EncOptions for "Canonical CBOR" encoding,
@@ -777,6 +798,9 @@ func (opts EncOptions) encMode() (*encMode, error) { //nolint:gocritic // ignore
 	if !opts.BinaryMarshaler.valid() {
 		return nil, errors.New("cbor: invalid BinaryMarshaler " + strconv.Itoa(int(opts.BinaryMarshaler)))
 	}
+	if !opts.TextMarshaler.valid() {
+		return nil, errors.New("cbor: invalid TextMarshaler " + strconv.Itoa(int(opts.TextMarshaler)))
+	}
 	em := encMode{
 		sort:                      opts.Sort,
 		shortestFloat:             opts.ShortestFloat,
@@ -796,6 +820,7 @@ func (opts EncOptions) encMode() (*encMode, error) { //nolint:gocritic // ignore
 		byteSliceLaterEncodingTag: byteSliceLaterEncodingTag,
 		byteArray:                 opts.ByteArray,
 		binaryMarshaler:           opts.BinaryMarshaler,
+		textMarshaler:             opts.TextMarshaler,
 	}
 	return &em, nil
 }
@@ -841,6 +866,7 @@ type encMode struct {
 	byteSliceLaterEncodingTag uint64
 	byteArray                 ByteArrayMode
 	binaryMarshaler           BinaryMarshalerMode
+	textMarshaler             TextMarshalerMode
 }
 
 var defaultEncMode, _ = EncOptions{}.encMode()
@@ -933,6 +959,7 @@ func (em *encMode) EncOptions() EncOptions {
 		ByteSliceLaterFormat: em.byteSliceLaterFormat,
 		ByteArray:            em.byteArray,
 		BinaryMarshaler:      em.binaryMarshaler,
+		TextMarshaler:        em.textMarshaler,
 	}
 }
 
@@ -1704,6 +1731,54 @@ func (bme binaryMarshalerEncoder) isEmpty(em *encMode, v reflect.Value) (bool, e
 	return len(data) == 0, nil
 }
 
+type textMarshalerEncoder struct {
+	alternateEncode  encodeFunc
+	alternateIsEmpty isEmptyFunc
+}
+
+func (tme textMarshalerEncoder) encode(e *bytes.Buffer, em *encMode, v reflect.Value) error {
+	if em.textMarshaler == TextMarshalerNone {
+		return tme.alternateEncode(e, em, v)
+	}
+
+	vt := v.Type()
+	m, ok := v.Interface().(encoding.TextMarshaler)
+	if !ok {
+		pv := reflect.New(vt)
+		pv.Elem().Set(v)
+		m = pv.Interface().(encoding.TextMarshaler)
+	}
+	data, err := m.MarshalText()
+	if err != nil {
+		return fmt.Errorf("cbor: cannot marshal text for %s: %w", vt, err)
+	}
+	if b := em.encTagBytes(vt); b != nil {
+		e.Write(b)
+	}
+
+	encodeHead(e, byte(cborTypeTextString), uint64(len(data)))
+	e.Write(data)
+	return nil
+}
+
+func (tme textMarshalerEncoder) isEmpty(em *encMode, v reflect.Value) (bool, error) {
+	if em.textMarshaler == TextMarshalerNone {
+		return tme.alternateIsEmpty(em, v)
+	}
+
+	m, ok := v.Interface().(encoding.TextMarshaler)
+	if !ok {
+		pv := reflect.New(v.Type())
+		pv.Elem().Set(v)
+		m = pv.Interface().(encoding.TextMarshaler)
+	}
+	data, err := m.MarshalText()
+	if err != nil {
+		return false, fmt.Errorf("cbor: cannot marshal text for %s: %w", v.Type(), err)
+	}
+	return len(data) == 0, nil
+}
+
 func encodeMarshalerType(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if em.tagsMd == TagsForbidden && v.Type() == typeRawTag {
 		return errors.New("cbor: cannot encode cbor.RawTag when TagsMd is TagsForbidden")
@@ -1810,6 +1885,7 @@ func encodeHead(e *bytes.Buffer, t byte, n uint64) int {
 var (
 	typeMarshaler       = reflect.TypeOf((*Marshaler)(nil)).Elem()
 	typeBinaryMarshaler = reflect.TypeOf((*encoding.BinaryMarshaler)(nil)).Elem()
+	typeTextMarshaler   = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
 	typeRawMessage      = reflect.TypeOf(RawMessage(nil))
 	typeByteString      = reflect.TypeOf(ByteString(""))
 )
@@ -1850,6 +1926,17 @@ func getEncodeFuncInternal(t reflect.Type) (ef encodeFunc, ief isEmptyFunc, izf 
 			}
 			ef = bme.encode
 			ief = bme.isEmpty
+		}()
+	}
+	if reflect.PointerTo(t).Implements(typeTextMarshaler) {
+		defer func() {
+			// capture encoding method used for modes that disable TextMarshaler
+			tme := textMarshalerEncoder{
+				alternateEncode:  ef,
+				alternateIsEmpty: ief,
+			}
+			ef = tme.encode
+			ief = tme.isEmpty
 		}()
 	}
 	switch k {
