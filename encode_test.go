@@ -4583,7 +4583,7 @@ func TestEncModeStringType(t *testing.T) {
 		wantErrorMsg string
 	}{
 		{
-			name:         "",
+			name:         "invalid mode",
 			opts:         EncOptions{String: -1},
 			wantErrorMsg: "cbor: invalid StringType -1",
 		},
@@ -4606,12 +4606,12 @@ func TestEncModeInvalidFieldNameMode(t *testing.T) {
 		wantErrorMsg string
 	}{
 		{
-			name:         "",
+			name:         "below range of valid modes",
 			opts:         EncOptions{FieldName: -1},
 			wantErrorMsg: "cbor: invalid FieldName -1",
 		},
 		{
-			name:         "",
+			name:         "above range of valid modes",
 			opts:         EncOptions{FieldName: 101},
 			wantErrorMsg: "cbor: invalid FieldName 101",
 		},
@@ -5499,12 +5499,12 @@ func TestEncModeInvalidBinaryMarshalerMode(t *testing.T) {
 		wantErrorMsg string
 	}{
 		{
-			name:         "",
+			name:         "below range of valid modes",
 			opts:         EncOptions{BinaryMarshaler: -1},
 			wantErrorMsg: "cbor: invalid BinaryMarshaler -1",
 		},
 		{
-			name:         "",
+			name:         "above range of valid modes",
 			opts:         EncOptions{BinaryMarshaler: 101},
 			wantErrorMsg: "cbor: invalid BinaryMarshaler 101",
 		},
