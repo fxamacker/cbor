@@ -4503,25 +4503,32 @@ func TestEncOptionsTagsForbidden(t *testing.T) {
 	}
 }
 
+type stubTranscoder struct{}
+
+func (stubTranscoder) Transcode(io.Writer, io.Reader) error {
+	return nil
+}
+
 func TestEncOptions(t *testing.T) {
 	opts1 := EncOptions{
-		Sort:                 SortBytewiseLexical,
-		ShortestFloat:        ShortestFloat16,
-		NaNConvert:           NaNConvertPreserveSignal,
-		InfConvert:           InfConvertNone,
-		BigIntConvert:        BigIntConvertNone,
-		Time:                 TimeRFC3339Nano,
-		TimeTag:              EncTagRequired,
-		IndefLength:          IndefLengthForbidden,
-		NilContainers:        NilContainerAsEmpty,
-		TagsMd:               TagsAllowed,
-		OmitEmpty:            OmitEmptyGoValue,
-		String:               StringToByteString,
-		FieldName:            FieldNameToByteString,
-		ByteSliceLaterFormat: ByteSliceLaterFormatBase16,
-		ByteArray:            ByteArrayToArray,
-		BinaryMarshaler:      BinaryMarshalerNone,
-		TextMarshaler:        TextMarshalerTextString,
+		Sort:                    SortBytewiseLexical,
+		ShortestFloat:           ShortestFloat16,
+		NaNConvert:              NaNConvertPreserveSignal,
+		InfConvert:              InfConvertNone,
+		BigIntConvert:           BigIntConvertNone,
+		Time:                    TimeRFC3339Nano,
+		TimeTag:                 EncTagRequired,
+		IndefLength:             IndefLengthForbidden,
+		NilContainers:           NilContainerAsEmpty,
+		TagsMd:                  TagsAllowed,
+		OmitEmpty:               OmitEmptyGoValue,
+		String:                  StringToByteString,
+		FieldName:               FieldNameToByteString,
+		ByteSliceLaterFormat:    ByteSliceLaterFormatBase16,
+		ByteArray:               ByteArrayToArray,
+		BinaryMarshaler:         BinaryMarshalerNone,
+		TextMarshaler:           TextMarshalerTextString,
+		JSONMarshalerTranscoder: stubTranscoder{},
 	}
 	ov := reflect.ValueOf(opts1)
 	for i := 0; i < ov.NumField(); i++ {
@@ -5750,6 +5757,218 @@ func TestTextMarshalerModeError(t *testing.T) {
 
 			if got := err.Error(); got != tc.want {
 				t.Errorf("want: %q, got: %q", tc.want, got)
+			}
+		})
+	}
+}
+
+type stubJSONMarshaler struct {
+	JSON  string
+	Error error
+}
+
+func (m stubJSONMarshaler) MarshalJSON() ([]byte, error) {
+	return []byte(m.JSON), m.Error
+}
+
+type stubJSONMarshalerPointerReceiver struct {
+	JSON string
+}
+
+func (m *stubJSONMarshalerPointerReceiver) MarshalJSON() ([]byte, error) {
+	return []byte(m.JSON), nil
+}
+
+type transcodeFunc func(io.Writer, io.Reader) error
+
+func (f transcodeFunc) Transcode(w io.Writer, r io.Reader) error {
+	return f(w, r)
+}
+
+func TestJSONMarshalerTranscoderNil(t *testing.T) {
+	enc, err := EncOptions{}.EncMode()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	{
+		// default encode behavior of underlying type
+		got, err := enc.Marshal(&stubJSONMarshalerPointerReceiver{JSON: "z"})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		want := []byte{0xa1, 0x64, 'J', 'S', 'O', 'N', 0x61, 'z'}
+		if !bytes.Equal(got, want) {
+			t.Errorf("want 0x%x, got 0x%x", want, got)
+		}
+	}
+
+	{
+		// default empty condition of underlying type
+		got, err := enc.Marshal(struct {
+			M stubJSONMarshalerPointerReceiver `cbor:"m,omitempty"`
+		}{})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		want := []byte{0xa1, 0x61, 'm', 0xa1, 0x64, 'J', 'S', 'O', 'N', 0x60}
+		if !bytes.Equal(got, want) {
+			t.Errorf("want 0x%x, got 0x%x", want, got)
+		}
+	}
+
+}
+
+func TestJSONMarshalerTranscoder(t *testing.T) {
+	testTags := NewTagSet()
+	if err := testTags.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeOf(stubJSONMarshaler{}), 9999); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		name  string
+		value any
+		tags  TagSet
+
+		transcodeInput  []byte
+		transcodeOutput []byte
+		transcodeError  error
+
+		wantCborData []byte
+		wantErrorMsg string
+	}{
+		{
+			name:            "value-receiver marshaler",
+			value:           stubJSONMarshaler{JSON: `"a"`},
+			transcodeInput:  []byte(`"a"`),
+			transcodeOutput: []byte{0x61, 'a'},
+			wantCborData:    []byte{0x61, 'a'},
+		},
+		{
+			name:           "transcoder returns non-nil error",
+			value:          stubJSONMarshaler{JSON: `"a"`},
+			transcodeInput: []byte(`"a"`),
+			transcodeError: errors.New("test"),
+			wantErrorMsg: TranscodeError{
+				err:          errors.New("test"),
+				rtype:        reflect.TypeOf(stubJSONMarshaler{}),
+				sourceFormat: "json",
+				targetFormat: "cbor",
+			}.Error(),
+		},
+		{
+			name:            "transcoder produces invalid cbor",
+			value:           stubJSONMarshaler{JSON: `"a"`},
+			transcodeInput:  []byte(`"a"`),
+			transcodeOutput: []byte{0xff},
+			wantErrorMsg: TranscodeError{
+				err:          errors.New(`cbor: unexpected "break" code`),
+				rtype:        reflect.TypeOf(stubJSONMarshaler{}),
+				sourceFormat: "json",
+				targetFormat: "cbor",
+			}.Error(),
+		},
+		{
+			name:            "transcoder produces short cbor",
+			value:           stubJSONMarshaler{JSON: `"a"`},
+			transcodeInput:  []byte(`"a"`),
+			transcodeOutput: []byte{0x61},
+			wantErrorMsg: TranscodeError{
+				err:          io.ErrUnexpectedEOF,
+				rtype:        reflect.TypeOf(stubJSONMarshaler{}),
+				sourceFormat: "json",
+				targetFormat: "cbor",
+			}.Error(),
+		},
+		{
+			name:            "transcoder produces extraneous cbor",
+			value:           stubJSONMarshaler{JSON: `"a"`},
+			transcodeInput:  []byte(`"a"`),
+			transcodeOutput: []byte{0x61, 'a', 0x61, 'b'},
+			wantErrorMsg: TranscodeError{
+				err:          &ExtraneousDataError{numOfBytes: 2, index: 2},
+				rtype:        reflect.TypeOf(stubJSONMarshaler{}),
+				sourceFormat: "json",
+				targetFormat: "cbor",
+			}.Error(),
+		},
+		{
+			name:         "marshaler returns non-nil error",
+			value:        stubJSONMarshaler{Error: errors.New("test")},
+			wantErrorMsg: "test",
+		},
+		{
+			name:            "value-receiver marshaler with registered tag",
+			tags:            testTags,
+			value:           stubJSONMarshaler{JSON: `"a"`},
+			transcodeInput:  []byte(`"a"`),
+			transcodeOutput: []byte{0x61, 'a'},                   // "a"
+			wantCborData:    []byte{0xd9, 0x27, 0x0f, 0x61, 'a'}, // 9999("a")
+		},
+		{
+			name:            "pointer-receiver marshaler",
+			value:           stubJSONMarshalerPointerReceiver{JSON: `"a"`},
+			transcodeInput:  []byte(`"a"`),
+			transcodeOutput: []byte{0x61, 'a'},
+			wantCborData:    []byte{0x61, 'a'},
+		},
+		{
+			name: "never omitempty",
+			value: struct {
+				M stubJSONMarshaler `cbor:"m,omitempty"`
+			}{M: stubJSONMarshaler{JSON: `"a"`}},
+			transcodeInput:  []byte(`"a"`),
+			transcodeOutput: []byte{0x61, 'a'},
+			wantCborData:    []byte{0xa1, 0x61, 'm', 0x61, 'a'},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			opts := EncOptions{
+				JSONMarshalerTranscoder: transcodeFunc(func(w io.Writer, r io.Reader) error {
+					source, err := io.ReadAll(r)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if got := string(source); got != string(tc.transcodeInput) {
+						t.Errorf("transcoder got input %q, want %q", got, string(tc.transcodeInput))
+					}
+
+					if tc.transcodeError != nil {
+						return tc.transcodeError
+					}
+
+					_, err = w.Write(tc.transcodeOutput)
+					return err
+				}),
+			}
+			var (
+				enc EncMode
+				err error
+			)
+			if tc.tags != nil {
+				enc, err = opts.EncModeWithTags(tc.tags)
+			} else {
+				enc, err = opts.EncMode()
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			b, err := enc.Marshal(tc.value)
+			if tc.wantErrorMsg != "" {
+				if err == nil {
+					t.Errorf("Marshal(%v) didn't return an error, want error %q", tc.value, tc.wantErrorMsg)
+				} else if gotErrorMsg := err.Error(); gotErrorMsg != tc.wantErrorMsg {
+					t.Errorf("Marshal(%v) returned error %q, want %q", tc.value, gotErrorMsg, tc.wantErrorMsg)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Marshal(%v) returned non-nil error %v", tc.value, err)
+				} else if !bytes.Equal(b, tc.wantCborData) {
+					t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.value, b, tc.wantCborData)
+				}
 			}
 		})
 	}
