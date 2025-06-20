@@ -6828,7 +6828,7 @@ func TestExtraErrorCondUnknownField(t *testing.T) {
 			name:         "CBOR map unknown field with ExtraDecErrorUnknownField",
 			data:         hexDecode("a461416161614261626143616361446164"), // map[string]string{"A": "a", "B": "b", "C": "c", "D": "d"}
 			dm:           dmUnknownFieldError,
-			wantErrorMsg: "cbor: found unknown field at map element index 3",
+			wantErrorMsg: "cbor: found unknown field: struct 'cbor.s' has no field 'D', at map element index 3",
 		},
 	}
 	for _, tc := range testCases {
@@ -6888,7 +6888,7 @@ func TestStreamExtraErrorCondUnknownField(t *testing.T) {
 	}
 
 	data := hexDecode("a461416161614461646142616261436163a3614161616142616261436163") // map[string]string{"A": "a", "D": "d", "B": "b", "C": "c"}, map[string]string{"A": "a", "B": "b", "C": "c"}
-	wantErrorMsg := "cbor: found unknown field at map element index 1"
+	wantErrorMsg := "cbor: found unknown field: struct 'cbor.s' has no field 'D', at map element index 1"
 	wantObj := s{A: "a", B: "b", C: "c"}
 
 	dmUnknownFieldError, _ := DecOptions{ExtraReturnErrors: ExtraDecErrorUnknownField}.DecMode()
