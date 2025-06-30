@@ -37,7 +37,7 @@ import (
 //
 // To unmarshal CBOR into a pointer, Unmarshal sets the pointer to nil
 // if CBOR data is null (0xf6) or undefined (0xf7).  Otherwise, Unmarshal
-// unmarshalls CBOR into the value pointed to by the pointer.  If the
+// unmarshals CBOR into the value pointed to by the pointer.  If the
 // pointer is nil, Unmarshal creates a new value for it to point to.
 //
 // To unmarshal CBOR into an empty interface value, Unmarshal uses the
@@ -95,7 +95,7 @@ import (
 //
 // To unmarshal CBOR null (0xf6) and undefined (0xf7) values into a
 // slice/map/pointer, Unmarshal sets Go value to nil.  Because null is often
-// used to mean "not present", unmarshalling CBOR null and undefined value
+// used to mean "not present", unmarshaling CBOR null and undefined value
 // into any other Go type has no effect and returns no error.
 //
 // Unmarshal supports CBOR tag 55799 (self-describe CBOR), tag 0 and 1 (time),
@@ -494,11 +494,11 @@ type BigIntDecMode int
 
 const (
 	// BigIntDecodeValue makes CBOR bignum decode to big.Int (instead of *big.Int)
-	// when unmarshalling into a Go interface{}.
+	// when unmarshaling into a Go interface{}.
 	BigIntDecodeValue BigIntDecMode = iota
 
 	// BigIntDecodePointer makes CBOR bignum decode to *big.Int when
-	// unmarshalling into a Go interface{}.
+	// unmarshaling into a Go interface{}.
 	BigIntDecodePointer
 
 	maxBigIntDecMode
@@ -831,7 +831,7 @@ type DecOptions struct {
 	ExtraReturnErrors ExtraDecErrorCond
 
 	// DefaultMapType specifies Go map type to create and decode to
-	// when unmarshalling CBOR into an empty interface value.
+	// when unmarshaling CBOR into an empty interface value.
 	// By default, unmarshal uses map[interface{}]interface{}.
 	DefaultMapType reflect.Type
 
