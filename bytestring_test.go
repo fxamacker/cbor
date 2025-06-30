@@ -30,72 +30,72 @@ func TestByteString(t *testing.T) {
 		{
 			name:         "empty",
 			obj:          emptybs,
-			wantCborData: hexDecode("40"),
+			wantCborData: mustHexDecode("40"),
 		},
 		{
 			name:         "not empty",
 			obj:          bs,
-			wantCborData: hexDecode("4401020304"),
+			wantCborData: mustHexDecode("4401020304"),
 		},
 		{
 			name:         "array",
 			obj:          []ByteString{bs},
-			wantCborData: hexDecode("814401020304"),
+			wantCborData: mustHexDecode("814401020304"),
 		},
 		{
 			name:         "map with ByteString key",
 			obj:          map[ByteString]bool{bs: true},
-			wantCborData: hexDecode("a14401020304f5"),
+			wantCborData: mustHexDecode("a14401020304f5"),
 		},
 		{
 			name:         "empty ByteString field",
 			obj:          s1{},
-			wantCborData: hexDecode("a1616140"),
+			wantCborData: mustHexDecode("a1616140"),
 		},
 		{
 			name:         "not empty ByteString field",
 			obj:          s1{A: bs},
-			wantCborData: hexDecode("a161614401020304"),
+			wantCborData: mustHexDecode("a161614401020304"),
 		},
 		{
 			name:         "nil *ByteString field",
 			obj:          s2{},
-			wantCborData: hexDecode("a16161f6"),
+			wantCborData: mustHexDecode("a16161f6"),
 		},
 		{
 			name:         "empty *ByteString field",
 			obj:          s2{A: &emptybs},
-			wantCborData: hexDecode("a1616140"),
+			wantCborData: mustHexDecode("a1616140"),
 		},
 		{
 			name:         "not empty *ByteString field",
 			obj:          s2{A: &bs},
-			wantCborData: hexDecode("a161614401020304"),
+			wantCborData: mustHexDecode("a161614401020304"),
 		},
 		{
 			name:         "empty ByteString field with omitempty option",
 			obj:          s3{},
-			wantCborData: hexDecode("a0"),
+			wantCborData: mustHexDecode("a0"),
 		},
 		{
 			name:         "not empty ByteString field with omitempty option",
 			obj:          s3{A: bs},
-			wantCborData: hexDecode("a161614401020304"),
+			wantCborData: mustHexDecode("a161614401020304"),
 		},
 		{
 			name:         "nil *ByteString field with omitempty option",
 			obj:          s4{},
-			wantCborData: hexDecode("a0"),
+			wantCborData: mustHexDecode("a0"),
 		},
 		{
 			name:         "empty *ByteString field with omitempty option",
 			obj:          s4{A: &emptybs},
-			wantCborData: hexDecode("a1616140"),
+			wantCborData: mustHexDecode("a1616140"),
 		},
 		{
 			name:         "not empty *ByteString field with omitempty option",
 			obj:          s4{A: &bs},
-			wantCborData: hexDecode("a161614401020304"),
+			wantCborData: mustHexDecode("a161614401020304"),
 		},
 	}
 
@@ -125,58 +125,58 @@ func TestUnmarshalByteStringOnBadData(t *testing.T) {
 		// Wrong CBOR types
 		{
 			name:   "uint type",
-			data:   hexDecode("01"),
+			data:   mustHexDecode("01"),
 			errMsg: "cbor: cannot unmarshal positive integer into Go value of type cbor.ByteString",
 		},
 		{
 			name:   "int type",
-			data:   hexDecode("20"),
+			data:   mustHexDecode("20"),
 			errMsg: "cbor: cannot unmarshal negative integer into Go value of type cbor.ByteString",
 		},
 		{
 			name:   "string type",
-			data:   hexDecode("60"),
+			data:   mustHexDecode("60"),
 			errMsg: "cbor: cannot unmarshal UTF-8 text string into Go value of type cbor.ByteString",
 		},
 		{
 			name:   "array type",
-			data:   hexDecode("80"),
+			data:   mustHexDecode("80"),
 			errMsg: "cbor: cannot unmarshal array into Go value of type cbor.ByteString",
 		},
 		{
 			name:   "map type",
-			data:   hexDecode("a0"),
+			data:   mustHexDecode("a0"),
 			errMsg: "cbor: cannot unmarshal map into Go value of type cbor.ByteString",
 		},
 		{
 			name:   "tag type",
-			data:   hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			data:   mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			errMsg: "cbor: cannot unmarshal tag into Go value of type cbor.ByteString",
 		},
 		{
 			name:   "float type",
-			data:   hexDecode("f90000"),
+			data:   mustHexDecode("f90000"),
 			errMsg: "cbor: cannot unmarshal primitives into Go value of type cbor.ByteString",
 		},
 
 		// Truncated CBOR data
 		{
 			name:   "truncated head",
-			data:   hexDecode("18"),
+			data:   mustHexDecode("18"),
 			errMsg: io.ErrUnexpectedEOF.Error(),
 		},
 
 		// Truncated CBOR byte string
 		{
 			name:   "truncated byte string",
-			data:   hexDecode("44010203"),
+			data:   mustHexDecode("44010203"),
 			errMsg: io.ErrUnexpectedEOF.Error(),
 		},
 
 		// Extraneous CBOR data
 		{
 			name:   "extraneous data",
-			data:   hexDecode("c074323031332d30332d32315432303a30343a30305a00"),
+			data:   mustHexDecode("c074323031332d30332d32315432303a30343a30305a00"),
 			errMsg: "cbor: 1 bytes of extraneous data starting at index 22",
 		},
 	}

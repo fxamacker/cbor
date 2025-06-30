@@ -92,162 +92,162 @@ func TestDepth(t *testing.T) {
 	}{
 		{
 			name:      "uint",
-			data:      hexDecode("00"),
+			data:      mustHexDecode("00"),
 			wantDepth: 0,
 		}, // 0
 		{
 			name:      "int",
-			data:      hexDecode("20"),
+			data:      mustHexDecode("20"),
 			wantDepth: 0,
 		}, // -1
 		{
 			name:      "bool",
-			data:      hexDecode("f4"),
+			data:      mustHexDecode("f4"),
 			wantDepth: 0,
 		}, // false
 		{
 			name:      "nil",
-			data:      hexDecode("f6"),
+			data:      mustHexDecode("f6"),
 			wantDepth: 0,
 		}, // nil
 		{
 			name:      "float",
-			data:      hexDecode("fa47c35000"),
+			data:      mustHexDecode("fa47c35000"),
 			wantDepth: 0,
 		}, // 100000.0
 		{
 			name:      "byte string",
-			data:      hexDecode("40"),
+			data:      mustHexDecode("40"),
 			wantDepth: 0,
 		}, // []byte{}
 		{
 			name:      "indefinite length byte string",
-			data:      hexDecode("5f42010243030405ff"),
+			data:      mustHexDecode("5f42010243030405ff"),
 			wantDepth: 0,
 		}, // []byte{1, 2, 3, 4, 5}
 		{
 			name:      "text string",
-			data:      hexDecode("60"),
+			data:      mustHexDecode("60"),
 			wantDepth: 0,
 		}, // ""
 		{
 			name:      "indefinite length text string",
-			data:      hexDecode("7f657374726561646d696e67ff"),
+			data:      mustHexDecode("7f657374726561646d696e67ff"),
 			wantDepth: 0,
 		}, // "streaming"
 		{
 			name:      "empty array",
-			data:      hexDecode("80"),
+			data:      mustHexDecode("80"),
 			wantDepth: 1,
 		}, // []
 		{
 			name:      "indefinite length empty array",
-			data:      hexDecode("9fff"),
+			data:      mustHexDecode("9fff"),
 			wantDepth: 1,
 		}, // []
 		{
 			name:      "array",
-			data:      hexDecode("98190102030405060708090a0b0c0d0e0f101112131415161718181819"),
+			data:      mustHexDecode("98190102030405060708090a0b0c0d0e0f101112131415161718181819"),
 			wantDepth: 1,
 		}, // [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
 		{
 			name:      "indefinite length array",
-			data:      hexDecode("9f0102030405060708090a0b0c0d0e0f101112131415161718181819ff"),
+			data:      mustHexDecode("9f0102030405060708090a0b0c0d0e0f101112131415161718181819ff"),
 			wantDepth: 1,
 		}, // [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
 		{
 			name:      "nested array",
-			data:      hexDecode("8301820203820405"),
+			data:      mustHexDecode("8301820203820405"),
 			wantDepth: 2,
 		}, // [1,[2,3],[4,5]]
 		{
 			name:      "indefinite length nested array",
-			data:      hexDecode("83018202039f0405ff"),
+			data:      mustHexDecode("83018202039f0405ff"),
 			wantDepth: 2,
 		}, // [1,[2,3],[4,5]]
 		{
 			name:      "array and map",
-			data:      hexDecode("826161a161626163"),
+			data:      mustHexDecode("826161a161626163"),
 			wantDepth: 2,
 		}, // [a", {"b": "c"}]
 		{
 			name:      "indefinite length array and map",
-			data:      hexDecode("826161bf61626163ff"),
+			data:      mustHexDecode("826161bf61626163ff"),
 			wantDepth: 2,
 		}, // [a", {"b": "c"}]
 		{
 			name:      "empty map",
-			data:      hexDecode("a0"),
+			data:      mustHexDecode("a0"),
 			wantDepth: 1,
 		}, // {}
 		{
 			name:      "indefinite length empty map",
-			data:      hexDecode("bfff"),
+			data:      mustHexDecode("bfff"),
 			wantDepth: 1,
 		}, // {}
 		{
 			name:      "map",
-			data:      hexDecode("a201020304"),
+			data:      mustHexDecode("a201020304"),
 			wantDepth: 1,
 		}, // {1:2, 3:4}
 		{
 			name:      "nested map",
-			data:      hexDecode("a26161016162820203"),
+			data:      mustHexDecode("a26161016162820203"),
 			wantDepth: 2,
 		}, // {"a": 1, "b": [2, 3]}
 		{
 			name:      "indefinite length nested map",
-			data:      hexDecode("bf61610161629f0203ffff"),
+			data:      mustHexDecode("bf61610161629f0203ffff"),
 			wantDepth: 2,
 		}, // {"a": 1, "b": [2, 3]}
 		{
 			name:      "tag",
-			data:      hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			data:      mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			wantDepth: 0,
 		}, // 0("2013-03-21T20:04:00Z")
 		{
 			name:      "tagged map",
-			data:      hexDecode("d864a26161016162820203"),
+			data:      mustHexDecode("d864a26161016162820203"),
 			wantDepth: 2,
 		}, // 100({"a": 1, "b": [2, 3]})
 		{
 			name:      "tagged map and array",
-			data:      hexDecode("d864a26161016162d865820203"),
+			data:      mustHexDecode("d864a26161016162d865820203"),
 			wantDepth: 2,
 		}, // 100({"a": 1, "b": 101([2, 3])})
 		{
 			name:      "tagged map and array",
-			data:      hexDecode("d864a26161016162d865d866820203"),
+			data:      mustHexDecode("d864a26161016162d865d866820203"),
 			wantDepth: 3,
 		}, // 100({"a": 1, "b": 101(102([2, 3]))})
 		{
 			name:      "nested tag",
-			data:      hexDecode("d864d865d86674323031332d30332d32315432303a30343a30305a"),
+			data:      mustHexDecode("d864d865d86674323031332d30332d32315432303a30343a30305a"),
 			wantDepth: 2,
 		}, // 100(101(102("2013-03-21T20:04:00Z")))
 		{
 			name:      "32-level array",
-			data:      hexDecode("82018181818181818181818181818181818181818181818181818181818181818101"),
+			data:      mustHexDecode("82018181818181818181818181818181818181818181818181818181818181818101"),
 			wantDepth: 32,
 		},
 		{
 			name:      "32-level indefinite length array",
-			data:      hexDecode("9f018181818181818181818181818181818181818181818181818181818181818101ff"),
+			data:      mustHexDecode("9f018181818181818181818181818181818181818181818181818181818181818101ff"),
 			wantDepth: 32,
 		},
 		{
 			name:      "32-level map",
-			data:      hexDecode("a1018181818181818181818181818181818181818181818181818181818181818101"),
+			data:      mustHexDecode("a1018181818181818181818181818181818181818181818181818181818181818101"),
 			wantDepth: 32,
 		},
 		{
 			name:      "32-level indefinite length map",
-			data:      hexDecode("bf018181818181818181818181818181818181818181818181818181818181818101ff"),
+			data:      mustHexDecode("bf018181818181818181818181818181818181818181818181818181818181818101ff"),
 			wantDepth: 32,
 		},
 		{
 			name:      "32-level tag",
-			data:      hexDecode("d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d86474323031332d30332d32315432303a30343a30305a"),
+			data:      mustHexDecode("d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d86474323031332d30332d32315432303a30343a30305a"),
 			wantDepth: 32,
 		}, // 100(100(...("2013-03-21T20:04:00Z")))
 	}
@@ -274,43 +274,43 @@ func TestDepthError(t *testing.T) {
 	}{
 		{
 			name:         "33-level array",
-			data:         hexDecode("82018181818181818181818181818181818181818181818181818181818181818101"),
+			data:         mustHexDecode("82018181818181818181818181818181818181818181818181818181818181818101"),
 			opts:         DecOptions{MaxNestedLevels: 4},
 			wantErrorMsg: "cbor: exceeded max nested level 4",
 		},
 		{
 			name:         "33-level array",
-			data:         hexDecode("82018181818181818181818181818181818181818181818181818181818181818101"),
+			data:         mustHexDecode("82018181818181818181818181818181818181818181818181818181818181818101"),
 			opts:         DecOptions{MaxNestedLevels: 10},
 			wantErrorMsg: "cbor: exceeded max nested level 10",
 		},
 		{
 			name:         "33-level array",
-			data:         hexDecode("8201818181818181818181818181818181818181818181818181818181818181818101"),
+			data:         mustHexDecode("8201818181818181818181818181818181818181818181818181818181818181818101"),
 			opts:         DecOptions{},
 			wantErrorMsg: "cbor: exceeded max nested level 32",
 		},
 		{
 			name:         "33-level indefinite length array",
-			data:         hexDecode("9f01818181818181818181818181818181818181818181818181818181818181818101ff"),
+			data:         mustHexDecode("9f01818181818181818181818181818181818181818181818181818181818181818101ff"),
 			opts:         DecOptions{},
 			wantErrorMsg: "cbor: exceeded max nested level 32",
 		},
 		{
 			name:         "33-level map",
-			data:         hexDecode("a101818181818181818181818181818181818181818181818181818181818181818101"),
+			data:         mustHexDecode("a101818181818181818181818181818181818181818181818181818181818181818101"),
 			opts:         DecOptions{},
 			wantErrorMsg: "cbor: exceeded max nested level 32",
 		},
 		{
 			name:         "33-level indefinite length map",
-			data:         hexDecode("bf01818181818181818181818181818181818181818181818181818181818181818101ff"),
+			data:         mustHexDecode("bf01818181818181818181818181818181818181818181818181818181818181818101ff"),
 			opts:         DecOptions{},
 			wantErrorMsg: "cbor: exceeded max nested level 32",
 		},
 		{
 			name:         "33-level tag",
-			data:         hexDecode("d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d86474323031332d30332d32315432303a30343a30305a"),
+			data:         mustHexDecode("d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d86474323031332d30332d32315432303a30343a30305a"),
 			opts:         DecOptions{},
 			wantErrorMsg: "cbor: exceeded max nested level 32",
 		},
@@ -337,35 +337,35 @@ func TestValidBuiltinTagTest(t *testing.T) {
 	}{
 		{
 			name: "tag 0",
-			data: hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			data: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 		},
 		{
 			name: "tag 1",
-			data: hexDecode("c11a514b67b0"),
+			data: mustHexDecode("c11a514b67b0"),
 		},
 		{
 			name: "tag 2",
-			data: hexDecode("c249010000000000000000"),
+			data: mustHexDecode("c249010000000000000000"),
 		},
 		{
 			name: "tag 3",
-			data: hexDecode("c349010000000000000000"),
+			data: mustHexDecode("c349010000000000000000"),
 		},
 		{
 			name: "nested tag 0",
-			data: hexDecode("d9d9f7c074323031332d30332d32315432303a30343a30305a"),
+			data: mustHexDecode("d9d9f7c074323031332d30332d32315432303a30343a30305a"),
 		},
 		{
 			name: "nested tag 1",
-			data: hexDecode("d9d9f7c11a514b67b0"),
+			data: mustHexDecode("d9d9f7c11a514b67b0"),
 		},
 		{
 			name: "nested tag 2",
-			data: hexDecode("d9d9f7c249010000000000000000"),
+			data: mustHexDecode("d9d9f7c249010000000000000000"),
 		},
 		{
 			name: "nested tag 3",
-			data: hexDecode("d9d9f7c349010000000000000000"),
+			data: mustHexDecode("d9d9f7c349010000000000000000"),
 		},
 	}
 
@@ -387,42 +387,42 @@ func TestInvalidBuiltinTagTest(t *testing.T) {
 	}{
 		{
 			name:         "tag 0",
-			data:         hexDecode("c01a514b67b0"),
+			data:         mustHexDecode("c01a514b67b0"),
 			wantErrorMsg: "cbor: tag number 0 must be followed by text string, got positive integer",
 		},
 		{
 			name:         "tag 1",
-			data:         hexDecode("c174323031332d30332d32315432303a30343a30305a"),
+			data:         mustHexDecode("c174323031332d30332d32315432303a30343a30305a"),
 			wantErrorMsg: "cbor: tag number 1 must be followed by integer or floating-point number, got UTF-8 text string",
 		},
 		{
 			name:         "tag 2",
-			data:         hexDecode("c269010000000000000000"),
+			data:         mustHexDecode("c269010000000000000000"),
 			wantErrorMsg: "cbor: tag number 2 or 3 must be followed by byte string, got UTF-8 text string",
 		},
 		{
 			name:         "tag 3",
-			data:         hexDecode("c300"),
+			data:         mustHexDecode("c300"),
 			wantErrorMsg: "cbor: tag number 2 or 3 must be followed by byte string, got positive integer",
 		},
 		{
 			name:         "nested tag 0",
-			data:         hexDecode("d9d9f7c01a514b67b0"),
+			data:         mustHexDecode("d9d9f7c01a514b67b0"),
 			wantErrorMsg: "cbor: tag number 0 must be followed by text string, got positive integer",
 		},
 		{
 			name:         "nested tag 1",
-			data:         hexDecode("d9d9f7c174323031332d30332d32315432303a30343a30305a"),
+			data:         mustHexDecode("d9d9f7c174323031332d30332d32315432303a30343a30305a"),
 			wantErrorMsg: "cbor: tag number 1 must be followed by integer or floating-point number, got UTF-8 text string",
 		},
 		{
 			name:         "nested tag 2",
-			data:         hexDecode("d9d9f7c269010000000000000000"),
+			data:         mustHexDecode("d9d9f7c269010000000000000000"),
 			wantErrorMsg: "cbor: tag number 2 or 3 must be followed by byte string, got UTF-8 text string",
 		},
 		{
 			name:         "nested tag 3",
-			data:         hexDecode("d9d9f7c300"),
+			data:         mustHexDecode("d9d9f7c300"),
 			wantErrorMsg: "cbor: tag number 2 or 3 must be followed by byte string, got positive integer",
 		},
 	}
