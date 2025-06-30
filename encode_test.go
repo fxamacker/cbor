@@ -32,48 +32,156 @@ type marshalErrorTest struct {
 // CBOR test data are from https://tools.ietf.org/html/rfc7049#appendix-A.
 var marshalTests = []marshalTest{
 	// unsigned integer
-	{wantData: hexDecode("00"), values: []any{uint(0), uint8(0), uint16(0), uint32(0), uint64(0), int(0), int8(0), int16(0), int32(0), int64(0)}},
-	{wantData: hexDecode("01"), values: []any{uint(1), uint8(1), uint16(1), uint32(1), uint64(1), int(1), int8(1), int16(1), int32(1), int64(1)}},
-	{wantData: hexDecode("0a"), values: []any{uint(10), uint8(10), uint16(10), uint32(10), uint64(10), int(10), int8(10), int16(10), int32(10), int64(10)}},
-	{wantData: hexDecode("17"), values: []any{uint(23), uint8(23), uint16(23), uint32(23), uint64(23), int(23), int8(23), int16(23), int32(23), int64(23)}},
-	{wantData: hexDecode("1818"), values: []any{uint(24), uint8(24), uint16(24), uint32(24), uint64(24), int(24), int8(24), int16(24), int32(24), int64(24)}},
-	{wantData: hexDecode("1819"), values: []any{uint(25), uint8(25), uint16(25), uint32(25), uint64(25), int(25), int8(25), int16(25), int32(25), int64(25)}},
-	{wantData: hexDecode("1864"), values: []any{uint(100), uint8(100), uint16(100), uint32(100), uint64(100), int(100), int8(100), int16(100), int32(100), int64(100)}},
-	{wantData: hexDecode("18ff"), values: []any{uint(255), uint8(255), uint16(255), uint32(255), uint64(255), int(255), int16(255), int32(255), int64(255)}},
-	{wantData: hexDecode("190100"), values: []any{uint(256), uint16(256), uint32(256), uint64(256), int(256), int16(256), int32(256), int64(256)}},
-	{wantData: hexDecode("1903e8"), values: []any{uint(1000), uint16(1000), uint32(1000), uint64(1000), int(1000), int16(1000), int32(1000), int64(1000)}},
-	{wantData: hexDecode("19ffff"), values: []any{uint(65535), uint16(65535), uint32(65535), uint64(65535), int(65535), int32(65535), int64(65535)}},
-	{wantData: hexDecode("1a00010000"), values: []any{uint(65536), uint32(65536), uint64(65536), int(65536), int32(65536), int64(65536)}},
-	{wantData: hexDecode("1a000f4240"), values: []any{uint(1000000), uint32(1000000), uint64(1000000), int(1000000), int32(1000000), int64(1000000)}},
-	{wantData: hexDecode("1affffffff"), values: []any{uint(4294967295), uint32(4294967295), uint64(4294967295), int64(4294967295)}},
-	{wantData: hexDecode("1b000000e8d4a51000"), values: []any{uint64(1000000000000), int64(1000000000000)}},
-	{wantData: hexDecode("1bffffffffffffffff"), values: []any{uint64(18446744073709551615)}},
+	{
+		wantData: hexDecode("00"),
+		values:   []any{uint(0), uint8(0), uint16(0), uint32(0), uint64(0), int(0), int8(0), int16(0), int32(0), int64(0)},
+	},
+	{
+		wantData: hexDecode("01"),
+		values:   []any{uint(1), uint8(1), uint16(1), uint32(1), uint64(1), int(1), int8(1), int16(1), int32(1), int64(1)},
+	},
+	{
+		wantData: hexDecode("0a"),
+		values:   []any{uint(10), uint8(10), uint16(10), uint32(10), uint64(10), int(10), int8(10), int16(10), int32(10), int64(10)},
+	},
+	{
+		wantData: hexDecode("17"),
+		values:   []any{uint(23), uint8(23), uint16(23), uint32(23), uint64(23), int(23), int8(23), int16(23), int32(23), int64(23)},
+	},
+	{
+		wantData: hexDecode("1818"),
+		values:   []any{uint(24), uint8(24), uint16(24), uint32(24), uint64(24), int(24), int8(24), int16(24), int32(24), int64(24)},
+	},
+	{
+		wantData: hexDecode("1819"),
+		values:   []any{uint(25), uint8(25), uint16(25), uint32(25), uint64(25), int(25), int8(25), int16(25), int32(25), int64(25)},
+	},
+	{
+		wantData: hexDecode("1864"),
+		values:   []any{uint(100), uint8(100), uint16(100), uint32(100), uint64(100), int(100), int8(100), int16(100), int32(100), int64(100)},
+	},
+	{
+		wantData: hexDecode("18ff"),
+		values:   []any{uint(255), uint8(255), uint16(255), uint32(255), uint64(255), int(255), int16(255), int32(255), int64(255)},
+	},
+	{
+		wantData: hexDecode("190100"),
+		values:   []any{uint(256), uint16(256), uint32(256), uint64(256), int(256), int16(256), int32(256), int64(256)},
+	},
+	{
+		wantData: hexDecode("1903e8"),
+		values:   []any{uint(1000), uint16(1000), uint32(1000), uint64(1000), int(1000), int16(1000), int32(1000), int64(1000)},
+	},
+	{
+		wantData: hexDecode("19ffff"),
+		values:   []any{uint(65535), uint16(65535), uint32(65535), uint64(65535), int(65535), int32(65535), int64(65535)},
+	},
+	{
+		wantData: hexDecode("1a00010000"),
+		values:   []any{uint(65536), uint32(65536), uint64(65536), int(65536), int32(65536), int64(65536)},
+	},
+	{
+		wantData: hexDecode("1a000f4240"),
+		values:   []any{uint(1000000), uint32(1000000), uint64(1000000), int(1000000), int32(1000000), int64(1000000)},
+	},
+	{
+		wantData: hexDecode("1affffffff"),
+		values:   []any{uint(4294967295), uint32(4294967295), uint64(4294967295), int64(4294967295)},
+	},
+	{
+		wantData: hexDecode("1b000000e8d4a51000"),
+		values:   []any{uint64(1000000000000), int64(1000000000000)},
+	},
+	{
+		wantData: hexDecode("1bffffffffffffffff"),
+		values:   []any{uint64(18446744073709551615)},
+	},
 
 	// negative integer
-	{wantData: hexDecode("20"), values: []any{int(-1), int8(-1), int16(-1), int32(-1), int64(-1)}},
-	{wantData: hexDecode("29"), values: []any{int(-10), int8(-10), int16(-10), int32(-10), int64(-10)}},
-	{wantData: hexDecode("37"), values: []any{int(-24), int8(-24), int16(-24), int32(-24), int64(-24)}},
-	{wantData: hexDecode("3818"), values: []any{int(-25), int8(-25), int16(-25), int32(-25), int64(-25)}},
-	{wantData: hexDecode("3863"), values: []any{int(-100), int8(-100), int16(-100), int32(-100), int64(-100)}},
-	{wantData: hexDecode("38ff"), values: []any{int(-256), int16(-256), int32(-256), int64(-256)}},
-	{wantData: hexDecode("390100"), values: []any{int(-257), int16(-257), int32(-257), int64(-257)}},
-	{wantData: hexDecode("3903e7"), values: []any{int(-1000), int16(-1000), int32(-1000), int64(-1000)}},
-	{wantData: hexDecode("39ffff"), values: []any{int(-65536), int32(-65536), int64(-65536)}},
-	{wantData: hexDecode("3a00010000"), values: []any{int(-65537), int32(-65537), int64(-65537)}},
-	{wantData: hexDecode("3affffffff"), values: []any{int64(-4294967296)}},
+	{
+		wantData: hexDecode("20"),
+		values:   []any{int(-1), int8(-1), int16(-1), int32(-1), int64(-1)},
+	},
+	{
+		wantData: hexDecode("29"),
+		values:   []any{int(-10), int8(-10), int16(-10), int32(-10), int64(-10)},
+	},
+	{
+		wantData: hexDecode("37"),
+		values:   []any{int(-24), int8(-24), int16(-24), int32(-24), int64(-24)},
+	},
+	{
+		wantData: hexDecode("3818"),
+		values:   []any{int(-25), int8(-25), int16(-25), int32(-25), int64(-25)},
+	},
+	{
+		wantData: hexDecode("3863"),
+		values:   []any{int(-100), int8(-100), int16(-100), int32(-100), int64(-100)},
+	},
+	{
+		wantData: hexDecode("38ff"),
+		values:   []any{int(-256), int16(-256), int32(-256), int64(-256)},
+	},
+	{
+		wantData: hexDecode("390100"),
+		values:   []any{int(-257), int16(-257), int32(-257), int64(-257)},
+	},
+	{
+		wantData: hexDecode("3903e7"),
+		values:   []any{int(-1000), int16(-1000), int32(-1000), int64(-1000)},
+	},
+	{
+		wantData: hexDecode("39ffff"),
+		values:   []any{int(-65536), int32(-65536), int64(-65536)},
+	},
+	{
+		wantData: hexDecode("3a00010000"),
+		values:   []any{int(-65537), int32(-65537), int64(-65537)},
+	},
+	{
+		wantData: hexDecode("3affffffff"),
+		values:   []any{int64(-4294967296)},
+	},
 
 	// byte string
-	{wantData: hexDecode("40"), values: []any{[]byte{}}},
-	{wantData: hexDecode("4401020304"), values: []any{[]byte{1, 2, 3, 4}, [...]byte{1, 2, 3, 4}}},
+	{
+		wantData: hexDecode("40"),
+		values:   []any{[]byte{}},
+	},
+	{
+		wantData: hexDecode("4401020304"),
+		values:   []any{[]byte{1, 2, 3, 4}, [...]byte{1, 2, 3, 4}},
+	},
 
 	// text string
-	{wantData: hexDecode("60"), values: []any{""}},
-	{wantData: hexDecode("6161"), values: []any{"a"}},
-	{wantData: hexDecode("6449455446"), values: []any{"IETF"}},
-	{wantData: hexDecode("62225c"), values: []any{"\"\\"}},
-	{wantData: hexDecode("62c3bc"), values: []any{"ü"}},
-	{wantData: hexDecode("63e6b0b4"), values: []any{"水"}},
-	{wantData: hexDecode("64f0908591"), values: []any{"𐅑"}},
+	{
+		wantData: hexDecode("60"),
+		values:   []any{""},
+	},
+	{
+		wantData: hexDecode("6161"),
+		values:   []any{"a"},
+	},
+	{
+		wantData: hexDecode("6449455446"),
+		values:   []any{"IETF"},
+	},
+	{
+		wantData: hexDecode("62225c"),
+		values:   []any{"\"\\"},
+	},
+	{
+		wantData: hexDecode("62c3bc"),
+		values:   []any{"ü"},
+	},
+	{
+		wantData: hexDecode("63e6b0b4"),
+		values:   []any{"水"},
+	},
+	{
+		wantData: hexDecode("64f0908591"),
+		values:   []any{"𐅑"},
+	},
 
 	// array
 	{
@@ -270,25 +378,70 @@ var marshalTests = []marshalTest{
 	}, // 32: URI
 
 	// primitives
-	{wantData: hexDecode("f4"), values: []any{false}},
-	{wantData: hexDecode("f5"), values: []any{true}},
-	{wantData: hexDecode("f6"), values: []any{nil, []byte(nil), []int(nil), map[uint]bool(nil), (*int)(nil), io.Reader(nil)}},
+	{
+		wantData: hexDecode("f4"),
+		values:   []any{false},
+	},
+	{
+		wantData: hexDecode("f5"),
+		values:   []any{true},
+	},
+	{
+		wantData: hexDecode("f6"),
+		values:   []any{nil, []byte(nil), []int(nil), map[uint]bool(nil), (*int)(nil), io.Reader(nil)},
+	},
 	// simple values
-	{wantData: hexDecode("e0"), values: []any{SimpleValue(0)}},
-	{wantData: hexDecode("f0"), values: []any{SimpleValue(16)}},
-	{wantData: hexDecode("f820"), values: []any{SimpleValue(32)}},
-	{wantData: hexDecode("f8ff"), values: []any{SimpleValue(255)}},
+	{
+		wantData: hexDecode("e0"),
+		values:   []any{SimpleValue(0)},
+	},
+	{
+		wantData: hexDecode("f0"),
+		values:   []any{SimpleValue(16)},
+	},
+	{
+		wantData: hexDecode("f820"),
+		values:   []any{SimpleValue(32)},
+	},
+	{
+		wantData: hexDecode("f8ff"),
+		values:   []any{SimpleValue(255)},
+	},
 	// nan, positive and negative inf
-	{wantData: hexDecode("f97c00"), values: []any{math.Inf(1)}},
-	{wantData: hexDecode("f97e00"), values: []any{math.NaN()}},
-	{wantData: hexDecode("f9fc00"), values: []any{math.Inf(-1)}},
+	{
+		wantData: hexDecode("f97c00"),
+		values:   []any{math.Inf(1)},
+	},
+	{
+		wantData: hexDecode("f97e00"),
+		values:   []any{math.NaN()},
+	},
+	{
+		wantData: hexDecode("f9fc00"),
+		values:   []any{math.Inf(-1)},
+	},
 	// float32
-	{wantData: hexDecode("fa47c35000"), values: []any{float32(100000.0)}},
-	{wantData: hexDecode("fa7f7fffff"), values: []any{float32(3.4028234663852886e+38)}},
+	{
+		wantData: hexDecode("fa47c35000"),
+		values:   []any{float32(100000.0)},
+	},
+	{
+		wantData: hexDecode("fa7f7fffff"),
+		values:   []any{float32(3.4028234663852886e+38)},
+	},
 	// float64
-	{wantData: hexDecode("fb3ff199999999999a"), values: []any{float64(1.1)}},
-	{wantData: hexDecode("fb7e37e43c8800759c"), values: []any{float64(1.0e+300)}},
-	{wantData: hexDecode("fbc010666666666666"), values: []any{float64(-4.1)}},
+	{
+		wantData: hexDecode("fb3ff199999999999a"),
+		values:   []any{float64(1.1)},
+	},
+	{
+		wantData: hexDecode("fb7e37e43c8800759c"),
+		values:   []any{float64(1.0e+300)},
+	},
+	{
+		wantData: hexDecode("fbc010666666666666"),
+		values:   []any{float64(-4.1)},
+	},
 
 	// More testcases not covered by https://tools.ietf.org/html/rfc7049#appendix-A.
 	{
@@ -299,7 +452,10 @@ var marshalTests = []marshalTest{
 		},
 	},
 
-	{wantData: hexDecode("83f6f6f6"), values: []any{[]any{nil, nil, nil}}}, // [nil, nil, nil]
+	{
+		wantData: hexDecode("83f6f6f6"),
+		values:   []any{[]any{nil, nil, nil}},
+	}, // [nil, nil, nil]
 }
 
 func TestMarshal(t *testing.T) {
@@ -315,14 +471,46 @@ func TestInvalidTypeMarshal(t *testing.T) {
 		Chan chan bool
 	}
 	var marshalErrorTests = []marshalErrorTest{
-		{"channel cannot be marshaled", make(chan bool), "cbor: unsupported type: chan bool"},
-		{"slice of channel cannot be marshaled", make([]chan bool, 10), "cbor: unsupported type: []chan bool"},
-		{"slice of pointer to channel cannot be marshaled", make([]*chan bool, 10), "cbor: unsupported type: []*chan bool"},
-		{"map of channel cannot be marshaled", make(map[string]chan bool), "cbor: unsupported type: map[string]chan bool"},
-		{"struct of channel cannot be marshaled", s1{}, "cbor: unsupported type: cbor.s1"},
-		{"struct of channel cannot be marshaled", s2{}, "cbor: unsupported type: cbor.s2"},
-		{"function cannot be marshaled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
-		{"complex cannot be marshaled", complex(100, 8), "cbor: unsupported type: complex128"},
+		{
+			name:         "channel cannot be marshaled",
+			value:        make(chan bool),
+			wantErrorMsg: "cbor: unsupported type: chan bool",
+		},
+		{
+			name:         "slice of channel cannot be marshaled",
+			value:        make([]chan bool, 10),
+			wantErrorMsg: "cbor: unsupported type: []chan bool",
+		},
+		{
+			name:         "slice of pointer to channel cannot be marshaled",
+			value:        make([]*chan bool, 10),
+			wantErrorMsg: "cbor: unsupported type: []*chan bool",
+		},
+		{
+			name:         "map of channel cannot be marshaled",
+			value:        make(map[string]chan bool),
+			wantErrorMsg: "cbor: unsupported type: map[string]chan bool",
+		},
+		{
+			name:         "struct of channel cannot be marshaled",
+			value:        s1{},
+			wantErrorMsg: "cbor: unsupported type: cbor.s1",
+		},
+		{
+			name:         "struct of channel cannot be marshaled",
+			value:        s2{},
+			wantErrorMsg: "cbor: unsupported type: cbor.s2",
+		},
+		{
+			name:         "function cannot be marshaled",
+			value:        func(i int) int { return i * i },
+			wantErrorMsg: "cbor: unsupported type: func(int) int",
+		},
+		{
+			name:         "complex cannot be marshaled",
+			value:        complex(100, 8),
+			wantErrorMsg: "cbor: unsupported type: complex128",
+		},
 	}
 	em, err := EncOptions{Sort: SortCanonical}.EncMode()
 	if err != nil {
@@ -2957,64 +3145,226 @@ func TestMarshalRawMessageValue(t *testing.T) {
 		want []byte
 	}{
 		// Test with nil RawMessage.
-		{rawNil, []byte{0xf6}},
-		{&rawNil, []byte{0xf6}},
-		{[]any{rawNil}, []byte{0x81, 0xf6}},
-		{&[]any{rawNil}, []byte{0x81, 0xf6}},
-		{[]any{&rawNil}, []byte{0x81, 0xf6}},
-		{&[]any{&rawNil}, []byte{0x81, 0xf6}},
-		{struct{ M RawMessage }{rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{&struct{ M RawMessage }{rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{struct{ M *RawMessage }{&rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{&struct{ M *RawMessage }{&rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{map[string]any{"M": rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{&map[string]any{"M": rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{map[string]any{"M": &rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{&map[string]any{"M": &rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{T1{rawNil}, []byte{0xa0}},
-		{T2{&rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{&T1{rawNil}, []byte{0xa0}},
-		{&T2{&rawNil}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{
+			obj:  rawNil,
+			want: []byte{0xf6},
+		},
+		{
+			obj:  &rawNil,
+			want: []byte{0xf6},
+		},
+		{
+			obj:  []any{rawNil},
+			want: []byte{0x81, 0xf6},
+		},
+		{
+			obj:  &[]any{rawNil},
+			want: []byte{0x81, 0xf6},
+		},
+		{
+			obj:  []any{&rawNil},
+			want: []byte{0x81, 0xf6},
+		},
+		{
+			obj:  &[]any{&rawNil},
+			want: []byte{0x81, 0xf6},
+		},
+		{
+			obj:  struct{ M RawMessage }{rawNil},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
+		{
+			obj:  &struct{ M RawMessage }{rawNil},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
+		{
+			obj:  struct{ M *RawMessage }{&rawNil},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
+		{
+			obj:  &struct{ M *RawMessage }{&rawNil},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
+		{
+			obj:  map[string]any{"M": rawNil},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
+		{
+			obj:  &map[string]any{"M": rawNil},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
+		{
+			obj:  map[string]any{"M": &rawNil},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
+		{
+			obj:  &map[string]any{"M": &rawNil},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
+		{
+			obj:  T1{rawNil},
+			want: []byte{0xa0},
+		},
+		{
+			obj:  T2{&rawNil},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
+		{
+			obj:  &T1{rawNil},
+			want: []byte{0xa0},
+		},
+		{
+			obj:  &T2{&rawNil},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
 
 		// Test with empty, but non-nil, RawMessage.
-		{rawEmpty, []byte{0xf6}},
-		{&rawEmpty, []byte{0xf6}},
-		{[]any{rawEmpty}, []byte{0x81, 0xf6}},
-		{&[]any{rawEmpty}, []byte{0x81, 0xf6}},
-		{[]any{&rawEmpty}, []byte{0x81, 0xf6}},
-		{&[]any{&rawEmpty}, []byte{0x81, 0xf6}},
-		{struct{ M RawMessage }{rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{&struct{ M RawMessage }{rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{struct{ M *RawMessage }{&rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{&struct{ M *RawMessage }{&rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{map[string]any{"M": rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{&map[string]any{"M": rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{map[string]any{"M": &rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{&map[string]any{"M": &rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{T1{rawEmpty}, []byte{0xa0}},
-		{T2{&rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
-		{&T1{rawEmpty}, []byte{0xa0}},
-		{&T2{&rawEmpty}, []byte{0xa1, 0x61, 0x4d, 0xf6}},
+		{
+			obj:  rawEmpty,
+			want: []byte{0xf6},
+		},
+		{
+			obj:  &rawEmpty,
+			want: []byte{0xf6},
+		},
+		{
+			obj:  []any{rawEmpty},
+			want: []byte{0x81, 0xf6},
+		},
+		{
+			obj:  &[]any{rawEmpty},
+			want: []byte{0x81, 0xf6},
+		},
+		{
+			obj:  []any{&rawEmpty},
+			want: []byte{0x81, 0xf6},
+		},
+		{
+			obj:  &[]any{&rawEmpty},
+			want: []byte{0x81, 0xf6},
+		},
+		{
+			obj:  struct{ M RawMessage }{rawEmpty},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
+		{
+			obj:  &struct{ M RawMessage }{rawEmpty},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
+		{
+			obj:  struct{ M *RawMessage }{&rawEmpty},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
+		{
+			obj:  &struct{ M *RawMessage }{&rawEmpty},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
+		{
+			obj:  map[string]any{"M": rawEmpty},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
+		{
+			obj:  &map[string]any{"M": rawEmpty},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
+		{
+			obj:  map[string]any{"M": &rawEmpty},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
+		{
+			obj:  &map[string]any{"M": &rawEmpty},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
+		{
+			obj:  T1{rawEmpty},
+			want: []byte{0xa0},
+		},
+		{
+			obj:  T2{&rawEmpty},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
+		{
+			obj:  &T1{rawEmpty},
+			want: []byte{0xa0},
+		},
+		{
+			obj:  &T2{&rawEmpty},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6},
+		},
 
 		// Test with RawMessage with some data.
-		{raw, []byte{0x01}},
-		{&raw, []byte{0x01}},
-		{[]any{raw}, []byte{0x81, 0x01}},
-		{&[]any{raw}, []byte{0x81, 0x01}},
-		{[]any{&raw}, []byte{0x81, 0x01}},
-		{&[]any{&raw}, []byte{0x81, 0x01}},
-		{struct{ M RawMessage }{raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
-		{&struct{ M RawMessage }{raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
-		{struct{ M *RawMessage }{&raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
-		{&struct{ M *RawMessage }{&raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
-		{map[string]any{"M": raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
-		{&map[string]any{"M": raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
-		{map[string]any{"M": &raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
-		{&map[string]any{"M": &raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
-		{T1{raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
-		{T2{&raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
-		{&T1{raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
-		{&T2{&raw}, []byte{0xa1, 0x61, 0x4d, 0x01}},
+		{
+			obj:  raw,
+			want: []byte{0x01},
+		},
+		{
+			obj:  &raw,
+			want: []byte{0x01},
+		},
+		{
+			obj:  []any{raw},
+			want: []byte{0x81, 0x01},
+		},
+		{
+			obj:  &[]any{raw},
+			want: []byte{0x81, 0x01},
+		},
+		{
+			obj:  []any{&raw},
+			want: []byte{0x81, 0x01},
+		},
+		{
+			obj:  &[]any{&raw},
+			want: []byte{0x81, 0x01},
+		},
+		{
+			obj:  struct{ M RawMessage }{raw},
+			want: []byte{0xa1, 0x61, 0x4d, 0x01},
+		},
+		{
+			obj:  &struct{ M RawMessage }{raw},
+			want: []byte{0xa1, 0x61, 0x4d, 0x01},
+		},
+		{
+			obj:  struct{ M *RawMessage }{&raw},
+			want: []byte{0xa1, 0x61, 0x4d, 0x01},
+		},
+		{
+			obj:  &struct{ M *RawMessage }{&raw},
+			want: []byte{0xa1, 0x61, 0x4d, 0x01},
+		},
+		{
+			obj:  map[string]any{"M": raw},
+			want: []byte{0xa1, 0x61, 0x4d, 0x01},
+		},
+		{
+			obj:  &map[string]any{"M": raw},
+			want: []byte{0xa1, 0x61, 0x4d, 0x01},
+		},
+		{
+			obj:  map[string]any{"M": &raw},
+			want: []byte{0xa1, 0x61, 0x4d, 0x01},
+		},
+		{
+			obj:  &map[string]any{"M": &raw},
+			want: []byte{0xa1, 0x61, 0x4d, 0x01},
+		},
+		{
+			obj:  T1{raw},
+			want: []byte{0xa1, 0x61, 0x4d, 0x01},
+		},
+		{
+			obj:  T2{&raw},
+			want: []byte{0xa1, 0x61, 0x4d, 0x01},
+		},
+		{
+			obj:  &T1{raw},
+			want: []byte{0xa1, 0x61, 0x4d, 0x01},
+		},
+		{
+			obj:  &T2{&raw},
+			want: []byte{0xa1, 0x61, 0x4d, 0x01},
+		},
 	}
 
 	for _, tc := range tests {
@@ -3063,14 +3413,14 @@ func TestMarshalUnmarshalStructKeyAsInt(t *testing.T) {
 		wantCborData []byte
 	}{
 		{
-			"Zero value struct",
-			T{},
-			hexDecode("a0"), // {}
+			name:         "Zero value struct",
+			obj:          T{},
+			wantCborData: hexDecode("a0"), // {}
 		},
 		{
-			"Initialized value struct",
-			T{F1: 1, F2: 2, F3: 3},
-			hexDecode("a301012203613202"), // {1: 1, -3: 3, "2": 2}
+			name:         "Initialized value struct",
+			obj:          T{F1: 1, F2: 2, F3: 3},
+			wantCborData: hexDecode("a301012203613202"), // {1: 1, -3: 3, "2": 2}
 		},
 	}
 	em, err := EncOptions{Sort: SortCanonical}.EncMode()
@@ -3156,19 +3506,19 @@ func TestMarshalUnmarshalStructToArray(t *testing.T) {
 		wantCborData []byte
 	}{
 		{
-			"Zero value struct (test omitempty)",
-			T{},
-			hexDecode("8500a000f6f6"), // [0, {}, 0, nil, nil]
+			name:         "Zero value struct (test omitempty)",
+			obj:          T{},
+			wantCborData: hexDecode("8500a000f6f6"), // [0, {}, 0, nil, nil]
 		},
 		{
-			"Initialized struct",
-			T{A: 24, B: T1{M: 1}, T1: T1{M: 2}, T2: &T2{N: 3, O: 4}},
-			hexDecode("851818a1614d01020304"), // [24, {M: 1}, 2, 3, 4]
+			name:         "Initialized struct",
+			obj:          T{A: 24, B: T1{M: 1}, T1: T1{M: 2}, T2: &T2{N: 3, O: 4}},
+			wantCborData: hexDecode("851818a1614d01020304"), // [24, {M: 1}, 2, 3, 4]
 		},
 		{
-			"Null pointer to embedded struct",
-			T{A: 24, B: T1{M: 1}, T1: T1{M: 2}},
-			hexDecode("851818a1614d0102f6f6"), // [24, {M: 1}, 2, nil, nil]
+			name:         "Null pointer to embedded struct",
+			obj:          T{A: 24, B: T1{M: 1}, T1: T1{M: 2}},
+			wantCborData: hexDecode("851818a1614d0102f6f6"), // [24, {M: 1}, 2, nil, nil]
 		},
 	}
 	for _, tc := range testCases {
@@ -3230,11 +3580,31 @@ func TestMapSort(t *testing.T) {
 		opts         EncOptions
 		wantCborData []byte
 	}{
-		{"Length first sort", EncOptions{Sort: SortLengthFirst}, lenFirstSortedCborData},
-		{"Bytewise sort", EncOptions{Sort: SortBytewiseLexical}, bytewiseSortedCborData},
-		{"CBOR canonical sort", EncOptions{Sort: SortCanonical}, lenFirstSortedCborData},
-		{"CTAP2 canonical sort", EncOptions{Sort: SortCTAP2}, bytewiseSortedCborData},
-		{"Core deterministic sort", EncOptions{Sort: SortCoreDeterministic}, bytewiseSortedCborData},
+		{
+			name:         "Length first sort",
+			opts:         EncOptions{Sort: SortLengthFirst},
+			wantCborData: lenFirstSortedCborData,
+		},
+		{
+			name:         "Bytewise sort",
+			opts:         EncOptions{Sort: SortBytewiseLexical},
+			wantCborData: bytewiseSortedCborData,
+		},
+		{
+			name:         "CBOR canonical sort",
+			opts:         EncOptions{Sort: SortCanonical},
+			wantCborData: lenFirstSortedCborData,
+		},
+		{
+			name:         "CTAP2 canonical sort",
+			opts:         EncOptions{Sort: SortCTAP2},
+			wantCborData: bytewiseSortedCborData,
+		},
+		{
+			name:         "Core deterministic sort",
+			opts:         EncOptions{Sort: SortCoreDeterministic},
+			wantCborData: bytewiseSortedCborData,
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -3272,13 +3642,41 @@ func TestStructSort(t *testing.T) {
 		opts         EncOptions
 		wantCborData []byte
 	}{
-		{"No sort", EncOptions{}, unsortedCborData},
-		{"No sort", EncOptions{Sort: SortNone}, unsortedCborData},
-		{"Length first sort", EncOptions{Sort: SortLengthFirst}, lenFirstSortedCborData},
-		{"Bytewise sort", EncOptions{Sort: SortBytewiseLexical}, bytewiseSortedCborData},
-		{"CBOR canonical sort", EncOptions{Sort: SortCanonical}, lenFirstSortedCborData},
-		{"CTAP2 canonical sort", EncOptions{Sort: SortCTAP2}, bytewiseSortedCborData},
-		{"Core deterministic sort", EncOptions{Sort: SortCoreDeterministic}, bytewiseSortedCborData},
+		{
+			name:         "No sort",
+			opts:         EncOptions{},
+			wantCborData: unsortedCborData,
+		},
+		{
+			name:         "No sort",
+			opts:         EncOptions{Sort: SortNone},
+			wantCborData: unsortedCborData,
+		},
+		{
+			name:         "Length first sort",
+			opts:         EncOptions{Sort: SortLengthFirst},
+			wantCborData: lenFirstSortedCborData,
+		},
+		{
+			name:         "Bytewise sort",
+			opts:         EncOptions{Sort: SortBytewiseLexical},
+			wantCborData: bytewiseSortedCborData,
+		},
+		{
+			name:         "CBOR canonical sort",
+			opts:         EncOptions{Sort: SortCanonical},
+			wantCborData: lenFirstSortedCborData,
+		},
+		{
+			name:         "CTAP2 canonical sort",
+			opts:         EncOptions{Sort: SortCTAP2},
+			wantCborData: bytewiseSortedCborData,
+		},
+		{
+			name:         "Core deterministic sort",
+			opts:         EncOptions{Sort: SortCoreDeterministic},
+			wantCborData: bytewiseSortedCborData,
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -3578,25 +3976,81 @@ func TestShortestFloat16(t *testing.T) {
 		wantCborData []byte
 	}{
 		// Data from RFC 7049 appendix A
-		{"Shrink to float16", 0.0, hexDecode("f90000")},
-		{"Shrink to float16", 1.0, hexDecode("f93c00")},
-		{"Shrink to float16", 1.5, hexDecode("f93e00")},
-		{"Shrink to float16", 65504.0, hexDecode("f97bff")},
-		{"Shrink to float16", 5.960464477539063e-08, hexDecode("f90001")},
-		{"Shrink to float16", 6.103515625e-05, hexDecode("f90400")},
-		{"Shrink to float16", -4.0, hexDecode("f9c400")},
+		{
+			name:         "Shrink to float16",
+			f64:          0.0,
+			wantCborData: hexDecode("f90000"),
+		},
+		{
+			name:         "Shrink to float16",
+			f64:          1.0,
+			wantCborData: hexDecode("f93c00"),
+		},
+		{
+			name:         "Shrink to float16",
+			f64:          1.5,
+			wantCborData: hexDecode("f93e00"),
+		},
+		{
+			name:         "Shrink to float16",
+			f64:          65504.0,
+			wantCborData: hexDecode("f97bff"),
+		},
+		{
+			name:         "Shrink to float16",
+			f64:          5.960464477539063e-08,
+			wantCborData: hexDecode("f90001"),
+		},
+		{
+			name:         "Shrink to float16",
+			f64:          6.103515625e-05,
+			wantCborData: hexDecode("f90400"),
+		},
+		{
+			name:         "Shrink to float16",
+			f64:          -4.0,
+			wantCborData: hexDecode("f9c400"),
+		},
 		// Data from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
-		{"Shrink to float16", 0.333251953125, hexDecode("f93555")},
+		{
+			name:         "Shrink to float16",
+			f64:          0.333251953125,
+			wantCborData: hexDecode("f93555"),
+		},
 		// Data from 7049bis 4.2.1 and 5.5
-		{"Shrink to float16", 5.5, hexDecode("f94580")},
+		{
+			name:         "Shrink to float16",
+			f64:          5.5,
+			wantCborData: hexDecode("f94580"),
+		},
 		// Data from RFC 7049 appendix A
-		{"Shrink to float32", 100000.0, hexDecode("fa47c35000")},
-		{"Shrink to float32", 3.4028234663852886e+38, hexDecode("fa7f7fffff")},
+		{
+			name:         "Shrink to float32",
+			f64:          100000.0,
+			wantCborData: hexDecode("fa47c35000"),
+		},
+		{
+			name:         "Shrink to float32",
+			f64:          3.4028234663852886e+38,
+			wantCborData: hexDecode("fa7f7fffff"),
+		},
 		// Data from 7049bis 4.2.1 and 5.5
-		{"Shrink to float32", 5555.5, hexDecode("fa45ad9c00")},
-		{"Shrink to float32", 1000000.5, hexDecode("fa49742408")},
+		{
+			name:         "Shrink to float32",
+			f64:          5555.5,
+			wantCborData: hexDecode("fa45ad9c00"),
+		},
+		{
+			name:         "Shrink to float32",
+			f64:          1000000.5,
+			wantCborData: hexDecode("fa49742408"),
+		},
 		// Data from RFC 7049 appendix A
-		{"Shrink to float64", 1.0e+300, hexDecode("fb7e37e43c8800759c")},
+		{
+			name:         "Shrink to float64",
+			f64:          1.0e+300,
+			wantCborData: hexDecode("fb7e37e43c8800759c"),
+		},
 	}
 	em, err := EncOptions{ShortestFloat: ShortestFloat16}.EncMode()
 	if err != nil {
@@ -3620,105 +4074,6 @@ func TestShortestFloat16(t *testing.T) {
 	}
 }
 
-/*
-	func TestShortestFloat32(t *testing.T) {
-		testCases := []struct {
-			name         string
-			f64          float64
-			wantCborData []byte
-		}{
-			// Data from RFC 7049 appendix A
-			{"Shrink to float32", 0.0, hexDecode("fa00000000")},
-			{"Shrink to float32", 1.0, hexDecode("fa3f800000")},
-			{"Shrink to float32", 1.5, hexDecode("fa3fc00000")},
-			{"Shrink to float32", 65504.0, hexDecode("fa477fe000")},
-			{"Shrink to float32", 5.960464477539063e-08, hexDecode("fa33800000")},
-			{"Shrink to float32", 6.103515625e-05, hexDecode("fa38800000")},
-			{"Shrink to float32", -4.0, hexDecode("fac0800000")},
-			// Data from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
-			{"Shrink to float32", 0.333251953125, hexDecode("fa3eaaa000")},
-			// Data from 7049bis 4.2.1 and 5.5
-			{"Shrink to float32", 5.5, hexDecode("fa40b00000")},
-			// Data from RFC 7049 appendix A
-			{"Shrink to float32", 100000.0, hexDecode("fa47c35000")},
-			{"Shrink to float32", 3.4028234663852886e+38, hexDecode("fa7f7fffff")},
-			// Data from 7049bis 4.2.1 and 5.5
-			{"Shrink to float32", 5555.5, hexDecode("fa45ad9c00")},
-			{"Shrink to float32", 1000000.5, hexDecode("fa49742408")},
-			// Data from RFC 7049 appendix A
-			{"Shrink to float64", 1.0e+300, hexDecode("fb7e37e43c8800759c")},
-		}
-		em, err := EncOptions{ShortestFloat: ShortestFloat32}.EncMode()
-		if err != nil {
-			t.Errorf("EncMode() returned an error %v", err)
-		}
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				b, err := em.Marshal(tc.f64)
-				if err != nil {
-					t.Errorf("Marshal(%v) returned error %v", tc.f64, err)
-				} else if !bytes.Equal(b, tc.wantCborData) {
-					t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.f64, b, tc.wantCborData)
-				}
-				var f64 float64
-				if err = Unmarshal(b, &f64); err != nil {
-					t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-				} else if f64 != tc.f64 {
-					t.Errorf("Unmarshal(0x%x) = %f, want %f", b, f64, tc.f64)
-				}
-			})
-		}
-	}
-
-	func TestShortestFloat64(t *testing.T) {
-		testCases := []struct {
-			name         string
-			f64          float64
-			wantCborData []byte
-		}{
-			// Data from RFC 7049 appendix A
-			{"Shrink to float64", 0.0, hexDecode("fb0000000000000000")},
-			{"Shrink to float64", 1.0, hexDecode("fb3ff0000000000000")},
-			{"Shrink to float64", 1.5, hexDecode("fb3ff8000000000000")},
-			{"Shrink to float64", 65504.0, hexDecode("fb40effc0000000000")},
-			{"Shrink to float64", 5.960464477539063e-08, hexDecode("fb3e70000000000000")},
-			{"Shrink to float64", 6.103515625e-05, hexDecode("fb3f10000000000000")},
-			{"Shrink to float64", -4.0, hexDecode("fbc010000000000000")},
-			// Data from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
-			{"Shrink to float64", 0.333251953125, hexDecode("fb3fd5540000000000")},
-			// Data from 7049bis 4.2.1 and 5.5
-			{"Shrink to float64", 5.5, hexDecode("fb4016000000000000")},
-			// Data from RFC 7049 appendix A
-			{"Shrink to float64", 100000.0, hexDecode("fb40f86a0000000000")},
-			{"Shrink to float64", 3.4028234663852886e+38, hexDecode("fb47efffffe0000000")},
-			// Data from 7049bis 4.2.1 and 5.5
-			{"Shrink to float64", 5555.5, hexDecode("fb40b5b38000000000")},
-			{"Shrink to float64", 1000000.5, hexDecode("fb412e848100000000")},
-			// Data from RFC 7049 appendix A
-			{"Shrink to float64", 1.0e+300, hexDecode("fb7e37e43c8800759c")},
-		}
-		em, err := EncOptions{ShortestFloat: ShortestFloat64}.EncMode()
-		if err != nil {
-			t.Errorf("EncMode() returned an error %v", err)
-		}
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				b, err := em.Marshal(tc.f64)
-				if err != nil {
-					t.Errorf("Marshal(%v) returned error %v", tc.f64, err)
-				} else if !bytes.Equal(b, tc.wantCborData) {
-					t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.f64, b, tc.wantCborData)
-				}
-				var f64 float64
-				if err = Unmarshal(b, &f64); err != nil {
-					t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-				} else if f64 != tc.f64 {
-					t.Errorf("Unmarshal(0x%x) = %f, want %f", b, f64, tc.f64)
-				}
-			})
-		}
-	}
-*/
 func TestShortestFloatNone(t *testing.T) {
 	testCases := []struct {
 		name         string
@@ -3726,37 +4081,145 @@ func TestShortestFloatNone(t *testing.T) {
 		wantCborData []byte
 	}{
 		// Data from RFC 7049 appendix A
-		{"float32", float32(0.0), hexDecode("fa00000000")},
-		{"float64", float64(0.0), hexDecode("fb0000000000000000")},
-		{"float32", float32(1.0), hexDecode("fa3f800000")},
-		{"float64", float64(1.0), hexDecode("fb3ff0000000000000")},
-		{"float32", float32(1.5), hexDecode("fa3fc00000")},
-		{"float64", float64(1.5), hexDecode("fb3ff8000000000000")},
-		{"float32", float32(65504.0), hexDecode("fa477fe000")},
-		{"float64", float64(65504.0), hexDecode("fb40effc0000000000")},
-		{"float32", float32(5.960464477539063e-08), hexDecode("fa33800000")},
-		{"float64", float64(5.960464477539063e-08), hexDecode("fb3e70000000000000")},
-		{"float32", float32(6.103515625e-05), hexDecode("fa38800000")},
-		{"float64", float64(6.103515625e-05), hexDecode("fb3f10000000000000")},
-		{"float32", float32(-4.0), hexDecode("fac0800000")},
-		{"float64", float64(-4.0), hexDecode("fbc010000000000000")},
+		{
+			name:         "float32",
+			f:            float32(0.0),
+			wantCborData: hexDecode("fa00000000"),
+		},
+		{
+			name:         "float64",
+			f:            float64(0.0),
+			wantCborData: hexDecode("fb0000000000000000"),
+		},
+		{
+			name:         "float32",
+			f:            float32(1.0),
+			wantCborData: hexDecode("fa3f800000"),
+		},
+		{
+			name:         "float64",
+			f:            float64(1.0),
+			wantCborData: hexDecode("fb3ff0000000000000"),
+		},
+		{
+			name:         "float32",
+			f:            float32(1.5),
+			wantCborData: hexDecode("fa3fc00000"),
+		},
+		{
+			name:         "float64",
+			f:            float64(1.5),
+			wantCborData: hexDecode("fb3ff8000000000000"),
+		},
+		{
+			name:         "float32",
+			f:            float32(65504.0),
+			wantCborData: hexDecode("fa477fe000"),
+		},
+		{
+			name:         "float64",
+			f:            float64(65504.0),
+			wantCborData: hexDecode("fb40effc0000000000"),
+		},
+		{
+			name:         "float32",
+			f:            float32(5.960464477539063e-08),
+			wantCborData: hexDecode("fa33800000"),
+		},
+		{
+			name:         "float64",
+			f:            float64(5.960464477539063e-08),
+			wantCborData: hexDecode("fb3e70000000000000"),
+		},
+		{
+			name:         "float32",
+			f:            float32(6.103515625e-05),
+			wantCborData: hexDecode("fa38800000"),
+		},
+		{
+			name:         "float64",
+			f:            float64(6.103515625e-05),
+			wantCborData: hexDecode("fb3f10000000000000"),
+		},
+		{
+			name:         "float32",
+			f:            float32(-4.0),
+			wantCborData: hexDecode("fac0800000"),
+		},
+		{
+			name:         "float64",
+			f:            float64(-4.0),
+			wantCborData: hexDecode("fbc010000000000000"),
+		},
 		// Data from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
-		{"float32", float32(0.333251953125), hexDecode("fa3eaaa000")},
-		{"float64", float64(0.333251953125), hexDecode("fb3fd5540000000000")},
+		{
+			name:         "float32",
+			f:            float32(0.333251953125),
+			wantCborData: hexDecode("fa3eaaa000"),
+		},
+		{
+			name:         "float64",
+			f:            float64(0.333251953125),
+			wantCborData: hexDecode("fb3fd5540000000000"),
+		},
 		// Data from 7049bis 4.2.1 and 5.5
-		{"float32", float32(5.5), hexDecode("fa40b00000")},
-		{"float64", float64(5.5), hexDecode("fb4016000000000000")},
+		{
+			name:         "float32",
+			f:            float32(5.5),
+			wantCborData: hexDecode("fa40b00000"),
+		},
+		{
+			name:         "float64",
+			f:            float64(5.5),
+			wantCborData: hexDecode("fb4016000000000000"),
+		},
 		// Data from RFC 7049 appendix A
-		{"float32", float32(100000.0), hexDecode("fa47c35000")},
-		{"float64", float64(100000.0), hexDecode("fb40f86a0000000000")},
-		{"float32", float32(3.4028234663852886e+38), hexDecode("fa7f7fffff")},
-		{"float64", float64(3.4028234663852886e+38), hexDecode("fb47efffffe0000000")},
+		{
+			name:         "float32",
+			f:            float32(100000.0),
+			wantCborData: hexDecode("fa47c35000"),
+		},
+		{
+			name:         "float64",
+			f:            float64(100000.0),
+			wantCborData: hexDecode("fb40f86a0000000000"),
+		},
+		{
+			name:         "float32",
+			f:            float32(3.4028234663852886e+38),
+			wantCborData: hexDecode("fa7f7fffff"),
+		},
+		{
+			name:         "float64",
+			f:            float64(3.4028234663852886e+38),
+			wantCborData: hexDecode("fb47efffffe0000000"),
+		},
 		// Data from 7049bis 4.2.1 and 5.5
-		{"float32", float32(5555.5), hexDecode("fa45ad9c00")},
-		{"float64", float64(5555.5), hexDecode("fb40b5b38000000000")},
-		{"float32", float32(1000000.5), hexDecode("fa49742408")},
-		{"float64", float64(1000000.5), hexDecode("fb412e848100000000")},
-		{"float64", float64(1.0e+300), hexDecode("fb7e37e43c8800759c")},
+		{
+			name:         "float32",
+			f:            float32(5555.5),
+			wantCborData: hexDecode("fa45ad9c00"),
+		},
+		{
+			name:         "float64",
+			f:            float64(5555.5),
+			wantCborData: hexDecode("fb40b5b38000000000"),
+		},
+		{
+			name:         "float32",
+			f:            float32(1000000.5),
+			wantCborData: hexDecode("fa49742408"),
+		},
+		{
+			name:         "float64",
+			f:            float64(1000000.5),
+			wantCborData: hexDecode("fb412e848100000000"),
+		},
+		{
+			name:         "float64",
+			f:            float64(1.0e+300),
+			wantCborData: hexDecode("fb7e37e43c8800759c"),
+		},
 	}
 	em, err := EncOptions{ShortestFloat: ShortestFloatNone}.EncMode()
 	if err != nil {
@@ -3826,14 +4289,54 @@ func TestInfConvert(t *testing.T) {
 		opts         EncOptions
 		wantCborData []byte
 	}{
-		{"float32 -inf no conversion", float32(math.Inf(-1)), infConvertNoneOpt, hexDecode("faff800000")},
-		{"float32 +inf no conversion", float32(math.Inf(1)), infConvertNoneOpt, hexDecode("fa7f800000")},
-		{"float64 -inf no conversion", math.Inf(-1), infConvertNoneOpt, hexDecode("fbfff0000000000000")},
-		{"float64 +inf no conversion", math.Inf(1), infConvertNoneOpt, hexDecode("fb7ff0000000000000")},
-		{"float32 -inf to float16", float32(math.Inf(-1)), infConvertFloat16Opt, hexDecode("f9fc00")},
-		{"float32 +inf to float16", float32(math.Inf(1)), infConvertFloat16Opt, hexDecode("f97c00")},
-		{"float64 -inf to float16", math.Inf(-1), infConvertFloat16Opt, hexDecode("f9fc00")},
-		{"float64 +inf to float16", math.Inf(1), infConvertFloat16Opt, hexDecode("f97c00")},
+		{
+			name:         "float32 -inf no conversion",
+			v:            float32(math.Inf(-1)),
+			opts:         infConvertNoneOpt,
+			wantCborData: hexDecode("faff800000"),
+		},
+		{
+			name:         "float32 +inf no conversion",
+			v:            float32(math.Inf(1)),
+			opts:         infConvertNoneOpt,
+			wantCborData: hexDecode("fa7f800000"),
+		},
+		{
+			name:         "float64 -inf no conversion",
+			v:            math.Inf(-1),
+			opts:         infConvertNoneOpt,
+			wantCborData: hexDecode("fbfff0000000000000"),
+		},
+		{
+			name:         "float64 +inf no conversion",
+			v:            math.Inf(1),
+			opts:         infConvertNoneOpt,
+			wantCborData: hexDecode("fb7ff0000000000000"),
+		},
+		{
+			name:         "float32 -inf to float16",
+			v:            float32(math.Inf(-1)),
+			opts:         infConvertFloat16Opt,
+			wantCborData: hexDecode("f9fc00"),
+		},
+		{
+			name:         "float32 +inf to float16",
+			v:            float32(math.Inf(1)),
+			opts:         infConvertFloat16Opt,
+			wantCborData: hexDecode("f97c00"),
+		},
+		{
+			name:         "float64 -inf to float16",
+			v:            math.Inf(-1),
+			opts:         infConvertFloat16Opt,
+			wantCborData: hexDecode("f9fc00"),
+		},
+		{
+			name:         "float64 +inf to float16",
+			v:            math.Inf(1),
+			opts:         infConvertFloat16Opt,
+			wantCborData: hexDecode("f97c00"),
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -3906,14 +4409,42 @@ func TestNilContainers(t *testing.T) {
 		opts         EncOptions
 		wantCborData []byte
 	}{
-		{"map(nil) as CBOR null", map[string]string(nil), nilContainersNull, hexDecode("f6")},
-		{"map(nil) as CBOR empty map", map[string]string(nil), nilContainersEmpty, hexDecode("a0")},
-
-		{"slice(nil) as CBOR null", []int(nil), nilContainersNull, hexDecode("f6")},
-		{"slice(nil) as CBOR empty array", []int(nil), nilContainersEmpty, hexDecode("80")},
-
-		{"[]byte(nil) as CBOR null", []byte(nil), nilContainersNull, hexDecode("f6")},
-		{"[]byte(nil) as CBOR empty bytestring", []byte(nil), nilContainersEmpty, hexDecode("40")},
+		{
+			name:         "map(nil) as CBOR null",
+			v:            map[string]string(nil),
+			opts:         nilContainersNull,
+			wantCborData: hexDecode("f6"),
+		},
+		{
+			name:         "map(nil) as CBOR empty map",
+			v:            map[string]string(nil),
+			opts:         nilContainersEmpty,
+			wantCborData: hexDecode("a0"),
+		},
+		{
+			name:         "slice(nil) as CBOR null",
+			v:            []int(nil),
+			opts:         nilContainersNull,
+			wantCborData: hexDecode("f6"),
+		},
+		{
+			name:         "slice(nil) as CBOR empty array",
+			v:            []int(nil),
+			opts:         nilContainersEmpty,
+			wantCborData: hexDecode("80"),
+		},
+		{
+			name:         "[]byte(nil) as CBOR null",
+			v:            []byte(nil),
+			opts:         nilContainersNull,
+			wantCborData: hexDecode("f6"),
+		},
+		{
+			name:         "[]byte(nil) as CBOR empty bytestring",
+			v:            []byte(nil),
+			opts:         nilContainersEmpty,
+			wantCborData: hexDecode("40"),
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -4029,145 +4560,445 @@ func TestNaNConvert(t *testing.T) {
 		convert []nanConvert
 	}{
 		// float32 qNaN dropped payload not zero
-		{math.Float32frombits(qnanVar0xffc00001), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("faffc00001")},
-			{nanConvertPreserveSignalOpt, hexDecode("faffc00001")},
-			{nanConvertQuietOpt, hexDecode("faffc00001")},
-		}},
+		{
+			v: math.Float32frombits(qnanVar0xffc00001),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("faffc00001"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("faffc00001"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("faffc00001"),
+				},
+			},
+		},
 		// float32 qNaN dropped payload not zero
-		{math.Float32frombits(qnanVar0x7fc00001), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("fa7fc00001")},
-			{nanConvertPreserveSignalOpt, hexDecode("fa7fc00001")},
-			{nanConvertQuietOpt, hexDecode("fa7fc00001")},
-		}},
+		{
+			v: math.Float32frombits(qnanVar0x7fc00001),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("fa7fc00001"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("fa7fc00001"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("fa7fc00001"),
+				},
+			},
+		},
 		// float32 -qNaN dropped payload zero
-		{math.Float32frombits(qnanVar0xffc02000), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("faffc02000")},
-			{nanConvertPreserveSignalOpt, hexDecode("f9fe01")},
-			{nanConvertQuietOpt, hexDecode("f9fe01")},
-		}},
+		{
+			v: math.Float32frombits(qnanVar0xffc02000),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("faffc02000"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("f9fe01"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("f9fe01"),
+				},
+			},
+		},
 		// float32 qNaN dropped payload zero
-		{math.Float32frombits(qnanVar0x7fc02000), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("fa7fc02000")},
-			{nanConvertPreserveSignalOpt, hexDecode("f97e01")},
-			{nanConvertQuietOpt, hexDecode("f97e01")},
-		}},
+		{
+			v: math.Float32frombits(qnanVar0x7fc02000),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("fa7fc02000"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("f97e01"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("f97e01"),
+				},
+			},
+		},
 		// float32 -sNaN dropped payload not zero
-		{math.Float32frombits(snanVar0xff800001), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("faff800001")},
-			{nanConvertPreserveSignalOpt, hexDecode("faff800001")},
-			{nanConvertQuietOpt, hexDecode("faffc00001")},
-		}},
+		{
+			v: math.Float32frombits(snanVar0xff800001),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("faff800001"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("faff800001"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("faffc00001"),
+				},
+			},
+		},
 		// float32 sNaN dropped payload not zero
-		{math.Float32frombits(snanVar0x7f800001), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("fa7f800001")},
-			{nanConvertPreserveSignalOpt, hexDecode("fa7f800001")},
-			{nanConvertQuietOpt, hexDecode("fa7fc00001")},
-		}},
+		{
+			v: math.Float32frombits(snanVar0x7f800001),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("fa7f800001"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("fa7f800001"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("fa7fc00001"),
+				},
+			},
+		},
 		// float32 -sNaN dropped payload zero
-		{math.Float32frombits(snanVar0xff802000), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("faff802000")},
-			{nanConvertPreserveSignalOpt, hexDecode("f9fc01")},
-			{nanConvertQuietOpt, hexDecode("f9fe01")},
-		}},
+		{
+			v: math.Float32frombits(snanVar0xff802000),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("faff802000"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("f9fc01"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("f9fe01"),
+				},
+			},
+		},
 		// float32 sNaN dropped payload zero
-		{math.Float32frombits(snanVar0x7f802000), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("fa7f802000")},
-			{nanConvertPreserveSignalOpt, hexDecode("f97c01")},
-			{nanConvertQuietOpt, hexDecode("f97e01")},
-		}},
+		{
+			v: math.Float32frombits(snanVar0x7f802000),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("fa7f802000"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("f97c01"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("f97e01"),
+				},
+			},
+		},
 		// float64 -qNaN dropped payload not zero
-		{math.Float64frombits(qnanVar0xfff8000000000001), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("fbfff8000000000001")},
-			{nanConvertPreserveSignalOpt, hexDecode("fbfff8000000000001")},
-			{nanConvertQuietOpt, hexDecode("fbfff8000000000001")},
-		}},
+		{
+			v: math.Float64frombits(qnanVar0xfff8000000000001),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("fbfff8000000000001"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("fbfff8000000000001"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("fbfff8000000000001"),
+				},
+			},
+		},
 		// float64 qNaN dropped payload not zero
-		{math.Float64frombits(qnanVar0x7ff8000000000001), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("fb7ff8000000000001")},
-			{nanConvertPreserveSignalOpt, hexDecode("fb7ff8000000000001")},
-			{nanConvertQuietOpt, hexDecode("fb7ff8000000000001")},
-		}},
+		{
+			v: math.Float64frombits(qnanVar0x7ff8000000000001),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("fb7ff8000000000001"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("fb7ff8000000000001"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("fb7ff8000000000001"),
+				},
+			},
+		},
 		// float64 -qNaN dropped payload zero
-		{math.Float64frombits(qnanVar0xfff8000020000000), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("fbfff8000020000000")},
-			{nanConvertPreserveSignalOpt, hexDecode("faffc00001")},
-			{nanConvertQuietOpt, hexDecode("faffc00001")},
-		}},
+		{
+			v: math.Float64frombits(qnanVar0xfff8000020000000),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("fbfff8000020000000"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("faffc00001"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("faffc00001"),
+				},
+			},
+		},
 		// float64 qNaN dropped payload zero
-		{math.Float64frombits(qnanVar0x7ff8000020000000), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("fb7ff8000020000000")},
-			{nanConvertPreserveSignalOpt, hexDecode("fa7fc00001")},
-			{nanConvertQuietOpt, hexDecode("fa7fc00001")},
-		}},
+		{
+			v: math.Float64frombits(qnanVar0x7ff8000020000000),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("fb7ff8000020000000"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("fa7fc00001"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("fa7fc00001"),
+				},
+			},
+		},
 		// float64 -qNaN dropped payload zero
-		{math.Float64frombits(qnanVar0xfffc000000000000), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("fbfffc000000000000")},
-			{nanConvertPreserveSignalOpt, hexDecode("f9ff00")},
-			{nanConvertQuietOpt, hexDecode("f9ff00")},
-		}},
+		{
+			v: math.Float64frombits(qnanVar0xfffc000000000000),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("fbfffc000000000000"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("f9ff00"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("f9ff00"),
+				},
+			},
+		},
 		// float64 qNaN dropped payload zero
-		{math.Float64frombits(qnanVar0x7ffc000000000000), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("fb7ffc000000000000")},
-			{nanConvertPreserveSignalOpt, hexDecode("f97f00")},
-			{nanConvertQuietOpt, hexDecode("f97f00")},
-		}},
+		{
+			v: math.Float64frombits(qnanVar0x7ffc000000000000),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("fb7ffc000000000000"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("f97f00"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("f97f00"),
+				},
+			},
+		},
 		// float64 -sNaN dropped payload not zero
-		{math.Float64frombits(snanVar0xfff0000000000001), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("fbfff0000000000001")},
-			{nanConvertPreserveSignalOpt, hexDecode("fbfff0000000000001")},
-			{nanConvertQuietOpt, hexDecode("fbfff8000000000001")},
-		}},
+		{
+			v: math.Float64frombits(snanVar0xfff0000000000001),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("fbfff0000000000001"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("fbfff0000000000001"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("fbfff8000000000001"),
+				},
+			},
+		},
 		// float64 sNaN dropped payload not zero
-		{math.Float64frombits(snanVar0x7ff0000000000001), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("fb7ff0000000000001")},
-			{nanConvertPreserveSignalOpt, hexDecode("fb7ff0000000000001")},
-			{nanConvertQuietOpt, hexDecode("fb7ff8000000000001")},
-		}},
+		{
+			v: math.Float64frombits(snanVar0x7ff0000000000001),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("fb7ff0000000000001"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("fb7ff0000000000001"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("fb7ff8000000000001"),
+				},
+			},
+		},
 		// float64 -sNaN dropped payload zero
-		{math.Float64frombits(snanVar0xfff0000020000000), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("fbfff0000020000000")},
-			{nanConvertPreserveSignalOpt, hexDecode("faff800001")},
-			{nanConvertQuietOpt, hexDecode("faffc00001")},
-		}},
+		{
+			v: math.Float64frombits(snanVar0xfff0000020000000),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("fbfff0000020000000"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("faff800001"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("faffc00001"),
+				},
+			},
+		},
 		// float64 sNaN dropped payload zero
-		{math.Float64frombits(snanVar0x7ff0000020000000), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("fb7ff0000020000000")},
-			{nanConvertPreserveSignalOpt, hexDecode("fa7f800001")},
-			{nanConvertQuietOpt, hexDecode("fa7fc00001")},
-		}},
+		{
+			v: math.Float64frombits(snanVar0x7ff0000020000000),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("fb7ff0000020000000"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("fa7f800001"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("fa7fc00001"),
+				},
+			},
+		},
 		// float64 -sNaN dropped payload zero
-		{math.Float64frombits(snanVar0xfff4000000000000), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("fbfff4000000000000")},
-			{nanConvertPreserveSignalOpt, hexDecode("f9fd00")},
-			{nanConvertQuietOpt, hexDecode("f9ff00")},
-		}},
+		{
+			v: math.Float64frombits(snanVar0xfff4000000000000),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("fbfff4000000000000"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("f9fd00"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("f9ff00"),
+				},
+			},
+		},
 		// float64 sNaN dropped payload zero
-		{math.Float64frombits(snanVar0x7ff4000000000000), []nanConvert{
-			{nanConvert7e00Opt, hexDecode("f97e00")},
-			{nanConvertNoneOpt, hexDecode("fb7ff4000000000000")},
-			{nanConvertPreserveSignalOpt, hexDecode("f97d00")},
-			{nanConvertQuietOpt, hexDecode("f97f00")},
-		}},
+		{
+			v: math.Float64frombits(snanVar0x7ff4000000000000),
+			convert: []nanConvert{
+				{
+					opt:          nanConvert7e00Opt,
+					wantCborData: hexDecode("f97e00"),
+				},
+				{
+					opt:          nanConvertNoneOpt,
+					wantCborData: hexDecode("fb7ff4000000000000"),
+				},
+				{
+					opt:          nanConvertPreserveSignalOpt,
+					wantCborData: hexDecode("f97d00"),
+				},
+				{
+					opt:          nanConvertQuietOpt,
+					wantCborData: hexDecode("f97f00"),
+				},
+			},
+		},
 	}
 	for _, tc := range testCases {
 		var vName string
@@ -4253,8 +5084,14 @@ func TestMarshalSenML(t *testing.T) {
 		name string
 		opts EncOptions
 	}{
-		{"EncOptions ShortestFloatNone", EncOptions{}},
-		{"EncOptions ShortestFloat16", EncOptions{ShortestFloat: ShortestFloat16}},
+		{
+			name: "EncOptions ShortestFloatNone",
+			opts: EncOptions{},
+		},
+		{
+			name: "EncOptions ShortestFloat16",
+			opts: EncOptions{ShortestFloat: ShortestFloat16},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

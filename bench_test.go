@@ -171,18 +171,66 @@ var decodeBenchmarks = []struct {
 	data          []byte
 	decodeToTypes []reflect.Type
 }{
-	{"bool", hexDecode("f5"), []reflect.Type{typeIntf, typeBool}},                                                                                                                                                                                           // true
-	{"positive int", hexDecode("1bffffffffffffffff"), []reflect.Type{typeIntf, typeUint64}},                                                                                                                                                                 // uint64(18446744073709551615)
-	{"negative int", hexDecode("3903e7"), []reflect.Type{typeIntf, typeInt64}},                                                                                                                                                                              // int64(-1000)
-	{"float", hexDecode("fbc010666666666666"), []reflect.Type{typeIntf, typeFloat64}},                                                                                                                                                                       // float64(-4.1)
-	{"bytes", hexDecode("581a0102030405060708090a0b0c0d0e0f101112131415161718191a"), []reflect.Type{typeIntf, typeByteSlice}},                                                                                                                               // []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}
-	{"bytes indef len", hexDecode("5f410141024103410441054106410741084109410a410b410c410d410e410f4110411141124113411441154116411741184119411aff"), []reflect.Type{typeIntf, typeByteSlice}},                                                                 // []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}
-	{"text", hexDecode("782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"), []reflect.Type{typeIntf, typeString}},                                                                                                 // "The quick brown fox jumps over the lazy dog"
-	{"text indef len", hexDecode("7f61546168616561206171617561696163616b612061626172616f6177616e61206166616f61786120616a6175616d617061736120616f61766165617261206174616861656120616c6161617a617961206164616f6167ff"), []reflect.Type{typeIntf, typeString}}, // "The quick brown fox jumps over the lazy dog"
-	{"array", hexDecode("981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a"), []reflect.Type{typeIntf, typeIntSlice}},                                                                                                                          // []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}
-	{"array indef len", hexDecode("9f0102030405060708090a0b0c0d0e0f101112131415161718181819181aff"), []reflect.Type{typeIntf, typeIntSlice}},                                                                                                                // []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}
-	{"map", hexDecode("ad616161416162614261636143616461446165614561666146616761476168614861696149616a614a616c614c616d614d616e614e"), []reflect.Type{typeIntf, typeMapStringIntf, typeMapStringString}},                                                      // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}}
-	{"map indef len", hexDecode("bf616161416162614261636143616461446165614561666146616761476168614861696149616a614a616b614b616c614c616d614d616e614eff"), []reflect.Type{typeIntf, typeMapStringIntf, typeMapStringString}},                                  // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}}
+	{
+		name:          "bool",
+		data:          hexDecode("f5"),
+		decodeToTypes: []reflect.Type{typeIntf, typeBool},
+	}, // true
+	{
+		name:          "positive int",
+		data:          hexDecode("1bffffffffffffffff"),
+		decodeToTypes: []reflect.Type{typeIntf, typeUint64},
+	}, // uint64(18446744073709551615)
+	{
+		name:          "negative int",
+		data:          hexDecode("3903e7"),
+		decodeToTypes: []reflect.Type{typeIntf, typeInt64},
+	}, // int64(-1000)
+	{
+		name:          "float",
+		data:          hexDecode("fbc010666666666666"),
+		decodeToTypes: []reflect.Type{typeIntf, typeFloat64},
+	}, // float64(-4.1)
+	{
+		name:          "bytes",
+		data:          hexDecode("581a0102030405060708090a0b0c0d0e0f101112131415161718191a"),
+		decodeToTypes: []reflect.Type{typeIntf, typeByteSlice},
+	}, // []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}
+	{
+		name:          "bytes indef len",
+		data:          hexDecode("5f410141024103410441054106410741084109410a410b410c410d410e410f4110411141124113411441154116411741184119411aff"),
+		decodeToTypes: []reflect.Type{typeIntf, typeByteSlice},
+	}, // []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}
+	{
+		name:          "text",
+		data:          hexDecode("782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"),
+		decodeToTypes: []reflect.Type{typeIntf, typeString},
+	}, // "The quick brown fox jumps over the lazy dog"
+	{
+		name:          "text indef len",
+		data:          hexDecode("7f61546168616561206171617561696163616b612061626172616f6177616e61206166616f61786120616a6175616d617061736120616f61766165617261206174616861656120616c6161617a617961206164616f6167ff"),
+		decodeToTypes: []reflect.Type{typeIntf, typeString},
+	}, // "The quick brown fox jumps over the lazy dog"
+	{
+		name:          "array",
+		data:          hexDecode("981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a"),
+		decodeToTypes: []reflect.Type{typeIntf, typeIntSlice},
+	}, // []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}
+	{
+		name:          "array indef len",
+		data:          hexDecode("9f0102030405060708090a0b0c0d0e0f101112131415161718181819181aff"),
+		decodeToTypes: []reflect.Type{typeIntf, typeIntSlice},
+	}, // []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}
+	{
+		name:          "map",
+		data:          hexDecode("ad616161416162614261636143616461446165614561666146616761476168614861696149616a614a616c614c616d614d616e614e"),
+		decodeToTypes: []reflect.Type{typeIntf, typeMapStringIntf, typeMapStringString},
+	}, // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}}
+	{
+		name:          "map indef len",
+		data:          hexDecode("bf616161416162614261636143616461446165614561666146616761476168614861696149616a614a616b614b616c614c616d614d616e614eff"),
+		decodeToTypes: []reflect.Type{typeIntf, typeMapStringIntf, typeMapStringString},
+	}, // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}}
 }
 
 var encodeBenchmarks = []struct {
@@ -190,14 +238,46 @@ var encodeBenchmarks = []struct {
 	data   []byte
 	values []any
 }{
-	{"bool", hexDecode("f5"), []any{true}},
-	{"positive int", hexDecode("1bffffffffffffffff"), []any{uint64(18446744073709551615)}},
-	{"negative int", hexDecode("3903e7"), []any{int64(-1000)}},
-	{"float", hexDecode("fbc010666666666666"), []any{float64(-4.1)}},
-	{"bytes", hexDecode("581a0102030405060708090a0b0c0d0e0f101112131415161718191a"), []any{[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}}},
-	{"text", hexDecode("782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"), []any{"The quick brown fox jumps over the lazy dog"}},
-	{"array", hexDecode("981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a"), []any{[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}}},
-	{"map", hexDecode("ad616161416162614261636143616461446165614561666146616761476168614861696149616a614a616c614c616d614d616e614e"), []any{map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}}},
+	{
+		name:   "bool",
+		data:   hexDecode("f5"),
+		values: []any{true},
+	},
+	{
+		name:   "positive int",
+		data:   hexDecode("1bffffffffffffffff"),
+		values: []any{uint64(18446744073709551615)},
+	},
+	{
+		name:   "negative int",
+		data:   hexDecode("3903e7"),
+		values: []any{int64(-1000)},
+	},
+	{
+		name:   "float",
+		data:   hexDecode("fbc010666666666666"),
+		values: []any{float64(-4.1)},
+	},
+	{
+		name:   "bytes",
+		data:   hexDecode("581a0102030405060708090a0b0c0d0e0f101112131415161718191a"),
+		values: []any{[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}},
+	},
+	{
+		name:   "text",
+		data:   hexDecode("782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"),
+		values: []any{"The quick brown fox jumps over the lazy dog"},
+	},
+	{
+		name:   "array",
+		data:   hexDecode("981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a"),
+		values: []any{[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}},
+	},
+	{
+		name:   "map",
+		data:   hexDecode("ad616161416162614261636143616461446165614561666146616761476168614861696149616a614a616c614c616d614d616e614e"),
+		values: []any{map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}},
+	},
 }
 
 func BenchmarkUnmarshal(b *testing.B) {
@@ -224,39 +304,39 @@ func BenchmarkUnmarshal(b *testing.B) {
 	}{
 		// Unmarshal CBOR map with string key to map[string]interface{}.
 		{
-			"CBOR map to Go map[string]interface{}",
-			hexDecode("a86154f56255691bffffffffffffffff61493903e76146fbc0106666666666666142581a0102030405060708090a0b0c0d0e0f101112131415161718191a6153782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6764536c6369981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a634d7373ad6163614361656145616661466167614761686148616e614e616d614d61616141616261426164614461696149616a614a616c614c"),
-			reflect.TypeOf(map[string]any{}),
+			name:         "CBOR map to Go map[string]interface{}",
+			data:         hexDecode("a86154f56255691bffffffffffffffff61493903e76146fbc0106666666666666142581a0102030405060708090a0b0c0d0e0f101112131415161718191a6153782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6764536c6369981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a634d7373ad6163614361656145616661466167614761686148616e614e616d614d61616141616261426164614461696149616a614a616c614c"),
+			decodeToType: reflect.TypeOf(map[string]any{}),
 		},
 		// Unmarshal CBOR map with string key to struct.
 		{
-			"CBOR map to Go struct",
-			hexDecode("a86154f56255491bffffffffffffffff61493903e76146fbc0106666666666666142581a0102030405060708090a0b0c0d0e0f101112131415161718191a6153782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6764536c6369981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a634d7373ad6163614361656145616661466167614761686148616e614e616d614d61616141616261426164614461696149616a614a616c614c"),
-			reflect.TypeOf(T1{}),
+			name:         "CBOR map to Go struct",
+			data:         hexDecode("a86154f56255491bffffffffffffffff61493903e76146fbc0106666666666666142581a0102030405060708090a0b0c0d0e0f101112131415161718191a6153782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6764536c6369981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a634d7373ad6163614361656145616661466167614761686148616e614e616d614d61616141616261426164614461696149616a614a616c614c"),
+			decodeToType: reflect.TypeOf(T1{}),
 		},
 		// Unmarshal CBOR map with integer key, such as COSE Key and SenML, to map[int]interface{}.
 		{
-			"CBOR map to Go map[int]interface{}",
-			hexDecode("a801f5021bffffffffffffffff033903e704fbc01066666666666605581a0102030405060708090a0b0c0d0e0f101112131415161718191a06782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6707981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a08ad61646144616661466167614761686148616d614d616e614e6161614161626142616361436165614561696149616a614a616c614c"),
-			reflect.TypeOf(map[int]any{}),
+			name:         "CBOR map to Go map[int]interface{}",
+			data:         hexDecode("a801f5021bffffffffffffffff033903e704fbc01066666666666605581a0102030405060708090a0b0c0d0e0f101112131415161718191a06782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6707981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a08ad61646144616661466167614761686148616d614d616e614e6161614161626142616361436165614561696149616a614a616c614c"),
+			decodeToType: reflect.TypeOf(map[int]any{}),
 		},
 		// Unmarshal CBOR map with integer key, such as COSE Key and SenML, to struct.
 		{
-			"CBOR map to Go struct keyasint",
-			hexDecode("a801f5021bffffffffffffffff033903e704fbc01066666666666605581a0102030405060708090a0b0c0d0e0f101112131415161718191a06782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6707981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a08ad61646144616661466167614761686148616d614d616e614e6161614161626142616361436165614561696149616a614a616c614c"),
-			reflect.TypeOf(T2{}),
+			name:         "CBOR map to Go struct keyasint",
+			data:         hexDecode("a801f5021bffffffffffffffff033903e704fbc01066666666666605581a0102030405060708090a0b0c0d0e0f101112131415161718191a06782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6707981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a08ad61646144616661466167614761686148616d614d616e614e6161614161626142616361436165614561696149616a614a616c614c"),
+			decodeToType: reflect.TypeOf(T2{}),
 		},
 		// Unmarshal CBOR array of known sequence of data types, such as signed/maced/encrypted CWT, to []interface{}.
 		{
-			"CBOR array to Go []interface{}",
-			hexDecode("88f51bffffffffffffffff3903e7fbc010666666666666581a0102030405060708090a0b0c0d0e0f101112131415161718191a782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67981a0102030405060708090a0b0c0d0e0f101112131415161718181819181aad616261426163614361646144616561456166614661696149616e614e616161416167614761686148616a614a616c614c616d614d"),
-			reflect.TypeOf([]any{}),
+			name:         "CBOR array to Go []interface{}",
+			data:         hexDecode("88f51bffffffffffffffff3903e7fbc010666666666666581a0102030405060708090a0b0c0d0e0f101112131415161718191a782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67981a0102030405060708090a0b0c0d0e0f101112131415161718181819181aad616261426163614361646144616561456166614661696149616e614e616161416167614761686148616a614a616c614c616d614d"),
+			decodeToType: reflect.TypeOf([]any{}),
 		},
 		// Unmarshal CBOR array of known sequence of data types, such as signed/maced/encrypted CWT, to struct.
 		{
-			"CBOR array to Go struct toarray",
-			hexDecode("88f51bffffffffffffffff3903e7fbc010666666666666581a0102030405060708090a0b0c0d0e0f101112131415161718191a782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67981a0102030405060708090a0b0c0d0e0f101112131415161718181819181aad616261426163614361646144616561456166614661696149616e614e616161416167614761686148616a614a616c614c616d614d"),
-			reflect.TypeOf(T3{}),
+			name:         "CBOR array to Go struct toarray",
+			data:         hexDecode("88f51bffffffffffffffff3903e7fbc010666666666666581a0102030405060708090a0b0c0d0e0f101112131415161718191a782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67981a0102030405060708090a0b0c0d0e0f101112131415161718181819181aad616261426163614361646144616561456166614661696149616e614e616161416167614761686148616a614a616c614c616d614d"),
+			decodeToType: reflect.TypeOf(T3{}),
 		},
 	}
 	for _, bm := range moreBenchmarks {
@@ -453,23 +533,59 @@ func BenchmarkMarshal(b *testing.B) {
 		name  string
 		value any
 	}{
-		{"Go map[string]interface{} to CBOR map", m1},
-		{"Go struct to CBOR map", v1},
-		{"Go struct many fields all omitempty all empty to CBOR map", ManyFieldsAllOmitEmpty{}},
-		{"Go struct some fields all omitempty all empty to CBOR map", SomeFieldsAllOmitEmpty{}},
-		{"Go struct many fields all omitempty all nonempty to CBOR map", ManyFieldsAllOmitEmpty{
-			F01: 1, F02: 1, F03: 1, F04: 1, F05: 1, F06: 1, F07: 1, F08: 1, F09: 1, F10: 1, F11: 1, F12: 1, F13: 1, F14: 1, F15: 1, F16: 1,
-			F17: 1, F18: 1, F19: 1, F20: 1, F21: 1, F22: 1, F23: 1, F24: 1, F25: 1, F26: 1, F27: 1, F28: 1, F29: 1, F30: 1, F31: 1, F32: 1,
-		}},
-		{"Go struct some fields all omitempty all nonempty to CBOR map", SomeFieldsAllOmitEmpty{
-			F01: 1, F02: 1, F03: 1, F04: 1, F05: 1, F06: 1, F07: 1, F08: 1,
-		}},
-		{"Go struct many fields one omitempty to CBOR map", ManyFieldsOneOmitEmpty{}},
-		{"Go struct some fields one omitempty to CBOR map", SomeFieldsOneOmitEmpty{}},
-		{"Go map[int]interface{} to CBOR map", m2},
-		{"Go struct keyasint to CBOR map", v2},
-		{"Go []interface{} to CBOR map", slc},
-		{"Go struct toarray to CBOR array", v3},
+		{
+			name:  "Go map[string]interface{} to CBOR map",
+			value: m1,
+		},
+		{
+			name:  "Go struct to CBOR map",
+			value: v1,
+		},
+		{
+			name:  "Go struct many fields all omitempty all empty to CBOR map",
+			value: ManyFieldsAllOmitEmpty{},
+		},
+		{
+			name:  "Go struct some fields all omitempty all empty to CBOR map",
+			value: SomeFieldsAllOmitEmpty{},
+		},
+		{
+			name: "Go struct many fields all omitempty all nonempty to CBOR map",
+			value: ManyFieldsAllOmitEmpty{
+				F01: 1, F02: 1, F03: 1, F04: 1, F05: 1, F06: 1, F07: 1, F08: 1, F09: 1, F10: 1, F11: 1, F12: 1, F13: 1, F14: 1, F15: 1, F16: 1,
+				F17: 1, F18: 1, F19: 1, F20: 1, F21: 1, F22: 1, F23: 1, F24: 1, F25: 1, F26: 1, F27: 1, F28: 1, F29: 1, F30: 1, F31: 1, F32: 1,
+			},
+		},
+		{
+			name: "Go struct some fields all omitempty all nonempty to CBOR map",
+			value: SomeFieldsAllOmitEmpty{
+				F01: 1, F02: 1, F03: 1, F04: 1, F05: 1, F06: 1, F07: 1, F08: 1,
+			},
+		},
+		{
+			name:  "Go struct many fields one omitempty to CBOR map",
+			value: ManyFieldsOneOmitEmpty{},
+		},
+		{
+			name:  "Go struct some fields one omitempty to CBOR map",
+			value: SomeFieldsOneOmitEmpty{},
+		},
+		{
+			name:  "Go map[int]interface{} to CBOR map",
+			value: m2,
+		},
+		{
+			name:  "Go struct keyasint to CBOR map",
+			value: v2,
+		},
+		{
+			name:  "Go []interface{} to CBOR map",
+			value: slc,
+		},
+		{
+			name:  "Go struct toarray to CBOR array",
+			value: v3,
+		},
 	}
 	for _, bm := range moreBenchmarks {
 		b.Run(bm.name, func(b *testing.B) {
@@ -503,7 +619,15 @@ func BenchmarkMarshalCanonical(b *testing.B) {
 		data   []byte
 		values []any
 	}{
-		{"map", hexDecode("ad616161416162614261636143616461446165614561666146616761476168614861696149616a614a616c614c616d614d616e614e"), []any{map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}, strc{A: "A", B: "B", C: "C", D: "D", E: "E", F: "F", G: "G", H: "H", I: "I", J: "J", L: "L", M: "M", N: "N"}, map[int]int{0: 0} /* single-entry map */}},
+		{
+			name: "map",
+			data: hexDecode("ad616161416162614261636143616461446165614561666146616761476168614861696149616a614a616c614c616d614d616e614e"),
+			values: []any{
+				map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"},
+				strc{A: "A", B: "B", C: "C", D: "D", E: "E", F: "F", G: "G", H: "H", I: "I", J: "J", L: "L", M: "M", N: "N"},
+				map[int]int{0: 0}, /* single-entry map */
+			},
+		},
 	} {
 		for _, v := range bm.values {
 			name := "Go " + reflect.TypeOf(v).String() + " to CBOR " + bm.name
@@ -598,9 +722,18 @@ func BenchmarkUnmarshalCOSE(b *testing.B) {
 		name string
 		data []byte
 	}{
-		{"128-Bit Symmetric Key", hexDecode("a42050231f4c4d4d3051fdc2ec0a3851d5b3830104024c53796d6d6574726963313238030a")},
-		{"256-Bit Symmetric Key", hexDecode("a4205820403697de87af64611c1d32a05dab0fe1fcb715a86ab435f1ec99192d795693880104024c53796d6d6574726963323536030a")},
-		{"ECDSA P256 256-Bit Key", hexDecode("a72358206c1382765aec5358f117733d281c1c7bdc39884d04a45a1e6c67c858bc206c1922582060f7f1a780d8a783bfb7a2dd6b2796e8128dbbcef9d3d168db9529971a36e7b9215820143329cce7868e416927599cf65a34f3ce2ffda55a7eca69ed8919a394d42f0f2001010202524173796d6d657472696345434453413235360326")},
+		{
+			name: "128-Bit Symmetric Key",
+			data: hexDecode("a42050231f4c4d4d3051fdc2ec0a3851d5b3830104024c53796d6d6574726963313238030a"),
+		},
+		{
+			name: "256-Bit Symmetric Key",
+			data: hexDecode("a4205820403697de87af64611c1d32a05dab0fe1fcb715a86ab435f1ec99192d795693880104024c53796d6d6574726963323536030a"),
+		},
+		{
+			name: "ECDSA P256 256-Bit Key",
+			data: hexDecode("a72358206c1382765aec5358f117733d281c1c7bdc39884d04a45a1e6c67c858bc206c1922582060f7f1a780d8a783bfb7a2dd6b2796e8128dbbcef9d3d168db9529971a36e7b9215820143329cce7868e416927599cf65a34f3ce2ffda55a7eca69ed8919a394d42f0f2001010202524173796d6d657472696345434453413235360326"),
+		},
 	}
 	for _, tc := range testCases {
 		b.Run(tc.name, func(b *testing.B) {
@@ -620,9 +753,18 @@ func BenchmarkMarshalCOSE(b *testing.B) {
 		name string
 		data []byte
 	}{
-		{"128-Bit Symmetric Key", hexDecode("a42050231f4c4d4d3051fdc2ec0a3851d5b3830104024c53796d6d6574726963313238030a")},
-		{"256-Bit Symmetric Key", hexDecode("a4205820403697de87af64611c1d32a05dab0fe1fcb715a86ab435f1ec99192d795693880104024c53796d6d6574726963323536030a")},
-		{"ECDSA P256 256-Bit Key", hexDecode("a72358206c1382765aec5358f117733d281c1c7bdc39884d04a45a1e6c67c858bc206c1922582060f7f1a780d8a783bfb7a2dd6b2796e8128dbbcef9d3d168db9529971a36e7b9215820143329cce7868e416927599cf65a34f3ce2ffda55a7eca69ed8919a394d42f0f2001010202524173796d6d657472696345434453413235360326")},
+		{
+			name: "128-Bit Symmetric Key",
+			data: hexDecode("a42050231f4c4d4d3051fdc2ec0a3851d5b3830104024c53796d6d6574726963313238030a"),
+		},
+		{
+			name: "256-Bit Symmetric Key",
+			data: hexDecode("a4205820403697de87af64611c1d32a05dab0fe1fcb715a86ab435f1ec99192d795693880104024c53796d6d6574726963323536030a"),
+		},
+		{
+			name: "ECDSA P256 256-Bit Key",
+			data: hexDecode("a72358206c1382765aec5358f117733d281c1c7bdc39884d04a45a1e6c67c858bc206c1922582060f7f1a780d8a783bfb7a2dd6b2796e8128dbbcef9d3d168db9529971a36e7b9215820143329cce7868e416927599cf65a34f3ce2ffda55a7eca69ed8919a394d42f0f2001010202524173796d6d657472696345434453413235360326"),
+		},
 	}
 	for _, tc := range testCases {
 		var v coseKey

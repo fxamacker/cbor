@@ -2792,51 +2792,155 @@ func TestUnmarshalNil(t *testing.T) {
 		wantValue any
 	}{
 		// Unmarshalling CBOR null to the following types is a no-op.
-		{"bool", true, true},
-		{"int", int(-1), int(-1)},
-		{"int8", int8(-2), int8(-2)},
-		{"int16", int16(-3), int16(-3)},
-		{"int32", int32(-4), int32(-4)},
-		{"int64", int64(-5), int64(-5)},
-		{"uint", uint(1), uint(1)},
-		{"uint8", uint8(2), uint8(2)},
-		{"uint16", uint16(3), uint16(3)},
-		{"uint32", uint32(4), uint32(4)},
-		{"uint64", uint64(5), uint64(5)},
-		{"float32", float32(1.23), float32(1.23)},
-		{"float64", float64(4.56), float64(4.56)},
-		{"string", "hello", "hello"},
-		{"array", [3]int{1, 2, 3}, [3]int{1, 2, 3}},
+		{
+			name:      "bool",
+			value:     true,
+			wantValue: true,
+		},
+		{
+			name:      "int",
+			value:     int(-1),
+			wantValue: int(-1),
+		},
+		{
+			name:      "int8",
+			value:     int8(-2),
+			wantValue: int8(-2),
+		},
+		{
+			name:      "int16",
+			value:     int16(-3),
+			wantValue: int16(-3),
+		},
+		{
+			name:      "int32",
+			value:     int32(-4),
+			wantValue: int32(-4),
+		},
+		{
+			name:      "int64",
+			value:     int64(-5),
+			wantValue: int64(-5),
+		},
+		{
+			name:      "uint",
+			value:     uint(1),
+			wantValue: uint(1),
+		},
+		{
+			name:      "uint8",
+			value:     uint8(2),
+			wantValue: uint8(2),
+		},
+		{
+			name:      "uint16",
+			value:     uint16(3),
+			wantValue: uint16(3),
+		},
+		{
+			name:      "uint32",
+			value:     uint32(4),
+			wantValue: uint32(4),
+		},
+		{
+			name:      "uint64",
+			value:     uint64(5),
+			wantValue: uint64(5),
+		},
+		{
+			name:      "float32",
+			value:     float32(1.23),
+			wantValue: float32(1.23),
+		},
+		{
+			name:      "float64",
+			value:     float64(4.56),
+			wantValue: float64(4.56),
+		},
+		{
+			name:      "string",
+			value:     "hello",
+			wantValue: "hello",
+		},
+		{
+			name:      "array",
+			value:     [3]int{1, 2, 3},
+			wantValue: [3]int{1, 2, 3},
+		},
 
 		// Unmarshalling CBOR null to slice/map sets Go values to nil.
-		{"[]byte", []byte{1, 2, 3}, []byte(nil)},
-		{"slice", []string{"hello", "world"}, []string(nil)},
-		{"map", map[string]bool{"hello": true, "goodbye": false}, map[string]bool(nil)},
+		{
+			name:      "[]byte",
+			value:     []byte{1, 2, 3},
+			wantValue: []byte(nil),
+		},
+		{
+			name:      "slice",
+			value:     []string{"hello", "world"},
+			wantValue: []string(nil),
+		},
+		{
+			name:      "map",
+			value:     map[string]bool{"hello": true, "goodbye": false},
+			wantValue: map[string]bool(nil),
+		},
 
 		// Unmarshalling CBOR null to ByteString (string wrapper for []byte) resets ByteString to empty string.
-		{"cbor.ByteString", ByteString("\x01\x02\x03"), ByteString("")},
+		{
+			name:      "cbor.ByteString",
+			value:     ByteString("\x01\x02\x03"),
+			wantValue: ByteString(""),
+		},
 
 		// Unmarshalling CBOR null to time.Time is a no-op.
-		{"time.Time", time.Date(2020, time.January, 2, 3, 4, 5, 6, time.UTC), time.Date(2020, time.January, 2, 3, 4, 5, 6, time.UTC)},
+		{
+			name:      "time.Time",
+			value:     time.Date(2020, time.January, 2, 3, 4, 5, 6, time.UTC),
+			wantValue: time.Date(2020, time.January, 2, 3, 4, 5, 6, time.UTC),
+		},
 
 		// Unmarshalling CBOR null to big.Int is a no-op.
-		{"big.Int", bigIntOrPanic("123"), bigIntOrPanic("123")},
+		{
+			name:      "big.Int",
+			value:     bigIntOrPanic("123"),
+			wantValue: bigIntOrPanic("123"),
+		},
 
 		// Unmarshalling CBOR null to user defined struct types is a no-op.
-		{"user defined struct", T{I: 123}, T{I: 123}},
+		{
+			name:      "user defined struct",
+			value:     T{I: 123},
+			wantValue: T{I: 123},
+		},
 
 		// Unmarshalling CBOR null to cbor.Tag and cbor.RawTag is a no-op.
-		{"cbor.RawTag", RawTag{123, []byte{4, 5, 6}}, RawTag{123, []byte{4, 5, 6}}},
-		{"cbor.Tag", Tag{123, "hello world"}, Tag{123, "hello world"}},
+		{
+			name:      "cbor.RawTag",
+			value:     RawTag{123, []byte{4, 5, 6}},
+			wantValue: RawTag{123, []byte{4, 5, 6}},
+		},
+		{
+			name:      "cbor.Tag",
+			value:     Tag{123, "hello world"},
+			wantValue: Tag{123, "hello world"},
+		},
 
 		// Unmarshalling to cbor.RawMessage sets cbor.RawMessage to raw CBOR bytes (0xf6 or 0xf7).
 		// It's tested in TestUnmarshal().
 
 		// Unmarshalling to types implementing cbor.BinaryUnmarshaler is a no-op.
-		{"cbor.BinaryUnmarshaler", number(456), number(456)},
+		{
+			name:      "cbor.BinaryUnmarshaler",
+			value:     number(456),
+			wantValue: number(456),
+		},
 
 		// When unmarshalling to types implementing cbor.Unmarshaler,
-		{"cbor.Unmarshaler", nilUnmarshaler("hello world"), nilUnmarshaler("null")},
+		{
+			name:      "cbor.Unmarshaler",
+			value:     nilUnmarshaler("hello world"),
+			wantValue: nilUnmarshaler("null"),
+		},
 	}
 
 	// Unmarshalling to values of specified Go types.
@@ -2861,9 +2965,21 @@ var invalidUnmarshalTests = []struct {
 	v            any
 	wantErrorMsg string
 }{
-	{"unmarshal into nil interface{}", nil, "cbor: Unmarshal(nil)"},
-	{"unmarshal into non-pointer value", 5, "cbor: Unmarshal(non-pointer int)"},
-	{"unmarshal into nil pointer", (*int)(nil), "cbor: Unmarshal(nil *int)"},
+	{
+		name:         "unmarshal into nil interface{}",
+		v:            nil,
+		wantErrorMsg: "cbor: Unmarshal(nil)",
+	},
+	{
+		name:         "unmarshal into non-pointer value",
+		v:            5,
+		wantErrorMsg: "cbor: Unmarshal(non-pointer int)",
+	},
+	{
+		name:         "unmarshal into nil pointer",
+		v:            (*int)(nil),
+		wantErrorMsg: "cbor: Unmarshal(nil *int)",
+	},
 }
 
 func TestInvalidUnmarshal(t *testing.T) {
@@ -2884,113 +3000,505 @@ func TestInvalidUnmarshal(t *testing.T) {
 }
 
 var invalidCBORUnmarshalTests = []struct {
-	name                 string
-	data                 []byte
-	wantErrorMsg         string
-	errorMsgPartialMatch bool
+	name         string
+	data         []byte
+	wantErrorMsg string
 }{
-	{"Nil data", []byte(nil), "EOF", false},
-	{"Empty data", []byte{}, "EOF", false},
-	{"Tag number not followed by tag content", []byte{0xc0}, "unexpected EOF", false},
-	{"Definite length strings with tagged chunk", hexDecode("5fc64401020304ff"), "cbor: wrong element type tag for indefinite-length byte string", false},
-	{"Definite length strings with tagged chunk", hexDecode("7fc06161ff"), "cbor: wrong element type tag for indefinite-length UTF-8 text string", false},
-	{"Indefinite length strings with invalid head", hexDecode("7f61"), "unexpected EOF", false},
-	{"Invalid nested tag number", hexDecode("d864dc1a514b67b0"), "cbor: invalid additional information", true},
+	{
+		name:         "Nil data",
+		data:         []byte(nil),
+		wantErrorMsg: "EOF",
+	},
+	{
+		name:         "Empty data",
+		data:         []byte{},
+		wantErrorMsg: "EOF",
+	},
+	{
+		name:         "Tag number not followed by tag content",
+		data:         []byte{0xc0},
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Indefinite length byte string with tagged chunk",
+		data:         hexDecode("5fc64401020304ff"),
+		wantErrorMsg: "cbor: wrong element type tag for indefinite-length byte string",
+	},
+	{
+		name:         "Indefinite length text string with tagged chunk",
+		data:         hexDecode("7fc06161ff"),
+		wantErrorMsg: "cbor: wrong element type tag for indefinite-length UTF-8 text string",
+	},
+	{
+		name:         "Indefinite length strings with truncated text string",
+		data:         hexDecode("7f61"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Invalid nested tag number",
+		data:         hexDecode("d864dc1a514b67b0"),
+		wantErrorMsg: "cbor: invalid additional information 28 for type tag",
+	},
 	// Data from 7049bis G.1
 	// Premature end of the input
-	{"End of input in a head", hexDecode("18"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("19"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("1a"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("1b"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("1901"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("1a0102"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("1b01020304050607"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("38"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("58"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("78"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("98"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("9a01ff00"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("b8"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("d8"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("f8"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("f900"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("fa0000"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("fb000000"), "unexpected EOF", false},
-	{"Definite length strings with short data", hexDecode("41"), "unexpected EOF", false},
-	{"Definite length strings with short data", hexDecode("61"), "unexpected EOF", false},
-	{"Definite length strings with short data", hexDecode("5affffffff00"), "unexpected EOF", false},
-	{"Definite length strings with short data", hexDecode("5bffffffffffffffff010203"), "cbor: byte string length 18446744073709551615 is too large, causing integer overflow", false},
-	{"Definite length strings with short data", hexDecode("7affffffff00"), "unexpected EOF", false},
-	{"Definite length strings with short data", hexDecode("7b7fffffffffffffff010203"), "unexpected EOF", false},
-	{"Definite length maps and arrays not closed with enough items", hexDecode("81"), "unexpected EOF", false},
-	{"Definite length maps and arrays not closed with enough items", hexDecode("818181818181818181"), "unexpected EOF", false},
-	{"Definite length maps and arrays not closed with enough items", hexDecode("8200"), "unexpected EOF", false},
-	{"Definite length maps and arrays not closed with enough items", hexDecode("a1"), "unexpected EOF", false},
-	{"Definite length maps and arrays not closed with enough items", hexDecode("a20102"), "unexpected EOF", false},
-	{"Definite length maps and arrays not closed with enough items", hexDecode("a100"), "unexpected EOF", false},
-	{"Definite length maps and arrays not closed with enough items", hexDecode("a2000000"), "unexpected EOF", false},
-	{"Indefinite length strings not closed by a break stop code", hexDecode("5f4100"), "unexpected EOF", false},
-	{"Indefinite length strings not closed by a break stop code", hexDecode("7f6100"), "unexpected EOF", false},
-	{"Indefinite length maps and arrays not closed by a break stop code", hexDecode("9f"), "unexpected EOF", false},
-	{"Indefinite length maps and arrays not closed by a break stop code", hexDecode("9f0102"), "unexpected EOF", false},
-	{"Indefinite length maps and arrays not closed by a break stop code", hexDecode("bf"), "unexpected EOF", false},
-	{"Indefinite length maps and arrays not closed by a break stop code", hexDecode("bf01020102"), "unexpected EOF", false},
-	{"Indefinite length maps and arrays not closed by a break stop code", hexDecode("819f"), "unexpected EOF", false},
-	{"Indefinite length maps and arrays not closed by a break stop code", hexDecode("9f8000"), "unexpected EOF", false},
-	{"Indefinite length maps and arrays not closed by a break stop code", hexDecode("9f9f9f9f9fffffffff"), "unexpected EOF", false},
-	{"Indefinite length maps and arrays not closed by a break stop code", hexDecode("9f819f819f9fffffff"), "unexpected EOF", false},
+	{
+		name:         "End of input in a head",
+		data:         hexDecode("18"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "End of input in a head",
+		data:         hexDecode("19"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "End of input in a head",
+		data:         hexDecode("1a"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "End of input in a head",
+		data:         hexDecode("1b"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "End of input in a head",
+		data:         hexDecode("1901"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "End of input in a head",
+		data:         hexDecode("1a0102"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "End of input in a head",
+		data:         hexDecode("1b01020304050607"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "End of input in a head",
+		data:         hexDecode("38"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "End of input in a head",
+		data:         hexDecode("58"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "End of input in a head",
+		data:         hexDecode("78"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "End of input in a head",
+		data:         hexDecode("98"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "End of input in a head",
+		data:         hexDecode("9a01ff00"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "End of input in a head",
+		data:         hexDecode("b8"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "End of input in a head",
+		data:         hexDecode("d8"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "End of input in a head",
+		data:         hexDecode("f8"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "End of input in a head",
+		data:         hexDecode("f900"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "End of input in a head",
+		data:         hexDecode("fa0000"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "End of input in a head",
+		data:         hexDecode("fb000000"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Definite length strings with short data",
+		data:         hexDecode("41"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Definite length strings with short data",
+		data:         hexDecode("61"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Definite length strings with short data",
+		data:         hexDecode("5affffffff00"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Definite length strings with short data",
+		data:         hexDecode("5bffffffffffffffff010203"),
+		wantErrorMsg: "cbor: byte string length 18446744073709551615 is too large, causing integer overflow",
+	},
+	{
+		name:         "Definite length strings with short data",
+		data:         hexDecode("7affffffff00"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Definite length strings with short data",
+		data:         hexDecode("7b7fffffffffffffff010203"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Definite length maps and arrays not closed with enough items",
+		data:         hexDecode("81"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Definite length maps and arrays not closed with enough items",
+		data:         hexDecode("818181818181818181"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Definite length maps and arrays not closed with enough items",
+		data:         hexDecode("8200"),
+		wantErrorMsg: "unexpected EOF",
+	},
+
+	{
+		name:         "Definite length maps and arrays not closed with enough items",
+		data:         hexDecode("a1"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Definite length maps and arrays not closed with enough items",
+		data:         hexDecode("a20102"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Definite length maps and arrays not closed with enough items",
+		data:         hexDecode("a100"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Definite length maps and arrays not closed with enough items",
+		data:         hexDecode("a2000000"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Indefinite length strings not closed by a break stop code",
+		data:         hexDecode("5f4100"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Indefinite length strings not closed by a break stop code",
+		data:         hexDecode("7f6100"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Indefinite length maps and arrays not closed by a break stop code",
+		data:         hexDecode("9f"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Indefinite length maps and arrays not closed by a break stop code",
+		data:         hexDecode("9f0102"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Indefinite length maps and arrays not closed by a break stop code",
+		data:         hexDecode("bf"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Indefinite length maps and arrays not closed by a break stop code",
+		data:         hexDecode("bf01020102"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Indefinite length maps and arrays not closed by a break stop code",
+		data:         hexDecode("819f"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Indefinite length maps and arrays not closed by a break stop code",
+		data:         hexDecode("9f8000"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Indefinite length maps and arrays not closed by a break stop code",
+		data:         hexDecode("9f9f9f9f9fffffffff"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "Indefinite length maps and arrays not closed by a break stop code",
+		data:         hexDecode("9f819f819f9fffffff"),
+		wantErrorMsg: "unexpected EOF",
+	},
 	// Five subkinds of well-formedness error kind 3 (syntax error)
-	{"Reserved additional information values", hexDecode("3e"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("5c"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("5d"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("5e"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("7c"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("7d"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("7e"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("9c"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("9d"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("9e"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("bc"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("bd"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("be"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("dc"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("dd"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("de"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("fc"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("fd"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("fe"), "cbor: invalid additional information", true},
-	{"Reserved two-byte encodings of simple types", hexDecode("f800"), "cbor: invalid simple value 0 for type primitives", true},
-	{"Reserved two-byte encodings of simple types", hexDecode("f801"), "cbor: invalid simple value 1 for type primitives", true},
-	{"Reserved two-byte encodings of simple types", hexDecode("f818"), "cbor: invalid simple value 24 for type primitives", true},
-	{"Reserved two-byte encodings of simple types", hexDecode("f81f"), "cbor: invalid simple value 31 for type primitives", true},
-	{"Indefinite length string chunks not of the correct type", hexDecode("5f00ff"), "cbor: wrong element type positive integer for indefinite-length byte string", false},
-	{"Indefinite length string chunks not of the correct type", hexDecode("5f21ff"), "cbor: wrong element type negative integer for indefinite-length byte string", false},
-	{"Indefinite length string chunks not of the correct type", hexDecode("5f6100ff"), "cbor: wrong element type UTF-8 text string for indefinite-length byte string", false},
-	{"Indefinite length string chunks not of the correct type", hexDecode("5f80ff"), "cbor: wrong element type array for indefinite-length byte string", false},
-	{"Indefinite length string chunks not of the correct type", hexDecode("5fa0ff"), "cbor: wrong element type map for indefinite-length byte string", false},
-	{"Indefinite length string chunks not of the correct type", hexDecode("5fc000ff"), "cbor: wrong element type tag for indefinite-length byte string", false},
-	{"Indefinite length string chunks not of the correct type", hexDecode("5fe0ff"), "cbor: wrong element type primitives for indefinite-length byte string", false},
-	{"Indefinite length string chunks not of the correct type", hexDecode("7f4100ff"), "cbor: wrong element type byte string for indefinite-length UTF-8 text string", false},
-	{"Indefinite length string chunks not definite length", hexDecode("5f5f4100ffff"), "cbor: indefinite-length byte string chunk is not definite-length", false},
-	{"Indefinite length string chunks not definite length", hexDecode("7f7f6100ffff"), "cbor: indefinite-length UTF-8 text string chunk is not definite-length", false},
-	{"Break occurring on its own outside of an indefinite length item", hexDecode("ff"), "cbor: unexpected \"break\" code", true},
-	{"Break occurring in a definite length array or map or a tag", hexDecode("81ff"), "cbor: unexpected \"break\" code", true},
-	{"Break occurring in a definite length array or map or a tag", hexDecode("8200ff"), "cbor: unexpected \"break\" code", true},
-	{"Break occurring in a definite length array or map or a tag", hexDecode("a1ff"), "cbor: unexpected \"break\" code", true},
-	{"Break occurring in a definite length array or map or a tag", hexDecode("a1ff00"), "cbor: unexpected \"break\" code", true},
-	{"Break occurring in a definite length array or map or a tag", hexDecode("a100ff"), "cbor: unexpected \"break\" code", true},
-	{"Break occurring in a definite length array or map or a tag", hexDecode("a20000ff"), "cbor: unexpected \"break\" code", true},
-	{"Break occurring in a definite length array or map or a tag", hexDecode("9f81ff"), "cbor: unexpected \"break\" code", true},
-	{"Break occurring in a definite length array or map or a tag", hexDecode("9f829f819f9fffffffff"), "cbor: unexpected \"break\" code", true},
-	{"Break in indefinite length map would lead to odd number of items (break in a value position)", hexDecode("bf00ff"), "cbor: unexpected \"break\" code", true},
-	{"Break in indefinite length map would lead to odd number of items (break in a value position)", hexDecode("bf000000ff"), "cbor: unexpected \"break\" code", true},
-	{"Major type 0 with additional information 31", hexDecode("1f"), "cbor: invalid additional information 31 for type positive integer", true},
-	{"Major type 1 with additional information 31", hexDecode("3f"), "cbor: invalid additional information 31 for type negative integer", true},
-	{"Major type 6 with additional information 31", hexDecode("df"), "cbor: invalid additional information 31 for type tag", true},
+	{
+		name:         "Reserved additional information values",
+		data:         hexDecode("3e"),
+		wantErrorMsg: "cbor: invalid additional information 30 for type negative integer",
+	},
+	{
+		name:         "Reserved additional information values",
+		data:         hexDecode("5c"),
+		wantErrorMsg: "cbor: invalid additional information 28 for type byte string",
+	},
+	{
+		name:         "Reserved additional information values",
+		data:         hexDecode("5d"),
+		wantErrorMsg: "cbor: invalid additional information 29 for type byte string",
+	},
+	{
+		name:         "Reserved additional information values",
+		data:         hexDecode("5e"),
+		wantErrorMsg: "cbor: invalid additional information 30 for type byte string",
+	},
+	{
+		name:         "Reserved additional information values",
+		data:         hexDecode("7c"),
+		wantErrorMsg: "cbor: invalid additional information 28 for type UTF-8 text string",
+	},
+	{
+		name:         "Reserved additional information values",
+		data:         hexDecode("7d"),
+		wantErrorMsg: "cbor: invalid additional information 29 for type UTF-8 text string",
+	},
+	{
+		name:         "Reserved additional information values",
+		data:         hexDecode("7e"),
+		wantErrorMsg: "cbor: invalid additional information 30 for type UTF-8 text string",
+	},
+	{
+		name:         "Reserved additional information values",
+		data:         hexDecode("9c"),
+		wantErrorMsg: "cbor: invalid additional information 28 for type array",
+	},
+	{
+		name:         "Reserved additional information values",
+		data:         hexDecode("9d"),
+		wantErrorMsg: "cbor: invalid additional information 29 for type array",
+	},
+	{
+		name:         "Reserved additional information values",
+		data:         hexDecode("9e"),
+		wantErrorMsg: "cbor: invalid additional information 30 for type array",
+	},
+	{
+		name:         "Reserved additional information values",
+		data:         hexDecode("bc"),
+		wantErrorMsg: "cbor: invalid additional information 28 for type map",
+	},
+	{
+		name:         "Reserved additional information values",
+		data:         hexDecode("bd"),
+		wantErrorMsg: "cbor: invalid additional information 29 for type map",
+	},
+	{
+		name:         "Reserved additional information values",
+		data:         hexDecode("be"),
+		wantErrorMsg: "cbor: invalid additional information 30 for type map",
+	},
+	{
+		name:         "Reserved additional information values",
+		data:         hexDecode("dc"),
+		wantErrorMsg: "cbor: invalid additional information 28 for type tag",
+	},
+	{
+		name:         "Reserved additional information values",
+		data:         hexDecode("dd"),
+		wantErrorMsg: "cbor: invalid additional information 29 for type tag",
+	},
+	{
+		name:         "Reserved additional information values",
+		data:         hexDecode("de"),
+		wantErrorMsg: "cbor: invalid additional information 30 for type tag",
+	},
+	{
+		name:         "Reserved additional information values",
+		data:         hexDecode("fc"),
+		wantErrorMsg: "cbor: invalid additional information 28 for type primitives",
+	},
+	{
+		name:         "Reserved additional information values",
+		data:         hexDecode("fd"),
+		wantErrorMsg: "cbor: invalid additional information 29 for type primitives",
+	},
+	{
+		name:         "Reserved additional information values",
+		data:         hexDecode("fe"),
+		wantErrorMsg: "cbor: invalid additional information 30 for type primitives",
+	},
+	{
+		name:         "Reserved two-byte encodings of simple types",
+		data:         hexDecode("f800"),
+		wantErrorMsg: "cbor: invalid simple value 0 for type primitives",
+	},
+	{
+		name:         "Reserved two-byte encodings of simple types",
+		data:         hexDecode("f801"),
+		wantErrorMsg: "cbor: invalid simple value 1 for type primitives",
+	},
+	{
+		name:         "Reserved two-byte encodings of simple types",
+		data:         hexDecode("f818"),
+		wantErrorMsg: "cbor: invalid simple value 24 for type primitives",
+	},
+	{
+		name:         "Reserved two-byte encodings of simple types",
+		data:         hexDecode("f81f"),
+		wantErrorMsg: "cbor: invalid simple value 31 for type primitives",
+	},
+	{
+		name:         "Indefinite length string chunks not of the correct type",
+		data:         hexDecode("5f00ff"),
+		wantErrorMsg: "cbor: wrong element type positive integer for indefinite-length byte string",
+	},
+	{
+		name:         "Indefinite length string chunks not of the correct type",
+		data:         hexDecode("5f21ff"),
+		wantErrorMsg: "cbor: wrong element type negative integer for indefinite-length byte string",
+	},
+	{
+		name:         "Indefinite length string chunks not of the correct type",
+		data:         hexDecode("5f6100ff"),
+		wantErrorMsg: "cbor: wrong element type UTF-8 text string for indefinite-length byte string",
+	},
+	{
+		name:         "Indefinite length string chunks not of the correct type",
+		data:         hexDecode("5f80ff"),
+		wantErrorMsg: "cbor: wrong element type array for indefinite-length byte string",
+	},
+	{
+		name:         "Indefinite length string chunks not of the correct type",
+		data:         hexDecode("5fa0ff"),
+		wantErrorMsg: "cbor: wrong element type map for indefinite-length byte string",
+	},
+	{
+		name:         "Indefinite length string chunks not of the correct type",
+		data:         hexDecode("5fc000ff"),
+		wantErrorMsg: "cbor: wrong element type tag for indefinite-length byte string",
+	},
+	{
+		name:         "Indefinite length string chunks not of the correct type",
+		data:         hexDecode("5fe0ff"),
+		wantErrorMsg: "cbor: wrong element type primitives for indefinite-length byte string",
+	},
+	{
+		name:         "Indefinite length string chunks not of the correct type",
+		data:         hexDecode("7f4100ff"),
+		wantErrorMsg: "cbor: wrong element type byte string for indefinite-length UTF-8 text string",
+	},
+	{
+		name:         "Indefinite length string chunks not definite length",
+		data:         hexDecode("5f5f4100ffff"),
+		wantErrorMsg: "cbor: indefinite-length byte string chunk is not definite-length",
+	},
+	{
+		name:         "Indefinite length string chunks not definite length",
+		data:         hexDecode("7f7f6100ffff"),
+		wantErrorMsg: "cbor: indefinite-length UTF-8 text string chunk is not definite-length",
+	},
+	{
+		name:         "Break occurring on its own outside of an indefinite length item",
+		data:         hexDecode("ff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "Break occurring in a definite length array or map or a tag",
+		data:         hexDecode("81ff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "Break occurring in a definite length array or map or a tag",
+		data:         hexDecode("8200ff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "Break occurring in a definite length array or map or a tag",
+		data:         hexDecode("a1ff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "Break occurring in a definite length array or map or a tag",
+		data:         hexDecode("a1ff00"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "Break occurring in a definite length array or map or a tag",
+		data:         hexDecode("a100ff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "Break occurring in a definite length array or map or a tag",
+		data:         hexDecode("a20000ff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "Break occurring in a definite length array or map or a tag",
+		data:         hexDecode("9f81ff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "Break occurring in a definite length array or map or a tag",
+		data:         hexDecode("9f829f819f9fffffffff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "Break in indefinite length map would lead to odd number of items (break in a value position)",
+		data:         hexDecode("bf00ff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "Break in indefinite length map would lead to odd number of items (break in a value position)",
+		data:         hexDecode("bf000000ff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "Major type 0 with additional information 31",
+		data:         hexDecode("1f"),
+		wantErrorMsg: "cbor: invalid additional information 31 for type positive integer",
+	},
+	{
+		name:         "Major type 1 with additional information 31",
+		data:         hexDecode("3f"),
+		wantErrorMsg: "cbor: invalid additional information 31 for type negative integer",
+	},
+	{
+		name:         "Major type 6 with additional information 31",
+		data:         hexDecode("df"),
+		wantErrorMsg: "cbor: invalid additional information 31 for type tag",
+	},
 	// Extraneous data
-	{"two ints", hexDecode("0001"), "cbor: 1 bytes of extraneous data starting at index 1", false},
-	{"two arrays", hexDecode("830102038104"), "cbor: 2 bytes of extraneous data starting at index 4", false},
-	{"int and partial array", hexDecode("00830102"), "cbor: 3 bytes of extraneous data starting at index 1", false},
+	{
+		name:         "Two ints",
+		data:         hexDecode("0001"),
+		wantErrorMsg: "cbor: 1 bytes of extraneous data starting at index 1",
+	},
+	{
+		name:         "Two arrays",
+		data:         hexDecode("830102038104"),
+		wantErrorMsg: "cbor: 2 bytes of extraneous data starting at index 4",
+	},
+	{
+		name:         "Int and partial array",
+		data:         hexDecode("00830102"),
+		wantErrorMsg: "cbor: 3 bytes of extraneous data starting at index 1",
+	},
 }
 
 func TestInvalidCBORUnmarshal(t *testing.T) {
@@ -3000,9 +3508,7 @@ func TestInvalidCBORUnmarshal(t *testing.T) {
 			err := Unmarshal(tc.data, &i)
 			if err == nil {
 				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
-			} else if !tc.errorMsgPartialMatch && err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-			} else if tc.errorMsgPartialMatch && !strings.Contains(err.Error(), tc.wantErrorMsg) {
+			} else if err.Error() != tc.wantErrorMsg {
 				t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 			}
 		})
@@ -3207,8 +3713,16 @@ func TestUnmarshalStruct(t *testing.T) {
 		data []byte
 		want any
 	}{
-		{"case-insensitive field name match", hexDecode("a868696e746669656c64187b6a666c6f61746669656c64fa47c3500069626f6f6c6669656c64f56b537472696e674669656c6464746573746f42797465537472696e674669656c64430103056a41727261794669656c64826568656c6c6f65776f726c64684d61704669656c64a2676d6f726e696e67f56961667465726e6f6f6ef4714e65737465645374727563744669656c64a261581903e861591a000f4240"), want},
-		{"exact field name match", hexDecode("a868496e744669656c64187b6a466c6f61744669656c64fa47c3500069426f6f6c4669656c64f56b537472696e674669656c6464746573746f42797465537472696e674669656c64430103056a41727261794669656c64826568656c6c6f65776f726c64684d61704669656c64a2676d6f726e696e67f56961667465726e6f6f6ef4714e65737465645374727563744669656c64a261581903e861591a000f4240"), want},
+		{
+			name: "case-insensitive field name match",
+			data: hexDecode("a868696e746669656c64187b6a666c6f61746669656c64fa47c3500069626f6f6c6669656c64f56b537472696e674669656c6464746573746f42797465537472696e674669656c64430103056a41727261794669656c64826568656c6c6f65776f726c64684d61704669656c64a2676d6f726e696e67f56961667465726e6f6f6ef4714e65737465645374727563744669656c64a261581903e861591a000f4240"),
+			want: want,
+		},
+		{
+			name: "exact field name match",
+			data: hexDecode("a868496e744669656c64187b6a466c6f61744669656c64fa47c3500069426f6f6c4669656c64f56b537472696e674669656c6464746573746f42797465537472696e674669656c64430103056a41727261794669656c64826568656c6c6f65776f726c64684d61704669656c64a2676d6f726e696e67f56961667465726e6f6f6ef4714e65737465645374727563744669656c64a261581903e861591a000f4240"),
+			want: want,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -3462,14 +3976,46 @@ func TestMapKeyUnhashable(t *testing.T) {
 		data         []byte
 		wantErrorMsg string
 	}{
-		{"slice as map key", hexDecode("bf8030ff"), "cbor: invalid map key type: []interface {}"},                                                    // {[]: -17}
-		{"slice as map key", hexDecode("a1813030"), "cbor: invalid map key type: []interface {}"},                                                    // {[-17]: -17}
-		{"slice as map key", hexDecode("bfd1a388f730303030303030303030303030ff"), "cbor: invalid map key type: []interface {}"},                      // {17({[undefined, -17, -17, -17, -17, -17, -17, -17]: -17, -17: -17}): -17}}
-		{"map as map key", hexDecode("bf30a1a030ff"), "cbor: invalid map key type: map"},                                                             // {-17: {{}: -17}}, empty map as map key
-		{"map as map key", hexDecode("bfb0303030303030303030303030303030303030303030303030303030303030303030ff"), "cbor: invalid map key type: map"}, // {{-17: -17}: -17}, map as key
-		{"big.Int as map key", hexDecode("a13bbd3030303030303030"), "cbor: invalid map key type: big.Int"},                                           // {-13632449055575519281: -17}
-		{"tagged big.Int as map key", hexDecode("a1c24901000000000000000030"), "cbor: invalid map key type: big.Int"},                                // {18446744073709551616: -17}
-		{"tagged big.Int as map key", hexDecode("a1c34901000000000000000030"), "cbor: invalid map key type: big.Int"},                                // {-18446744073709551617: -17}
+		{
+			name:         "slice as map key",
+			data:         hexDecode("bf8030ff"),
+			wantErrorMsg: "cbor: invalid map key type: []interface {}",
+		}, // {[]: -17}
+		{
+			name:         "slice as map key",
+			data:         hexDecode("a1813030"),
+			wantErrorMsg: "cbor: invalid map key type: []interface {}",
+		}, // {[-17]: -17}
+		{
+			name:         "slice as map key",
+			data:         hexDecode("bfd1a388f730303030303030303030303030ff"),
+			wantErrorMsg: "cbor: invalid map key type: []interface {}",
+		}, // {17({[undefined, -17, -17, -17, -17, -17, -17, -17]: -17, -17: -17}): -17}}
+		{
+			name:         "map as map key",
+			data:         hexDecode("bf30a1a030ff"),
+			wantErrorMsg: "cbor: invalid map key type: map",
+		}, // {-17: {{}: -17}}, empty map as map key
+		{
+			name:         "map as map key",
+			data:         hexDecode("bfb0303030303030303030303030303030303030303030303030303030303030303030ff"),
+			wantErrorMsg: "cbor: invalid map key type: map",
+		}, // {{-17: -17}: -17}, map as key
+		{
+			name:         "big.Int as map key",
+			data:         hexDecode("a13bbd3030303030303030"),
+			wantErrorMsg: "cbor: invalid map key type: big.Int",
+		}, // {-13632449055575519281: -17}
+		{
+			name:         "tagged big.Int as map key",
+			data:         hexDecode("a1c24901000000000000000030"),
+			wantErrorMsg: "cbor: invalid map key type: big.Int",
+		}, // {18446744073709551616: -17}
+		{
+			name:         "tagged big.Int as map key",
+			data:         hexDecode("a1c34901000000000000000030"),
+			wantErrorMsg: "cbor: invalid map key type: big.Int",
+		}, // {-18446744073709551617: -17}
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -4499,8 +5045,14 @@ func TestUnmarshalArrayToStruct(t *testing.T) {
 		name string
 		data []byte
 	}{
-		{"definite length array", hexDecode("83010203")},
-		{"indefinite length array", hexDecode("9f010203ff")},
+		{
+			name: "definite length array",
+			data: hexDecode("83010203"),
+		},
+		{
+			name: "indefinite length array",
+			data: hexDecode("9f010203ff"),
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -4553,13 +5105,34 @@ func TestUnmarshalNonArrayDataToStructToArray(t *testing.T) {
 		name string
 		data []byte
 	}{
-		{"CBOR positive int", hexDecode("00")},                        // 0
-		{"CBOR negative int", hexDecode("20")},                        // -1
-		{"CBOR byte string", hexDecode("4401020304")},                 // h`01020304`
-		{"CBOR text string", hexDecode("7f657374726561646d696e67ff")}, // streaming
-		{"CBOR map", hexDecode("a3614101614202614303")},               // {"A": 1, "B": 2, "C": 3}
-		{"CBOR bool", hexDecode("f5")},                                // true
-		{"CBOR float", hexDecode("fa7f7fffff")},                       // 3.4028234663852886e+38
+		{
+			name: "CBOR positive int",
+			data: hexDecode("00"),
+		}, // 0
+		{
+			name: "CBOR negative int",
+			data: hexDecode("20"),
+		}, // -1
+		{
+			name: "CBOR byte string",
+			data: hexDecode("4401020304"),
+		}, // h`01020304`
+		{
+			name: "CBOR text string",
+			data: hexDecode("7f657374726561646d696e67ff"),
+		}, // streaming
+		{
+			name: "CBOR map",
+			data: hexDecode("a3614101614202614303"),
+		}, // {"A": 1, "B": 2, "C": 3}
+		{
+			name: "CBOR bool",
+			data: hexDecode("f5"),
+		}, // true
+		{
+			name: "CBOR float",
+			data: hexDecode("fa7f7fffff"),
+		}, // 3.4028234663852886e+38
 	}
 	wantT := T{}
 	wantErrorMsg := "cannot unmarshal"
@@ -4624,9 +5197,19 @@ func TestUnmarshalArrayToStructWrongFieldTypeError(t *testing.T) {
 		wantV        any
 	}{
 		// [1, 2, 3]
-		{"wrong field type", hexDecode("83010203"), "cannot unmarshal", T{A: 1, C: 3}},
+		{
+			name:         "wrong field type",
+			data:         hexDecode("83010203"),
+			wantErrorMsg: "cannot unmarshal",
+			wantV:        T{A: 1, C: 3},
+		},
 		// [1, 0xfe, 3]
-		{"invalid UTF-8 string", hexDecode("830161fe03"), invalidUTF8ErrorMsg, T{A: 1, C: 3}},
+		{
+			name:         "invalid UTF-8 string",
+			data:         hexDecode("830161fe03"),
+			wantErrorMsg: invalidUTF8ErrorMsg,
+			wantV:        T{A: 1, C: 3},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -7039,18 +7622,18 @@ func TestUnmarshalTagNum55799AsElement(t *testing.T) {
 		wrongTypes          []reflect.Type
 	}{
 		{
-			"array",
-			hexDecode("d9d9f783d9d9f701d9d9f702d9d9f703"), // 55799([55799(1), 55799(2), 55799(3)])
-			[]any{uint64(1), uint64(2), uint64(3)},
-			[]any{[]any{uint64(1), uint64(2), uint64(3)}, []byte{1, 2, 3}, []int{1, 2, 3}, []uint{1, 2, 3}, [0]int{}, [1]int{1}, [3]int{1, 2, 3}, [5]int{1, 2, 3, 0, 0}, []float32{1, 2, 3}, []float64{1, 2, 3}},
-			[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag},
+			name:                "array",
+			data:                hexDecode("d9d9f783d9d9f701d9d9f702d9d9f703"), // 55799([55799(1), 55799(2), 55799(3)])
+			emptyInterfaceValue: []any{uint64(1), uint64(2), uint64(3)},
+			values:              []any{[]any{uint64(1), uint64(2), uint64(3)}, []byte{1, 2, 3}, []int{1, 2, 3}, []uint{1, 2, 3}, [0]int{}, [1]int{1}, [3]int{1, 2, 3}, [5]int{1, 2, 3, 0, 0}, []float32{1, 2, 3}, []float64{1, 2, 3}},
+			wrongTypes:          []reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag},
 		},
 		{
-			"map",
-			hexDecode("d9d9f7a2d9d9f701d9d9f702d9d9f703d9d9f704"), // 55799({55799(1): 55799(2), 55799(3): 55799(4)})
-			map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)},
-			[]any{map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)}, map[uint]int{1: 2, 3: 4}, map[int]uint{1: 2, 3: 4}},
-			[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeByteArray, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
+			name:                "map",
+			data:                hexDecode("d9d9f7a2d9d9f701d9d9f702d9d9f703d9d9f704"), // 55799({55799(1): 55799(2), 55799(3): 55799(4)})
+			emptyInterfaceValue: map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)},
+			values:              []any{map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)}, map[uint]int{1: 2, 3: 4}, map[int]uint{1: 2, 3: 4}},
+			wrongTypes:          []reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeByteArray, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		},
 	}
 	for _, tc := range testCases {

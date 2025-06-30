@@ -32,9 +32,24 @@ func TestValidExtraneousData(t *testing.T) {
 		extraneousDataNumOfBytes int
 		extraneousDataIndex      int
 	}{
-		{"two numbers", []byte{0x00, 0x01}, 1, 1},                                // 0, 1
-		{"bytestring and int", []byte{0x44, 0x01, 0x02, 0x03, 0x04, 0x00}, 1, 5}, // h'01020304', 0
-		{"int and partial array", []byte{0x00, 0x83, 0x01, 0x02}, 3, 1},
+		{
+			name:                     "two numbers",
+			data:                     []byte{0x00, 0x01},
+			extraneousDataNumOfBytes: 1,
+			extraneousDataIndex:      1,
+		}, // 0, 1
+		{
+			name:                     "bytestring and int",
+			data:                     []byte{0x44, 0x01, 0x02, 0x03, 0x04, 0x00},
+			extraneousDataNumOfBytes: 1,
+			extraneousDataIndex:      5,
+		}, // h'01020304', 0
+		{
+			name:                     "int and partial array",
+			data:                     []byte{0x00, 0x83, 0x01, 0x02},
+			extraneousDataNumOfBytes: 3,
+			extraneousDataIndex:      1,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -75,38 +90,166 @@ func TestDepth(t *testing.T) {
 		data      []byte
 		wantDepth int
 	}{
-		{"uint", hexDecode("00"), 0},                                                          // 0
-		{"int", hexDecode("20"), 0},                                                           // -1
-		{"bool", hexDecode("f4"), 0},                                                          // false
-		{"nil", hexDecode("f6"), 0},                                                           // nil
-		{"float", hexDecode("fa47c35000"), 0},                                                 // 100000.0
-		{"byte string", hexDecode("40"), 0},                                                   // []byte{}
-		{"indefinite length byte string", hexDecode("5f42010243030405ff"), 0},                 // []byte{1, 2, 3, 4, 5}
-		{"text string", hexDecode("60"), 0},                                                   // ""
-		{"indefinite length text string", hexDecode("7f657374726561646d696e67ff"), 0},         // "streaming"
-		{"empty array", hexDecode("80"), 1},                                                   // []
-		{"indefinite length empty array", hexDecode("9fff"), 1},                               // []
-		{"array", hexDecode("98190102030405060708090a0b0c0d0e0f101112131415161718181819"), 1}, // [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
-		{"indefinite length array", hexDecode("9f0102030405060708090a0b0c0d0e0f101112131415161718181819ff"), 1}, // [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
-		{"nested array", hexDecode("8301820203820405"), 2},                                                      // [1,[2,3],[4,5]]
-		{"indefinite length nested array", hexDecode("83018202039f0405ff"), 2},                                  // [1,[2,3],[4,5]]
-		{"array and map", hexDecode("826161a161626163"), 2},                                                     // [a", {"b": "c"}]
-		{"indefinite length array and map", hexDecode("826161bf61626163ff"), 2},                                 // [a", {"b": "c"}]
-		{"empty map", hexDecode("a0"), 1},                                                                       // {}
-		{"indefinite length empty map", hexDecode("bfff"), 1},                                                   // {}
-		{"map", hexDecode("a201020304"), 1},                                                                     // {1:2, 3:4}
-		{"nested map", hexDecode("a26161016162820203"), 2},                                                      // {"a": 1, "b": [2, 3]}
-		{"indefinite length nested map", hexDecode("bf61610161629f0203ffff"), 2},                                // {"a": 1, "b": [2, 3]}
-		{"tag", hexDecode("c074323031332d30332d32315432303a30343a30305a"), 0},                                   // 0("2013-03-21T20:04:00Z")
-		{"tagged map", hexDecode("d864a26161016162820203"), 2},                                                  // 100({"a": 1, "b": [2, 3]})
-		{"tagged map and array", hexDecode("d864a26161016162d865820203"), 2},                                    // 100({"a": 1, "b": 101([2, 3])})
-		{"tagged map and array", hexDecode("d864a26161016162d865d866820203"), 3},                                // 100({"a": 1, "b": 101(102([2, 3]))})
-		{"nested tag", hexDecode("d864d865d86674323031332d30332d32315432303a30343a30305a"), 2},                  // 100(101(102("2013-03-21T20:04:00Z")))
-		{"32-level array", hexDecode("82018181818181818181818181818181818181818181818181818181818181818101"), 32},
-		{"32-level indefinite length array", hexDecode("9f018181818181818181818181818181818181818181818181818181818181818101ff"), 32},
-		{"32-level map", hexDecode("a1018181818181818181818181818181818181818181818181818181818181818101"), 32},
-		{"32-level indefinite length map", hexDecode("bf018181818181818181818181818181818181818181818181818181818181818101ff"), 32},
-		{"32-level tag", hexDecode("d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d86474323031332d30332d32315432303a30343a30305a"), 32}, // 100(100(...("2013-03-21T20:04:00Z")))
+		{
+			name:      "uint",
+			data:      hexDecode("00"),
+			wantDepth: 0,
+		}, // 0
+		{
+			name:      "int",
+			data:      hexDecode("20"),
+			wantDepth: 0,
+		}, // -1
+		{
+			name:      "bool",
+			data:      hexDecode("f4"),
+			wantDepth: 0,
+		}, // false
+		{
+			name:      "nil",
+			data:      hexDecode("f6"),
+			wantDepth: 0,
+		}, // nil
+		{
+			name:      "float",
+			data:      hexDecode("fa47c35000"),
+			wantDepth: 0,
+		}, // 100000.0
+		{
+			name:      "byte string",
+			data:      hexDecode("40"),
+			wantDepth: 0,
+		}, // []byte{}
+		{
+			name:      "indefinite length byte string",
+			data:      hexDecode("5f42010243030405ff"),
+			wantDepth: 0,
+		}, // []byte{1, 2, 3, 4, 5}
+		{
+			name:      "text string",
+			data:      hexDecode("60"),
+			wantDepth: 0,
+		}, // ""
+		{
+			name:      "indefinite length text string",
+			data:      hexDecode("7f657374726561646d696e67ff"),
+			wantDepth: 0,
+		}, // "streaming"
+		{
+			name:      "empty array",
+			data:      hexDecode("80"),
+			wantDepth: 1,
+		}, // []
+		{
+			name:      "indefinite length empty array",
+			data:      hexDecode("9fff"),
+			wantDepth: 1,
+		}, // []
+		{
+			name:      "array",
+			data:      hexDecode("98190102030405060708090a0b0c0d0e0f101112131415161718181819"),
+			wantDepth: 1,
+		}, // [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+		{
+			name:      "indefinite length array",
+			data:      hexDecode("9f0102030405060708090a0b0c0d0e0f101112131415161718181819ff"),
+			wantDepth: 1,
+		}, // [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+		{
+			name:      "nested array",
+			data:      hexDecode("8301820203820405"),
+			wantDepth: 2,
+		}, // [1,[2,3],[4,5]]
+		{
+			name:      "indefinite length nested array",
+			data:      hexDecode("83018202039f0405ff"),
+			wantDepth: 2,
+		}, // [1,[2,3],[4,5]]
+		{
+			name:      "array and map",
+			data:      hexDecode("826161a161626163"),
+			wantDepth: 2,
+		}, // [a", {"b": "c"}]
+		{
+			name:      "indefinite length array and map",
+			data:      hexDecode("826161bf61626163ff"),
+			wantDepth: 2,
+		}, // [a", {"b": "c"}]
+		{
+			name:      "empty map",
+			data:      hexDecode("a0"),
+			wantDepth: 1,
+		}, // {}
+		{
+			name:      "indefinite length empty map",
+			data:      hexDecode("bfff"),
+			wantDepth: 1,
+		}, // {}
+		{
+			name:      "map",
+			data:      hexDecode("a201020304"),
+			wantDepth: 1,
+		}, // {1:2, 3:4}
+		{
+			name:      "nested map",
+			data:      hexDecode("a26161016162820203"),
+			wantDepth: 2,
+		}, // {"a": 1, "b": [2, 3]}
+		{
+			name:      "indefinite length nested map",
+			data:      hexDecode("bf61610161629f0203ffff"),
+			wantDepth: 2,
+		}, // {"a": 1, "b": [2, 3]}
+		{
+			name:      "tag",
+			data:      hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			wantDepth: 0,
+		}, // 0("2013-03-21T20:04:00Z")
+		{
+			name:      "tagged map",
+			data:      hexDecode("d864a26161016162820203"),
+			wantDepth: 2,
+		}, // 100({"a": 1, "b": [2, 3]})
+		{
+			name:      "tagged map and array",
+			data:      hexDecode("d864a26161016162d865820203"),
+			wantDepth: 2,
+		}, // 100({"a": 1, "b": 101([2, 3])})
+		{
+			name:      "tagged map and array",
+			data:      hexDecode("d864a26161016162d865d866820203"),
+			wantDepth: 3,
+		}, // 100({"a": 1, "b": 101(102([2, 3]))})
+		{
+			name:      "nested tag",
+			data:      hexDecode("d864d865d86674323031332d30332d32315432303a30343a30305a"),
+			wantDepth: 2,
+		}, // 100(101(102("2013-03-21T20:04:00Z")))
+		{
+			name:      "32-level array",
+			data:      hexDecode("82018181818181818181818181818181818181818181818181818181818181818101"),
+			wantDepth: 32,
+		},
+		{
+			name:      "32-level indefinite length array",
+			data:      hexDecode("9f018181818181818181818181818181818181818181818181818181818181818101ff"),
+			wantDepth: 32,
+		},
+		{
+			name:      "32-level map",
+			data:      hexDecode("a1018181818181818181818181818181818181818181818181818181818181818101"),
+			wantDepth: 32,
+		},
+		{
+			name:      "32-level indefinite length map",
+			data:      hexDecode("bf018181818181818181818181818181818181818181818181818181818181818101ff"),
+			wantDepth: 32,
+		},
+		{
+			name:      "32-level tag",
+			data:      hexDecode("d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d864d86474323031332d30332d32315432303a30343a30305a"),
+			wantDepth: 32,
+		}, // 100(100(...("2013-03-21T20:04:00Z")))
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
