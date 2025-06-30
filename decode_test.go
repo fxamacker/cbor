@@ -4782,7 +4782,7 @@ func (s *stru) MarshalBinary() ([]byte, error) {
 	if s.a == "" && s.b == "" && s.c == "" {
 		return []byte{}, nil
 	}
-	return []byte(fmt.Sprintf("%s,%s,%s", s.a, s.b, s.c)), nil
+	return fmt.Appendf(nil, "%s,%s,%s", s.a, s.b, s.c), nil
 }
 
 func (s *stru) UnmarshalBinary(data []byte) (err error) {
