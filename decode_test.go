@@ -2791,7 +2791,7 @@ func TestUnmarshalNil(t *testing.T) {
 		value     any
 		wantValue any
 	}{
-		// Unmarshalling CBOR null to the following types is a no-op.
+		// Unmarshaling CBOR null to the following types is a no-op.
 		{
 			name:      "bool",
 			value:     true,
@@ -2868,7 +2868,7 @@ func TestUnmarshalNil(t *testing.T) {
 			wantValue: [3]int{1, 2, 3},
 		},
 
-		// Unmarshalling CBOR null to slice/map sets Go values to nil.
+		// Unmarshaling CBOR null to slice/map sets Go values to nil.
 		{
 			name:      "[]byte",
 			value:     []byte{1, 2, 3},
@@ -2885,35 +2885,35 @@ func TestUnmarshalNil(t *testing.T) {
 			wantValue: map[string]bool(nil),
 		},
 
-		// Unmarshalling CBOR null to ByteString (string wrapper for []byte) resets ByteString to empty string.
+		// Unmarshaling CBOR null to ByteString (string wrapper for []byte) resets ByteString to empty string.
 		{
 			name:      "cbor.ByteString",
 			value:     ByteString("\x01\x02\x03"),
 			wantValue: ByteString(""),
 		},
 
-		// Unmarshalling CBOR null to time.Time is a no-op.
+		// Unmarshaling CBOR null to time.Time is a no-op.
 		{
 			name:      "time.Time",
 			value:     time.Date(2020, time.January, 2, 3, 4, 5, 6, time.UTC),
 			wantValue: time.Date(2020, time.January, 2, 3, 4, 5, 6, time.UTC),
 		},
 
-		// Unmarshalling CBOR null to big.Int is a no-op.
+		// Unmarshaling CBOR null to big.Int is a no-op.
 		{
 			name:      "big.Int",
 			value:     mustBigInt("123"),
 			wantValue: mustBigInt("123"),
 		},
 
-		// Unmarshalling CBOR null to user defined struct types is a no-op.
+		// Unmarshaling CBOR null to user defined struct types is a no-op.
 		{
 			name:      "user defined struct",
 			value:     T{I: 123},
 			wantValue: T{I: 123},
 		},
 
-		// Unmarshalling CBOR null to cbor.Tag and cbor.RawTag is a no-op.
+		// Unmarshaling CBOR null to cbor.Tag and cbor.RawTag is a no-op.
 		{
 			name:      "cbor.RawTag",
 			value:     RawTag{123, []byte{4, 5, 6}},
@@ -2925,17 +2925,17 @@ func TestUnmarshalNil(t *testing.T) {
 			wantValue: Tag{123, "hello world"},
 		},
 
-		// Unmarshalling to cbor.RawMessage sets cbor.RawMessage to raw CBOR bytes (0xf6 or 0xf7).
+		// Unmarshaling to cbor.RawMessage sets cbor.RawMessage to raw CBOR bytes (0xf6 or 0xf7).
 		// It's tested in TestUnmarshal().
 
-		// Unmarshalling to types implementing cbor.BinaryUnmarshaler is a no-op.
+		// Unmarshaling to types implementing cbor.BinaryUnmarshaler is a no-op.
 		{
 			name:      "cbor.BinaryUnmarshaler",
 			value:     number(456),
 			wantValue: number(456),
 		},
 
-		// When unmarshalling to types implementing cbor.Unmarshaler,
+		// When unmarshaling to types implementing cbor.Unmarshaler,
 		{
 			name:      "cbor.Unmarshaler",
 			value:     nilUnmarshaler("hello world"),
@@ -2943,7 +2943,7 @@ func TestUnmarshalNil(t *testing.T) {
 		},
 	}
 
-	// Unmarshalling to values of specified Go types.
+	// Unmarshaling to values of specified Go types.
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, data := range data {
@@ -7506,7 +7506,7 @@ func TestUnmarshalTagNum55799(t *testing.T) {
 		copy(data[3:], tagNum55799)
 		copy(data[6:], tc.data)
 
-		// Test unmarshalling CBOR into empty interface.
+		// Test unmarshaling CBOR into empty interface.
 		var v any
 		if err := Unmarshal(data, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
@@ -7520,7 +7520,7 @@ func TestUnmarshalTagNum55799(t *testing.T) {
 			}
 		}
 
-		// Test unmarshalling CBOR into RawMessage.
+		// Test unmarshaling CBOR into RawMessage.
 		var r RawMessage
 		if err := Unmarshal(data, &r); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
@@ -7528,7 +7528,7 @@ func TestUnmarshalTagNum55799(t *testing.T) {
 			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", data, r, tc.data)
 		}
 
-		// Test unmarshalling CBOR into compatible data types.
+		// Test unmarshaling CBOR into compatible data types.
 		for _, value := range tc.wantValues {
 			v := reflect.New(reflect.TypeOf(value))
 			vPtr := v.Interface()
@@ -7545,7 +7545,7 @@ func TestUnmarshalTagNum55799(t *testing.T) {
 			}
 		}
 
-		// Test unmarshalling CBOR into incompatible data types.
+		// Test unmarshaling CBOR into incompatible data types.
 		for _, typ := range tc.wrongTypes {
 			v := reflect.New(typ)
 			vPtr := v.Interface()
@@ -7571,7 +7571,7 @@ func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
 		copy(data, tagNum55799)
 		copy(data[3:], tc.data)
 
-		// Test unmarshalling CBOR into empty interface.
+		// Test unmarshaling CBOR into empty interface.
 		var v any
 		if err := Unmarshal(tc.data, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
@@ -7579,7 +7579,7 @@ func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
 			compareFloats(t, tc.data, v, tc.wantInterfaceValue, tc.equalityThreshold)
 		}
 
-		// Test unmarshalling CBOR into RawMessage.
+		// Test unmarshaling CBOR into RawMessage.
 		var r RawMessage
 		if err := Unmarshal(tc.data, &r); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
@@ -7587,7 +7587,7 @@ func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
 			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", tc.data, r, tc.data)
 		}
 
-		// Test unmarshalling CBOR into compatible data types.
+		// Test unmarshaling CBOR into compatible data types.
 		for _, value := range tc.wantValues {
 			v := reflect.New(reflect.TypeOf(value))
 			vPtr := v.Interface()
@@ -7598,7 +7598,7 @@ func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
 			}
 		}
 
-		// Test unmarshalling CBOR into incompatible data types.
+		// Test unmarshaling CBOR into incompatible data types.
 		for _, typ := range unmarshalFloatWrongTypes {
 			v := reflect.New(typ)
 			vPtr := v.Interface()
@@ -7638,7 +7638,7 @@ func TestUnmarshalTagNum55799AsElement(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Test unmarshalling CBOR into empty interface.
+			// Test unmarshaling CBOR into empty interface.
 			var v any
 			if err := Unmarshal(tc.data, &v); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
@@ -7652,7 +7652,7 @@ func TestUnmarshalTagNum55799AsElement(t *testing.T) {
 				}
 			}
 
-			// Test unmarshalling CBOR into compatible data types.
+			// Test unmarshaling CBOR into compatible data types.
 			for _, value := range tc.values {
 				v := reflect.New(reflect.TypeOf(value))
 				vPtr := v.Interface()
@@ -7669,7 +7669,7 @@ func TestUnmarshalTagNum55799AsElement(t *testing.T) {
 				}
 			}
 
-			// Test unmarshalling CBOR into incompatible data types.
+			// Test unmarshaling CBOR into incompatible data types.
 			for _, typ := range tc.wrongTypes {
 				v := reflect.New(typ)
 				vPtr := v.Interface()

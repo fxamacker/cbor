@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-// Tag represents a tagged data item (CBOR major type 6), comprising a tag number and the unmarshalled tag content.
+// Tag represents a tagged data item (CBOR major type 6), comprising a tag number and the unmarshaled tag content.
 // NOTE: The same encoding and decoding options that apply to untagged CBOR data items also applies to tag content
 // during encoding and decoding.
 type Tag struct {
