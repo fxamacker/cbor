@@ -10779,6 +10779,15 @@ func TestTextUnmarshalerMode(t *testing.T) {
 			in:   []byte("\x65hello"), // "hello"
 			want: testTextUnmarshaler("hello"),
 		},
+		{
+			name: "UnmarshalText is called for byte string with TextUnmarshalerTextString and ByteStringToStringAllowed",
+			opts: DecOptions{
+				TextUnmarshaler:    TextUnmarshalerTextString,
+				ByteStringToString: ByteStringToStringAllowed,
+			},
+			in:   []byte("\x45hello"), // 'hello'
+			want: testTextUnmarshaler("UnmarshalText"),
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, err := tc.opts.DecMode()
