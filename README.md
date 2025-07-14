@@ -4,7 +4,7 @@
 
 CBOR is a [trusted alternative](https://www.rfc-editor.org/rfc/rfc8949.html#name-comparison-of-other-binary-) to JSON, MessagePack, Protocol Buffers, etc.&nbsp; CBOR is an Internet&nbsp;Standard defined by [IETF&nbsp;STD&nbsp;94 (RFC&nbsp;8949)](https://www.rfc-editor.org/info/std94) and is designed to be relevant for decades.
 
-`fxamacker/cbor` is used in projects by Arm Ltd., Cisco, EdgeX&nbsp;Foundry, Flow Foundation, Fraunhofer&#8209;AISEC, Kubernetes, Let's&nbsp;Encrypt (ISRG), Linux&nbsp;Foundation, Microsoft, Mozilla, Oasis&nbsp;Protocol, Tailscale, Teleport, [etc](https://github.com/fxamacker/cbor#who-uses-fxamackercbor).
+`fxamacker/cbor` is used in projects by Arm Ltd., EdgeX&nbsp;Foundry, Flow Foundation, Fraunhofer&#8209;AISEC, IBM, Kubernetes[*](https://github.com/search?q=org%3Akubernetes%20fxamacker%2Fcbor&type=code), Let's&nbsp;Encrypt, Linux&nbsp;Foundation, Microsoft, Oasis&nbsp;Protocol, Red Hat[*](https://github.com/search?q=org%3Aopenshift+fxamacker%2Fcbor&type=code), Tailscale[*](https://github.com/search?q=org%3Atailscale+fxamacker%2Fcbor&type=code), Veraison[*](https://github.com/search?q=org%3Averaison+fxamacker%2Fcbor&type=code), [etc](https://github.com/fxamacker/cbor#who-uses-fxamackercbor).
 
 See [Quick&nbsp;Start](#quick-start) and [Releases](https://github.com/fxamacker/cbor/releases/).  🆕 `UnmarshalFirst` and `DiagnoseFirst` can decode CBOR Sequences.  `MarshalToBuffer` and `UserBufferEncMode` accepts user-specified buffer.
 
@@ -150,6 +150,8 @@ We can write less code by using struct tag options:
 - `omitzero`: omit zero-value field when encoding
 
 As a special case, struct field tag "-" omits the field.
+
+NOTE: When a struct uses `toarray`, the encoder will ignore `omitempty` and `omitzero` to prevent position of encoded array elements from changing. This allows decoder to match encoded elements to their Go struct field.
 
 ![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.3.0/cbor_struct_tags_api.svg?sanitize=1 "CBOR API and Go Struct Tags")
 
@@ -700,28 +702,28 @@ Default limits may need to be increased for systems handling very large data (e.
 
 ## Status
 
-v2.8.0 (March 30, 2025) is a small release primarily to add `omitzero` option to struct field tags and fix bugs.   It passed fuzz tests (billions of executions) and is production quality.
+[v2.9.0](https://github.com/fxamacker/cbor/releases/tag/v2.9.0) (Jul 13, 2025) improved interoperability/transcoding between CBOR & JSON, refactored tests, and improved docs.
+- Add opt-in support for `encoding.TextMarshaler` and `encoding.TextUnmarshaler` to encode and decode from CBOR text string.
+- Add opt-in support for `json.Marshaler` and `json.Unmarshaler` via user-provided transcoding function.
+- Update docs for TimeMode, Tag, RawTag, and add example for Embedded JSON Tag for CBOR.
 
-v2.8.0 and v2.7.1 fixes these 3 functions (when called directly by user apps) to use same error handling on bad inputs as `cbor.Unmarshal()`:
-- `ByteString.UnmarshalCBOR()`
-- `RawTag.UnmarshalCBOR()`
-- `SimpleValue.UnmarshalCBOR()`
-
-The above 3 `UnmarshalCBOR()` functions were initially created for internal use and are deprecated now, so please use `Unmarshal()` or `UnmarshalFirst()` instead.  To preserve backward compatibility, these deprecated functions were added to fuzz tests and will not be removed in v2.
+v2.9.0 passed fuzz tests and is production quality.
 
 The minimum version of Go required to build:
-- v2.8.0 requires go 1.20.
-- v2.7.1 and older releases require go 1.17.
+- v2.8.0 and newer releases require go 1.20+.
+- v2.7.1 and older releases require go 1.17+.
 
 For more details, see [release notes](https://github.com/fxamacker/cbor/releases).
 
 ### Prior Releases
 
-v2.7.0 (June 23, 2024) adds features and improvements that help large projects (e.g. Kubernetes) use CBOR as an alternative to JSON and Protocol Buffers. Other improvements include speedups, improved memory use, bug fixes, new serialization options, etc.   It passed fuzz tests (5+ billion executions) and is production quality.
+[v2.8.0](https://github.com/fxamacker/cbor/releases/tag/v2.8.0) (March 30, 2025) is a small release primarily to add `omitzero` option to struct field tags and fix bugs.   It passed fuzz tests (billions of executions) and is production quality.
+
+[v2.7.0](https://github.com/fxamacker/cbor/releases/tag/v2.7.0) (June 23, 2024) adds features and improvements that help large projects (e.g. Kubernetes) use CBOR as an alternative to JSON and Protocol Buffers. Other improvements include speedups, improved memory use, bug fixes, new serialization options, etc.   It passed fuzz tests (5+ billion executions) and is production quality.
 
 [v2.6.0](https://github.com/fxamacker/cbor/releases/tag/v2.6.0) (February 2024) adds important new features, optimizations, and bug fixes. It is especially useful to systems that need to convert data between CBOR and JSON.  New options and optimizations improve handling of bignum, integers, maps, and strings.
 
-v2.5.0 was released on Sunday, August 13, 2023 with new features and important bug fixes.  It is fuzz tested and production quality after extended beta [v2.5.0-beta](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta) (Dec 2022) -> [v2.5.0](https://github.com/fxamacker/cbor/releases/tag/v2.5.0) (Aug 2023).
+[v2.5.0](https://github.com/fxamacker/cbor/releases/tag/v2.5.0) was released on Sunday, August 13, 2023 with new features and important bug fixes.  It is fuzz tested and production quality after extended beta [v2.5.0-beta](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta) (Dec 2022) -> [v2.5.0](https://github.com/fxamacker/cbor/releases/tag/v2.5.0) (Aug 2023).
 
 __IMPORTANT__:  👉 Before upgrading from v2.4 or older release, please read the notable changes highlighted in the release notes.  v2.5.0 is a large release with bug fixes to error handling for extraneous data in `Unmarshal`, etc. that should be reviewed before upgrading.
 
@@ -790,9 +792,9 @@ geomean                                                      2.782              
 
 ## Who uses fxamacker/cbor
 
-`fxamacker/cbor` is used in projects by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, Cisco, Confidential&nbsp;Computing&nbsp;Consortium, ConsenSys, EdgeX&nbsp;Foundry, F5, Flow&nbsp;Foundation, Fraunhofer&#8209;AISEC, IBM, Kubernetes, Let's&nbsp;Encrypt&nbsp;(ISRG), Linux&nbsp;Foundation, Matrix.org, Microsoft, Mozilla, National&nbsp;Cybersecurity&nbsp;Agency&nbsp;of&nbsp;France&nbsp;(govt), Netherlands&nbsp;(govt), Oasis&nbsp;Protocol, Smallstep, Tailscale, Taurus SA, Teleport, TIBCO, and others.
+`fxamacker/cbor` is used in projects by Arm Ltd., Berlin Institute of Health at Charité, Chainlink, Confidential&nbsp;Computing&nbsp;Consortium, ConsenSys, EdgeX&nbsp;Foundry, F5, Flow&nbsp;Foundation, Fraunhofer&#8209;AISEC, IBM, Kubernetes, Let's&nbsp;Encrypt&nbsp;(ISRG), Linaro, Linux&nbsp;Foundation, Matrix.org, Microsoft, National&nbsp;Cybersecurity&nbsp;Agency&nbsp;of&nbsp;France&nbsp;(govt), Netherlands&nbsp;(govt), Oasis&nbsp;Protocol, Red Hat OpenShift, Smallstep, Tailscale, Taurus SA, TIBCO, Veraison, and others.
 
-`fxamacker/cbor` passed multiple confidential security assessments.  A [nonconfidential security assessment](https://github.com/veraison/go-cose/blob/v1.0.0-rc.1/reports/NCC_Microsoft-go-cose-Report_2022-05-26_v1.0.pdf) (prepared by NCC Group for Microsoft Corporation) includes a subset of fxamacker/cbor v2.4.0 in its scope.
+`fxamacker/cbor` passed multiple confidential security assessments in 2022.  A [nonconfidential security assessment](https://github.com/veraison/go-cose/blob/v1.0.0-rc.1/reports/NCC_Microsoft-go-cose-Report_2022-05-26_v1.0.pdf) (prepared by NCC Group for Microsoft Corporation) assessed a subset of fxamacker/cbor v2.4.
 
 ## Standards
 
