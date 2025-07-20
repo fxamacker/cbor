@@ -2687,318 +2687,591 @@ func TestEncodeInterface(t *testing.T) {
 	}
 }
 
-func TestEncodeTime(t *testing.T) {
-	timeUnixOpt := EncOptions{Time: TimeUnix}
-	timeUnixMicroOpt := EncOptions{Time: TimeUnixMicro}
-	timeUnixDynamicOpt := EncOptions{Time: TimeUnixDynamic}
-	timeRFC3339Opt := EncOptions{Time: TimeRFC3339}
-	timeRFC3339NanoOpt := EncOptions{Time: TimeRFC3339Nano}
+type encTimeOption struct {
+	name           string
+	opt            EncOptions
+	hasLocalOffset bool
+}
 
-	type timeConvert struct {
-		opt          EncOptions
+var (
+	timeUnixOpt = encTimeOption{
+		name:           "TimeUnix",
+		opt:            EncOptions{Time: TimeUnix},
+		hasLocalOffset: false,
+	}
+
+	timeUnixWithTagOpt = encTimeOption{
+		name:           "TimeUnixWithTag",
+		opt:            EncOptions{Time: TimeUnix, TimeTag: EncTagRequired},
+		hasLocalOffset: false,
+	}
+
+	timeUnixMicroOpt = encTimeOption{
+		name:           "TimeUnixMicro",
+		opt:            EncOptions{Time: TimeUnixMicro},
+		hasLocalOffset: false,
+	}
+
+	timeUnixMicroWithTagOpt = encTimeOption{
+		name:           "TimeUnixMicroWithTag",
+		opt:            EncOptions{Time: TimeUnixMicro, TimeTag: EncTagRequired},
+		hasLocalOffset: false,
+	}
+
+	timeUnixDynamicOpt = encTimeOption{
+		name:           "TimeUnixDynamic",
+		opt:            EncOptions{Time: TimeUnixDynamic},
+		hasLocalOffset: false,
+	}
+
+	timeUnixDynamicWithTagOpt = encTimeOption{
+		name:           "TimeUnixDynamicWithTag",
+		opt:            EncOptions{Time: TimeUnixDynamic, TimeTag: EncTagRequired},
+		hasLocalOffset: false,
+	}
+
+	timeRFC3339Opt = encTimeOption{
+		name:           "TimeRFC3339",
+		opt:            EncOptions{Time: TimeRFC3339},
+		hasLocalOffset: true,
+	}
+
+	timeRFC3339WithTagOpt = encTimeOption{
+		name:           "TimeRFC3339WithTag",
+		opt:            EncOptions{Time: TimeRFC3339, TimeTag: EncTagRequired},
+		hasLocalOffset: true,
+	}
+
+	timeRFC3339NanoOpt = encTimeOption{
+		name:           "TimeRFC3339Nano",
+		opt:            EncOptions{Time: TimeRFC3339Nano},
+		hasLocalOffset: true,
+	}
+
+	timeRFC3339NanoWithTagOpt = encTimeOption{
+		name:           "TimeRFC3339NanoWithTag",
+		opt:            EncOptions{Time: TimeRFC3339Nano, TimeTag: EncTagRequired},
+		hasLocalOffset: true,
+	}
+
+	timeRFC3339NanoUTCOpt = encTimeOption{
+		name:           "TimeRFC3339NanoUTC",
+		opt:            EncOptions{Time: TimeRFC3339NanoUTC},
+		hasLocalOffset: false,
+	}
+
+	timeRFC3339NanoUTCWithTagOpt = encTimeOption{
+		name:           "TimeRFC3339NanoUTCWithTag",
+		opt:            EncOptions{Time: TimeRFC3339NanoUTC, TimeTag: EncTagRequired},
+		hasLocalOffset: false,
+	}
+)
+
+func TestEncodeTime(t *testing.T) {
+	type conversion struct {
+		opt          encTimeOption
 		wantCborData []byte
+		roundtrip    bool
 	}
 	testCases := []struct {
 		name    string
 		tm      time.Time
-		convert []timeConvert
+		convert []conversion
 	}{
 		{
 			name: "zero time",
 			tm:   time.Time{},
-			convert: []timeConvert{
+			convert: []conversion{
 				{
 					opt:          timeUnixOpt,
 					wantCborData: mustHexDecode("f6"), // encode as CBOR null
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixWithTagOpt,
+					wantCborData: mustHexDecode("f6"), // encode as CBOR null
+					roundtrip:    true,
 				},
 				{
 					opt:          timeUnixMicroOpt,
 					wantCborData: mustHexDecode("f6"), // encode as CBOR null
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixMicroWithTagOpt,
+					wantCborData: mustHexDecode("f6"), // encode as CBOR null
+					roundtrip:    true,
 				},
 				{
 					opt:          timeUnixDynamicOpt,
 					wantCborData: mustHexDecode("f6"), // encode as CBOR null
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixDynamicWithTagOpt,
+					wantCborData: mustHexDecode("f6"), // encode as CBOR null
+					roundtrip:    true,
 				},
 				{
 					opt:          timeRFC3339Opt,
 					wantCborData: mustHexDecode("f6"), // encode as CBOR null
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339WithTagOpt,
+					wantCborData: mustHexDecode("f6"), // encode as CBOR null
+					roundtrip:    true,
 				},
 				{
 					opt:          timeRFC3339NanoOpt,
 					wantCborData: mustHexDecode("f6"), // encode as CBOR null
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoWithTagOpt,
+					wantCborData: mustHexDecode("f6"), // encode as CBOR null
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoUTCOpt,
+					wantCborData: mustHexDecode("f6"), // encode as CBOR null
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoUTCWithTagOpt,
+					wantCborData: mustHexDecode("f6"), // encode as CBOR null
+					roundtrip:    true,
 				},
 			},
 		},
 		{
-			name: "time without fractional seconds",
-			tm:   parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
-			convert: []timeConvert{
+			name: "UTC time without fractional seconds",
+			tm:   mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			convert: []conversion{
 				{
 					opt:          timeUnixOpt,
 					wantCborData: mustHexDecode("1a514b67b0"), // 1363896240
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixWithTagOpt,
+					wantCborData: mustHexDecode("c11a514b67b0"), // 1(1363896240)
+					roundtrip:    true,
 				},
 				{
 					opt:          timeUnixMicroOpt,
 					wantCborData: mustHexDecode("fb41d452d9ec000000"), // 1363896240.0
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixMicroWithTagOpt,
+					wantCborData: mustHexDecode("c1fb41d452d9ec000000"), // 1(1363896240.0)
+					roundtrip:    true,
 				},
 				{
 					opt:          timeUnixDynamicOpt,
 					wantCborData: mustHexDecode("1a514b67b0"), // 1363896240
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixDynamicWithTagOpt,
+					wantCborData: mustHexDecode("c11a514b67b0"), // 1(1363896240)
+					roundtrip:    true,
 				},
 				{
 					opt:          timeRFC3339Opt,
 					wantCborData: mustHexDecode("74323031332d30332d32315432303a30343a30305a"), // "2013-03-21T20:04:00Z"
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339WithTagOpt,
+					wantCborData: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"), // 0("2013-03-21T20:04:00Z")
+					roundtrip:    true,
 				},
 				{
 					opt:          timeRFC3339NanoOpt,
 					wantCborData: mustHexDecode("74323031332d30332d32315432303a30343a30305a"), // "2013-03-21T20:04:00Z"
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoWithTagOpt,
+					wantCborData: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"), // 0("2013-03-21T20:04:00Z")
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoUTCOpt,
+					wantCborData: mustHexDecode("74323031332d30332d32315432303a30343a30305a"), // "2013-03-21T20:04:00Z"
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoUTCWithTagOpt,
+					wantCborData: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"), // 0("2013-03-21T20:04:00Z")
+					roundtrip:    true,
 				},
 			},
 		},
 		{
-			name: "time with fractional seconds",
-			tm:   parseTime(time.RFC3339Nano, "2013-03-21T20:04:00.5Z"),
-			convert: []timeConvert{
+			name: "local time without fractional seconds",
+			tm:   mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00-05:00"),
+			convert: []conversion{
+				{
+					opt:          timeUnixOpt,
+					wantCborData: mustHexDecode("1a514bae00"), // 1363914240
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixWithTagOpt,
+					wantCborData: mustHexDecode("c11a514bae00"), // 1(1363914240)
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixMicroOpt,
+					wantCborData: mustHexDecode("fb41d452eb80000000"), // 1363914240.0
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixMicroWithTagOpt,
+					wantCborData: mustHexDecode("c1fb41d452eb80000000"), // 1(1363914240.0)
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixDynamicOpt,
+					wantCborData: mustHexDecode("1a514bae00"), // 1363914240
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixDynamicWithTagOpt,
+					wantCborData: mustHexDecode("c11a514bae00"), // 1(1363914240)
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339Opt,
+					wantCborData: mustHexDecode("7819323031332d30332d32315432303a30343a30302d30353a3030"), // "2013-03-21T20:04:00-05:00"
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339WithTagOpt,
+					wantCborData: mustHexDecode("c07819323031332d30332d32315432303a30343a30302d30353a3030"), // 0("2013-03-21T20:04:00-05:00")
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoOpt,
+					wantCborData: mustHexDecode("7819323031332d30332d32315432303a30343a30302d30353a3030"), // "2013-03-21T20:04:00-05:00"
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoWithTagOpt,
+					wantCborData: mustHexDecode("c07819323031332d30332d32315432303a30343a30302d30353a3030"), // 0("2013-03-21T20:04:00-05:00")
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoUTCOpt,
+					wantCborData: mustHexDecode("74323031332d30332d32325430313a30343a30305a"), // "2013-03-22T01:04:00Z"
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoUTCWithTagOpt,
+					wantCborData: mustHexDecode("c074323031332d30332d32325430313a30343a30305a"), // 0("2013-03-22T01:04:00Z")
+					roundtrip:    true,
+				},
+			},
+		},
+		{
+			name: "UTC time with fractional seconds",
+			tm:   mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00.5Z"),
+			convert: []conversion{
 				{
 					opt:          timeUnixOpt,
 					wantCborData: mustHexDecode("1a514b67b0"), // 1363896240
+					roundtrip:    false,
+				},
+				{
+					opt:          timeUnixWithTagOpt,
+					wantCborData: mustHexDecode("c11a514b67b0"), // 1(1363896240)
+					roundtrip:    false,
 				},
 				{
 					opt:          timeUnixMicroOpt,
 					wantCborData: mustHexDecode("fb41d452d9ec200000"), // 1363896240.5
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixMicroWithTagOpt,
+					wantCborData: mustHexDecode("c1fb41d452d9ec200000"), // 1(1363896240.5)
+					roundtrip:    true,
 				},
 				{
 					opt:          timeUnixDynamicOpt,
 					wantCborData: mustHexDecode("fb41d452d9ec200000"), // 1363896240.5
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixDynamicWithTagOpt,
+					wantCborData: mustHexDecode("c1fb41d452d9ec200000"), // 1(1363896240.5)
+					roundtrip:    true,
 				},
 				{
 					opt:          timeRFC3339Opt,
 					wantCborData: mustHexDecode("74323031332d30332d32315432303a30343a30305a"), // "2013-03-21T20:04:00Z"
+					roundtrip:    false,
+				},
+				{
+					opt:          timeRFC3339WithTagOpt,
+					wantCborData: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"), // 0("2013-03-21T20:04:00Z")
+					roundtrip:    false,
 				},
 				{
 					opt:          timeRFC3339NanoOpt,
 					wantCborData: mustHexDecode("76323031332d30332d32315432303a30343a30302e355a"), // "2013-03-21T20:04:00.5Z"
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoWithTagOpt,
+					wantCborData: mustHexDecode("c076323031332d30332d32315432303a30343a30302e355a"), // 0("2013-03-21T20:04:00.5Z")
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoUTCOpt,
+					wantCborData: mustHexDecode("76323031332d30332d32315432303a30343a30302e355a"), // "2013-03-21T20:04:00.5Z"
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoUTCWithTagOpt,
+					wantCborData: mustHexDecode("c076323031332d30332d32315432303a30343a30302e355a"), // 0("2013-03-21T20:04:00.5Z")
+					roundtrip:    true,
 				},
 			},
 		},
 		{
-			name: "time before January 1, 1970 UTC without fractional seconds",
-			tm:   parseTime(time.RFC3339Nano, "1969-03-21T20:04:00Z"),
-			convert: []timeConvert{
+			name: "local time with fractional seconds",
+			tm:   mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00.5-05:00"),
+			convert: []conversion{
+				{
+					opt:          timeUnixOpt,
+					wantCborData: mustHexDecode("1a514bae00"), // 1363914240
+					roundtrip:    false,
+				},
+				{
+					opt:          timeUnixWithTagOpt,
+					wantCborData: mustHexDecode("c11a514bae00"), // 1(1363914240)
+					roundtrip:    false,
+				},
+				{
+					opt:          timeUnixMicroOpt,
+					wantCborData: mustHexDecode("fb41d452eb80200000"), // 1363914240.5
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixMicroWithTagOpt,
+					wantCborData: mustHexDecode("c1fb41d452eb80200000"), // 1(1363914240.5)
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixDynamicOpt,
+					wantCborData: mustHexDecode("fb41d452eb80200000"), // 1363914240.5
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixDynamicWithTagOpt,
+					wantCborData: mustHexDecode("c1fb41d452eb80200000"), // 1(1363914240.5)
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339Opt,
+					wantCborData: mustHexDecode("7819323031332d30332d32315432303a30343a30302d30353a3030"), // "2013-03-21T20:04:00-05:00"
+					roundtrip:    false,
+				},
+				{
+					opt:          timeRFC3339WithTagOpt,
+					wantCborData: mustHexDecode("c07819323031332d30332d32315432303a30343a30302d30353a3030"), // 0("2013-03-21T20:04:00-05:00")
+					roundtrip:    false,
+				},
+				{
+					opt:          timeRFC3339NanoOpt,
+					wantCborData: mustHexDecode("781b323031332d30332d32315432303a30343a30302e352d30353a3030"), // "2013-03-21T20:04:00.5-05:00"
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoWithTagOpt,
+					wantCborData: mustHexDecode("c0781b323031332d30332d32315432303a30343a30302e352d30353a3030"), // 0("2013-03-21T20:04:00.5-05:00")
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoUTCOpt,
+					wantCborData: mustHexDecode("76323031332d30332d32325430313a30343a30302e355a"), // "2013-03-22T01:04:00.5Z"
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoUTCWithTagOpt,
+					wantCborData: mustHexDecode("c076323031332d30332d32325430313a30343a30302e355a"), // 0("2013-03-22T01:04:00.5Z")
+					roundtrip:    true,
+				},
+			},
+		},
+		{
+			name: "UTC time before January 1, 1970 UTC without fractional seconds",
+			tm:   mustParseTime(time.RFC3339Nano, "1969-03-21T20:04:00Z"),
+			convert: []conversion{
 				{
 					opt:          timeUnixOpt,
 					wantCborData: mustHexDecode("3a0177f2cf"), // -24638160
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixWithTagOpt,
+					wantCborData: mustHexDecode("c13a0177f2cf"), // 1(-24638160)
+					roundtrip:    true,
 				},
 				{
 					opt:          timeUnixMicroOpt,
 					wantCborData: mustHexDecode("fbc1777f2d00000000"), // -24638160.0
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixMicroWithTagOpt,
+					wantCborData: mustHexDecode("c1fbc1777f2d00000000"), // 1(-24638160.0)
+					roundtrip:    true,
 				},
 				{
 					opt:          timeUnixDynamicOpt,
 					wantCborData: mustHexDecode("3a0177f2cf"), // -24638160
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixDynamicWithTagOpt,
+					wantCborData: mustHexDecode("c13a0177f2cf"), // 1(-24638160)
+					roundtrip:    true,
 				},
 				{
 					opt:          timeRFC3339Opt,
 					wantCborData: mustHexDecode("74313936392d30332d32315432303a30343a30305a"), // "1969-03-21T20:04:00Z"
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339WithTagOpt,
+					wantCborData: mustHexDecode("c074313936392d30332d32315432303a30343a30305a"), // 0("1969-03-21T20:04:00Z")
+					roundtrip:    true,
 				},
 				{
 					opt:          timeRFC3339NanoOpt,
 					wantCborData: mustHexDecode("74313936392d30332d32315432303a30343a30305a"), // "1969-03-21T20:04:00Z"
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoWithTagOpt,
+					wantCborData: mustHexDecode("c074313936392d30332d32315432303a30343a30305a"), // 0("1969-03-21T20:04:00Z")
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoUTCOpt,
+					wantCborData: mustHexDecode("74313936392d30332d32315432303a30343a30305a"), // "1969-03-21T20:04:00Z"
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoUTCWithTagOpt,
+					wantCborData: mustHexDecode("c074313936392d30332d32315432303a30343a30305a"), // 0("1969-03-21T20:04:00Z")
+					roundtrip:    true,
+				},
+			},
+		},
+		{
+			name: "local time before January 1, 1970 UTC without fractional seconds",
+			tm:   mustParseTime(time.RFC3339Nano, "1969-03-21T20:04:00-05:00"),
+			convert: []conversion{
+				{
+					opt:          timeUnixOpt,
+					wantCborData: mustHexDecode("3a0177ac7f"), // -24620160
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixWithTagOpt,
+					wantCborData: mustHexDecode("c13a0177ac7f"), // 1(-24620160)
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixMicroOpt,
+					wantCborData: mustHexDecode("fbc1777ac800000000"), // -24620160.0
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixMicroWithTagOpt,
+					wantCborData: mustHexDecode("c1fbc1777ac800000000"), // 1(-24620160.0)
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixDynamicOpt,
+					wantCborData: mustHexDecode("3a0177ac7f"), // -24620160
+					roundtrip:    true,
+				},
+				{
+					opt:          timeUnixDynamicWithTagOpt,
+					wantCborData: mustHexDecode("c13a0177ac7f"), // 1(-24620160)
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339Opt,
+					wantCborData: mustHexDecode("7819313936392d30332d32315432303a30343a30302d30353a3030"), // "1969-03-21T20:04:00-05:00"
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339WithTagOpt,
+					wantCborData: mustHexDecode("c07819313936392d30332d32315432303a30343a30302d30353a3030"), // 0("1969-03-21T20:04:00-05:00")
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoOpt,
+					wantCborData: mustHexDecode("7819313936392d30332d32315432303a30343a30302d30353a3030"), // "1969-03-21T20:04:00-05:00"
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoWithTagOpt,
+					wantCborData: mustHexDecode("c07819313936392d30332d32315432303a30343a30302d30353a3030"), // 0("1969-03-21T20:04:00-05:00")
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoUTCOpt,
+					wantCborData: mustHexDecode("74313936392d30332d32325430313a30343a30305a"), // "1969-03-22T01:04:00Z"
+					roundtrip:    true,
+				},
+				{
+					opt:          timeRFC3339NanoUTCWithTagOpt,
+					wantCborData: mustHexDecode("c074313936392d30332d32325430313a30343a30305a"), // 0("1969-03-22T01:04:00Z")
+					roundtrip:    true,
 				},
 			},
 		},
 	}
 	for _, tc := range testCases {
 		for _, convert := range tc.convert {
-			var convertName string
-			switch convert.opt.Time {
-			case TimeUnix:
-				convertName = "TimeUnix"
-			case TimeUnixMicro:
-				convertName = "TimeUnixMicro"
-			case TimeUnixDynamic:
-				convertName = "TimeUnixDynamic"
-			case TimeRFC3339:
-				convertName = "TimeRFC3339"
-			case TimeRFC3339Nano:
-				convertName = "TimeRFC3339Nano"
-			}
-			name := tc.name + " with " + convertName + " option"
+			name := tc.name + " with " + convert.opt.name + " option"
 			t.Run(name, func(t *testing.T) {
-				em, err := convert.opt.EncMode()
+				em, err := convert.opt.opt.EncMode()
 				if err != nil {
 					t.Errorf("EncMode() returned error %v", err)
 				}
+
 				b, err := em.Marshal(tc.tm)
 				if err != nil {
 					t.Errorf("Marshal(%+v) returned error %v", tc.tm, err)
 				} else if !bytes.Equal(b, convert.wantCborData) {
 					t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.tm, b, convert.wantCborData)
 				}
-			})
-		}
-	}
-}
 
-func TestEncodeTimeWithTag(t *testing.T) {
-	timeUnixOpt := EncOptions{Time: TimeUnix, TimeTag: EncTagRequired}
-	timeUnixMicroOpt := EncOptions{Time: TimeUnixMicro, TimeTag: EncTagRequired}
-	timeUnixDynamicOpt := EncOptions{Time: TimeUnixDynamic, TimeTag: EncTagRequired}
-	timeRFC3339Opt := EncOptions{Time: TimeRFC3339, TimeTag: EncTagRequired}
-	timeRFC3339NanoOpt := EncOptions{Time: TimeRFC3339Nano, TimeTag: EncTagRequired}
-
-	type timeConvert struct {
-		opt          EncOptions
-		wantCborData []byte
-	}
-	testCases := []struct {
-		name    string
-		tm      time.Time
-		convert []timeConvert
-	}{
-		{
-			name: "zero time",
-			tm:   time.Time{},
-			convert: []timeConvert{
-				{
-					opt:          timeUnixOpt,
-					wantCborData: mustHexDecode("f6"), // encode as CBOR null
-				},
-				{
-					opt:          timeUnixMicroOpt,
-					wantCborData: mustHexDecode("f6"), // encode as CBOR null
-				},
-				{
-					opt:          timeUnixDynamicOpt,
-					wantCborData: mustHexDecode("f6"), // encode as CBOR null
-				},
-				{
-					opt:          timeRFC3339Opt,
-					wantCborData: mustHexDecode("f6"), // encode as CBOR null
-				},
-				{
-					opt:          timeRFC3339NanoOpt,
-					wantCborData: mustHexDecode("f6"), // encode as CBOR null
-				},
-			},
-		},
-		{
-			name: "time without fractional seconds",
-			tm:   parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
-			convert: []timeConvert{
-				{
-					opt:          timeUnixOpt,
-					wantCborData: mustHexDecode("c11a514b67b0"), // 1363896240
-				},
-				{
-					opt:          timeUnixMicroOpt,
-					wantCborData: mustHexDecode("c1fb41d452d9ec000000"), // 1363896240.0
-				},
-				{
-					opt:          timeUnixDynamicOpt,
-					wantCborData: mustHexDecode("c11a514b67b0"), // 1363896240
-				},
-				{
-					opt:          timeRFC3339Opt,
-					wantCborData: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"), // "2013-03-21T20:04:00Z"
-				},
-				{
-					opt:          timeRFC3339NanoOpt,
-					wantCborData: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"), // "2013-03-21T20:04:00Z"
-				},
-			},
-		},
-		{
-			name: "time with fractional seconds",
-			tm:   parseTime(time.RFC3339Nano, "2013-03-21T20:04:00.5Z"),
-			convert: []timeConvert{
-				{
-					opt:          timeUnixOpt,
-					wantCborData: mustHexDecode("c11a514b67b0"), // 1363896240
-				},
-				{
-					opt:          timeUnixMicroOpt,
-					wantCborData: mustHexDecode("c1fb41d452d9ec200000"), // 1363896240.5
-				},
-				{
-					opt:          timeUnixDynamicOpt,
-					wantCborData: mustHexDecode("c1fb41d452d9ec200000"), // 1363896240.5
-				},
-				{
-					opt:          timeRFC3339Opt,
-					wantCborData: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"), // "2013-03-21T20:04:00Z"
-				},
-				{
-					opt:          timeRFC3339NanoOpt,
-					wantCborData: mustHexDecode("c076323031332d30332d32315432303a30343a30302e355a"), // "2013-03-21T20:04:00.5Z"
-				},
-			},
-		},
-		{
-			name: "time before January 1, 1970 UTC without fractional seconds",
-			tm:   parseTime(time.RFC3339Nano, "1969-03-21T20:04:00Z"),
-			convert: []timeConvert{
-				{
-					opt:          timeUnixOpt,
-					wantCborData: mustHexDecode("c13a0177f2cf"), // -24638160
-				},
-				{
-					opt:          timeUnixMicroOpt,
-					wantCborData: mustHexDecode("c1fbc1777f2d00000000"), // -24638160.0
-				},
-				{
-					opt:          timeUnixDynamicOpt,
-					wantCborData: mustHexDecode("c13a0177f2cf"), // -24638160
-				},
-				{
-					opt:          timeRFC3339Opt,
-					wantCborData: mustHexDecode("c074313936392d30332d32315432303a30343a30305a"), // "1969-03-21T20:04:00Z"
-				},
-				{
-					opt:          timeRFC3339NanoOpt,
-					wantCborData: mustHexDecode("c074313936392d30332d32315432303a30343a30305a"), // "1969-03-21T20:04:00Z"
-				},
-			},
-		},
-	}
-	for _, tc := range testCases {
-		for _, convert := range tc.convert {
-			var convertName string
-			switch convert.opt.Time {
-			case TimeUnix:
-				convertName = "TimeUnix"
-			case TimeUnixMicro:
-				convertName = "TimeUnixMicro"
-			case TimeUnixDynamic:
-				convertName = "TimeUnixDynamic"
-			case TimeRFC3339:
-				convertName = "TimeRFC3339"
-			case TimeRFC3339Nano:
-				convertName = "TimeRFC3339Nano"
-			}
-			name := tc.name + " with " + convertName + " option"
-			t.Run(name, func(t *testing.T) {
-				em, err := convert.opt.EncMode()
+				var tm time.Time
+				err = Unmarshal(b, &tm)
 				if err != nil {
-					t.Errorf("EncMode() returned error %v", err)
-				}
-				b, err := em.Marshal(tc.tm)
-				if err != nil {
-					t.Errorf("Marshal(%+v) returned error %v", tc.tm, err)
-				} else if !bytes.Equal(b, convert.wantCborData) {
-					t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.tm, b, convert.wantCborData)
+					t.Errorf("Unmarshal(0x%x) to time.Time returned error %v", b, err)
+				} else if convert.roundtrip {
+					if convert.opt.hasLocalOffset && tc.tm.Compare(tm) != 0 {
+						t.Errorf("failed to rountrip local time: want %s, got %s", tc.tm, tm)
+					}
+					if !convert.opt.hasLocalOffset && tc.tm.UTC().Compare(tm.UTC()) != 0 {
+						t.Errorf("failed to roundtrip UTC time: want %s, got %s", tc.tm, tm)
+					}
 				}
 			})
 		}
 	}
-}
-
-func parseTime(layout string, value string) time.Time {
-	tm, err := time.Parse(layout, value)
-	if err != nil {
-		panic(err)
-	}
-	return tm
 }
 
 func TestInvalidTimeMode(t *testing.T) {
@@ -6809,4 +7082,12 @@ func TestJSONMarshalerTranscoder(t *testing.T) {
 			}
 		})
 	}
+}
+
+func mustParseTime(layout string, value string) time.Time {
+	tm, err := time.Parse(layout, value)
+	if err != nil {
+		panic(err)
+	}
+	return tm
 }

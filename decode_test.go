@@ -4137,25 +4137,25 @@ func TestDecodeTime(t *testing.T) {
 			name:            "time without fractional seconds", // positive integer
 			cborRFC3339Time: mustHexDecode("74323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("1a514b67b0"),
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
 			name:            "time with fractional seconds", // float
 			cborRFC3339Time: mustHexDecode("7819313937302d30312d30315432313a34363a34302d30363a3030"),
 			cborUnixTime:    mustHexDecode("fa47c35000"),
-			wantTime:        parseTime(time.RFC3339Nano, "1970-01-01T21:46:40-06:00"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "1970-01-01T21:46:40-06:00"),
 		},
 		{
 			name:            "time with fractional seconds", // float
 			cborRFC3339Time: mustHexDecode("76323031332d30332d32315432303a30343a30302e355a"),
 			cborUnixTime:    mustHexDecode("fb41d452d9ec200000"),
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00.5Z"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00.5Z"),
 		},
 		{
 			name:            "time before January 1, 1970 UTC without fractional seconds", // negative integer
 			cborRFC3339Time: mustHexDecode("74313936392d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("3a0177f2cf"),
-			wantTime:        parseTime(time.RFC3339Nano, "1969-03-21T20:04:00Z"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "1969-03-21T20:04:00Z"),
 		},
 	}
 	for _, tc := range testCases {
@@ -4187,19 +4187,19 @@ func TestDecodeTimeWithTag(t *testing.T) {
 			name:            "time without fractional seconds", // positive integer
 			cborRFC3339Time: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c11a514b67b0"),
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
 			name:            "time with fractional seconds", // float
 			cborRFC3339Time: mustHexDecode("c076323031332d30332d32315432303a30343a30302e355a"),
 			cborUnixTime:    mustHexDecode("c1fb41d452d9ec200000"),
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00.5Z"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00.5Z"),
 		},
 		{
 			name:            "time before January 1, 1970 UTC without fractional seconds", // negative integer
 			cborRFC3339Time: mustHexDecode("c074313936392d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c13a0177f2cf"),
-			wantTime:        parseTime(time.RFC3339Nano, "1969-03-21T20:04:00Z"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "1969-03-21T20:04:00Z"),
 		},
 	}
 	for _, tc := range testCases {
@@ -4570,14 +4570,14 @@ func TestDecTimeTagOption(t *testing.T) {
 			cborRFC3339Time: mustHexDecode("74323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("1a514b67b0"),
 			decMode:         timeTagIgnoredDecMode,
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
 			name:            "not-tagged data with timeTagOptionalDecMode option",
 			cborRFC3339Time: mustHexDecode("74323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("1a514b67b0"),
 			decMode:         timeTagOptionalDecMode,
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
 			name:            "not-tagged data with timeTagRequiredDecMode option",
@@ -4592,21 +4592,21 @@ func TestDecTimeTagOption(t *testing.T) {
 			cborRFC3339Time: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c11a514b67b0"),
 			decMode:         timeTagIgnoredDecMode,
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
 			name:            "tagged data with timeTagOptionalDecMode option",
 			cborRFC3339Time: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c11a514b67b0"),
 			decMode:         timeTagOptionalDecMode,
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
 			name:            "tagged data with timeTagRequiredDecMode option",
 			cborRFC3339Time: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c11a514b67b0"),
 			decMode:         timeTagRequiredDecMode,
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		// mis-tagged time CBOR data
 		{
@@ -4614,7 +4614,7 @@ func TestDecTimeTagOption(t *testing.T) {
 			cborRFC3339Time: mustHexDecode("c8c974323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c8c91a514b67b0"),
 			decMode:         timeTagIgnoredDecMode,
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
 			name:            "mis-tagged data with timeTagOptionalDecMode option",

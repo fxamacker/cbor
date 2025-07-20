@@ -343,7 +343,7 @@ const (
 	// non-UTC timezone then a "localtime - UTC" numeric offset will be included as specified in RFC3339.
 	// NOTE: User applications can avoid including the RFC3339 numeric offset by:
 	// - providing a time.Time value set to UTC, or
-	// - using the TimeUnix, TimeUnixMicro, or TimeUnixDynamic option instead of TimeRFC3339.
+	// - using the TimeUnix, TimeUnixMicro, TimeUnixDynamic, or TimeRFC3339NanoUTC option.
 	TimeRFC3339
 
 	// TimeRFC3339Nano causes time.Time to encode to a CBOR time (tag 0) with a text string content
@@ -351,8 +351,12 @@ const (
 	// non-UTC timezone then a "localtime - UTC" numeric offset will be included as specified in RFC3339.
 	// NOTE: User applications can avoid including the RFC3339 numeric offset by:
 	// - providing a time.Time value set to UTC, or
-	// - using the TimeUnix, TimeUnixMicro, or TimeUnixDynamic option instead of TimeRFC3339Nano.
+	// - using the TimeUnix, TimeUnixMicro, TimeUnixDynamic, or TimeRFC3339NanoUTC option.
 	TimeRFC3339Nano
+
+	// TimeRFC3339NanoUTC causes time.Time to encode to a CBOR time (tag 0) with a text string content
+	// representing UTC time using nanosecond precision in RFC3339 format.
+	TimeRFC3339NanoUTC
 
 	maxTimeMode
 )
@@ -1633,7 +1637,7 @@ func encodeTime(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	}
 	if em.timeTag == EncTagRequired {
 		tagNumber := 1
-		if em.time == TimeRFC3339 || em.time == TimeRFC3339Nano {
+		if em.time == TimeRFC3339 || em.time == TimeRFC3339Nano || em.time == TimeRFC3339NanoUTC {
 			tagNumber = 0
 		}
 		encodeHead(e, byte(cborTypeTag), uint64(tagNumber))
@@ -1659,6 +1663,10 @@ func encodeTime(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 
 	case TimeRFC3339:
 		s := t.Format(time.RFC3339)
+		return encodeString(e, em, reflect.ValueOf(s))
+
+	case TimeRFC3339NanoUTC:
+		s := t.UTC().Format(time.RFC3339Nano)
 		return encodeString(e, em, reflect.ValueOf(s))
 
 	default: // TimeRFC3339Nano
