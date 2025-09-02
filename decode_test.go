@@ -10980,14 +10980,13 @@ func TestFloatPrecisionMode(t *testing.T) {
 			opts:     DecOptions{FloatPrecision: FloatPrecisionKept},
 			in:       mustHexDecode("fb7ff8000000000000"),
 			intoType: reflect.TypeOf(float32(0)),
-			// want:     float32(math.NaN()),
-			shouldErr: true,
+			want:     float32(math.NaN()),
 		}, {
-			name:      "FloatPrecisionKept float32 signal NaN",
-			opts:      DecOptions{FloatPrecision: FloatPrecisionKept},
-			in:        mustHexDecode("fb7ff8000000000001"),
-			intoType:  reflect.TypeOf(float32(0)),
-			shouldErr: true,
+			name:     "FloatPrecisionKept float32 signal NaN",
+			opts:     DecOptions{FloatPrecision: FloatPrecisionKept},
+			in:       mustHexDecode("fb7ff8000000000001"),
+			intoType: reflect.TypeOf(float32(0)),
+			want:     float32(math.NaN()),
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -11009,7 +11008,29 @@ func TestFloatPrecisionMode(t *testing.T) {
 			}
 
 			got := gotrv.Elem().Interface()
-			if !reflect.DeepEqual(tc.want, got) {
+			
+			// Special handling for NaN values since reflect.DeepEqual considers NaN != NaN
+			wantIsNaN := false
+			gotIsNaN := false
+			
+			switch wantVal := tc.want.(type) {
+			case float32:
+				wantIsNaN = math.IsNaN(float64(wantVal))
+			case float64:
+				wantIsNaN = math.IsNaN(wantVal)
+			}
+			
+			switch gotVal := got.(type) {
+			case float32:
+				gotIsNaN = math.IsNaN(float64(gotVal))
+			case float64:
+				gotIsNaN = math.IsNaN(gotVal)
+			}
+			
+			if wantIsNaN && gotIsNaN {
+				// Both are NaN, consider them equal
+				return
+			} else if !reflect.DeepEqual(tc.want, got) {
 				t.Errorf("want: %v (%T), got: %v (%T)", tc.want, tc.want, got, got)
 			}
 		})
