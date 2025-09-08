@@ -31,7 +31,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
-        go-version: ['1.20', 1.21, 1.22, 1.23, 1.24]
+        go-version: ['1.20', 1.21, 1.22, 1.23, 1.24, 1.25]
     steps:
     - name: Install Go
       uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
