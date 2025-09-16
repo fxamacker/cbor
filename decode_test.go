@@ -2085,8 +2085,8 @@ var unmarshalFloatTests = []unmarshalFloatTest{
 	},
 	{
 		data:               mustHexDecode("f98000"),
-		wantInterfaceValue: float64(-0.0),                       //nolint:staticcheck // we know -0.0 is 0.0 in Go
-		wantValues:         []any{float32(-0.0), float64(-0.0)}, //nolint:staticcheck // we know -0.0 is 0.0 in Go
+		wantInterfaceValue: math.Copysign(0, -1),
+		wantValues:         []any{float32(math.Copysign(0, -1)), math.Copysign(0, -1)},
 	},
 	{
 		data:               mustHexDecode("f93c00"),
