@@ -70,92 +70,92 @@ func TestTagNewTypeWithBuiltinUnderlyingType(t *testing.T) {
 		{
 			name:         "bool",
 			obj:          myBool(true),
-			wantCborData: hexDecode("d864f5"),
+			wantCborData: mustHexDecode("d864f5"),
 		},
 		{
 			name:         "uint",
 			obj:          myUint(0),
-			wantCborData: hexDecode("d86500"),
+			wantCborData: mustHexDecode("d86500"),
 		},
 		{
 			name:         "uint8",
 			obj:          myUint8(0),
-			wantCborData: hexDecode("d86600"),
+			wantCborData: mustHexDecode("d86600"),
 		},
 		{
 			name:         "uint16",
 			obj:          myUint16(1000),
-			wantCborData: hexDecode("d8671903e8"),
+			wantCborData: mustHexDecode("d8671903e8"),
 		},
 		{
 			name:         "uint32",
 			obj:          myUint32(1000000),
-			wantCborData: hexDecode("d8681a000f4240"),
+			wantCborData: mustHexDecode("d8681a000f4240"),
 		},
 		{
 			name:         "uint64",
 			obj:          myUint64(1000000000000),
-			wantCborData: hexDecode("d8691b000000e8d4a51000"),
+			wantCborData: mustHexDecode("d8691b000000e8d4a51000"),
 		},
 		{
 			name:         "int",
 			obj:          myInt(-1),
-			wantCborData: hexDecode("d86a20"),
+			wantCborData: mustHexDecode("d86a20"),
 		},
 		{
 			name:         "int8",
 			obj:          myInt8(-1),
-			wantCborData: hexDecode("d86b20"),
+			wantCborData: mustHexDecode("d86b20"),
 		},
 		{
 			name:         "int16",
 			obj:          myInt16(-1000),
-			wantCborData: hexDecode("d86c3903e7"),
+			wantCborData: mustHexDecode("d86c3903e7"),
 		},
 		{
 			name:         "int32",
 			obj:          myInt32(-1000),
-			wantCborData: hexDecode("d86d3903e7"),
+			wantCborData: mustHexDecode("d86d3903e7"),
 		},
 		{
 			name:         "int64",
 			obj:          myInt64(-1000),
-			wantCborData: hexDecode("d86e3903e7"),
+			wantCborData: mustHexDecode("d86e3903e7"),
 		},
 		{
 			name:         "float32",
 			obj:          myFloat32(100000.0),
-			wantCborData: hexDecode("d86ffa47c35000"),
+			wantCborData: mustHexDecode("d86ffa47c35000"),
 		},
 		{
 			name:         "float64",
 			obj:          myFloat64(1.1),
-			wantCborData: hexDecode("d870fb3ff199999999999a"),
+			wantCborData: mustHexDecode("d870fb3ff199999999999a"),
 		},
 		{
 			name:         "string",
 			obj:          myString("a"),
-			wantCborData: hexDecode("d8716161"),
+			wantCborData: mustHexDecode("d8716161"),
 		},
 		{
 			name:         "[]byte",
 			obj:          myByteSlice([]byte{1, 2, 3, 4}),
-			wantCborData: hexDecode("d8724401020304"),
+			wantCborData: mustHexDecode("d8724401020304"),
 		},
 		{
 			name:         "[]int",
 			obj:          myIntSlice([]int{1, 2, 3, 4}),
-			wantCborData: hexDecode("d8738401020304"),
+			wantCborData: mustHexDecode("d8738401020304"),
 		},
 		{
 			name:         "[4]int",
 			obj:          myIntArray([...]int{1, 2, 3, 4}),
-			wantCborData: hexDecode("d8748401020304"),
+			wantCborData: mustHexDecode("d8748401020304"),
 		},
 		{
 			name:         "map[int]int",
 			obj:          myMapIntInt(map[int]int{1: 2, 3: 4}),
-			wantCborData: hexDecode("d875a201020304"),
+			wantCborData: mustHexDecode("d875a201020304"),
 		},
 	}
 
@@ -181,12 +181,12 @@ func TestTagBinaryMarshalerUnmarshaler(t *testing.T) {
 		{
 			name:         "primitive obj",
 			obj:          number(1234567890),
-			wantCborData: hexDecode("d87b4800000000499602d2"),
+			wantCborData: mustHexDecode("d87b4800000000499602d2"),
 		},
 		{
 			name:         "struct obj",
 			obj:          stru{a: "a", b: "b", c: "c"},
-			wantCborData: hexDecode("d87c45612C622C63"),
+			wantCborData: mustHexDecode("d87c45612C622C63"),
 		},
 	}
 
@@ -208,7 +208,7 @@ func TestTagStruct(t *testing.T) {
 	em, _ := EncOptions{}.EncModeWithTags(tags)
 	dm, _ := DecOptions{}.DecModeWithTags(tags)
 
-	data := hexDecode("d864a0") // {}
+	data := mustHexDecode("d864a0") // {}
 	var v T
 	if err := dm.Unmarshal(data, &v); err != nil {
 		t.Errorf("Unmarshal() returned error %v", err)
@@ -237,7 +237,7 @@ func TestTagFixedLengthStruct(t *testing.T) {
 	em, _ := EncOptions{}.EncModeWithTags(tags)
 	dm, _ := DecOptions{}.DecModeWithTags(tags)
 
-	data := hexDecode("d864a1617360") // {"s":""}
+	data := mustHexDecode("d864a1617360") // {"s":""}
 	var v T
 	if err := dm.Unmarshal(data, &v); err != nil {
 		t.Errorf("Unmarshal() returned error %v", err)
@@ -276,7 +276,7 @@ func TestTagToArrayStruct(t *testing.T) {
 	dm, _ := DecOptions{}.DecModeWithTags(tags)
 
 	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.3
-	data := hexDecode("d28443a10126a104524173796d6d657472696345434453413235365850a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b7158405427c1ff28d23fbad1f29c4c7c6a555e601d6fa29f9179bc3d7438bacaca5acd08c8d4d4f96131680c429a01f85951ecee743a52b9b63632c57209120e1c9e30")
+	data := mustHexDecode("d28443a10126a104524173796d6d657472696345434453413235365850a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b7158405427c1ff28d23fbad1f29c4c7c6a555e601d6fa29f9179bc3d7438bacaca5acd08c8d4d4f96131680c429a01f85951ecee743a52b9b63632c57209120e1c9e30")
 	var v signedCWT
 	if err := dm.Unmarshal(data, &v); err != nil {
 		t.Errorf("Unmarshal() returned error %v", err)
@@ -316,7 +316,7 @@ func TestNestedTagStruct(t *testing.T) {
 	dm, _ := DecOptions{}.DecModeWithTags(tags)
 
 	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.4
-	data := hexDecode("d83dd18443a10104a1044c53796d6d65747269633235365850a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b7148093101ef6d789200")
+	data := mustHexDecode("d83dd18443a10104a1044c53796d6d65747269633235365850a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b7148093101ef6d789200")
 	var v macedCOSE
 	if err := dm.Unmarshal(data, &v); err != nil {
 		t.Errorf("Unmarshal() returned error %v", err)
@@ -747,22 +747,22 @@ func TestDecodeTagData(t *testing.T) {
 		{
 			name:         "BinaryMarshaler non-struct",
 			obj:          number(1234567890),
-			wantCborData: hexDecode("d87b4800000000499602d2"),
+			wantCborData: mustHexDecode("d87b4800000000499602d2"),
 		},
 		{
 			name:         "BinaryMarshaler struct",
 			obj:          stru{a: "a", b: "b", c: "c"},
-			wantCborData: hexDecode("d87c45612C622C63"),
+			wantCborData: mustHexDecode("d87c45612C622C63"),
 		},
 		{
 			name:         "non-struct",
 			obj:          myInt(1),
-			wantCborData: hexDecode("d87d01"),
+			wantCborData: mustHexDecode("d87d01"),
 		},
 		{
 			name:         "struct",
 			obj:          s{A: "A", B: "B", C: "C"},
-			wantCborData: hexDecode("d87ea3616161416162614261636143"), // {"a":"A", "b":"B", "c":"C"}
+			wantCborData: mustHexDecode("d87ea3616161416162614261636143"), // {"a":"A", "b":"B", "c":"C"}
 		},
 	}
 	for _, tag := range tags {
@@ -817,22 +817,22 @@ func TestDecodeNoTagData(t *testing.T) {
 		{
 			name:         "BinaryMarshaler non-struct",
 			obj:          number(1234567890),
-			wantCborData: hexDecode("4800000000499602d2"),
+			wantCborData: mustHexDecode("4800000000499602d2"),
 		},
 		{
 			name:         "BinaryMarshaler struct",
 			obj:          stru{a: "a", b: "b", c: "c"},
-			wantCborData: hexDecode("45612C622C63"),
+			wantCborData: mustHexDecode("45612C622C63"),
 		},
 		{
 			name:         "non-struct",
 			obj:          myInt(1),
-			wantCborData: hexDecode("01"),
+			wantCborData: mustHexDecode("01"),
 		},
 		{
 			name:         "struct",
 			obj:          s{A: "A", B: "B", C: "C"},
-			wantCborData: hexDecode("a3616161416162614261636143"), // {"a":"A", "b":"B", "c":"C"}
+			wantCborData: mustHexDecode("a3616161416162614261636143"), // {"a":"A", "b":"B", "c":"C"}
 		},
 	}
 
@@ -915,25 +915,25 @@ func TestDecodeWrongTag(t *testing.T) {
 		{
 			name:         "BinaryMarshaler non-struct",
 			obj:          number(1234567890),
-			data:         hexDecode("d87d4800000000499602d2"),
+			data:         mustHexDecode("d87d4800000000499602d2"),
 			wantErrorMsg: "cbor: wrong tag number for cbor.number, got [125], expected [123]",
 		},
 		{
 			name:         "BinaryMarshaler struct",
 			obj:          stru{a: "a", b: "b", c: "c"},
-			data:         hexDecode("d87d45612C622C63"),
+			data:         mustHexDecode("d87d45612C622C63"),
 			wantErrorMsg: "cbor: wrong tag number for cbor.stru, got [125], expected [124]",
 		},
 		{
 			name:         "non-struct",
 			obj:          myInt(1),
-			data:         hexDecode("d87d01"),
+			data:         mustHexDecode("d87d01"),
 			wantErrorMsg: "cbor: wrong tag number for cbor.myInt, got [125], expected [100]",
 		},
 		{
 			name:         "struct",
 			obj:          s{A: "A", B: "B", C: "C"},
-			data:         hexDecode("d87ea3616161416162614261636143"), // {"a":"A", "b":"B", "c":"C"}
+			data:         mustHexDecode("d87ea3616161416162614261636143"), // {"a":"A", "b":"B", "c":"C"}
 			wantErrorMsg: "cbor: wrong tag number for cbor.s, got [126], expected [101 102]",
 		},
 	}
@@ -992,7 +992,7 @@ func TestEncodeSharedTag(t *testing.T) {
 
 	// Encode myInt with tag number 123
 	v := myInt(1)
-	wantCborData := hexDecode("d87b01")
+	wantCborData := mustHexDecode("d87b01")
 	b, err := em.Marshal(v)
 	if err != nil {
 		t.Errorf("Marshal(%v) returned error %v", v, err)
@@ -1006,7 +1006,7 @@ func TestEncodeSharedTag(t *testing.T) {
 
 	// Encode myInt without tag number 123
 	v = myInt(2)
-	wantCborData = hexDecode("02")
+	wantCborData = mustHexDecode("02")
 	b, err = em.Marshal(v)
 	if err != nil {
 		t.Errorf("Marshal(%v) returned error %v", v, err)
@@ -1022,7 +1022,7 @@ func TestEncodeSharedTag(t *testing.T) {
 
 	// Encode myInt with tag number 234
 	v = myInt(3)
-	wantCborData = hexDecode("d8ea03")
+	wantCborData = mustHexDecode("d8ea03")
 	b, err = em.Marshal(v)
 	if err != nil {
 		t.Errorf("Marshal(%v) returned error %v", v, err)
@@ -1053,7 +1053,7 @@ func TestDecodeSharedTag(t *testing.T) {
 	// Decode myInt with tag number 123
 	var v myInt
 	wantV := myInt(1)
-	data := hexDecode("d87b01")
+	data := mustHexDecode("d87b01")
 	if err = dm.Unmarshal(data, &v); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
@@ -1066,7 +1066,7 @@ func TestDecodeSharedTag(t *testing.T) {
 
 	// Decode myInt without tag number
 	wantV = myInt(2)
-	data = hexDecode("02")
+	data = mustHexDecode("02")
 	if err := dm.Unmarshal(data, &v); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
@@ -1081,7 +1081,7 @@ func TestDecodeSharedTag(t *testing.T) {
 
 	// Decode myInt with tag number 234
 	wantV = myInt(3)
-	data = hexDecode("d8ea03")
+	data = mustHexDecode("d8ea03")
 	if err := dm.Unmarshal(data, &v); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
@@ -1165,7 +1165,7 @@ func TestEncModeWithTagsError(t *testing.T) {
 func TestNilRawTagUnmarshalCBORError(t *testing.T) {
 	wantErrorMsg := "cbor.RawTag: UnmarshalCBOR on nil pointer"
 	var tag *RawTag
-	data := hexDecode("c249010000000000000000")
+	data := mustHexDecode("c249010000000000000000")
 	if err := tag.UnmarshalCBOR(data); err == nil {
 		t.Errorf("UnmarshalCBOR() didn't return error")
 	} else if err.Error() != wantErrorMsg {
@@ -1174,7 +1174,7 @@ func TestNilRawTagUnmarshalCBORError(t *testing.T) {
 }
 
 func TestTagUnmarshalError(t *testing.T) {
-	data := hexDecode("d87b61fe") // invalid UTF-8 string
+	data := mustHexDecode("d87b61fe") // invalid UTF-8 string
 	var tag Tag
 	if err := Unmarshal(data, &tag); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return error", data)
@@ -1219,8 +1219,8 @@ func TestMarshalUninitializedRawTag(t *testing.T) {
 }
 
 func TestMarshalTagWithEmptyContent(t *testing.T) {
-	v := Tag{Number: 100}       // Tag.Content is empty
-	want := hexDecode("d864f6") // 100(null)
+	v := Tag{Number: 100}           // Tag.Content is empty
+	want := mustHexDecode("d864f6") // 100(null)
 	b, err := Marshal(v)
 	if err != nil {
 		t.Errorf("Marshal(%v) returned error %v", v, err)
@@ -1231,8 +1231,8 @@ func TestMarshalTagWithEmptyContent(t *testing.T) {
 }
 
 func TestMarshalRawTagWithEmptyContent(t *testing.T) {
-	v := RawTag{Number: 100}    // RawTag.Content is empty
-	want := hexDecode("d864f6") // 100(null)
+	v := RawTag{Number: 100}        // RawTag.Content is empty
+	want := mustHexDecode("d864f6") // 100(null)
 	b, err := Marshal(v)
 	if err != nil {
 		t.Errorf("Marshal(%v) returned error %v", v, err)
@@ -1255,8 +1255,8 @@ func TestEncodeTag(t *testing.T) {
 
 	v := Tag{100, m}
 
-	lenFirstSortedCborData := hexDecode("d864a80af520f5f4f51864f5617af58120f5626161f5811864f5") // tag number: 100, value: map with sorted keys: 10, -1, false, 100, "z", [-1], "aa", [100]
-	bytewiseSortedCborData := hexDecode("d864a80af51864f520f5617af5626161f5811864f58120f5f4f5") // tag number: 100, value: map with sorted keys: 10, 100, -1, "z", "aa", [100], [-1], false
+	lenFirstSortedCborData := mustHexDecode("d864a80af520f5f4f51864f5617af58120f5626161f5811864f5") // tag number: 100, value: map with sorted keys: 10, -1, false, 100, "z", [-1], "aa", [100]
+	bytewiseSortedCborData := mustHexDecode("d864a80af51864f520f5617af5626161f5811864f58120f5f4f5") // tag number: 100, value: map with sorted keys: 10, 100, -1, "z", "aa", [100], [-1], false
 
 	em, _ := EncOptions{Sort: SortLengthFirst}.EncMode()
 	b, err := em.Marshal(v)
@@ -1302,27 +1302,27 @@ func TestDecodeTagToEmptyIface(t *testing.T) {
 	}{
 		{
 			name:    "registered myBool",
-			data:    hexDecode("d864f5"), // 100(true)
+			data:    mustHexDecode("d864f5"), // 100(true)
 			wantObj: myBool(true),
 		},
 		{
 			name:    "registered myUint",
-			data:    hexDecode("d865d86600"), // 101(102(0))
+			data:    mustHexDecode("d865d86600"), // 101(102(0))
 			wantObj: myUint(0),
 		},
 		{
 			name:    "not registered bool",
-			data:    hexDecode("d865f5"), // 101(true)
+			data:    mustHexDecode("d865f5"), // 101(true)
 			wantObj: Tag{101, true},
 		},
 		{
 			name:    "not registered uint",
-			data:    hexDecode("d865d86700"), // 101(103(0))
+			data:    mustHexDecode("d865d86700"), // 101(103(0))
 			wantObj: Tag{101, Tag{103, uint64(0)}},
 		},
 		{
 			name:    "not registered uint",
-			data:    hexDecode("d865d866d86700"), // 101(102(103(0)))
+			data:    mustHexDecode("d865d866d86700"), // 101(102(103(0)))
 			wantObj: Tag{101, Tag{102, Tag{103, uint64(0)}}},
 		},
 	}
@@ -1360,7 +1360,7 @@ func TestDecodeRegisteredTagToEmptyIfaceError(t *testing.T) {
 
 	dm, _ := DecOptions{}.DecModeWithTags(tags)
 
-	data := hexDecode("d865d8663bffffffffffffffff") // 101(102(-18446744073709551616))
+	data := mustHexDecode("d865d8663bffffffffffffffff") // 101(102(-18446744073709551616))
 
 	var v any
 	if err := dm.Unmarshal(data, &v); err == nil {
@@ -1411,7 +1411,7 @@ func TestDecodeRegisterTagForUnmarshaler(t *testing.T) {
 		t.Fatalf("TagSet.Add(%s, %d) returned error %v", typ, 100, err)
 	}
 
-	data := hexDecode("d864a1636e756d01") // 100({"num": 1})
+	data := mustHexDecode("d864a1636e756d01") // 100({"num": 1})
 	wantObj := number3(1)
 
 	dm, _ := DecOptions{}.DecModeWithTags(tags)
@@ -1519,7 +1519,7 @@ func TestEncodeBuiltinTag(t *testing.T) {
 			name: "rfc 3339 content is not encoded as byte string",
 			tag:  Tag{Number: tagNumRFC3339Time, Content: "2013-03-21T20:04:00Z"},
 			opts: EncOptions{String: StringToByteString},
-			want: hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			want: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1561,73 +1561,73 @@ func TestUnmarshalRawTagOnBadData(t *testing.T) {
 		// Wrong CBOR types
 		{
 			name:   "uint type",
-			data:   hexDecode("01"),
+			data:   mustHexDecode("01"),
 			errMsg: "cbor: cannot unmarshal positive integer into Go value of type cbor.RawTag",
 		},
 		{
 			name:   "int type",
-			data:   hexDecode("20"),
+			data:   mustHexDecode("20"),
 			errMsg: "cbor: cannot unmarshal negative integer into Go value of type cbor.RawTag",
 		},
 		{
 			name:   "byte string type",
-			data:   hexDecode("40"),
+			data:   mustHexDecode("40"),
 			errMsg: "cbor: cannot unmarshal byte string into Go value of type cbor.RawTag",
 		},
 		{
 			name:   "string type",
-			data:   hexDecode("60"),
+			data:   mustHexDecode("60"),
 			errMsg: "cbor: cannot unmarshal UTF-8 text string into Go value of type cbor.RawTag",
 		},
 		{
 			name:   "array type",
-			data:   hexDecode("80"),
+			data:   mustHexDecode("80"),
 			errMsg: "cbor: cannot unmarshal array into Go value of type cbor.RawTag",
 		},
 		{
 			name:   "map type",
-			data:   hexDecode("a0"),
+			data:   mustHexDecode("a0"),
 			errMsg: "cbor: cannot unmarshal map into Go value of type cbor.RawTag",
 		},
 		{
 			name:   "primitive type",
-			data:   hexDecode("f4"),
+			data:   mustHexDecode("f4"),
 			errMsg: "cbor: cannot unmarshal primitives into Go value of type cbor.RawTag",
 		},
 		{
 			name:   "float type",
-			data:   hexDecode("f90000"),
+			data:   mustHexDecode("f90000"),
 			errMsg: "cbor: cannot unmarshal primitives into Go value of type cbor.RawTag",
 		},
 
 		// Truncated CBOR data
 		{
 			name:   "truncated head",
-			data:   hexDecode("18"),
+			data:   mustHexDecode("18"),
 			errMsg: io.ErrUnexpectedEOF.Error(),
 		},
 
 		// Truncated CBOR tag data
 		{
 			name:   "truncated tag number",
-			data:   hexDecode("d8"),
+			data:   mustHexDecode("d8"),
 			errMsg: io.ErrUnexpectedEOF.Error(),
 		},
 		{
 			name:   "tag number not followed by tag content",
-			data:   hexDecode("da"),
+			data:   mustHexDecode("da"),
 			errMsg: io.ErrUnexpectedEOF.Error(),
 		},
 		{
 			name:   "truncated tag content",
-			data:   hexDecode("c074323031332d30332d32315432303a30343a3030"),
+			data:   mustHexDecode("c074323031332d30332d32315432303a30343a3030"),
 			errMsg: io.ErrUnexpectedEOF.Error(),
 		},
 
 		// Extraneous CBOR data
 		{
 			name:   "extraneous data",
-			data:   hexDecode("c074323031332d30332d32315432303a30343a30305a00"),
+			data:   mustHexDecode("c074323031332d30332d32315432303a30343a30305a00"),
 			errMsg: "cbor: 1 bytes of extraneous data starting at index 22",
 		},
 	}
