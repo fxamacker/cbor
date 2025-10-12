@@ -4,6 +4,7 @@
 package cbor
 
 import (
+	"bytes"
 	"encoding"
 	"encoding/base64"
 	"encoding/binary"
@@ -95,7 +96,7 @@ import (
 //
 // To unmarshal CBOR null (0xf6) and undefined (0xf7) values into a
 // slice/map/pointer, Unmarshal sets Go value to nil.  Because null is often
-// used to mean "not present", unmarshalling CBOR null and undefined value
+// used to mean "not present", unmarshaling CBOR null and undefined value
 // into any other Go type has no effect and returns no error.
 //
 // Unmarshal supports CBOR tag 55799 (self-describe CBOR), tag 0 and 1 (time),
@@ -203,7 +204,7 @@ type DupMapKeyError struct {
 }
 
 func (e *DupMapKeyError) Error() string {
-	return fmt.Sprintf("cbor: found duplicate map key \"%v\" at map element index %d", e.Key, e.Index)
+	return fmt.Sprintf("cbor: found duplicate map key %#v at map element index %d", e.Key, e.Index)
 }
 
 // UnknownFieldError describes detected unknown field in CBOR map when decoding to Go struct.
@@ -388,7 +389,7 @@ const (
 	// - return UnmarshalTypeError if value doesn't fit into int64
 	IntDecConvertSignedOrFail
 
-	// IntDecConvertSigned affects how CBOR integers (major type 0 and 1) decode to Go interface{}.
+	// IntDecConvertSignedOrBigInt affects how CBOR integers (major type 0 and 1) decode to Go interface{}.
 	// It makes CBOR integers (major type 0 and 1) decode to:
 	// - int64 if value fits
 	// - big.Int or *big.Int (see BigIntDecMode) if value doesn't fit into int64
@@ -494,11 +495,11 @@ type BigIntDecMode int
 
 const (
 	// BigIntDecodeValue makes CBOR bignum decode to big.Int (instead of *big.Int)
-	// when unmarshalling into a Go interface{}.
+	// when unmarshaling into a Go interface{}.
 	BigIntDecodeValue BigIntDecMode = iota
 
 	// BigIntDecodePointer makes CBOR bignum decode to *big.Int when
-	// unmarshalling into a Go interface{}.
+	// unmarshaling into a Go interface{}.
 	BigIntDecodePointer
 
 	maxBigIntDecMode
@@ -750,6 +751,25 @@ func (bum BinaryUnmarshalerMode) valid() bool {
 	return bum >= 0 && bum < maxBinaryUnmarshalerMode
 }
 
+// TextUnmarshalerMode specifies how to decode into types that implement
+// encoding.TextUnmarshaler.
+type TextUnmarshalerMode int
+
+const (
+	// TextUnmarshalerNone does not recognize TextUnmarshaler implementations during decode.
+	TextUnmarshalerNone TextUnmarshalerMode = iota
+
+	// TextUnmarshalerTextString will invoke UnmarshalText on the contents of a CBOR text
+	// string when decoding into a value that implements TextUnmarshaler.
+	TextUnmarshalerTextString
+
+	maxTextUnmarshalerMode
+)
+
+func (tum TextUnmarshalerMode) valid() bool {
+	return tum >= 0 && tum < maxTextUnmarshalerMode
+}
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -800,7 +820,7 @@ type DecOptions struct {
 	// TagsMd specifies whether to allow CBOR tags (major type 6).
 	TagsMd TagsMode
 
-	// IntDec specifies which Go integer type (int64 or uint64) to use
+	// IntDec specifies which Go integer type (int64, uint64, or [big.Int]) to use
 	// when decoding CBOR int (major type 0 and 1) to Go interface{}.
 	IntDec IntDecMode
 
@@ -814,7 +834,7 @@ type DecOptions struct {
 	ExtraReturnErrors ExtraDecErrorCond
 
 	// DefaultMapType specifies Go map type to create and decode to
-	// when unmarshalling CBOR into an empty interface value.
+	// when unmarshaling CBOR into an empty interface value.
 	// By default, unmarshal uses map[interface{}]interface{}.
 	DefaultMapType reflect.Type
 
@@ -886,6 +906,15 @@ type DecOptions struct {
 	// BinaryUnmarshaler specifies how to decode into types that implement
 	// encoding.BinaryUnmarshaler.
 	BinaryUnmarshaler BinaryUnmarshalerMode
+
+	// TextUnmarshaler specifies how to decode into types that implement
+	// encoding.TextUnmarshaler.
+	TextUnmarshaler TextUnmarshalerMode
+
+	// JSONUnmarshalerTranscoder sets the transcoding scheme used to unmarshal types that
+	// implement json.Unmarshaler but do not also implement cbor.Unmarshaler. If nil, decoding
+	// behavior is not influenced by whether or not a type implements json.Unmarshaler.
+	JSONUnmarshalerTranscoder Transcoder
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -1100,33 +1129,39 @@ func (opts DecOptions) decMode() (*decMode, error) { //nolint:gocritic // ignore
 		return nil, errors.New("cbor: invalid BinaryUnmarshaler " + strconv.Itoa(int(opts.BinaryUnmarshaler)))
 	}
 
+	if !opts.TextUnmarshaler.valid() {
+		return nil, errors.New("cbor: invalid TextUnmarshaler " + strconv.Itoa(int(opts.TextUnmarshaler)))
+	}
+
 	dm := decMode{
-		dupMapKey:                opts.DupMapKey,
-		timeTag:                  opts.TimeTag,
-		maxNestedLevels:          opts.MaxNestedLevels,
-		maxArrayElements:         opts.MaxArrayElements,
-		maxMapPairs:              opts.MaxMapPairs,
-		indefLength:              opts.IndefLength,
-		tagsMd:                   opts.TagsMd,
-		intDec:                   opts.IntDec,
-		mapKeyByteString:         opts.MapKeyByteString,
-		extraReturnErrors:        opts.ExtraReturnErrors,
-		defaultMapType:           opts.DefaultMapType,
-		utf8:                     opts.UTF8,
-		fieldNameMatching:        opts.FieldNameMatching,
-		bigIntDec:                opts.BigIntDec,
-		defaultByteStringType:    opts.DefaultByteStringType,
-		byteStringToString:       opts.ByteStringToString,
-		fieldNameByteString:      opts.FieldNameByteString,
-		unrecognizedTagToAny:     opts.UnrecognizedTagToAny,
-		timeTagToAny:             opts.TimeTagToAny,
-		simpleValues:             simpleValues,
-		nanDec:                   opts.NaN,
-		infDec:                   opts.Inf,
-		byteStringToTime:         opts.ByteStringToTime,
-		byteStringExpectedFormat: opts.ByteStringExpectedFormat,
-		bignumTag:                opts.BignumTag,
-		binaryUnmarshaler:        opts.BinaryUnmarshaler,
+		dupMapKey:                 opts.DupMapKey,
+		timeTag:                   opts.TimeTag,
+		maxNestedLevels:           opts.MaxNestedLevels,
+		maxArrayElements:          opts.MaxArrayElements,
+		maxMapPairs:               opts.MaxMapPairs,
+		indefLength:               opts.IndefLength,
+		tagsMd:                    opts.TagsMd,
+		intDec:                    opts.IntDec,
+		mapKeyByteString:          opts.MapKeyByteString,
+		extraReturnErrors:         opts.ExtraReturnErrors,
+		defaultMapType:            opts.DefaultMapType,
+		utf8:                      opts.UTF8,
+		fieldNameMatching:         opts.FieldNameMatching,
+		bigIntDec:                 opts.BigIntDec,
+		defaultByteStringType:     opts.DefaultByteStringType,
+		byteStringToString:        opts.ByteStringToString,
+		fieldNameByteString:       opts.FieldNameByteString,
+		unrecognizedTagToAny:      opts.UnrecognizedTagToAny,
+		timeTagToAny:              opts.TimeTagToAny,
+		simpleValues:              simpleValues,
+		nanDec:                    opts.NaN,
+		infDec:                    opts.Inf,
+		byteStringToTime:          opts.ByteStringToTime,
+		byteStringExpectedFormat:  opts.ByteStringExpectedFormat,
+		bignumTag:                 opts.BignumTag,
+		binaryUnmarshaler:         opts.BinaryUnmarshaler,
+		textUnmarshaler:           opts.TextUnmarshaler,
+		jsonUnmarshalerTranscoder: opts.JSONUnmarshalerTranscoder,
 	}
 
 	return &dm, nil
@@ -1185,33 +1220,35 @@ type DecMode interface {
 }
 
 type decMode struct {
-	tags                     tagProvider
-	dupMapKey                DupMapKeyMode
-	timeTag                  DecTagMode
-	maxNestedLevels          int
-	maxArrayElements         int
-	maxMapPairs              int
-	indefLength              IndefLengthMode
-	tagsMd                   TagsMode
-	intDec                   IntDecMode
-	mapKeyByteString         MapKeyByteStringMode
-	extraReturnErrors        ExtraDecErrorCond
-	defaultMapType           reflect.Type
-	utf8                     UTF8Mode
-	fieldNameMatching        FieldNameMatchingMode
-	bigIntDec                BigIntDecMode
-	defaultByteStringType    reflect.Type
-	byteStringToString       ByteStringToStringMode
-	fieldNameByteString      FieldNameByteStringMode
-	unrecognizedTagToAny     UnrecognizedTagToAnyMode
-	timeTagToAny             TimeTagToAnyMode
-	simpleValues             *SimpleValueRegistry
-	nanDec                   NaNMode
-	infDec                   InfMode
-	byteStringToTime         ByteStringToTimeMode
-	byteStringExpectedFormat ByteStringExpectedFormatMode
-	bignumTag                BignumTagMode
-	binaryUnmarshaler        BinaryUnmarshalerMode
+	tags                      tagProvider
+	dupMapKey                 DupMapKeyMode
+	timeTag                   DecTagMode
+	maxNestedLevels           int
+	maxArrayElements          int
+	maxMapPairs               int
+	indefLength               IndefLengthMode
+	tagsMd                    TagsMode
+	intDec                    IntDecMode
+	mapKeyByteString          MapKeyByteStringMode
+	extraReturnErrors         ExtraDecErrorCond
+	defaultMapType            reflect.Type
+	utf8                      UTF8Mode
+	fieldNameMatching         FieldNameMatchingMode
+	bigIntDec                 BigIntDecMode
+	defaultByteStringType     reflect.Type
+	byteStringToString        ByteStringToStringMode
+	fieldNameByteString       FieldNameByteStringMode
+	unrecognizedTagToAny      UnrecognizedTagToAnyMode
+	timeTagToAny              TimeTagToAnyMode
+	simpleValues              *SimpleValueRegistry
+	nanDec                    NaNMode
+	infDec                    InfMode
+	byteStringToTime          ByteStringToTimeMode
+	byteStringExpectedFormat  ByteStringExpectedFormatMode
+	bignumTag                 BignumTagMode
+	binaryUnmarshaler         BinaryUnmarshalerMode
+	textUnmarshaler           TextUnmarshalerMode
+	jsonUnmarshalerTranscoder Transcoder
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -1226,32 +1263,34 @@ func (dm *decMode) DecOptions() DecOptions {
 	}
 
 	return DecOptions{
-		DupMapKey:                dm.dupMapKey,
-		TimeTag:                  dm.timeTag,
-		MaxNestedLevels:          dm.maxNestedLevels,
-		MaxArrayElements:         dm.maxArrayElements,
-		MaxMapPairs:              dm.maxMapPairs,
-		IndefLength:              dm.indefLength,
-		TagsMd:                   dm.tagsMd,
-		IntDec:                   dm.intDec,
-		MapKeyByteString:         dm.mapKeyByteString,
-		ExtraReturnErrors:        dm.extraReturnErrors,
-		DefaultMapType:           dm.defaultMapType,
-		UTF8:                     dm.utf8,
-		FieldNameMatching:        dm.fieldNameMatching,
-		BigIntDec:                dm.bigIntDec,
-		DefaultByteStringType:    dm.defaultByteStringType,
-		ByteStringToString:       dm.byteStringToString,
-		FieldNameByteString:      dm.fieldNameByteString,
-		UnrecognizedTagToAny:     dm.unrecognizedTagToAny,
-		TimeTagToAny:             dm.timeTagToAny,
-		SimpleValues:             simpleValues,
-		NaN:                      dm.nanDec,
-		Inf:                      dm.infDec,
-		ByteStringToTime:         dm.byteStringToTime,
-		ByteStringExpectedFormat: dm.byteStringExpectedFormat,
-		BignumTag:                dm.bignumTag,
-		BinaryUnmarshaler:        dm.binaryUnmarshaler,
+		DupMapKey:                 dm.dupMapKey,
+		TimeTag:                   dm.timeTag,
+		MaxNestedLevels:           dm.maxNestedLevels,
+		MaxArrayElements:          dm.maxArrayElements,
+		MaxMapPairs:               dm.maxMapPairs,
+		IndefLength:               dm.indefLength,
+		TagsMd:                    dm.tagsMd,
+		IntDec:                    dm.intDec,
+		MapKeyByteString:          dm.mapKeyByteString,
+		ExtraReturnErrors:         dm.extraReturnErrors,
+		DefaultMapType:            dm.defaultMapType,
+		UTF8:                      dm.utf8,
+		FieldNameMatching:         dm.fieldNameMatching,
+		BigIntDec:                 dm.bigIntDec,
+		DefaultByteStringType:     dm.defaultByteStringType,
+		ByteStringToString:        dm.byteStringToString,
+		FieldNameByteString:       dm.fieldNameByteString,
+		UnrecognizedTagToAny:      dm.unrecognizedTagToAny,
+		TimeTagToAny:              dm.timeTagToAny,
+		SimpleValues:              simpleValues,
+		NaN:                       dm.nanDec,
+		Inf:                       dm.infDec,
+		ByteStringToTime:          dm.byteStringToTime,
+		ByteStringExpectedFormat:  dm.byteStringExpectedFormat,
+		BignumTag:                 dm.bignumTag,
+		BinaryUnmarshaler:         dm.binaryUnmarshaler,
+		TextUnmarshaler:           dm.textUnmarshaler,
+		JSONUnmarshalerTranscoder: dm.jsonUnmarshalerTranscoder,
 	}
 }
 
@@ -1396,7 +1435,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 	// Decode CBOR nil or CBOR undefined to pointer value by setting pointer value to nil.
 	if d.nextCBORNil() && v.Kind() == reflect.Pointer {
 		d.skip()
-		v.Set(reflect.Zero(v.Type()))
+		v.SetZero()
 		return nil
 	}
 
@@ -1496,6 +1535,14 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 
 		case specialTypeUnexportedUnmarshalerIface:
 			return d.parseToUnexportedUnmarshaler(v)
+
+		case specialTypeJSONUnmarshalerIface:
+			// This special type implies that the type does not also implement
+			// cbor.Umarshaler.
+			if d.dm.jsonUnmarshalerTranscoder == nil {
+				break
+			}
+			return d.parseToJSONUnmarshaler(v)
 		}
 	}
 
@@ -1552,14 +1599,14 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 			return err
 		}
 		copied = copied || converted
-		return fillByteString(t, b, !copied, v, d.dm.byteStringToString, d.dm.binaryUnmarshaler)
+		return fillByteString(t, b, !copied, v, d.dm.byteStringToString, d.dm.binaryUnmarshaler, d.dm.textUnmarshaler)
 
 	case cborTypeTextString:
 		b, err := d.parseTextString()
 		if err != nil {
 			return err
 		}
-		return fillTextString(t, b, v)
+		return fillTextString(t, b, v, d.dm.textUnmarshaler)
 
 	case cborTypePrimitives:
 		_, ai, val := d.getHead()
@@ -1611,7 +1658,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				return nil
 			}
 			if tInfo.nonPtrKind == reflect.Slice || tInfo.nonPtrKind == reflect.Array {
-				return fillByteString(t, b, !copied, v, ByteStringToStringForbidden, d.dm.binaryUnmarshaler)
+				return fillByteString(t, b, !copied, v, ByteStringToStringForbidden, d.dm.binaryUnmarshaler, d.dm.textUnmarshaler)
 			}
 			if bi.IsUint64() {
 				return fillPositiveInt(t, bi.Uint64(), v)
@@ -1634,7 +1681,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				return nil
 			}
 			if tInfo.nonPtrKind == reflect.Slice || tInfo.nonPtrKind == reflect.Array {
-				return fillByteString(t, b, !copied, v, ByteStringToStringForbidden, d.dm.binaryUnmarshaler)
+				return fillByteString(t, b, !copied, v, ByteStringToStringForbidden, d.dm.binaryUnmarshaler, d.dm.textUnmarshaler)
 			}
 			if bi.IsInt64() {
 				return fillNegativeInt(t, bi.Int64(), v)
@@ -1859,6 +1906,32 @@ func (d *decoder) parseToUnexportedUnmarshaler(v reflect.Value) error {
 	}
 	d.skip()
 	return errors.New("cbor: failed to assert " + v.Type().String() + " as cbor.unmarshaler")
+}
+
+// parseToJSONUnmarshaler parses CBOR data to be transcoded to JSON and passed to the value's
+// implementation of the json.Unmarshaler interface. It assumes data is well-formed, and does not
+// perform bounds checking.
+func (d *decoder) parseToJSONUnmarshaler(v reflect.Value) error {
+	if d.nextCBORNil() && v.Kind() == reflect.Pointer && v.IsNil() {
+		d.skip()
+		return nil
+	}
+
+	if v.Kind() != reflect.Pointer && v.CanAddr() {
+		v = v.Addr()
+	}
+	if u, ok := v.Interface().(jsonUnmarshaler); ok {
+		start := d.off
+		d.skip()
+		e := getEncodeBuffer()
+		defer putEncodeBuffer(e)
+		if err := d.dm.jsonUnmarshalerTranscoder.Transcode(e, bytes.NewReader(d.data[start:d.off])); err != nil {
+			return &TranscodeError{err: err, rtype: v.Type(), sourceFormat: "cbor", targetFormat: "json"}
+		}
+		return u.UnmarshalJSON(e.Bytes())
+	}
+	d.skip()
+	return errors.New("cbor: failed to assert " + v.Type().String() + " as json.Unmarshaler")
 }
 
 // parse parses CBOR data and returns value in default Go type.
@@ -2346,9 +2419,8 @@ func (d *decoder) parseArrayToArray(v reflect.Value, tInfo *typeInfo) error {
 	}
 	// Set remaining Go array elements to zero values.
 	if gi < vLen {
-		zeroV := reflect.Zero(tInfo.elemTypeInfo.typ)
 		for ; gi < vLen; gi++ {
-			v.Index(gi).Set(zeroV)
+			v.Index(gi).SetZero()
 		}
 	}
 	return err
@@ -2428,7 +2500,7 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 	}
 	keyType, eleType := tInfo.keyTypeInfo.typ, tInfo.elemTypeInfo.typ
 	reuseKey, reuseEle := isImmutableKind(tInfo.keyTypeInfo.kind), isImmutableKind(tInfo.elemTypeInfo.kind)
-	var keyValue, eleValue, zeroKeyValue, zeroEleValue reflect.Value
+	var keyValue, eleValue reflect.Value
 	keyIsInterfaceType := keyType == typeIntf // If key type is interface{}, need to check if key value is hashable.
 	var err, lastErr error
 	keyCount := v.Len()
@@ -2447,10 +2519,7 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 		if !keyValue.IsValid() {
 			keyValue = reflect.New(keyType).Elem()
 		} else if !reuseKey {
-			if !zeroKeyValue.IsValid() {
-				zeroKeyValue = reflect.Zero(keyType)
-			}
-			keyValue.Set(zeroKeyValue)
+			keyValue.SetZero()
 		}
 		if lastErr = d.parseToValue(keyValue, tInfo.keyTypeInfo); lastErr != nil {
 			if err == nil {
@@ -2485,10 +2554,7 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 		if !eleValue.IsValid() {
 			eleValue = reflect.New(eleType).Elem()
 		} else if !reuseEle {
-			if !zeroEleValue.IsValid() {
-				zeroEleValue = reflect.Zero(eleType)
-			}
-			eleValue.Set(zeroEleValue)
+			eleValue.SetZero()
 		}
 		if lastErr := d.parseToValue(eleValue, tInfo.elemTypeInfo); lastErr != nil {
 			if err == nil {
@@ -3020,6 +3086,8 @@ func (d *decoder) nextCBORNil() bool {
 	return d.data[d.off] == 0xf6 || d.data[d.off] == 0xf7
 }
 
+type jsonUnmarshaler interface{ UnmarshalJSON([]byte) error }
+
 var (
 	typeIntf                  = reflect.TypeOf([]any(nil)).Elem()
 	typeTime                  = reflect.TypeOf(time.Time{})
@@ -3027,6 +3095,8 @@ var (
 	typeUnmarshaler           = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
 	typeUnexportedUnmarshaler = reflect.TypeOf((*unmarshaler)(nil)).Elem()
 	typeBinaryUnmarshaler     = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
+	typeTextUnmarshaler       = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
+	typeJSONUnmarshaler       = reflect.TypeOf((*jsonUnmarshaler)(nil)).Elem()
 	typeString                = reflect.TypeOf("")
 	typeByteSlice             = reflect.TypeOf([]byte(nil))
 )
@@ -3034,7 +3104,7 @@ var (
 func fillNil(_ cborType, v reflect.Value) error {
 	switch v.Kind() {
 	case reflect.Slice, reflect.Map, reflect.Interface, reflect.Pointer:
-		v.Set(reflect.Zero(v.Type()))
+		v.SetZero()
 		return nil
 	}
 	return nil
@@ -3135,7 +3205,7 @@ func fillFloat(t cborType, val float64, v reflect.Value) error {
 	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
 }
 
-func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, bsts ByteStringToStringMode, bum BinaryUnmarshalerMode) error {
+func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, bsts ByteStringToStringMode, bum BinaryUnmarshalerMode, tum TextUnmarshalerMode) error {
 	if bum == BinaryUnmarshalerByteString && reflect.PointerTo(v.Type()).Implements(typeBinaryUnmarshaler) {
 		if v.CanAddr() {
 			v = v.Addr()
@@ -3148,9 +3218,26 @@ func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, bsts B
 		}
 		return errors.New("cbor: cannot set new value for " + v.Type().String())
 	}
-	if bsts != ByteStringToStringForbidden && v.Kind() == reflect.String {
-		v.SetString(string(val))
-		return nil
+	if bsts != ByteStringToStringForbidden {
+		if tum == TextUnmarshalerTextString && reflect.PointerTo(v.Type()).Implements(typeTextUnmarshaler) {
+			if v.CanAddr() {
+				v = v.Addr()
+				if u, ok := v.Interface().(encoding.TextUnmarshaler); ok {
+					// The contract of TextUnmarshaler forbids retaining the input
+					// bytes, so no copying is required even if val is shared.
+					if err := u.UnmarshalText(val); err != nil {
+						return fmt.Errorf("cbor: cannot unmarshal text for %s: %w", v.Type(), err)
+					}
+					return nil
+				}
+			}
+			return errors.New("cbor: cannot set new value for " + v.Type().String())
+		}
+
+		if v.Kind() == reflect.String {
+			v.SetString(string(val))
+			return nil
+		}
 	}
 	if v.Kind() == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8 {
 		src := val
@@ -3170,9 +3257,8 @@ func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, bsts B
 		}
 		// Set remaining Go array elements to zero values.
 		if i < vLen {
-			zeroV := reflect.Zero(reflect.TypeOf(byte(0)))
 			for ; i < vLen; i++ {
-				v.Index(i).Set(zeroV)
+				v.Index(i).SetZero()
 			}
 		}
 		return nil
@@ -3180,11 +3266,28 @@ func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, bsts B
 	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
 }
 
-func fillTextString(t cborType, val []byte, v reflect.Value) error {
+func fillTextString(t cborType, val []byte, v reflect.Value, tum TextUnmarshalerMode) error {
+	// Check if the value implements TextUnmarshaler and the mode allows it
+	if tum == TextUnmarshalerTextString && reflect.PointerTo(v.Type()).Implements(typeTextUnmarshaler) {
+		if v.CanAddr() {
+			v = v.Addr()
+			if u, ok := v.Interface().(encoding.TextUnmarshaler); ok {
+				// The contract of TextUnmarshaler forbids retaining the input
+				// bytes, so no copying is required even if val is shared.
+				if err := u.UnmarshalText(val); err != nil {
+					return fmt.Errorf("cbor: cannot unmarshal text for %s: %w", v.Type(), err)
+				}
+				return nil
+			}
+		}
+		return errors.New("cbor: cannot set new value for " + v.Type().String())
+	}
+
 	if v.Kind() == reflect.String {
 		v.SetString(string(val))
 		return nil
 	}
+
 	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
 }
 

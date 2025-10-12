@@ -26,9 +26,18 @@ func TestDecoder(t *testing.T) {
 		name   string
 		reader io.Reader
 	}{
-		{"bytes.Buffer", &buf},
-		{"1 byte reader", newNBytesReader(buf.Bytes(), 1)},
-		{"toggled reader", newToggledReader(buf.Bytes(), 1)},
+		{
+			name:   "bytes.Buffer",
+			reader: &buf,
+		},
+		{
+			name:   "1 byte reader",
+			reader: newNBytesReader(buf.Bytes(), 1),
+		},
+		{
+			name:   "toggled reader",
+			reader: newToggledReader(buf.Bytes(), 1),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -83,9 +92,18 @@ func TestDecoderUnmarshalTypeError(t *testing.T) {
 		name   string
 		reader io.Reader
 	}{
-		{"bytes.Buffer", &buf},
-		{"1 byte reader", newNBytesReader(buf.Bytes(), 1)},
-		{"toggled reader", newToggledReader(buf.Bytes(), 1)},
+		{
+			name:   "bytes.Buffer",
+			reader: &buf,
+		},
+		{
+			name:   "1 byte reader",
+			reader: newNBytesReader(buf.Bytes(), 1),
+		},
+		{
+			name:   "toggled reader",
+			reader: newToggledReader(buf.Bytes(), 1),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -150,9 +168,18 @@ func TestDecoderUnexpectedEOFError(t *testing.T) {
 		name   string
 		reader io.Reader
 	}{
-		{"bytes.Buffer", &buf},
-		{"1 byte reader", newNBytesReader(buf.Bytes(), 1)},
-		{"toggled reader", newToggledReader(buf.Bytes(), 1)},
+		{
+			name:   "bytes.Buffer",
+			reader: &buf,
+		},
+		{
+			name:   "1 byte reader",
+			reader: newNBytesReader(buf.Bytes(), 1),
+		},
+		{
+			name:   "toggled reader",
+			reader: newToggledReader(buf.Bytes(), 1),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -206,9 +233,18 @@ func TestDecoderReadError(t *testing.T) {
 		name   string
 		reader io.Reader
 	}{
-		{"byte reader", newNBytesReaderWithError(buf.Bytes(), 512, readerErr)},
-		{"1 byte reader", newNBytesReaderWithError(buf.Bytes(), 1, readerErr)},
-		{"toggled reader", newToggledReaderWithError(buf.Bytes(), 1, readerErr)},
+		{
+			name:   "byte reader",
+			reader: newNBytesReaderWithError(buf.Bytes(), 512, readerErr),
+		},
+		{
+			name:   "1 byte reader",
+			reader: newNBytesReaderWithError(buf.Bytes(), 1, readerErr),
+		},
+		{
+			name:   "toggled reader",
+			reader: newToggledReaderWithError(buf.Bytes(), 1, readerErr),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -256,9 +292,21 @@ func TestDecoderNoData(t *testing.T) {
 		reader  io.Reader
 		wantErr error
 	}{
-		{"byte.Buffer", new(bytes.Buffer), io.EOF},
-		{"1 byte reader", newNBytesReaderWithError(nil, 0, readerErr), readerErr},
-		{"toggled reader", newToggledReaderWithError(nil, 0, readerErr), readerErr},
+		{
+			name:    "byte.Buffer",
+			reader:  new(bytes.Buffer),
+			wantErr: io.EOF,
+		},
+		{
+			name:    "1 byte reader",
+			reader:  newNBytesReaderWithError(nil, 0, readerErr),
+			wantErr: readerErr,
+		},
+		{
+			name:    "toggled reader",
+			reader:  newToggledReaderWithError(nil, 0, readerErr),
+			wantErr: readerErr,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -279,7 +327,7 @@ func TestDecoderNoData(t *testing.T) {
 }
 
 func TestDecoderRecoverableReadError(t *testing.T) {
-	data := hexDecode("83010203") // [1,2,3]
+	data := mustHexDecode("83010203") // [1,2,3]
 	wantValue := []any{uint64(1), uint64(2), uint64(3)}
 	recoverableReaderErr := errors.New("recoverable reader error")
 
@@ -344,9 +392,18 @@ func TestDecoderSkip(t *testing.T) {
 		name   string
 		reader io.Reader
 	}{
-		{"bytes.Buffer", &buf},
-		{"1 byte reader", newNBytesReader(buf.Bytes(), 1)},
-		{"toggled reader", newToggledReader(buf.Bytes(), 1)},
+		{
+			name:   "bytes.Buffer",
+			reader: &buf,
+		},
+		{
+			name:   "1 byte reader",
+			reader: newNBytesReader(buf.Bytes(), 1),
+		},
+		{
+			name:   "toggled reader",
+			reader: newToggledReader(buf.Bytes(), 1),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -386,9 +443,18 @@ func TestDecoderSkipInvalidDataError(t *testing.T) {
 		name   string
 		reader io.Reader
 	}{
-		{"bytes.Buffer", &buf},
-		{"1 byte reader", newNBytesReader(buf.Bytes(), 1)},
-		{"toggled reader", newToggledReader(buf.Bytes(), 1)},
+		{
+			name:   "bytes.Buffer",
+			reader: &buf,
+		},
+		{
+			name:   "1 byte reader",
+			reader: newNBytesReader(buf.Bytes(), 1),
+		},
+		{
+			name:   "toggled reader",
+			reader: newToggledReader(buf.Bytes(), 1),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -429,9 +495,18 @@ func TestDecoderSkipUnexpectedEOFError(t *testing.T) {
 		name   string
 		reader io.Reader
 	}{
-		{"bytes.Buffer", &buf},
-		{"1 byte reader", newNBytesReader(buf.Bytes(), 1)},
-		{"toggled reader", newToggledReader(buf.Bytes(), 1)},
+		{
+			name:   "bytes.Buffer",
+			reader: &buf,
+		},
+		{
+			name:   "1 byte reader",
+			reader: newNBytesReader(buf.Bytes(), 1),
+		},
+		{
+			name:   "toggled reader",
+			reader: newToggledReader(buf.Bytes(), 1),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -472,9 +547,18 @@ func TestDecoderSkipReadError(t *testing.T) {
 		name   string
 		reader io.Reader
 	}{
-		{"byte reader", newNBytesReaderWithError(buf.Bytes(), 512, readerErr)},
-		{"1 byte reader", newNBytesReaderWithError(buf.Bytes(), 1, readerErr)},
-		{"toggled reader", newToggledReaderWithError(buf.Bytes(), 1, readerErr)},
+		{
+			name:   "byte reader",
+			reader: newNBytesReaderWithError(buf.Bytes(), 512, readerErr),
+		},
+		{
+			name:   "1 byte reader",
+			reader: newNBytesReaderWithError(buf.Bytes(), 1, readerErr),
+		},
+		{
+			name:   "toggled reader",
+			reader: newToggledReaderWithError(buf.Bytes(), 1, readerErr),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -510,9 +594,21 @@ func TestDecoderSkipNoData(t *testing.T) {
 		reader  io.Reader
 		wantErr error
 	}{
-		{"byte.Buffer", new(bytes.Buffer), io.EOF},
-		{"1 byte reader", newNBytesReaderWithError(nil, 0, readerErr), readerErr},
-		{"toggled reader", newToggledReaderWithError(nil, 0, readerErr), readerErr},
+		{
+			name:    "byte.Buffer",
+			reader:  new(bytes.Buffer),
+			wantErr: io.EOF,
+		},
+		{
+			name:    "1 byte reader",
+			reader:  newNBytesReaderWithError(nil, 0, readerErr),
+			wantErr: readerErr,
+		},
+		{
+			name:    "toggled reader",
+			reader:  newToggledReaderWithError(nil, 0, readerErr),
+			wantErr: readerErr,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -529,7 +625,7 @@ func TestDecoderSkipNoData(t *testing.T) {
 }
 
 func TestDecoderSkipRecoverableReadError(t *testing.T) {
-	data := hexDecode("83010203") // [1,2,3]
+	data := mustHexDecode("83010203") // [1,2,3]
 	recoverableReaderErr := errors.New("recoverable reader error")
 
 	decoder := NewDecoder(newRecoverableReader(data, 1, recoverableReaderErr))
@@ -565,7 +661,7 @@ func TestDecoderStructTag(t *testing.T) {
 		B: "B",
 		C: "C",
 	}
-	data := hexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
+	data := mustHexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
 
 	var v strc
 	dec := NewDecoder(bytes.NewReader(data))
@@ -691,9 +787,21 @@ func TestEncoderError(t *testing.T) {
 		value        any
 		wantErrorMsg string
 	}{
-		{"channel cannot be marshaled", make(chan bool), "cbor: unsupported type: chan bool"},
-		{"function cannot be marshaled", func(i int) int { return i * i }, "cbor: unsupported type: func(int) int"},
-		{"complex cannot be marshaled", complex(100, 8), "cbor: unsupported type: complex128"},
+		{
+			name:         "channel cannot be marshaled",
+			value:        make(chan bool),
+			wantErrorMsg: "cbor: unsupported type: chan bool",
+		},
+		{
+			name:         "function cannot be marshaled",
+			value:        func(i int) int { return i * i },
+			wantErrorMsg: "cbor: unsupported type: func(int) int",
+		},
+		{
+			name:         "complex cannot be marshaled",
+			value:        complex(100, 8),
+			wantErrorMsg: "cbor: unsupported type: complex128",
+		},
 	}
 	var w bytes.Buffer
 	encoder := NewEncoder(&w)
@@ -716,7 +824,7 @@ func TestEncoderError(t *testing.T) {
 }
 
 func TestIndefiniteByteString(t *testing.T) {
-	want := hexDecode("5f42010243030405ff")
+	want := mustHexDecode("5f42010243030405ff")
 	var w bytes.Buffer
 	encoder := NewEncoder(&w)
 	if err := encoder.StartIndefiniteByteString(); err != nil {
@@ -755,7 +863,7 @@ func TestIndefiniteByteStringError(t *testing.T) {
 }
 
 func TestIndefiniteTextString(t *testing.T) {
-	want := hexDecode("7f657374726561646d696e67ff")
+	want := mustHexDecode("7f657374726561646d696e67ff")
 	var w bytes.Buffer
 	encoder := NewEncoder(&w)
 	if err := encoder.StartIndefiniteTextString(); err != nil {
@@ -789,7 +897,7 @@ func TestIndefiniteTextStringError(t *testing.T) {
 }
 
 func TestIndefiniteArray(t *testing.T) {
-	want := hexDecode("9f018202039f0405ffff")
+	want := mustHexDecode("9f018202039f0405ffff")
 	var w bytes.Buffer
 	encoder := NewEncoder(&w)
 	if err := encoder.StartIndefiniteArray(); err != nil {
@@ -822,7 +930,7 @@ func TestIndefiniteArray(t *testing.T) {
 }
 
 func TestIndefiniteMap(t *testing.T) {
-	want := hexDecode("bf61610161629f0203ffff")
+	want := mustHexDecode("bf61610161629f0203ffff")
 	var w bytes.Buffer
 	em, err := EncOptions{Sort: SortCanonical}.EncMode()
 	if err != nil {
@@ -886,7 +994,7 @@ func TestEncoderStructTag(t *testing.T) {
 		B: "B",
 		C: "C",
 	}
-	want := hexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
+	want := mustHexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
 
 	var w bytes.Buffer
 	encoder := NewEncoder(&w)
@@ -904,8 +1012,8 @@ func TestRawMessage(t *testing.T) {
 		B *RawMessage `cbor:"b"`
 		C *RawMessage `cbor:"c"`
 	}
-	data := hexDecode("a361610161628202036163f6") // {"a": 1, "b": [2, 3], "c": nil},
-	r := RawMessage(hexDecode("820203"))
+	data := mustHexDecode("a361610161628202036163f6") // {"a": 1, "b": [2, 3], "c": nil},
+	r := RawMessage(mustHexDecode("820203"))
 	want := strc{
 		A: RawMessage([]byte{0x01}),
 		B: &r,
@@ -967,7 +1075,7 @@ func TestEmptyRawMessage(t *testing.T) {
 func TestNilRawMessageUnmarshalCBORError(t *testing.T) {
 	wantErrorMsg := "cbor.RawMessage: UnmarshalCBOR on nil pointer"
 	var r *RawMessage
-	data := hexDecode("01")
+	data := mustHexDecode("01")
 	if err := r.UnmarshalCBOR(data); err == nil {
 		t.Errorf("UnmarshalCBOR() didn't return error")
 	} else if err.Error() != wantErrorMsg {
