@@ -903,33 +903,33 @@ var defaultEncMode, _ = EncOptions{}.encMode()
 // non-Marshaler object that exceeds default limits.
 var (
 	marshalerForbidIndefLengthForbidTagsDecMode = decMode{
-		maxNestedLevels:  maxMaxNestedLevels,
-		maxArrayElements: maxMaxArrayElements,
-		maxMapPairs:      maxMaxMapPairs,
+		maxNestedLevels:  MaxMaxNestedLevels,
+		maxArrayElements: MaxMaxArrayElements,
+		maxMapPairs:      MaxMaxMapPairs,
 		indefLength:      IndefLengthForbidden,
 		tagsMd:           TagsForbidden,
 	}
 
 	marshalerAllowIndefLengthForbidTagsDecMode = decMode{
-		maxNestedLevels:  maxMaxNestedLevels,
-		maxArrayElements: maxMaxArrayElements,
-		maxMapPairs:      maxMaxMapPairs,
+		maxNestedLevels:  MaxMaxNestedLevels,
+		maxArrayElements: MaxMaxArrayElements,
+		maxMapPairs:      MaxMaxMapPairs,
 		indefLength:      IndefLengthAllowed,
 		tagsMd:           TagsForbidden,
 	}
 
 	marshalerForbidIndefLengthAllowTagsDecMode = decMode{
-		maxNestedLevels:  maxMaxNestedLevels,
-		maxArrayElements: maxMaxArrayElements,
-		maxMapPairs:      maxMaxMapPairs,
+		maxNestedLevels:  MaxMaxNestedLevels,
+		maxArrayElements: MaxMaxArrayElements,
+		maxMapPairs:      MaxMaxMapPairs,
 		indefLength:      IndefLengthForbidden,
 		tagsMd:           TagsAllowed,
 	}
 
 	marshalerAllowIndefLengthAllowTagsDecMode = decMode{
-		maxNestedLevels:  maxMaxNestedLevels,
-		maxArrayElements: maxMaxArrayElements,
-		maxMapPairs:      maxMaxMapPairs,
+		maxNestedLevels:  MaxMaxNestedLevels,
+		maxArrayElements: MaxMaxArrayElements,
+		maxMapPairs:      MaxMaxMapPairs,
 		indefLength:      IndefLengthAllowed,
 		tagsMd:           TagsAllowed,
 	}
@@ -956,9 +956,9 @@ func getMarshalerDecMode(indefLength IndefLengthMode, tagsMd TagsMode) *decMode 
 		// This should never happen, unless we add new options to
 		// IndefLengthMode or TagsMode without updating this function.
 		return &decMode{
-			maxNestedLevels:  maxMaxNestedLevels,
-			maxArrayElements: maxMaxArrayElements,
-			maxMapPairs:      maxMaxMapPairs,
+			maxNestedLevels:  MaxMaxNestedLevels,
+			maxArrayElements: MaxMaxArrayElements,
+			maxMapPairs:      MaxMaxMapPairs,
 			indefLength:      indefLength,
 			tagsMd:           tagsMd,
 		}

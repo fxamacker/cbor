@@ -986,17 +986,17 @@ func (opts DecOptions) DecModeWithSharedTags(tags TagSet) (DecMode, error) { //n
 }
 
 const (
-	defaultMaxArrayElements = 131072
-	minMaxArrayElements     = 16
-	maxMaxArrayElements     = 2147483647
+	DefaultMaxArrayElements = 131072
+	MinMaxArrayElements     = 16
+	MaxMaxArrayElements     = 2147483647
 
-	defaultMaxMapPairs = 131072
-	minMaxMapPairs     = 16
-	maxMaxMapPairs     = 2147483647
+	DefaultMaxMapPairs = 131072
+	MinMaxMapPairs     = 16
+	MaxMaxMapPairs     = 2147483647
 
-	defaultMaxNestedLevels = 32
-	minMaxNestedLevels     = 4
-	maxMaxNestedLevels     = 65535
+	DefaultMaxNestedLevels = 32
+	MinMaxNestedLevels     = 4
+	MaxMaxNestedLevels     = 65535
 )
 
 var defaultSimpleValues = func() *SimpleValueRegistry {
@@ -1034,24 +1034,24 @@ func (opts DecOptions) decMode() (*decMode, error) { //nolint:gocritic // ignore
 	}
 
 	if opts.MaxNestedLevels == 0 {
-		opts.MaxNestedLevels = defaultMaxNestedLevels
-	} else if opts.MaxNestedLevels < minMaxNestedLevels || opts.MaxNestedLevels > maxMaxNestedLevels {
+		opts.MaxNestedLevels = DefaultMaxNestedLevels
+	} else if opts.MaxNestedLevels < MinMaxNestedLevels || opts.MaxNestedLevels > MaxMaxNestedLevels {
 		return nil, errors.New("cbor: invalid MaxNestedLevels " + strconv.Itoa(opts.MaxNestedLevels) +
-			" (range is [" + strconv.Itoa(minMaxNestedLevels) + ", " + strconv.Itoa(maxMaxNestedLevels) + "])")
+			" (range is [" + strconv.Itoa(MinMaxNestedLevels) + ", " + strconv.Itoa(MaxMaxNestedLevels) + "])")
 	}
 
 	if opts.MaxArrayElements == 0 {
-		opts.MaxArrayElements = defaultMaxArrayElements
-	} else if opts.MaxArrayElements < minMaxArrayElements || opts.MaxArrayElements > maxMaxArrayElements {
+		opts.MaxArrayElements = DefaultMaxArrayElements
+	} else if opts.MaxArrayElements < MinMaxArrayElements || opts.MaxArrayElements > MaxMaxArrayElements {
 		return nil, errors.New("cbor: invalid MaxArrayElements " + strconv.Itoa(opts.MaxArrayElements) +
-			" (range is [" + strconv.Itoa(minMaxArrayElements) + ", " + strconv.Itoa(maxMaxArrayElements) + "])")
+			" (range is [" + strconv.Itoa(MinMaxArrayElements) + ", " + strconv.Itoa(MaxMaxArrayElements) + "])")
 	}
 
 	if opts.MaxMapPairs == 0 {
-		opts.MaxMapPairs = defaultMaxMapPairs
-	} else if opts.MaxMapPairs < minMaxMapPairs || opts.MaxMapPairs > maxMaxMapPairs {
+		opts.MaxMapPairs = DefaultMaxMapPairs
+	} else if opts.MaxMapPairs < MinMaxMapPairs || opts.MaxMapPairs > MaxMaxMapPairs {
 		return nil, errors.New("cbor: invalid MaxMapPairs " + strconv.Itoa(opts.MaxMapPairs) +
-			" (range is [" + strconv.Itoa(minMaxMapPairs) + ", " + strconv.Itoa(maxMaxMapPairs) + "])")
+			" (range is [" + strconv.Itoa(MinMaxMapPairs) + ", " + strconv.Itoa(MaxMaxMapPairs) + "])")
 	}
 
 	if !opts.ExtraReturnErrors.valid() {

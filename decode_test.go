@@ -5660,8 +5660,8 @@ func TestDecModeDefaultMaxMapPairs(t *testing.T) {
 		t.Errorf("DecMode() returned error %v", err)
 	} else {
 		maxMapPairs := dm.DecOptions().MaxMapPairs
-		if maxMapPairs != defaultMaxMapPairs {
-			t.Errorf("DecOptions().MaxMapPairs = %d, want %v", maxMapPairs, defaultMaxMapPairs)
+		if maxMapPairs != DefaultMaxMapPairs {
+			t.Errorf("DecOptions().MaxMapPairs = %d, want %v", maxMapPairs, DefaultMaxMapPairs)
 		}
 	}
 }
@@ -5701,8 +5701,8 @@ func TestDecModeDefaultMaxArrayElements(t *testing.T) {
 		t.Errorf("DecMode() returned error %v", err)
 	} else {
 		maxArrayElements := dm.DecOptions().MaxArrayElements
-		if maxArrayElements != defaultMaxArrayElements {
-			t.Errorf("DecOptions().MaxArrayElementsr = %d, want %v", maxArrayElements, defaultMaxArrayElements)
+		if maxArrayElements != DefaultMaxArrayElements {
+			t.Errorf("DecOptions().MaxArrayElementsr = %d, want %v", maxArrayElements, DefaultMaxArrayElements)
 		}
 	}
 }
