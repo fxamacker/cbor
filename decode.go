@@ -769,6 +769,26 @@ func (tum TextUnmarshalerMode) valid() bool {
 	return tum >= 0 && tum < maxTextUnmarshalerMode
 }
 
+// FloatPrecision sets whether float64 CBOR values are decoded into float32 if the number cannot
+// be stored exactly.
+type FloatPrecisionMode int
+
+const (
+	// FloatPrecisionIgnored will decode float64 values into a float32 Go type even if
+	// precision is lost.
+	FloatPrecisionIgnored FloatPrecisionMode = iota
+
+	// FloatPrecisionKept will return an error when trying to decode a float64 into a float32,
+	// if precision will be lost.
+	FloatPrecisionKept
+
+	maxFloatPrecisionMode
+)
+
+func (fpm FloatPrecisionMode) valid() bool {
+	return fpm >= 0 && fpm < maxFloatPrecisionMode
+}
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -912,6 +932,10 @@ type DecOptions struct {
 	// implement json.Unmarshaler but do not also implement cbor.Unmarshaler. If nil, decoding
 	// behavior is not influenced by whether or not a type implements json.Unmarshaler.
 	JSONUnmarshalerTranscoder Transcoder
+
+	// FloatPrecision sets whether float64 CBOR values are decoded into float32 if the number cannot
+	// be stored exactly.
+	FloatPrecision FloatPrecisionMode
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -1128,6 +1152,10 @@ func (opts DecOptions) decMode() (*decMode, error) { //nolint:gocritic // ignore
 		return nil, errors.New("cbor: invalid TextUnmarshaler " + strconv.Itoa(int(opts.TextUnmarshaler)))
 	}
 
+	if !opts.FloatPrecision.valid() {
+		return nil, errors.New("cbor: invalid FloatPrecision " + strconv.Itoa(int(opts.FloatPrecision)))
+	}
+
 	dm := decMode{
 		dupMapKey:                 opts.DupMapKey,
 		timeTag:                   opts.TimeTag,
@@ -1157,6 +1185,7 @@ func (opts DecOptions) decMode() (*decMode, error) { //nolint:gocritic // ignore
 		binaryUnmarshaler:         opts.BinaryUnmarshaler,
 		textUnmarshaler:           opts.TextUnmarshaler,
 		jsonUnmarshalerTranscoder: opts.JSONUnmarshalerTranscoder,
+		floatPrecision:            opts.FloatPrecision,
 	}
 
 	return &dm, nil
@@ -1238,6 +1267,7 @@ type decMode struct {
 	binaryUnmarshaler         BinaryUnmarshalerMode
 	textUnmarshaler           TextUnmarshalerMode
 	jsonUnmarshalerTranscoder Transcoder
+	floatPrecision            FloatPrecisionMode
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -1280,6 +1310,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		BinaryUnmarshaler:         dm.binaryUnmarshaler,
 		TextUnmarshaler:           dm.textUnmarshaler,
 		JSONUnmarshalerTranscoder: dm.jsonUnmarshalerTranscoder,
+		FloatPrecision:            dm.floatPrecision,
 	}
 }
 
@@ -1592,7 +1623,20 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 
 		case additionalInformationAsFloat64:
 			f := math.Float64frombits(val)
-			return fillFloat(t, f, v)
+			err := fillFloat(t, f, v)
+			if d.dm.floatPrecision == FloatPrecisionIgnored || err != nil {
+				return err
+			}
+			// No error and we need to maintain float precision
+			if v.Kind() == reflect.Float64 {
+				return nil
+			} else if math.IsNaN(f) {
+				return fillFloat(t, f, v)
+			} else if f == float64(float32(f)) {
+				return nil
+			}
+			return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String(),
+				errorMsg: "float64 value would lose precision in float32 type"}
 
 		default: // ai <= 24
 			if d.dm.simpleValues.rejected[SimpleValue(val)] {
