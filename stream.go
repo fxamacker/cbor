@@ -171,14 +171,20 @@ func NewEncoder(w io.Writer) *Encoder {
 
 // Encode writes the CBOR encoding of v.
 func (enc *Encoder) Encode(v any) error {
-	if len(enc.indefTypes) > 0 && v != nil {
-		indefType := enc.indefTypes[len(enc.indefTypes)-1]
-		if indefType == cborTypeTextString {
+	if len(enc.indefTypes) > 0 {
+		switch enc.indefTypes[len(enc.indefTypes)-1] {
+		case cborTypeTextString:
+			if v == nil {
+				return errors.New("cbor: cannot encode nil for indefinite-length text string")
+			}
 			k := reflect.TypeOf(v).Kind()
 			if k != reflect.String {
 				return errors.New("cbor: cannot encode item type " + k.String() + " for indefinite-length text string")
 			}
-		} else if indefType == cborTypeByteString {
+		case cborTypeByteString:
+			if v == nil {
+				return errors.New("cbor: cannot encode nil for indefinite-length byte string")
+			}
 			t := reflect.TypeOf(v)
 			k := t.Kind()
 			if (k != reflect.Array && k != reflect.Slice) || t.Elem().Kind() != reflect.Uint8 {
@@ -219,7 +225,7 @@ func (enc *Encoder) StartIndefiniteArray() error {
 	return enc.startIndefinite(cborTypeArray)
 }
 
-// StartIndefiniteMap starts array encoding of indefinite length.
+// StartIndefiniteMap starts map encoding of indefinite length.
 // Subsequent calls of (*Encoder).Encode() encodes elements of the map
 // until EndIndefinite is called.
 func (enc *Encoder) StartIndefiniteMap() error {
