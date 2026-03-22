@@ -883,6 +883,19 @@ func TestIndefiniteTextString(t *testing.T) {
 	}
 }
 
+func TestIndefiniteByteStringNilError(t *testing.T) {
+	var w bytes.Buffer
+	encoder := NewEncoder(&w)
+	if err := encoder.StartIndefiniteByteString(); err != nil {
+		t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+	}
+	if err := encoder.Encode(nil); err == nil {
+		t.Errorf("Encode() didn't return an error")
+	} else if err.Error() != "cbor: cannot encode nil for indefinite-length byte string" {
+		t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode nil for indefinite-length byte string")
+	}
+}
+
 func TestIndefiniteTextStringError(t *testing.T) {
 	var w bytes.Buffer
 	encoder := NewEncoder(&w)
@@ -893,6 +906,24 @@ func TestIndefiniteTextStringError(t *testing.T) {
 		t.Errorf("Encode() didn't return an error")
 	} else if err.Error() != "cbor: cannot encode item type slice for indefinite-length text string" {
 		t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type slice for indefinite-length text string")
+	}
+	if err := encoder.Encode(123); err == nil {
+		t.Errorf("Encode() didn't return an error")
+	} else if err.Error() != "cbor: cannot encode item type int for indefinite-length text string" {
+		t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type int for indefinite-length text string")
+	}
+}
+
+func TestIndefiniteTextStringNilError(t *testing.T) {
+	var w bytes.Buffer
+	encoder := NewEncoder(&w)
+	if err := encoder.StartIndefiniteTextString(); err != nil {
+		t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+	}
+	if err := encoder.Encode(nil); err == nil {
+		t.Errorf("Encode() didn't return an error")
+	} else if err.Error() != "cbor: cannot encode nil for indefinite-length text string" {
+		t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode nil for indefinite-length text string")
 	}
 }
 
@@ -926,6 +957,41 @@ func TestIndefiniteArray(t *testing.T) {
 	}
 	if !bytes.Equal(w.Bytes(), want) {
 		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+	}
+}
+
+func TestIndefiniteArrayWithNilElement(t *testing.T) {
+	want := mustHexDecode("9f01f6ff") // [1, null]
+	var w bytes.Buffer
+	encoder := NewEncoder(&w)
+	if err := encoder.StartIndefiniteArray(); err != nil {
+		t.Fatalf("StartIndefiniteArray() returned error %v", err)
+	}
+	if err := encoder.Encode(1); err != nil {
+		t.Fatalf("Encode() returned error %v", err)
+	}
+	if err := encoder.Encode(nil); err != nil {
+		t.Fatalf("Encode() returned error %v", err)
+	}
+	if err := encoder.EndIndefinite(); err != nil {
+		t.Fatalf("EndIndefinite() returned error %v", err)
+	}
+	if !bytes.Equal(w.Bytes(), want) {
+		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+	}
+
+	var decoded []any
+	if err := Unmarshal(w.Bytes(), &decoded); err != nil {
+		t.Fatalf("Unmarshal() returned error %v", err)
+	}
+	if len(decoded) != 2 {
+		t.Fatalf("Unmarshal() returned %d elements, want 2", len(decoded))
+	}
+	if decoded[0] != uint64(1) {
+		t.Errorf("decoded[0] = %v (%T), want uint64(1)", decoded[0], decoded[0])
+	}
+	if decoded[1] != nil {
+		t.Errorf("decoded[1] = %v (%T), want nil", decoded[1], decoded[1])
 	}
 }
 
@@ -966,6 +1032,42 @@ func TestIndefiniteMap(t *testing.T) {
 	}
 	if !bytes.Equal(w.Bytes(), want) {
 		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+	}
+}
+
+func TestIndefiniteMapWithNilElement(t *testing.T) {
+	want := mustHexDecode("bf6161f6ff") // {"a": null}
+	var w bytes.Buffer
+	encoder := NewEncoder(&w)
+	if err := encoder.StartIndefiniteMap(); err != nil {
+		t.Fatalf("StartIndefiniteMap() returned error %v", err)
+	}
+	if err := encoder.Encode("a"); err != nil {
+		t.Fatalf("Encode() returned error %v", err)
+	}
+	if err := encoder.Encode(nil); err != nil {
+		t.Fatalf("Encode() returned error %v", err)
+	}
+	if err := encoder.EndIndefinite(); err != nil {
+		t.Fatalf("EndIndefinite() returned error %v", err)
+	}
+	if !bytes.Equal(w.Bytes(), want) {
+		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+	}
+
+	var decoded map[string]any
+	if err := Unmarshal(w.Bytes(), &decoded); err != nil {
+		t.Fatalf("Unmarshal() returned error %v", err)
+	}
+	if len(decoded) != 1 {
+		t.Fatalf("Unmarshal() returned %d entries, want 1", len(decoded))
+	}
+	v, ok := decoded["a"]
+	if !ok {
+		t.Fatalf("decoded map missing key \"a\"")
+	}
+	if v != nil {
+		t.Errorf("decoded[\"a\"] = %v (%T), want nil", v, v)
 	}
 }
 
