@@ -4377,6 +4377,18 @@ func TestDecodeInvalidTagTime(t *testing.T) {
 			wantErrorMsg:  "cbor: cannot unmarshal negative integer into Go value of type time.Time (-18446744073709551616 overflows Go's int64)",
 		},
 		{
+			name:          "tag 1 with positive float64 overflow",
+			data:          mustHexDecode("c1fb4415af1d78b58c40"), // 1(1e+20)
+			decodeToTypes: []reflect.Type{typeIntf, typeTime},
+			wantErrorMsg:  "overflows Go's int64",
+		},
+		{
+			name:          "tag 1 with negative float64 overflow",
+			data:          mustHexDecode("c1fbc415af1d78b58c40"), // 1(-1e+20)
+			decodeToTypes: []reflect.Type{typeIntf, typeTime},
+			wantErrorMsg:  "overflows Go's int64",
+		},
+		{
 			name:          "tag 1 with string content",
 			data:          mustHexDecode("c174323031332d30332d32315432303a30343a30305a"),
 			decodeToTypes: []reflect.Type{typeIntf, typeTime},
