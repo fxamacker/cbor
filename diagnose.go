@@ -51,11 +51,8 @@ const (
 	maxByteStringEncoding
 )
 
-func (bse ByteStringEncoding) valid() error {
-	if bse >= maxByteStringEncoding {
-		return errors.New("cbor: invalid ByteStringEncoding " + strconv.Itoa(int(bse)))
-	}
-	return nil
+func (bse ByteStringEncoding) valid() bool {
+	return bse < maxByteStringEncoding
 }
 
 // DiagOptions specifies Diag options.
@@ -104,8 +101,8 @@ func (opts DiagOptions) DiagMode() (DiagMode, error) {
 }
 
 func (opts DiagOptions) diagMode() (*diagMode, error) {
-	if err := opts.ByteStringEncoding.valid(); err != nil {
-		return nil, err
+	if !opts.ByteStringEncoding.valid() {
+		return nil, errors.New("cbor: invalid ByteStringEncoding " + strconv.Itoa(int(opts.ByteStringEncoding)))
 	}
 
 	decMode, err := DecOptions{

@@ -98,21 +98,6 @@ type decodingStructType struct {
 	toArray            bool
 }
 
-// The stdlib errors.Join was introduced in Go 1.20, and we still support Go 1.17, so instead,
-// here's a very basic implementation of an aggregated error.
-type multierror []error
-
-func (m multierror) Error() string {
-	var sb strings.Builder
-	for i, err := range m {
-		sb.WriteString(err.Error())
-		if i < len(m)-1 {
-			sb.WriteString(", ")
-		}
-	}
-	return sb.String()
-}
-
 func getDecodingStructType(t reflect.Type) *decodingStructType {
 	if v, _ := decodingStructTypeCache.Load(t); v != nil {
 		return v.(*decodingStructType)
@@ -145,20 +130,7 @@ func getDecodingStructType(t reflect.Type) *decodingStructType {
 		fieldIndicesByName[fld.name] = i
 	}
 
-	var err error
-	{
-		var multi multierror
-		for _, each := range errs {
-			if each != nil {
-				multi = append(multi, each)
-			}
-		}
-		if len(multi) == 1 {
-			err = multi[0]
-		} else if len(multi) > 1 {
-			err = multi
-		}
-	}
+	err := errors.Join(errs...)
 
 	structType := &decodingStructType{
 		fields:             flds,

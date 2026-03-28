@@ -30,7 +30,7 @@ import (
 // If value implements the Marshaler interface, Marshal calls its
 // MarshalCBOR method.
 //
-// If value implements encoding.BinaryMarshaler, Marhsal calls its
+// If value implements encoding.BinaryMarshaler, Marshal calls its
 // MarshalBinary method and encode it as CBOR byte string.
 //
 // Boolean values encode as CBOR booleans (type 7).
@@ -440,7 +440,7 @@ const (
 	// FieldNameToTextString encodes struct fields to CBOR text string (major type 3).
 	FieldNameToTextString FieldNameMode = iota
 
-	// FieldNameToTextString encodes struct fields to CBOR byte string (major type 2).
+	// FieldNameToByteString encodes struct fields to CBOR byte string (major type 2).
 	FieldNameToByteString
 
 	maxFieldNameMode
@@ -571,7 +571,7 @@ type EncOptions struct {
 	// RFC3339 format gets tag number 0, and numeric epoch time tag number 1.
 	TimeTag EncTagMode
 
-	// IndefLength specifies whether to allow indefinite length CBOR items.
+	// IndefLength specifies whether to allow indefinite-length CBOR items.
 	IndefLength IndefLengthMode
 
 	// NilContainers specifies how to encode nil slices and maps.
@@ -1539,8 +1539,8 @@ func encodeStruct(e *bytes.Buffer, em *encMode, v reflect.Value) (err error) {
 	// Head is rewritten later if actual encoded field count is different from struct field count.
 	encodedHeadLen := encodeHead(e, byte(cborTypeMap), uint64(len(flds)))
 
-	kvbegin := e.Len()
-	kvcount := 0
+	kvBeginOffset := e.Len()
+	kvCount := 0
 	for offset := 0; offset < len(flds); offset++ {
 		f := flds[(start+offset)%len(flds)]
 
@@ -1586,10 +1586,10 @@ func encodeStruct(e *bytes.Buffer, em *encMode, v reflect.Value) (err error) {
 			return err
 		}
 
-		kvcount++
+		kvCount++
 	}
 
-	if len(flds) == kvcount {
+	if len(flds) == kvCount {
 		// Encoded element count in head is the same as actual element count.
 		return nil
 	}
@@ -1597,8 +1597,8 @@ func encodeStruct(e *bytes.Buffer, em *encMode, v reflect.Value) (err error) {
 	// Overwrite the bytes that were reserved for the head before encoding the map entries.
 	var actualHeadLen int
 	{
-		headbuf := *bytes.NewBuffer(e.Bytes()[kvbegin-encodedHeadLen : kvbegin-encodedHeadLen : kvbegin])
-		actualHeadLen = encodeHead(&headbuf, byte(cborTypeMap), uint64(kvcount))
+		headbuf := *bytes.NewBuffer(e.Bytes()[kvBeginOffset-encodedHeadLen : kvBeginOffset-encodedHeadLen : kvBeginOffset])
+		actualHeadLen = encodeHead(&headbuf, byte(cborTypeMap), uint64(kvCount))
 	}
 
 	if actualHeadLen == encodedHeadLen {
@@ -1611,8 +1611,8 @@ func encodeStruct(e *bytes.Buffer, em *encMode, v reflect.Value) (err error) {
 	// encoded. The encoded entries are offset to the right by the number of excess reserved
 	// bytes. Shift the entries left to remove the gap.
 	excessReservedBytes := encodedHeadLen - actualHeadLen
-	dst := e.Bytes()[kvbegin-excessReservedBytes : e.Len()-excessReservedBytes]
-	src := e.Bytes()[kvbegin:e.Len()]
+	dst := e.Bytes()[kvBeginOffset-excessReservedBytes : e.Len()-excessReservedBytes]
+	src := e.Bytes()[kvBeginOffset:e.Len()]
 	copy(dst, src)
 
 	// After shifting, the excess bytes are at the end of the output buffer and they are

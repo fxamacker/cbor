@@ -204,35 +204,35 @@ func (enc *Encoder) Encode(v any) error {
 	return err
 }
 
-// StartIndefiniteByteString starts byte string encoding of indefinite length.
+// StartIndefiniteByteString starts indefinite-length byte string encoding.
 // Subsequent calls of (*Encoder).Encode() encodes definite length byte strings
 // ("chunks") as one contiguous string until EndIndefinite is called.
 func (enc *Encoder) StartIndefiniteByteString() error {
 	return enc.startIndefinite(cborTypeByteString)
 }
 
-// StartIndefiniteTextString starts text string encoding of indefinite length.
+// StartIndefiniteTextString starts indefinite-length text string encoding.
 // Subsequent calls of (*Encoder).Encode() encodes definite length text strings
 // ("chunks") as one contiguous string until EndIndefinite is called.
 func (enc *Encoder) StartIndefiniteTextString() error {
 	return enc.startIndefinite(cborTypeTextString)
 }
 
-// StartIndefiniteArray starts array encoding of indefinite length.
+// StartIndefiniteArray starts indefinite-length array encoding.
 // Subsequent calls of (*Encoder).Encode() encodes elements of the array
 // until EndIndefinite is called.
 func (enc *Encoder) StartIndefiniteArray() error {
 	return enc.startIndefinite(cborTypeArray)
 }
 
-// StartIndefiniteMap starts map encoding of indefinite length.
+// StartIndefiniteMap starts indefinite-length map encoding.
 // Subsequent calls of (*Encoder).Encode() encodes elements of the map
 // until EndIndefinite is called.
 func (enc *Encoder) StartIndefiniteMap() error {
 	return enc.startIndefinite(cborTypeMap)
 }
 
-// EndIndefinite closes last opened indefinite length value.
+// EndIndefinite closes last opened indefinite-length value.
 func (enc *Encoder) EndIndefinite() error {
 	if len(enc.indefTypes) == 0 {
 		return errors.New("cbor: cannot encode \"break\" code outside indefinite length values")
@@ -244,18 +244,22 @@ func (enc *Encoder) EndIndefinite() error {
 	return err
 }
 
-var cborIndefHeader = map[cborType][]byte{
-	cborTypeByteString: {cborByteStringWithIndefiniteLengthHead},
-	cborTypeTextString: {cborTextStringWithIndefiniteLengthHead},
-	cborTypeArray:      {cborArrayWithIndefiniteLengthHead},
-	cborTypeMap:        {cborMapWithIndefiniteLengthHead},
-}
-
 func (enc *Encoder) startIndefinite(typ cborType) error {
 	if enc.em.indefLength == IndefLengthForbidden {
 		return &IndefiniteLengthError{typ}
 	}
-	_, err := enc.w.Write(cborIndefHeader[typ])
+	var head byte
+	switch typ {
+	case cborTypeByteString:
+		head = cborByteStringWithIndefiniteLengthHead
+	case cborTypeTextString:
+		head = cborTextStringWithIndefiniteLengthHead
+	case cborTypeArray:
+		head = cborArrayWithIndefiniteLengthHead
+	case cborTypeMap:
+		head = cborMapWithIndefiniteLengthHead
+	}
+	_, err := enc.w.Write([]byte{head})
 	if err == nil {
 		enc.indefTypes = append(enc.indefTypes, typ)
 	}

@@ -17,7 +17,7 @@ import (
 func TestDecoder(t *testing.T) {
 	var buf bytes.Buffer
 	for i := 0; i < 5; i++ {
-		for _, tc := range unmarshalTests {
+		for _, tc := range unmarshalTestCases {
 			buf.Write(tc.data)
 		}
 	}
@@ -45,7 +45,7 @@ func TestDecoder(t *testing.T) {
 			decoder := NewDecoder(tc.reader)
 			bytesRead := 0
 			for i := 0; i < 5; i++ {
-				for _, tc := range unmarshalTests {
+				for _, tc := range unmarshalTestCases {
 					var v any
 					if err := decoder.Decode(&v); err != nil {
 						t.Fatalf("Decode() returned error %v", err)
@@ -81,7 +81,7 @@ func TestDecoder(t *testing.T) {
 func TestDecoderUnmarshalTypeError(t *testing.T) {
 	var buf bytes.Buffer
 	for i := 0; i < 5; i++ {
-		for _, tc := range unmarshalTests {
+		for _, tc := range unmarshalTestCases {
 			for j := 0; j < len(tc.wrongTypes)*2; j++ {
 				buf.Write(tc.data)
 			}
@@ -111,7 +111,7 @@ func TestDecoderUnmarshalTypeError(t *testing.T) {
 			decoder := NewDecoder(tc.reader)
 			bytesRead := 0
 			for i := 0; i < 5; i++ {
-				for _, tc := range unmarshalTests {
+				for _, tc := range unmarshalTestCases {
 					for _, typ := range tc.wrongTypes {
 						v := reflect.New(typ)
 						if err := decoder.Decode(v.Interface()); err == nil {
@@ -159,7 +159,7 @@ func TestDecoderUnmarshalTypeError(t *testing.T) {
 
 func TestDecoderUnexpectedEOFError(t *testing.T) {
 	var buf bytes.Buffer
-	for _, tc := range unmarshalTests {
+	for _, tc := range unmarshalTestCases {
 		buf.Write(tc.data)
 	}
 	buf.Truncate(buf.Len() - 1)
@@ -187,8 +187,8 @@ func TestDecoderUnexpectedEOFError(t *testing.T) {
 
 			decoder := NewDecoder(tc.reader)
 			bytesRead := 0
-			for i := 0; i < len(unmarshalTests)-1; i++ {
-				tc := unmarshalTests[i]
+			for i := 0; i < len(unmarshalTestCases)-1; i++ {
+				tc := unmarshalTestCases[i]
 				var v any
 				if err := decoder.Decode(&v); err != nil {
 					t.Fatalf("Decode() returned error %v", err)
@@ -222,7 +222,7 @@ func TestDecoderUnexpectedEOFError(t *testing.T) {
 
 func TestDecoderReadError(t *testing.T) {
 	var buf bytes.Buffer
-	for _, tc := range unmarshalTests {
+	for _, tc := range unmarshalTestCases {
 		buf.Write(tc.data)
 	}
 	buf.Truncate(buf.Len() - 1)
@@ -251,8 +251,8 @@ func TestDecoderReadError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			decoder := NewDecoder(tc.reader)
 			bytesRead := 0
-			for i := 0; i < len(unmarshalTests)-1; i++ {
-				tc := unmarshalTests[i]
+			for i := 0; i < len(unmarshalTestCases)-1; i++ {
+				tc := unmarshalTestCases[i]
 				var v any
 				if err := decoder.Decode(&v); err != nil {
 					t.Fatalf("Decode() returned error %v", err)
@@ -293,7 +293,7 @@ func TestDecoderNoData(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name:    "byte.Buffer",
+			name:    "bytes.Buffer",
 			reader:  new(bytes.Buffer),
 			wantErr: io.EOF,
 		},
@@ -383,7 +383,7 @@ func TestDecoderInvalidData(t *testing.T) {
 func TestDecoderSkip(t *testing.T) {
 	var buf bytes.Buffer
 	for i := 0; i < 5; i++ {
-		for _, tc := range unmarshalTests {
+		for _, tc := range unmarshalTestCases {
 			buf.Write(tc.data)
 		}
 	}
@@ -411,7 +411,7 @@ func TestDecoderSkip(t *testing.T) {
 			decoder := NewDecoder(tc.reader)
 			bytesRead := 0
 			for i := 0; i < 5; i++ {
-				for _, tc := range unmarshalTests {
+				for _, tc := range unmarshalTestCases {
 					if err := decoder.Skip(); err != nil {
 						t.Fatalf("Skip() returned error %v", err)
 					}
@@ -434,7 +434,7 @@ func TestDecoderSkip(t *testing.T) {
 
 func TestDecoderSkipInvalidDataError(t *testing.T) {
 	var buf bytes.Buffer
-	for _, tc := range unmarshalTests {
+	for _, tc := range unmarshalTestCases {
 		buf.Write(tc.data)
 	}
 	buf.WriteByte(0x3e)
@@ -461,8 +461,8 @@ func TestDecoderSkipInvalidDataError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			decoder := NewDecoder(tc.reader)
 			bytesRead := 0
-			for i := 0; i < len(unmarshalTests); i++ {
-				tc := unmarshalTests[i]
+			for i := 0; i < len(unmarshalTestCases); i++ {
+				tc := unmarshalTestCases[i]
 				if err := decoder.Skip(); err != nil {
 					t.Fatalf("Skip() returned error %v", err)
 				}
@@ -486,7 +486,7 @@ func TestDecoderSkipInvalidDataError(t *testing.T) {
 
 func TestDecoderSkipUnexpectedEOFError(t *testing.T) {
 	var buf bytes.Buffer
-	for _, tc := range unmarshalTests {
+	for _, tc := range unmarshalTestCases {
 		buf.Write(tc.data)
 	}
 	buf.Truncate(buf.Len() - 1)
@@ -513,8 +513,8 @@ func TestDecoderSkipUnexpectedEOFError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			decoder := NewDecoder(tc.reader)
 			bytesRead := 0
-			for i := 0; i < len(unmarshalTests)-1; i++ {
-				tc := unmarshalTests[i]
+			for i := 0; i < len(unmarshalTestCases)-1; i++ {
+				tc := unmarshalTestCases[i]
 				if err := decoder.Skip(); err != nil {
 					t.Fatalf("Skip() returned error %v", err)
 				}
@@ -536,7 +536,7 @@ func TestDecoderSkipUnexpectedEOFError(t *testing.T) {
 
 func TestDecoderSkipReadError(t *testing.T) {
 	var buf bytes.Buffer
-	for _, tc := range unmarshalTests {
+	for _, tc := range unmarshalTestCases {
 		buf.Write(tc.data)
 	}
 	buf.Truncate(buf.Len() - 1)
@@ -565,8 +565,8 @@ func TestDecoderSkipReadError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			decoder := NewDecoder(tc.reader)
 			bytesRead := 0
-			for i := 0; i < len(unmarshalTests)-1; i++ {
-				tc := unmarshalTests[i]
+			for i := 0; i < len(unmarshalTestCases)-1; i++ {
+				tc := unmarshalTestCases[i]
 				if err := decoder.Skip(); err != nil {
 					t.Fatalf("Skip() returned error %v", err)
 				}
@@ -595,7 +595,7 @@ func TestDecoderSkipNoData(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name:    "byte.Buffer",
+			name:    "bytes.Buffer",
 			reader:  new(bytes.Buffer),
 			wantErr: io.EOF,
 		},
@@ -767,7 +767,7 @@ func TestEncoder(t *testing.T) {
 		t.Errorf("EncMode() returned an error %v", err)
 	}
 	encoder := em.NewEncoder(&w)
-	for _, tc := range marshalTests {
+	for _, tc := range marshalTestCases {
 		for _, value := range tc.values {
 			want.Write(tc.wantData)
 
@@ -782,7 +782,7 @@ func TestEncoder(t *testing.T) {
 }
 
 func TestEncoderError(t *testing.T) {
-	testcases := []struct {
+	testCases := []struct {
 		name         string
 		value        any
 		wantErrorMsg string
@@ -805,7 +805,7 @@ func TestEncoderError(t *testing.T) {
 	}
 	var w bytes.Buffer
 	encoder := NewEncoder(&w)
-	for _, tc := range testcases {
+	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			v := tc.value
 			err := encoder.Encode(&v)

@@ -326,14 +326,14 @@ func (dmkm DupMapKeyMode) valid() bool {
 	return dmkm >= 0 && dmkm < maxDupMapKeyMode
 }
 
-// IndefLengthMode specifies whether to allow indefinite length items.
+// IndefLengthMode specifies whether to allow indefinite-length items.
 type IndefLengthMode int
 
 const (
-	// IndefLengthAllowed allows indefinite length items.
+	// IndefLengthAllowed allows indefinite-length items.
 	IndefLengthAllowed IndefLengthMode = iota
 
-	// IndefLengthForbidden disallows indefinite length items.
+	// IndefLengthForbidden disallows indefinite-length items.
 	IndefLengthForbidden
 
 	maxIndefLengthMode
@@ -811,7 +811,7 @@ type DecOptions struct {
 	// Default is 128*1024=131072 and it can be set to [16, 2147483647]
 	MaxMapPairs int
 
-	// IndefLength specifies whether to allow indefinite length CBOR items.
+	// IndefLength specifies whether to allow indefinite-length CBOR items.
 	IndefLength IndefLengthMode
 
 	// TagsMd specifies whether to allow CBOR tags (major type 6).
@@ -1149,8 +1149,8 @@ func (opts DecOptions) decMode() (*decMode, error) { //nolint:gocritic // ignore
 		unrecognizedTagToAny:      opts.UnrecognizedTagToAny,
 		timeTagToAny:              opts.TimeTagToAny,
 		simpleValues:              simpleValues,
-		nanDec:                    opts.NaN,
-		infDec:                    opts.Inf,
+		nan:                       opts.NaN,
+		inf:                       opts.Inf,
 		byteStringToTime:          opts.ByteStringToTime,
 		byteStringExpectedFormat:  opts.ByteStringExpectedFormat,
 		bignumTag:                 opts.BignumTag,
@@ -1230,8 +1230,8 @@ type decMode struct {
 	unrecognizedTagToAny      UnrecognizedTagToAnyMode
 	timeTagToAny              TimeTagToAnyMode
 	simpleValues              *SimpleValueRegistry
-	nanDec                    NaNMode
-	infDec                    InfMode
+	nan                       NaNMode
+	inf                       InfMode
 	byteStringToTime          ByteStringToTimeMode
 	byteStringExpectedFormat  ByteStringExpectedFormatMode
 	bignumTag                 BignumTagMode
@@ -1272,8 +1272,8 @@ func (dm *decMode) DecOptions() DecOptions {
 		UnrecognizedTagToAny:      dm.unrecognizedTagToAny,
 		TimeTagToAny:              dm.timeTagToAny,
 		SimpleValues:              simpleValues,
-		NaN:                       dm.nanDec,
-		Inf:                       dm.infDec,
+		NaN:                       dm.nan,
+		Inf:                       dm.inf,
 		ByteStringToTime:          dm.byteStringToTime,
 		ByteStringExpectedFormat:  dm.byteStringExpectedFormat,
 		BignumTag:                 dm.bignumTag,
@@ -2206,7 +2206,7 @@ func (d *decoder) parseByteString() ([]byte, bool) {
 		d.off += int(val)
 		return b, false
 	}
-	// Process indefinite length string chunks.
+	// Process indefinite-length string chunks.
 	b := []byte{}
 	for !d.foundBreak() {
 		_, _, val = d.getHead()
@@ -2307,7 +2307,7 @@ func (d *decoder) parseTextString() ([]byte, error) {
 		}
 		return b, nil
 	}
-	// Process indefinite length string chunks.
+	// Process indefinite-length string chunks.
 	b := []byte{}
 	for !d.foundBreak() {
 		_, _, val = d.getHead()
