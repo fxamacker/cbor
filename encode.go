@@ -1431,7 +1431,7 @@ func (x *bytewiseKeyValueSorter) Swap(i, j int) {
 
 func (x *bytewiseKeyValueSorter) Less(i, j int) bool {
 	kvi, kvj := x.kvs[i], x.kvs[j]
-	return bytes.Compare(x.data[kvi.offset:kvi.valueOffset], x.data[kvj.offset:kvj.valueOffset]) <= 0
+	return bytes.Compare(x.data[kvi.offset:kvi.valueOffset], x.data[kvj.offset:kvj.valueOffset]) < 0
 }
 
 type lengthFirstKeyValueSorter struct {
@@ -1452,7 +1452,7 @@ func (x *lengthFirstKeyValueSorter) Less(i, j int) bool {
 	if keyLengthDifference := (kvi.valueOffset - kvi.offset) - (kvj.valueOffset - kvj.offset); keyLengthDifference != 0 {
 		return keyLengthDifference < 0
 	}
-	return bytes.Compare(x.data[kvi.offset:kvi.valueOffset], x.data[kvj.offset:kvj.valueOffset]) <= 0
+	return bytes.Compare(x.data[kvi.offset:kvi.valueOffset], x.data[kvj.offset:kvj.valueOffset]) < 0
 }
 
 var keyValuePool = sync.Pool{}

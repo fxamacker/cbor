@@ -175,7 +175,7 @@ func (x *bytewiseFieldSorter) Swap(i, j int) {
 }
 
 func (x *bytewiseFieldSorter) Less(i, j int) bool {
-	return bytes.Compare(x.fields[i].cborName, x.fields[j].cborName) <= 0
+	return bytes.Compare(x.fields[i].cborName, x.fields[j].cborName) < 0
 }
 
 type lengthFirstFieldSorter struct {
@@ -194,7 +194,7 @@ func (x *lengthFirstFieldSorter) Less(i, j int) bool {
 	if len(x.fields[i].cborName) != len(x.fields[j].cborName) {
 		return len(x.fields[i].cborName) < len(x.fields[j].cborName)
 	}
-	return bytes.Compare(x.fields[i].cborName, x.fields[j].cborName) <= 0
+	return bytes.Compare(x.fields[i].cborName, x.fields[j].cborName) < 0
 }
 
 func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
