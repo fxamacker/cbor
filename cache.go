@@ -92,9 +92,9 @@ func newTypeInfo(t reflect.Type) *typeInfo {
 }
 
 type decodingStructType struct {
-	fields               fields
-	fieldIndicesByName   map[string]int
-	fieldIndicesByIntKey map[int64]int
+	fields               decodingFields
+	fieldIndicesByName   map[string]int // Only populated if toArray is false
+	fieldIndicesByIntKey map[int64]int  // Only populated if toArray is false
 	err                  error
 	toArray              bool
 }
@@ -119,39 +119,43 @@ func getDecodingStructType(t reflect.Type) (*decodingStructType, error) {
 	fieldIndicesByName := make(map[string]int, len(flds))
 	var fieldIndicesByIntKey map[int64]int
 
-	for i := 0; i < len(flds); i++ {
-		if flds[i].keyAsInt {
-			nameAsInt, numErr := strconv.Atoi(flds[i].name)
+	decFlds := make(decodingFields, len(flds))
+	for i, f := range flds {
+		if f.keyAsInt {
+			nameAsInt, numErr := strconv.Atoi(f.name)
 			if numErr != nil {
 				structType := &decodingStructType{
-					err: errors.New("cbor: failed to parse field name \"" + flds[i].name + "\" to int (" + numErr.Error() + ")"),
+					err: errors.New("cbor: failed to parse field name \"" + f.name + "\" to int (" + numErr.Error() + ")"),
 				}
 				decodingStructTypeCache.Store(t, structType)
 				return nil, structType.err
 			}
-			flds[i].nameAsInt = int64(nameAsInt)
+			f.nameAsInt = int64(nameAsInt)
 		}
 
-		if _, ok := fieldIndicesByName[flds[i].name]; ok {
+		if _, ok := fieldIndicesByName[f.name]; ok {
 			structType := &decodingStructType{
-				err: fmt.Errorf("cbor: two or more fields of %v have the same name %q", t, flds[i].name),
+				err: fmt.Errorf("cbor: two or more fields of %v have the same name %q", t, f.name),
 			}
 			decodingStructTypeCache.Store(t, structType)
 			return nil, structType.err
 		}
-		fieldIndicesByName[flds[i].name] = i
-		if flds[i].keyAsInt {
+		fieldIndicesByName[f.name] = i
+		if f.keyAsInt {
 			if fieldIndicesByIntKey == nil {
 				fieldIndicesByIntKey = make(map[int64]int, len(flds))
 			}
-			fieldIndicesByIntKey[flds[i].nameAsInt] = i
+			fieldIndicesByIntKey[f.nameAsInt] = i
 		}
 
-		flds[i].typInfo = getTypeInfo(flds[i].typ)
+		decFlds[i] = &decodingField{
+			field:   *f,
+			typInfo: getTypeInfo(f.typ),
+		}
 	}
 
 	structType := &decodingStructType{
-		fields:               flds,
+		fields:               decFlds,
 		fieldIndicesByName:   fieldIndicesByName,
 		fieldIndicesByIntKey: fieldIndicesByIntKey,
 	}
@@ -160,24 +164,28 @@ func getDecodingStructType(t reflect.Type) (*decodingStructType, error) {
 }
 
 func getDecodingStructToArrayType(t reflect.Type, flds fields) (*decodingStructType, error) {
-	for i := 0; i < len(flds); i++ {
+	decFlds := make(decodingFields, len(flds))
+	for i, f := range flds {
 		// nameAsInt is set in getFields() except for fields with an unparsable tagged name.
 		// Atoi() is called here to catch and save parsing errors.
-		if flds[i].keyAsInt && flds[i].nameAsInt == 0 {
-			if _, numErr := strconv.Atoi(flds[i].name); numErr != nil {
+		if f.keyAsInt && f.nameAsInt == 0 {
+			if _, numErr := strconv.Atoi(f.name); numErr != nil {
 				structType := &decodingStructType{
-					err: errors.New("cbor: failed to parse field name \"" + flds[i].name + "\" to int (" + numErr.Error() + ")"),
+					err: errors.New("cbor: failed to parse field name \"" + f.name + "\" to int (" + numErr.Error() + ")"),
 				}
 				decodingStructTypeCache.Store(t, structType)
 				return nil, structType.err
 			}
 		}
 
-		flds[i].typInfo = getTypeInfo(flds[i].typ)
+		decFlds[i] = &decodingField{
+			field:   *f,
+			typInfo: getTypeInfo(f.typ),
+		}
 	}
 
 	structType := &decodingStructType{
-		fields:  flds,
+		fields:  decFlds,
 		toArray: true,
 	}
 	decodingStructTypeCache.Store(t, structType)
@@ -185,15 +193,15 @@ func getDecodingStructToArrayType(t reflect.Type, flds fields) (*decodingStructT
 }
 
 type encodingStructType struct {
-	fields             fields
-	bytewiseFields     fields
-	lengthFirstFields  fields
-	omitEmptyFieldsIdx []int
+	fields             encodingFields
+	bytewiseFields     encodingFields // Only populated if toArray is false
+	lengthFirstFields  encodingFields // Only populated if toArray is false
+	omitEmptyFieldsIdx []int          // Only populated if toArray is false
 	err                error
 	toArray            bool
 }
 
-func (st *encodingStructType) getFields(em *encMode) fields {
+func (st *encodingStructType) getFields(em *encMode) encodingFields {
 	switch em.sort {
 	case SortNone, SortFastShuffle:
 		return st.fields
@@ -205,7 +213,7 @@ func (st *encodingStructType) getFields(em *encMode) fields {
 }
 
 type bytewiseFieldSorter struct {
-	fields fields
+	fields encodingFields
 }
 
 func (x *bytewiseFieldSorter) Len() int {
@@ -221,7 +229,7 @@ func (x *bytewiseFieldSorter) Less(i, j int) bool {
 }
 
 type lengthFirstFieldSorter struct {
-	fields fields
+	fields encodingFields
 }
 
 func (x *lengthFirstFieldSorter) Len() int {
@@ -258,13 +266,18 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 	var hasKeyAsStr bool
 	var omitEmptyIdx []int
 
+	encFlds := make(encodingFields, len(flds))
+
 	e := getEncodeBuffer()
 	defer putEncodeBuffer(e)
 
-	for i := 0; i < len(flds); i++ {
+	for i, f := range flds {
+		encFlds[i] = &encodingField{field: *f}
+		ef := encFlds[i]
+
 		// Get field's encodeFunc
-		flds[i].ef, flds[i].ief, flds[i].izf = getEncodeFunc(flds[i].typ)
-		if flds[i].ef == nil {
+		ef.ef, ef.ief, ef.izf = getEncodeFunc(f.typ)
+		if ef.ef == nil {
 			structType := &encodingStructType{err: &UnsupportedTypeError{t}}
 			encodingStructTypeCache.Store(t, structType)
 			return nil, structType.err
@@ -287,51 +300,51 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 				n := nameAsInt*(-1) - 1
 				encodeHead(e, byte(cborTypeNegativeInt), uint64(n))
 			}
-			flds[i].cborName = make([]byte, e.Len())
-			copy(flds[i].cborName, e.Bytes())
+			ef.cborName = make([]byte, e.Len())
+			copy(ef.cborName, e.Bytes())
 			e.Reset()
 
 			hasKeyAsInt = true
 		} else {
-			encodeHead(e, byte(cborTypeTextString), uint64(len(flds[i].name)))
-			flds[i].cborName = make([]byte, e.Len()+len(flds[i].name))
-			n := copy(flds[i].cborName, e.Bytes())
-			copy(flds[i].cborName[n:], flds[i].name)
+			encodeHead(e, byte(cborTypeTextString), uint64(len(f.name)))
+			ef.cborName = make([]byte, e.Len()+len(f.name))
+			n := copy(ef.cborName, e.Bytes())
+			copy(ef.cborName[n:], f.name)
 			e.Reset()
 
 			// If cborName contains a text string, then cborNameByteString contains a
 			// string that has the byte string major type but is otherwise identical to
 			// cborName.
-			flds[i].cborNameByteString = make([]byte, len(flds[i].cborName))
-			copy(flds[i].cborNameByteString, flds[i].cborName)
+			ef.cborNameByteString = make([]byte, len(ef.cborName))
+			copy(ef.cborNameByteString, ef.cborName)
 			// Reset encoded CBOR type to byte string, preserving the "additional
 			// information" bits:
-			flds[i].cborNameByteString[0] = byte(cborTypeByteString) |
-				getAdditionalInformation(flds[i].cborNameByteString[0])
+			ef.cborNameByteString[0] = byte(cborTypeByteString) |
+				getAdditionalInformation(ef.cborNameByteString[0])
 
 			hasKeyAsStr = true
 		}
 
 		// Check if field can be omitted when empty
-		if flds[i].omitEmpty {
+		if f.omitEmpty {
 			omitEmptyIdx = append(omitEmptyIdx, i)
 		}
 	}
 
 	// Sort fields by canonical order
-	bytewiseFields := make(fields, len(flds))
-	copy(bytewiseFields, flds)
+	bytewiseFields := make(encodingFields, len(encFlds))
+	copy(bytewiseFields, encFlds)
 	sort.Sort(&bytewiseFieldSorter{bytewiseFields})
 
 	lengthFirstFields := bytewiseFields
 	if hasKeyAsInt && hasKeyAsStr {
-		lengthFirstFields = make(fields, len(flds))
-		copy(lengthFirstFields, flds)
+		lengthFirstFields = make(encodingFields, len(encFlds))
+		copy(lengthFirstFields, encFlds)
 		sort.Sort(&lengthFirstFieldSorter{lengthFirstFields})
 	}
 
 	structType := &encodingStructType{
-		fields:             flds,
+		fields:             encFlds,
 		bytewiseFields:     bytewiseFields,
 		lengthFirstFields:  lengthFirstFields,
 		omitEmptyFieldsIdx: omitEmptyIdx,
@@ -342,10 +355,11 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 }
 
 func getEncodingStructToArrayType(t reflect.Type, flds fields) (*encodingStructType, error) {
-	for i := 0; i < len(flds); i++ {
-		// Get field's encodeFunc
-		flds[i].ef, flds[i].ief, flds[i].izf = getEncodeFunc(flds[i].typ)
-		if flds[i].ef == nil {
+	encFlds := make(encodingFields, len(flds))
+	for i, f := range flds {
+		encFlds[i] = &encodingField{field: *f}
+		encFlds[i].ef, encFlds[i].ief, encFlds[i].izf = getEncodeFunc(f.typ)
+		if encFlds[i].ef == nil {
 			structType := &encodingStructType{err: &UnsupportedTypeError{t}}
 			encodingStructTypeCache.Store(t, structType)
 			return nil, structType.err
@@ -353,7 +367,7 @@ func getEncodingStructToArrayType(t reflect.Type, flds fields) (*encodingStructT
 	}
 
 	structType := &encodingStructType{
-		fields:  flds,
+		fields:  encFlds,
 		toArray: true,
 	}
 	encodingStructTypeCache.Store(t, structType)

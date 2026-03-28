@@ -9,24 +9,39 @@ import (
 	"strings"
 )
 
+// field holds shared struct field metadata returned by getFields().
 type field struct {
-	name               string
-	nameAsInt          int64 // used to decoder to match field name with CBOR int
-	cborName           []byte
-	cborNameByteString []byte // major type 2 name encoding iff cborName has major type 3
-	idx                []int
-	typ                reflect.Type
-	ef                 encodeFunc
-	ief                isEmptyFunc
-	izf                isZeroFunc
-	typInfo            *typeInfo // used to decoder to reuse type info
-	tagged             bool      // used to choose dominant field (at the same level tagged fields dominate untagged fields)
-	omitEmpty          bool      // used to skip empty field
-	omitZero           bool      // used to skip zero field
-	keyAsInt           bool      // used to encode/decode field name as int
+	name      string
+	nameAsInt int64 // used to match field name with CBOR int
+	idx       []int
+	typ       reflect.Type // used during cache building only
+	keyAsInt  bool         // used to encode/decode field name as int
+	tagged    bool         // used to choose dominant field (at the same level tagged fields dominate untagged fields)
+	omitEmpty bool         // used to skip empty field
+	omitZero  bool         // used to skip zero field
 }
 
 type fields []*field
+
+// encodingField extends field with encoding-specific data.
+type encodingField struct {
+	field
+	cborName           []byte
+	cborNameByteString []byte // major type 2 name encoding if cborName has major type 3
+	ef                 encodeFunc
+	ief                isEmptyFunc
+	izf                isZeroFunc
+}
+
+type encodingFields []*encodingField
+
+// decodingField extends field with decoding-specific data.
+type decodingField struct {
+	field
+	typInfo *typeInfo // used by decoder to reuse type info
+}
+
+type decodingFields []*decodingField
 
 // indexFieldSorter sorts fields by field idx at each level, breaking ties with idx depth.
 type indexFieldSorter struct {

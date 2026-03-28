@@ -49,17 +49,17 @@ func findStructFieldByKey(
 
 // findFieldCaseInsensitive returns the index of the first field whose name
 // case-insensitively matches key, or -1 and false if no field matches.
-func findFieldCaseInsensitive(flds fields, key string) (int, bool) {
+func findFieldCaseInsensitive(flds decodingFields, key string) (int, bool) {
 	keyLen := len(key)
-	for i := 0; i < len(flds); i++ {
-		if len(flds[i].name) == keyLen && strings.EqualFold(flds[i].name, key) {
+	for i, f := range flds {
+		if len(f.name) == keyLen && strings.EqualFold(f.name, key) {
 			return i, true
 		}
 	}
 	return -1, false
 }
 
-// handleUnmatchedMapKey handles a map entry whose key doesn not match any struct
+// handleUnmatchedMapKey handles a map entry whose key does not match any struct
 // field. It can return UnknownFieldError or DupMapKeyError.
 // handleUnmatchedMapKey consumes the CBOR value, so the caller doesn't need to skip any values.
 // If an error is returned, the caller should abort parsing the map and return the error.
@@ -70,7 +70,8 @@ func handleUnmatchedMapKey(
 	i int,
 	count int,
 	hasSize bool,
-	uks *map[any]struct{},
+	// *map[any]struct{} is used here because we use lazy initialization for uks
+	uks *map[any]struct{}, //nolint:gocritic
 ) error {
 	errOnUnknownField := (d.dm.extraReturnErrors & ExtraDecErrorUnknownField) > 0
 

@@ -2673,7 +2673,7 @@ func (d *decoder) skipMapForUnknownField(i, count int, hasSize bool) error {
 
 // decodeToStructField decodes the next CBOR value into the struct field f in v.
 // If the field cannot be resolved, the CBOR value is skipped.
-func (d *decoder) decodeToStructField(v reflect.Value, f *field, tInfo *typeInfo) error {
+func (d *decoder) decodeToStructField(v reflect.Value, f *decodingField, tInfo *typeInfo) error {
 	var fv reflect.Value
 
 	if len(f.idx) == 1 {
