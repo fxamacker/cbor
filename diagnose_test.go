@@ -608,6 +608,12 @@ func TestDiagnoseTextString(t *testing.T) {
 			},
 		},
 		{
+			name:     "valid U+FFFD replacement character in text string",
+			data:     mustHexDecode("63efbfbd"),
+			wantDiag: `"\ufffd"`,
+			opts:     &DiagOptions{},
+		},
+		{
 			name:     "indefinite-length text string with no chunks",
 			data:     mustHexDecode("7fff"),
 			wantDiag: `""_`,

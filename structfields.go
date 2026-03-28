@@ -48,7 +48,7 @@ func (x *indexFieldSorter) Less(i, j int) bool {
 			return iIdx[k] < jIdx[k]
 		}
 	}
-	return len(iIdx) <= len(jIdx)
+	return len(iIdx) < len(jIdx)
 }
 
 // nameLevelAndTagFieldSorter sorts fields by field name, idx depth, and presence of tag.

@@ -605,7 +605,7 @@ func (di *diagnose) encodeTextString(val string, quote byte) error {
 
 		c, size := utf8.DecodeRuneInString(val[i:])
 		switch {
-		case c == utf8.RuneError:
+		case c == utf8.RuneError && size == 1:
 			return &SemanticError{"cbor: invalid UTF-8 string"}
 
 		case c < utf16SurrSelf:
