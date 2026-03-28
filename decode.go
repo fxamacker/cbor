@@ -16,7 +16,6 @@ import (
 	"math/big"
 	"reflect"
 	"strconv"
-	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -2644,7 +2643,68 @@ func (d *decoder) parseArrayToStruct(v reflect.Value, tInfo *typeInfo) error {
 	return err
 }
 
-// parseMapToStruct needs to be fast so gocyclo can be ignored for now.
+// skipMapEntriesFromIndex skips remaining map entries starting from index i.
+func (d *decoder) skipMapEntriesFromIndex(i, count int, hasSize bool) {
+	for ; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
+		d.skip()
+		d.skip()
+	}
+}
+
+// skipMapForDupKey skips the current map value and all remaining map entries,
+// then returns a DupMapKeyError for the given key at map index i.
+func (d *decoder) skipMapForDupKey(dupKey any, i, count int, hasSize bool) error {
+	// Skip the value of the duplicate key.
+	d.skip()
+	// Skip all remaining map entries.
+	d.skipMapEntriesFromIndex(i+1, count, hasSize)
+	return &DupMapKeyError{dupKey, i}
+}
+
+// skipMapForUnknownField skips the current map value and all remaining map entries,
+// then returns a UnknownFieldError for the given key at map index i.
+func (d *decoder) skipMapForUnknownField(i, count int, hasSize bool) error {
+	// Skip the value of the unknown key.
+	d.skip()
+	// Skip all remaining map entries.
+	d.skipMapEntriesFromIndex(i+1, count, hasSize)
+	return &UnknownFieldError{i}
+}
+
+// decodeToStructField decodes the next CBOR value into the struct field f in v.
+// If the field cannot be resolved, the CBOR value is skipped.
+func (d *decoder) decodeToStructField(v reflect.Value, f *field, tInfo *typeInfo) error {
+	var fv reflect.Value
+
+	if len(f.idx) == 1 {
+		fv = v.Field(f.idx[0])
+	} else {
+		var err error
+		fv, err = getFieldValue(v, f.idx, func(v reflect.Value) (reflect.Value, error) {
+			// Return a new value for embedded field null pointer to point to, or return error.
+			if !v.CanSet() {
+				return reflect.Value{}, errors.New("cbor: cannot set embedded pointer to unexported struct: " + v.Type().String())
+			}
+			v.Set(reflect.New(v.Type().Elem()))
+			return v, nil
+		})
+		if !fv.IsValid() {
+			d.skip()
+			return err
+		}
+	}
+
+	err := d.parseToValue(fv, f.typInfo)
+	if err != nil {
+		if typeError, ok := err.(*UnmarshalTypeError); ok {
+			typeError.StructFieldName = tInfo.nonPtrType.String() + "." + f.name
+		}
+		return err
+	}
+
+	return nil
+}
+
 func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
 	structType := getDecodingStructType(tInfo.nonPtrType)
 	if structType.err != nil {
@@ -2661,14 +2721,12 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 		}
 	}
 
-	var err, lastErr error
-
 	// Get CBOR map size
 	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
 	hasSize := !indefiniteLength
 	count := int(val)
 
-	// Keeps track of matched struct fields
+	// Keep track of matched struct fields to detect duplicate map keys.
 	var foundFldIdx []bool
 	{
 		const maxStackFields = 128
@@ -2682,94 +2740,64 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 		}
 	}
 
-	// Keeps track of CBOR map keys to detect duplicate map key
-	keyCount := 0
-	var mapKeys map[any]struct{}
+	// Keep track of unmatched CBOR map keys to detect duplicate map keys.
+	var unmatchedMapKeys map[any]struct{}
 
-	errOnUnknownField := (d.dm.extraReturnErrors & ExtraDecErrorUnknownField) > 0
+	var err error
 
-MapEntryLoop:
-	for j := 0; (hasSize && j < count) || (!hasSize && !d.foundBreak()); j++ {
-		var f *field
+	caseInsensitive := d.dm.fieldNameMatching == FieldNameMatchingPreferCaseSensitive
 
-		// If duplicate field detection is enabled and the key at index j did not match any
-		// field, k will hold the map key.
-		var k any
-
+	for i := 0; (hasSize && i < count) || (!hasSize && !d.foundBreak()); i++ {
 		t := d.nextCBORType()
-		if t == cborTypeTextString || (t == cborTypeByteString && d.dm.fieldNameByteString == FieldNameByteStringAllowed) {
+
+		// Reclassify disallowed byte string keys so they fall to the default case.
+		// keyType is only used for branch control.
+		keyType := t
+		if t == cborTypeByteString && d.dm.fieldNameByteString != FieldNameByteStringAllowed {
+			keyType = 0xff
+		}
+
+		switch keyType {
+		case cborTypeTextString, cborTypeByteString:
 			var keyBytes []byte
 			if t == cborTypeTextString {
-				keyBytes, lastErr = d.parseTextString()
-				if lastErr != nil {
+				var parseErr error
+				keyBytes, parseErr = d.parseTextString()
+				if parseErr != nil {
 					if err == nil {
-						err = lastErr
+						err = parseErr
 					}
-					d.skip() // skip value
+					d.skip() // Skip value
 					continue
 				}
 			} else { // cborTypeByteString
 				keyBytes, _ = d.parseByteString()
 			}
 
-			// Check for exact match on field name.
-			if i, ok := structType.fieldIndicesByName[string(keyBytes)]; ok {
-				fld := structType.fields[i]
+			// Find matching struct field (exact match, then case-insensitive fallback).
+			if fldIdx, ok := findStructFieldByKey(structType, keyBytes, caseInsensitive); ok {
+				fld := structType.fields[fldIdx]
 
-				if !foundFldIdx[i] {
-					f = fld
-					foundFldIdx[i] = true
-				} else if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
-					err = &DupMapKeyError{fld.name, j}
-					d.skip() // skip value
-					j++
-					// skip the rest of the map
-					for ; (hasSize && j < count) || (!hasSize && !d.foundBreak()); j++ {
-						d.skip()
-						d.skip()
+				switch checkDupField(d.dm, foundFldIdx, fldIdx) {
+				case mapActionParseValueAndContinue:
+					if fieldErr := d.decodeToStructField(v, fld, tInfo); fieldErr != nil && err == nil {
+						err = fieldErr
 					}
-					return err
-				} else {
-					// discard repeated match
+					continue
+				case mapActionSkipAllAndReturnError:
+					return d.skipMapForDupKey(string(keyBytes), i, count, hasSize)
+				case mapActionSkipValueAndContinue:
 					d.skip()
-					continue MapEntryLoop
+					continue
 				}
 			}
 
-			// Find field with case-insensitive match
-			if f == nil && d.dm.fieldNameMatching == FieldNameMatchingPreferCaseSensitive {
-				keyLen := len(keyBytes)
-				keyString := string(keyBytes)
-				for i := 0; i < len(structType.fields); i++ {
-					fld := structType.fields[i]
-					if len(fld.name) == keyLen && strings.EqualFold(fld.name, keyString) {
-						if !foundFldIdx[i] {
-							f = fld
-							foundFldIdx[i] = true
-						} else if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
-							err = &DupMapKeyError{keyString, j}
-							d.skip() // skip value
-							j++
-							// skip the rest of the map
-							for ; (hasSize && j < count) || (!hasSize && !d.foundBreak()); j++ {
-								d.skip()
-								d.skip()
-							}
-							return err
-						} else {
-							// discard repeated match
-							d.skip()
-							continue MapEntryLoop
-						}
-						break
-					}
-				}
+			// No matching struct field found.
+			if unmatchedErr := handleUnmatchedMapKey(d, string(keyBytes), i, count, hasSize, &unmatchedMapKeys); unmatchedErr != nil {
+				return unmatchedErr
 			}
 
-			if d.dm.dupMapKey == DupMapKeyEnforcedAPF && f == nil {
-				k = string(keyBytes)
-			}
-		} else if t <= cborTypeNegativeInt { // uint/int
+		case cborTypePositiveInt, cborTypeNegativeInt:
 			var nameAsInt int64
 
 			if t == cborTypePositiveInt {
@@ -2791,36 +2819,32 @@ MapEntryLoop:
 				nameAsInt = int64(-1) ^ int64(val)
 			}
 
-			// Find field
-			for i := 0; i < len(structType.fields); i++ {
-				fld := structType.fields[i]
-				if fld.keyAsInt && fld.nameAsInt == nameAsInt {
-					if !foundFldIdx[i] {
-						f = fld
-						foundFldIdx[i] = true
-					} else if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
-						err = &DupMapKeyError{nameAsInt, j}
-						d.skip() // skip value
-						j++
-						// skip the rest of the map
-						for ; (hasSize && j < count) || (!hasSize && !d.foundBreak()); j++ {
-							d.skip()
-							d.skip()
-						}
-						return err
-					} else {
-						// discard repeated match
-						d.skip()
-						continue MapEntryLoop
+			// Find field by integer key
+			if fldIdx, ok := structType.fieldIndicesByIntKey[nameAsInt]; ok {
+				fld := structType.fields[fldIdx]
+
+				switch checkDupField(d.dm, foundFldIdx, fldIdx) {
+				case mapActionParseValueAndContinue:
+					if fieldErr := d.decodeToStructField(v, fld, tInfo); fieldErr != nil && err == nil {
+						err = fieldErr
 					}
-					break
+					continue
+				case mapActionSkipAllAndReturnError:
+					return d.skipMapForDupKey(nameAsInt, i, count, hasSize)
+				case mapActionSkipValueAndContinue:
+					d.skip()
+					continue
 				}
 			}
 
-			if d.dm.dupMapKey == DupMapKeyEnforcedAPF && f == nil {
-				k = nameAsInt
+			// No matching struct field found.
+			if unmatchedErr := handleUnmatchedMapKey(d, nameAsInt, i, count, hasSize, &unmatchedMapKeys); unmatchedErr != nil {
+				return unmatchedErr
 			}
-		} else {
+
+		default:
+			// CBOR map keys that can't be matched to any struct field.
+
 			if err == nil {
 				err = &UnmarshalTypeError{
 					CBORType: t.String(),
@@ -2828,97 +2852,31 @@ MapEntryLoop:
 					errorMsg: "map key is of type " + t.String() + " and cannot be used to match struct field name",
 				}
 			}
+
+			var otherKey any
 			if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
 				// parse key
-				k, lastErr = d.parse(true)
-				if lastErr != nil {
+				var parseErr error
+				otherKey, parseErr = d.parse(true)
+				if parseErr != nil {
 					d.skip() // skip value
 					continue
 				}
 				// Detect if CBOR map key can be used as Go map key.
-				if !isHashableValue(reflect.ValueOf(k)) {
+				if !isHashableValue(reflect.ValueOf(otherKey)) {
 					d.skip() // skip value
 					continue
 				}
 			} else {
 				d.skip() // skip key
 			}
-		}
 
-		if f == nil {
-			if errOnUnknownField {
-				err = &UnknownFieldError{j}
-				d.skip() // Skip value
-				j++
-				// skip the rest of the map
-				for ; (hasSize && j < count) || (!hasSize && !d.foundBreak()); j++ {
-					d.skip()
-					d.skip()
-				}
-				return err
-			}
-
-			// Two map keys that match the same struct field are immediately considered
-			// duplicates. This check detects duplicates between two map keys that do
-			// not match a struct field. If unknown field errors are enabled, then this
-			// check is never reached.
-			if d.dm.dupMapKey == DupMapKeyEnforcedAPF {
-				if mapKeys == nil {
-					mapKeys = make(map[any]struct{}, 1)
-				}
-				mapKeys[k] = struct{}{}
-				newKeyCount := len(mapKeys)
-				if newKeyCount == keyCount {
-					err = &DupMapKeyError{k, j}
-					d.skip() // skip value
-					j++
-					// skip the rest of the map
-					for ; (hasSize && j < count) || (!hasSize && !d.foundBreak()); j++ {
-						d.skip()
-						d.skip()
-					}
-					return err
-				}
-				keyCount = newKeyCount
-			}
-
-			d.skip() // Skip value
-			continue
-		}
-
-		// Get field value by index
-		var fv reflect.Value
-		if len(f.idx) == 1 {
-			fv = v.Field(f.idx[0])
-		} else {
-			fv, lastErr = getFieldValue(v, f.idx, func(v reflect.Value) (reflect.Value, error) {
-				// Return a new value for embedded field null pointer to point to, or return error.
-				if !v.CanSet() {
-					return reflect.Value{}, errors.New("cbor: cannot set embedded pointer to unexported struct: " + v.Type().String())
-				}
-				v.Set(reflect.New(v.Type().Elem()))
-				return v, nil
-			})
-			if lastErr != nil && err == nil {
-				err = lastErr
-			}
-			if !fv.IsValid() {
-				d.skip()
-				continue
-			}
-		}
-
-		if lastErr = d.parseToValue(fv, f.typInfo); lastErr != nil {
-			if err == nil {
-				if typeError, ok := lastErr.(*UnmarshalTypeError); ok {
-					typeError.StructFieldName = tInfo.nonPtrType.String() + "." + f.name
-					err = typeError
-				} else {
-					err = lastErr
-				}
+			if unmatchedErr := handleUnmatchedMapKey(d, otherKey, i, count, hasSize, &unmatchedMapKeys); unmatchedErr != nil {
+				return unmatchedErr
 			}
 		}
 	}
+
 	return err
 }
 

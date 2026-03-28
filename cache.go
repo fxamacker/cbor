@@ -92,10 +92,11 @@ func newTypeInfo(t reflect.Type) *typeInfo {
 }
 
 type decodingStructType struct {
-	fields             fields
-	fieldIndicesByName map[string]int
-	err                error
-	toArray            bool
+	fields               fields
+	fieldIndicesByName   map[string]int
+	fieldIndicesByIntKey map[int64]int
+	err                  error
+	toArray              bool
 }
 
 func getDecodingStructType(t reflect.Type) *decodingStructType {
@@ -122,21 +123,29 @@ func getDecodingStructType(t reflect.Type) *decodingStructType {
 	}
 
 	fieldIndicesByName := make(map[string]int, len(flds))
+	var fieldIndicesByIntKey map[int64]int
 	for i, fld := range flds {
 		if _, ok := fieldIndicesByName[fld.name]; ok {
 			errs = append(errs, fmt.Errorf("cbor: two or more fields of %v have the same name %q", t, fld.name))
 			continue
 		}
 		fieldIndicesByName[fld.name] = i
+		if fld.keyAsInt {
+			if fieldIndicesByIntKey == nil {
+				fieldIndicesByIntKey = make(map[int64]int, len(flds))
+			}
+			fieldIndicesByIntKey[fld.nameAsInt] = i
+		}
 	}
 
 	err := errors.Join(errs...)
 
 	structType := &decodingStructType{
-		fields:             flds,
-		fieldIndicesByName: fieldIndicesByName,
-		err:                err,
-		toArray:            toArray,
+		fields:               flds,
+		fieldIndicesByName:   fieldIndicesByName,
+		fieldIndicesByIntKey: fieldIndicesByIntKey,
+		err:                  err,
+		toArray:              toArray,
 	}
 	decodingStructTypeCache.Store(t, structType)
 	return structType
