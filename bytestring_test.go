@@ -4,6 +4,7 @@
 package cbor
 
 import (
+	"bytes"
 	"io"
 	"strings"
 	"testing"
@@ -206,6 +207,38 @@ func TestUnmarshalByteStringOnBadData(t *testing.T) {
 				if !strings.HasPrefix(err.Error(), tc.errMsg) {
 					t.Errorf("Unmarshal(%x) returned error %q, want %q", tc.data, err.Error(), tc.errMsg)
 				}
+			}
+		})
+	}
+}
+
+func TestByteStringBytes(t *testing.T) {
+	testCases := []struct {
+		name string
+		bs   ByteString
+		want []byte
+	}{
+		{
+			name: "empty",
+			bs:   ByteString(""),
+			want: []byte{},
+		},
+		{
+			name: "non-empty",
+			bs:   ByteString("\x01\x02\x03\x04"),
+			want: []byte{0x01, 0x02, 0x03, 0x04},
+		},
+		{
+			name: "text content",
+			bs:   ByteString("hello"),
+			want: []byte("hello"),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.bs.Bytes()
+			if !bytes.Equal(got, tc.want) {
+				t.Errorf("ByteString(%x).Bytes() = %x, want %x", string(tc.bs), got, tc.want)
 			}
 		})
 	}

@@ -3499,6 +3499,17 @@ var invalidCBORUnmarshalTests = []struct {
 		data:         mustHexDecode("00830102"),
 		wantErrorMsg: "cbor: 3 bytes of extraneous data starting at index 1",
 	},
+	// Indefinite-length map
+	{
+		name:         "Indefinite-length map with one key and no value",
+		data:         []byte{0xbf, 0x61, 'a', 0xff},
+		wantErrorMsg: `cbor: unexpected "break" code`,
+	},
+	{
+		name:         "Indefinite-length map with two keys and one value",
+		data:         []byte{0xbf, 0x61, 'a', 0x01, 0x61, 'b', 0xff},
+		wantErrorMsg: `cbor: unexpected "break" code`,
+	},
 }
 
 func TestInvalidCBORUnmarshal(t *testing.T) {
@@ -3621,6 +3632,30 @@ func TestInvalidUTF8String(t *testing.T) {
 			data:    mustHexDecode("7f62e6b061b4ff"),
 			dm:      dmDecodeInvalidUTF8,
 			wantObj: string([]byte{0xe6, 0xb0, 0xb4}),
+		},
+		{
+			name: "indefinite-length invalid UTF-8 in the second chunk with UTF8RejectInvalid",
+			data: []byte{
+				0x7f,
+				0x62, 'a', 'b', // valid UTF-8
+				0x62, 0x80, 0x81, // invalid UTF-8
+				0x62, 'c', 'd', // valid UTF-8
+				0xff,
+			},
+			dm:           dmRejectInvalidUTF8,
+			wantErrorMsg: invalidUTF8ErrorMsg,
+		},
+		{
+			name: "indefinite-length invalid UTF-8 in the second chunk with dmDecodeInvalidUTF8",
+			data: []byte{
+				0x7f,
+				0x62, 'a', 'b', // valid UTF-8
+				0x62, 0x80, 0x81, // invalid UTF-8
+				0x62, 'c', 'd', // valid UTF-8
+				0xff,
+			},
+			dm:      dmDecodeInvalidUTF8,
+			wantObj: string([]byte{'a', 'b', 0x80, 0x81, 'c', 'd'}),
 		},
 	}
 
@@ -5799,6 +5834,9 @@ func TestUnmarshalStructKeyAsIntNumError(t *testing.T) {
 	type T2 struct {
 		F1 int `cbor:"-18446744073709551616,keyasint"`
 	}
+	type T3 struct {
+		F1 int `cbor:"99999999999999999999,keyasint"`
+	}
 	testCases := []struct {
 		name         string
 		data         []byte
@@ -5812,10 +5850,16 @@ func TestUnmarshalStructKeyAsIntNumError(t *testing.T) {
 			wantErrorMsg: "cbor: failed to parse field name \"a\" to int",
 		},
 		{
-			name:         "out of range int as key",
+			name:         "int key < math.MinInt",
 			data:         mustHexDecode("a13bffffffffffffffff01"),
 			obj:          T2{},
 			wantErrorMsg: "cbor: failed to parse field name \"-18446744073709551616\" to int",
+		},
+		{
+			name:         "int key > math.MaxInt",
+			data:         mustHexDecode("a10001"),
+			obj:          T3{},
+			wantErrorMsg: "cbor: failed to parse field name \"99999999999999999999\" to int",
 		},
 	}
 	for _, tc := range testCases {
@@ -6879,13 +6923,13 @@ func TestExceedMaxMapPairs(t *testing.T) {
 		wantErrorMsg string
 	}{
 		{
-			name:         "array",
+			name:         "map",
 			opts:         DecOptions{MaxMapPairs: 16},
 			data:         mustHexDecode("b101010101010101010101010101010101010101010101010101010101010101010101"),
 			wantErrorMsg: "cbor: exceeded max number of key-value pairs 16 for CBOR map",
 		},
 		{
-			name:         "indefinite length array",
+			name:         "indefinite length map",
 			opts:         DecOptions{MaxMapPairs: 16},
 			data:         mustHexDecode("bf01010101010101010101010101010101010101010101010101010101010101010101ff"),
 			wantErrorMsg: "cbor: exceeded max number of key-value pairs 16 for CBOR map",
@@ -10528,6 +10572,24 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			in:      []byte{0x42, 'f', 'f'},
 			want:    []byte{0xff},
 		},
+		{
+			name: "tag 21 wrapping tag 22",
+			opts: DecOptions{
+				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
+			},
+			dstType: reflect.TypeOf(""),
+			in:      []byte{0xd5, 0xd6, 0x42, 0x01, 0x02}, // 21(22(h'0102'))
+			want:    "AQI=",                               // base64 of [0x01, 0x02] with padding
+		},
+		{
+			name: "tag 22 wrapping tag 21",
+			opts: DecOptions{
+				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
+			},
+			dstType: reflect.TypeOf(""),
+			in:      []byte{0xd6, 0xd5, 0x42, 0x01, 0x02}, // 22(21(h'0102'))
+			want:    "AQI",                                // base64 of [0x01, 0x02] without padding
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, err := tc.opts.DecMode()
@@ -10908,5 +10970,23 @@ func TestJSONUnmarshalerTranscoder(t *testing.T) {
 			}
 
 		})
+	}
+}
+
+func TestByteStringExpectedFormatErrorUnwrap(t *testing.T) {
+	innerErr := errors.New("test error")
+	err := newByteStringExpectedFormatError(ByteStringExpectedBase64URL, innerErr)
+	if unwrapped := err.Unwrap(); unwrapped != innerErr {
+		t.Errorf("Unwrap() = %v, want %v", unwrapped, innerErr)
+	}
+}
+
+func TestByteStringExpectedFormatErrorDefaultCase(t *testing.T) {
+	innerErr := errors.New("test error")
+	err := &ByteStringExpectedFormatError{expectedFormatOption: 99, err: innerErr}
+	got := err.Error()
+	want := "cbor: failed to decode byte string in expected format 99: test error"
+	if got != want {
+		t.Errorf("Error() = %q, want %q", got, want)
 	}
 }

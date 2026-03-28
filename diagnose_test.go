@@ -1103,6 +1103,18 @@ func TestDiagnoseEmptyData(t *testing.T) {
 	}
 }
 
+func TestDiagnoseInvalidByteStringEncoding(t *testing.T) {
+	_, err := DiagOptions{
+		ByteStringEncoding: maxByteStringEncoding,
+	}.DiagMode()
+	if err == nil {
+		t.Fatal("DiagMode() expected error for invalid ByteStringEncoding, got nil")
+	}
+	if !strings.Contains(err.Error(), "invalid ByteStringEncoding") {
+		t.Errorf("DiagMode() error = %q, want error containing \"invalid ByteStringEncoding\"", err.Error())
+	}
+}
+
 func BenchmarkDiagnose(b *testing.B) {
 	for _, tc := range []struct {
 		name  string

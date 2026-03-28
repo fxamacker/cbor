@@ -3728,6 +3728,9 @@ func TestMarshalStructKeyAsIntNumError(t *testing.T) {
 	type T2 struct {
 		F1 int `cbor:"-18446744073709551616,keyasint"`
 	}
+	type T3 struct {
+		F1 int `cbor:"99999999999999999999,keyasint"`
+	}
 	testCases := []struct {
 		name         string
 		obj          any
@@ -3739,9 +3742,14 @@ func TestMarshalStructKeyAsIntNumError(t *testing.T) {
 			wantErrorMsg: "cbor: failed to parse field name \"2.0\" to int",
 		},
 		{
-			name:         "out of range int as key",
+			name:         "int key < math.MinInt",
 			obj:          T2{},
 			wantErrorMsg: "cbor: failed to parse field name \"-18446744073709551616\" to int",
+		},
+		{
+			name:         "int key > math.MaxInt",
+			obj:          T3{},
+			wantErrorMsg: "cbor: failed to parse field name \"99999999999999999999\" to int",
 		},
 	}
 	for _, tc := range testCases {
@@ -7081,6 +7089,59 @@ func TestJSONMarshalerTranscoder(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestMarshalerErrorUnwrap(t *testing.T) {
+	innerErr := errors.New("MarshalCBOR: error")
+	v := marshalCBORError(innerErr.Error())
+	_, err := Marshal(v)
+	if err == nil {
+		t.Fatal("Marshal() didn't return an error")
+	}
+	var me *MarshalerError
+	if errors.As(err, &me) {
+		if unwrapped := me.Unwrap(); unwrapped == nil || unwrapped.Error() != innerErr.Error() {
+			t.Errorf("MarshalerError.Unwrap() = %v, want error with message %q", unwrapped, innerErr.Error())
+		}
+	}
+	// The marshalCBORError type returns the raw error, not a MarshalerError,
+	// so also test Unwrap directly by constructing a MarshalerError.
+	me2 := &MarshalerError{typ: reflect.TypeOf(0), err: innerErr}
+	if unwrapped := me2.Unwrap(); unwrapped != innerErr {
+		t.Errorf("MarshalerError.Unwrap() = %v, want %v", unwrapped, innerErr)
+	}
+}
+
+func TestTranscodeErrorUnwrap(t *testing.T) {
+	innerErr := errors.New("transcode failed")
+	te := TranscodeError{err: innerErr, rtype: reflect.TypeOf(0), sourceFormat: "json", targetFormat: "cbor"}
+	if unwrapped := te.Unwrap(); unwrapped != innerErr {
+		t.Errorf("TranscodeError.Unwrap() = %v, want %v", unwrapped, innerErr)
+	}
+}
+
+func TestUnsupportedValueErrorMessage(t *testing.T) {
+	err := &UnsupportedValueError{msg: "floating-point infinity"}
+	want := "cbor: unsupported value: floating-point infinity"
+	if got := err.Error(); got != want {
+		t.Errorf("UnsupportedValueError.Error() = %q, want %q", got, want)
+	}
+}
+
+func TestMarshalToBufferNilBuffer(t *testing.T) {
+	// Test package-level function
+	if err := MarshalToBuffer(42, nil); err == nil {
+		t.Error("MarshalToBuffer(42, nil) didn't return an error")
+	}
+
+	// Test UserBufferEncMode method
+	bem, err := EncOptions{}.UserBufferEncMode()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := bem.MarshalToBuffer(42, nil); err == nil {
+		t.Error("UserBufferEncMode.MarshalToBuffer(42, nil) didn't return an error")
 	}
 }
 
