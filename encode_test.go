@@ -18,19 +18,19 @@ import (
 	"time"
 )
 
-type marshalTest struct {
+type marshalTestCase struct {
 	wantData []byte
 	values   []any
 }
 
-type marshalErrorTest struct {
+type marshalErrorTestCase struct {
 	name         string
 	value        any
 	wantErrorMsg string
 }
 
 // CBOR test data are from https://tools.ietf.org/html/rfc7049#appendix-A.
-var marshalTests = []marshalTest{
+var marshalTestCases = []marshalTestCase{
 	// unsigned integer
 	{
 		wantData: mustHexDecode("00"),
@@ -459,7 +459,7 @@ var marshalTests = []marshalTest{
 }
 
 func TestMarshal(t *testing.T) {
-	testMarshal(t, marshalTests)
+	testMarshal(t, marshalTestCases)
 }
 
 func TestInvalidTypeMarshal(t *testing.T) {
@@ -470,7 +470,7 @@ func TestInvalidTypeMarshal(t *testing.T) {
 		_    struct{} `cbor:",toarray"`
 		Chan chan bool
 	}
-	var marshalErrorTests = []marshalErrorTest{
+	var marshalErrorTestCases = []marshalErrorTestCase{
 		{
 			name:         "channel cannot be marshaled",
 			value:        make(chan bool),
@@ -516,7 +516,7 @@ func TestInvalidTypeMarshal(t *testing.T) {
 	if err != nil {
 		t.Errorf("EncMode() returned an error %v", err)
 	}
-	for _, tc := range marshalErrorTests {
+	for _, tc := range marshalErrorTestCases {
 		t.Run(tc.name, func(t *testing.T) {
 			v := tc.value
 			b, err := Marshal(&v)
@@ -548,7 +548,7 @@ func TestInvalidTypeMarshal(t *testing.T) {
 func TestMarshalLargeByteString(t *testing.T) {
 	// []byte{100, 100, 100, ...}
 	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 10000000}
-	tests := make([]marshalTest, len(lengths))
+	testCases := make([]marshalTestCase, len(lengths))
 	for i, length := range lengths {
 		data := bytes.NewBuffer(encodeCborHeader(cborTypeByteString, uint64(length)))
 		value := make([]byte, length)
@@ -556,16 +556,16 @@ func TestMarshalLargeByteString(t *testing.T) {
 			data.WriteByte(100)
 			value[j] = 100
 		}
-		tests[i] = marshalTest{data.Bytes(), []any{value}}
+		testCases[i] = marshalTestCase{data.Bytes(), []any{value}}
 	}
 
-	testMarshal(t, tests)
+	testMarshal(t, testCases)
 }
 
 func TestMarshalLargeTextString(t *testing.T) {
 	// "ddd..."
 	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 10000000}
-	tests := make([]marshalTest, len(lengths))
+	testCases := make([]marshalTestCase, len(lengths))
 	for i, length := range lengths {
 		data := bytes.NewBuffer(encodeCborHeader(cborTypeTextString, uint64(length)))
 		value := make([]byte, length)
@@ -573,16 +573,16 @@ func TestMarshalLargeTextString(t *testing.T) {
 			data.WriteByte(100)
 			value[j] = 100
 		}
-		tests[i] = marshalTest{data.Bytes(), []any{string(value)}}
+		testCases[i] = marshalTestCase{data.Bytes(), []any{string(value)}}
 	}
 
-	testMarshal(t, tests)
+	testMarshal(t, testCases)
 }
 
 func TestMarshalLargeArray(t *testing.T) {
 	// []string{"水", "水", "水", ...}
 	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 131072}
-	tests := make([]marshalTest, len(lengths))
+	testCases := make([]marshalTestCase, len(lengths))
 	for i, length := range lengths {
 		data := bytes.NewBuffer(encodeCborHeader(cborTypeArray, uint64(length)))
 		value := make([]string, length)
@@ -590,16 +590,16 @@ func TestMarshalLargeArray(t *testing.T) {
 			data.Write([]byte{0x63, 0xe6, 0xb0, 0xb4})
 			value[j] = "水"
 		}
-		tests[i] = marshalTest{data.Bytes(), []any{value}}
+		testCases[i] = marshalTestCase{data.Bytes(), []any{value}}
 	}
 
-	testMarshal(t, tests)
+	testMarshal(t, testCases)
 }
 
 func TestMarshalLargeMapCanonical(t *testing.T) {
 	// map[int]int {0:0, 1:1, 2:2, ...}
 	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 131072}
-	tests := make([]marshalTest, len(lengths))
+	testCases := make([]marshalTestCase, len(lengths))
 	for i, length := range lengths {
 		data := bytes.NewBuffer(encodeCborHeader(cborTypeMap, uint64(length)))
 		value := make(map[int]int, length)
@@ -609,10 +609,10 @@ func TestMarshalLargeMapCanonical(t *testing.T) {
 			data.Write(d)
 			value[j] = j
 		}
-		tests[i] = marshalTest{data.Bytes(), []any{value}}
+		testCases[i] = marshalTestCase{data.Bytes(), []any{value}}
 	}
 
-	testMarshal(t, tests)
+	testMarshal(t, testCases)
 }
 
 func TestMarshalLargeMap(t *testing.T) {
@@ -683,7 +683,7 @@ func encodeCborHeader(t cborType, n uint64) []byte {
 	return b[:]
 }
 
-func testMarshal(t *testing.T, testCases []marshalTest) {
+func testMarshal(t *testing.T, testCases []marshalTestCase) {
 	em, err := EncOptions{Sort: SortCanonical}.EncMode()
 	if err != nil {
 		t.Errorf("EncMode() returned an error %v", err)
@@ -828,7 +828,7 @@ func TestMarshalStructVariableLength(t *testing.T) {
 				t.Fatal(err)
 			}
 			if !bytes.Equal(tc.want, got) {
-				t.Errorf("want 0x%x but got 0x%x", tc.want, got)
+				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.in, got, tc.want)
 			}
 		})
 	}
@@ -1301,10 +1301,10 @@ func TestOmitAndRenameStructField(t *testing.T) {
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	tests := []roundTripTest{
+	testCases := []roundTripTestCase{
 		{"default values", v1, want1},
 		{"non-default values", v2, want2}}
-	testRoundTrip(t, tests, em, dm)
+	testRoundTrip(t, testCases, em, dm)
 }
 
 func TestOmitEmptyForBuiltinType(t *testing.T) {
@@ -1345,7 +1345,7 @@ func TestOmitEmptyForBuiltinType(t *testing.T) {
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
 func TestOmitEmptyForAnonymousStruct(t *testing.T) {
@@ -1359,7 +1359,7 @@ func TestOmitEmptyForAnonymousStruct(t *testing.T) {
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
 func TestOmitEmptyForStruct1(t *testing.T) {
@@ -1384,7 +1384,7 @@ func TestOmitEmptyForStruct1(t *testing.T) {
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
 func TestOmitEmptyForStruct2(t *testing.T) {
@@ -1408,7 +1408,7 @@ func TestOmitEmptyForStruct2(t *testing.T) {
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"non-default values", v, want}}, em, dm)
+	testRoundTrip(t, []roundTripTestCase{{"non-default values", v, want}}, em, dm)
 }
 
 func TestInvalidOmitEmptyMode(t *testing.T) {
@@ -1500,8 +1500,8 @@ func TestOmitEmptyMode(t *testing.T) {
 	emOmitEmptyGoValue, _ := EncOptions{OmitEmpty: OmitEmptyGoValue}.EncMode()
 	emOmitEmptyCBORValue, _ := EncOptions{OmitEmpty: OmitEmptyCBORValue}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"OmitEmptyGoValue (default) ", v, wantDataWithOmitEmptyGoValue}}, emOmitEmptyGoValue, dm)
-	testRoundTrip(t, []roundTripTest{{"OmitEmptyCBORValue", v, wantDataWithOmitEmptyCBORValue}}, emOmitEmptyCBORValue, dm)
+	testRoundTrip(t, []roundTripTestCase{{"OmitEmptyGoValue (default)", v, wantDataWithOmitEmptyGoValue}}, emOmitEmptyGoValue, dm)
+	testRoundTrip(t, []roundTripTestCase{{"OmitEmptyCBORValue", v, wantDataWithOmitEmptyCBORValue}}, emOmitEmptyCBORValue, dm)
 }
 
 func TestOmitEmptyForNestedStruct(t *testing.T) {
@@ -1529,7 +1529,7 @@ func TestOmitEmptyForNestedStruct(t *testing.T) {
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
 func TestOmitEmptyForToArrayStruct1(t *testing.T) {
@@ -1558,7 +1558,7 @@ func TestOmitEmptyForToArrayStruct1(t *testing.T) {
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"no exportable fields", v, want}}, em, dm)
+	testRoundTrip(t, []roundTripTestCase{{"no exportable fields", v, want}}, em, dm)
 }
 
 func TestOmitEmptyForToArrayStruct2(t *testing.T) {
@@ -1584,7 +1584,7 @@ func TestOmitEmptyForToArrayStruct2(t *testing.T) {
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"has exportable fields", v, want}}, em, dm)
+	testRoundTrip(t, []roundTripTestCase{{"has exportable fields", v, want}}, em, dm)
 }
 
 func TestOmitEmptyForStructWithPtrToAnonymousField(t *testing.T) {
@@ -1714,7 +1714,7 @@ func TestOmitEmptyForBinaryMarshaler1(t *testing.T) {
 		Stro T1 `cbor:"stro,omitempty"`
 	}
 
-	testCases := []roundTripTest{
+	testCases := []roundTripTestCase{
 		{
 			"empty BinaryMarshaler",
 			T1{},
@@ -1741,7 +1741,7 @@ func TestOmitEmptyForBinaryMarshaler2(t *testing.T) {
 		Stro T1 `cbor:"stro,omitempty"`
 	}
 
-	testCases := []roundTripTest{
+	testCases := []roundTripTestCase{
 		{
 			"empty BinaryMarshaler",
 			T1{},
@@ -1770,7 +1770,7 @@ func TestOmitEmptyForTime(t *testing.T) {
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
 // omitempty is a no-op for big.Int.
@@ -1784,7 +1784,7 @@ func TestOmitEmptyForBigInt(t *testing.T) {
 
 	em, _ := EncOptions{BigIntConvert: BigIntConvertNone}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
 func TestOmitZeroForBuiltinType(t *testing.T) {
@@ -1825,7 +1825,7 @@ func TestOmitZeroForBuiltinType(t *testing.T) {
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
 func TestOmitZeroForAnonymousStruct(t *testing.T) {
@@ -1839,7 +1839,7 @@ func TestOmitZeroForAnonymousStruct(t *testing.T) {
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
 func TestOmitZeroForStruct1(t *testing.T) {
@@ -1864,7 +1864,7 @@ func TestOmitZeroForStruct1(t *testing.T) {
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
 func TestOmitZeroForStruct2(t *testing.T) {
@@ -1888,7 +1888,7 @@ func TestOmitZeroForStruct2(t *testing.T) {
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"non-default values", v, want}}, em, dm)
+	testRoundTrip(t, []roundTripTestCase{{"non-default values", v, want}}, em, dm)
 }
 
 func TestOmitZeroForNestedStruct(t *testing.T) {
@@ -1916,7 +1916,7 @@ func TestOmitZeroForNestedStruct(t *testing.T) {
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
 func TestOmitZeroForToArrayStruct1(t *testing.T) {
@@ -1945,7 +1945,7 @@ func TestOmitZeroForToArrayStruct1(t *testing.T) {
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"no exportable fields", v, want}}, em, dm)
+	testRoundTrip(t, []roundTripTestCase{{"no exportable fields", v, want}}, em, dm)
 }
 
 func TestOmitZeroForToArrayStruct2(t *testing.T) {
@@ -1971,7 +1971,7 @@ func TestOmitZeroForToArrayStruct2(t *testing.T) {
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"has exportable fields", v, want}}, em, dm)
+	testRoundTrip(t, []roundTripTestCase{{"has exportable fields", v, want}}, em, dm)
 }
 
 func TestOmitZeroForStructWithPtrToAnonymousField(t *testing.T) {
@@ -2101,7 +2101,7 @@ func TestOmitZeroForBinaryMarshaler1(t *testing.T) {
 		Stro T1 `cbor:"stro,omitzero"`
 	}
 
-	testCases := []roundTripTest{
+	testCases := []roundTripTestCase{
 		{
 			"empty BinaryMarshaler",
 			T1{},
@@ -2128,7 +2128,7 @@ func TestOmitZeroForBinaryMarshaler2(t *testing.T) {
 		Stro T1 `cbor:"stro,omitzero"`
 	}
 
-	testCases := []roundTripTest{
+	testCases := []roundTripTestCase{
 		{
 			"empty BinaryMarshaler",
 			T1{},
@@ -2156,7 +2156,7 @@ func TestOmitZeroForTime(t *testing.T) {
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
 func TestOmitZeroForBigInt(t *testing.T) {
@@ -2169,257 +2169,257 @@ func TestOmitZeroForBigInt(t *testing.T) {
 
 	em, _ := EncOptions{BigIntConvert: BigIntConvertNone}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, []roundTripTest{{"default values", v, want}}, em, dm)
+	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
 func TestIsZero(t *testing.T) {
 	var zeroStructZeroer isZeroer = zeroTestTypeCustom{value: 42}
 
-	testcases := []struct {
+	testCases := []struct {
 		name string
 		t    reflect.Type
 		v    reflect.Value
 
-		expect    bool
-		expectErr bool
+		want       bool
+		wantHasErr bool
 	}{
 		{
-			name:   "nil",
-			t:      reflect.TypeOf(nil),
-			v:      reflect.ValueOf(nil),
-			expect: true,
+			name: "nil",
+			t:    reflect.TypeOf(nil),
+			v:    reflect.ValueOf(nil),
+			want: true,
 		},
 		{
-			name:   "string-zero",
-			t:      reflect.TypeOf(""),
-			v:      reflect.ValueOf(""),
-			expect: true,
-		},
-
-		{
-			name:   "string-nonzero",
-			t:      reflect.TypeOf(""),
-			v:      reflect.ValueOf("a"),
-			expect: false,
-		},
-		{
-			name:   "int-zero",
-			t:      reflect.TypeOf(0),
-			v:      reflect.ValueOf(0),
-			expect: true,
-		},
-		{
-			name:   "int-nonzero",
-			t:      reflect.TypeOf(0),
-			v:      reflect.ValueOf(1),
-			expect: false,
+			name: "string-zero",
+			t:    reflect.TypeOf(""),
+			v:    reflect.ValueOf(""),
+			want: true,
 		},
 
 		{
-			name:   "bool-zero",
-			t:      reflect.TypeOf(false),
-			v:      reflect.ValueOf(false),
-			expect: true,
+			name: "string-nonzero",
+			t:    reflect.TypeOf(""),
+			v:    reflect.ValueOf("a"),
+			want: false,
 		},
 		{
-			name:   "bool-nonzero",
-			t:      reflect.TypeOf(false),
-			v:      reflect.ValueOf(true),
-			expect: false,
-		},
-
-		{
-			name:   "slice-zero",
-			t:      reflect.TypeOf([]string(nil)),
-			v:      reflect.ValueOf([]string(nil)),
-			expect: true,
+			name: "int-zero",
+			t:    reflect.TypeOf(0),
+			v:    reflect.ValueOf(0),
+			want: true,
 		},
 		{
-			name:   "slice-nonzero",
-			t:      reflect.TypeOf([]string(nil)),
-			v:      reflect.ValueOf([]string{}),
-			expect: false,
+			name: "int-nonzero",
+			t:    reflect.TypeOf(0),
+			v:    reflect.ValueOf(1),
+			want: false,
 		},
 
 		{
-			name:   "map-zero",
-			t:      reflect.TypeOf(map[string]string(nil)),
-			v:      reflect.ValueOf(map[string]string(nil)),
-			expect: true,
+			name: "bool-zero",
+			t:    reflect.TypeOf(false),
+			v:    reflect.ValueOf(false),
+			want: true,
 		},
 		{
-			name:   "map-nonzero",
-			t:      reflect.TypeOf(map[string]string(nil)),
-			v:      reflect.ValueOf(map[string]string{}),
-			expect: false,
-		},
-
-		{
-			name:   "struct-zero",
-			t:      reflect.TypeOf(zeroTestType{}),
-			v:      reflect.ValueOf(zeroTestType{}),
-			expect: true,
-		},
-		{
-			name:   "struct-nonzero",
-			t:      reflect.TypeOf(zeroTestType{}),
-			v:      reflect.ValueOf(zeroTestType{value: 42}),
-			expect: false,
+			name: "bool-nonzero",
+			t:    reflect.TypeOf(false),
+			v:    reflect.ValueOf(true),
+			want: false,
 		},
 
 		{
-			name:   "pointer-zero",
-			t:      reflect.TypeOf((*zeroTestType)(nil)),
-			v:      reflect.ValueOf((*zeroTestType)(nil)),
-			expect: true,
+			name: "slice-zero",
+			t:    reflect.TypeOf([]string(nil)),
+			v:    reflect.ValueOf([]string(nil)),
+			want: true,
 		},
 		{
-			name:   "pointer-nonzero",
-			t:      reflect.TypeOf((*zeroTestType)(nil)),
-			v:      reflect.ValueOf(&zeroTestType{}),
-			expect: false,
-		},
-
-		{
-			name:   "any-struct-zero",
-			t:      reflect.TypeOf(any(nil)),
-			v:      reflect.ValueOf(zeroTestType{}),
-			expect: true,
-		},
-		{
-			name:   "any-struct-nonzero",
-			t:      reflect.TypeOf(any(nil)),
-			v:      reflect.ValueOf(zeroTestType{value: 42}),
-			expect: false,
+			name: "slice-nonzero",
+			t:    reflect.TypeOf([]string(nil)),
+			v:    reflect.ValueOf([]string{}),
+			want: false,
 		},
 
 		{
-			name:   "any-pointer-zero",
-			t:      reflect.TypeOf(any(nil)),
-			v:      reflect.ValueOf((*zeroTestType)(nil)),
-			expect: true,
+			name: "map-zero",
+			t:    reflect.TypeOf(map[string]string(nil)),
+			v:    reflect.ValueOf(map[string]string(nil)),
+			want: true,
 		},
 		{
-			name:   "any-pointer-nonzero",
-			t:      reflect.TypeOf(any(nil)),
-			v:      reflect.ValueOf(&zeroTestType{}),
-			expect: false,
-		},
-
-		{
-			name:   "custom-structreceiver-zero-structvalue",
-			t:      reflect.TypeOf(zeroTestTypeCustom{}),
-			v:      reflect.ValueOf(zeroTestTypeCustom{value: 42}),
-			expect: true,
-		},
-		{
-			name:   "custom-structreceiver-nonzero-structvalue",
-			t:      reflect.TypeOf(zeroTestTypeCustom{}),
-			v:      reflect.ValueOf(zeroTestTypeCustom{value: 1}),
-			expect: false,
-		},
-		{
-			name:   "custom-structreceiver-zero-pointervalue",
-			t:      reflect.TypeOf(zeroTestTypeCustom{}),
-			v:      reflect.ValueOf(&zeroTestTypeCustom{value: 42}),
-			expect: true,
-		},
-		{
-			name:   "custom-structreceiver-nonzero-pointervalue",
-			t:      reflect.TypeOf(zeroTestTypeCustom{}),
-			v:      reflect.ValueOf(&zeroTestTypeCustom{value: 1}),
-			expect: false,
+			name: "map-nonzero",
+			t:    reflect.TypeOf(map[string]string(nil)),
+			v:    reflect.ValueOf(map[string]string{}),
+			want: false,
 		},
 
 		{
-			name:   "custom-structreceiver-zero-pointervalue",
-			t:      reflect.TypeOf(&zeroTestTypeCustom{}),
-			v:      reflect.ValueOf(&zeroTestTypeCustom{value: 42}),
-			expect: true,
+			name: "struct-zero",
+			t:    reflect.TypeOf(zeroTestType{}),
+			v:    reflect.ValueOf(zeroTestType{}),
+			want: true,
 		},
 		{
-			name:   "custom-structreceiver-nonzero-pointervalue",
-			t:      reflect.TypeOf(&zeroTestTypeCustom{}),
-			v:      reflect.ValueOf(&zeroTestTypeCustom{value: 1}),
-			expect: false,
-		},
-		{
-			name:   "custom-structreceiver-zero-nil-pointervalue",
-			t:      reflect.TypeOf(&zeroTestTypeCustom{}),
-			v:      reflect.ValueOf((*zeroTestTypeCustom)(nil)),
-			expect: true,
+			name: "struct-nonzero",
+			t:    reflect.TypeOf(zeroTestType{}),
+			v:    reflect.ValueOf(zeroTestType{value: 42}),
+			want: false,
 		},
 
 		{
-			name:   "custom-pointerreceiver-zero-structvalue",
-			t:      reflect.TypeOf(zeroTestTypeCustomPointer{}),
-			v:      reflect.ValueOf(zeroTestTypeCustomPointer{value: 42}),
-			expect: true,
+			name: "pointer-zero",
+			t:    reflect.TypeOf((*zeroTestType)(nil)),
+			v:    reflect.ValueOf((*zeroTestType)(nil)),
+			want: true,
 		},
 		{
-			name:   "custom-pointerreceiver-nonzero-structvalue",
-			t:      reflect.TypeOf(zeroTestTypeCustomPointer{}),
-			v:      reflect.ValueOf(zeroTestTypeCustomPointer{value: 1}),
-			expect: false,
-		},
-
-		{
-			name:   "custom-pointerreceiver-zero-pointervalue",
-			t:      reflect.TypeOf(&zeroTestTypeCustomPointer{}),
-			v:      reflect.ValueOf(&zeroTestTypeCustomPointer{value: 42}),
-			expect: true,
-		},
-		{
-			name:   "custom-pointerreceiver-nonzero-pointervalue",
-			t:      reflect.TypeOf(&zeroTestTypeCustomPointer{}),
-			v:      reflect.ValueOf(&zeroTestTypeCustomPointer{value: 1}),
-			expect: false,
+			name: "pointer-nonzero",
+			t:    reflect.TypeOf((*zeroTestType)(nil)),
+			v:    reflect.ValueOf(&zeroTestType{}),
+			want: false,
 		},
 
 		{
-			name:   "custom-interface-nil-pointer",
-			t:      isZeroerType,
-			v:      reflect.ValueOf((*zeroTestTypeCustom)(nil)),
-			expect: true,
+			name: "any-struct-zero",
+			t:    reflect.TypeOf(any(nil)),
+			v:    reflect.ValueOf(zeroTestType{}),
+			want: true,
 		},
 		{
-			name:   "custom-interface-zero-structreceiver-pointer",
-			t:      isZeroerType,
-			v:      reflect.ValueOf(&zeroTestTypeCustom{value: 42}),
-			expect: true,
+			name: "any-struct-nonzero",
+			t:    reflect.TypeOf(any(nil)),
+			v:    reflect.ValueOf(zeroTestType{value: 42}),
+			want: false,
+		},
+
+		{
+			name: "any-pointer-zero",
+			t:    reflect.TypeOf(any(nil)),
+			v:    reflect.ValueOf((*zeroTestType)(nil)),
+			want: true,
 		},
 		{
-			name:   "custom-interface-zero-structreceiver",
-			t:      isZeroerType,
-			v:      reflect.ValueOf(zeroStructZeroer),
-			expect: true,
+			name: "any-pointer-nonzero",
+			t:    reflect.TypeOf(any(nil)),
+			v:    reflect.ValueOf(&zeroTestType{}),
+			want: false,
+		},
+
+		{
+			name: "custom-structreceiver-zero-structvalue",
+			t:    reflect.TypeOf(zeroTestTypeCustom{}),
+			v:    reflect.ValueOf(zeroTestTypeCustom{value: 42}),
+			want: true,
 		},
 		{
-			name:   "custom-interface-nonzero-struct",
-			t:      isZeroerType,
-			v:      reflect.ValueOf(&zeroTestTypeCustom{value: 1}),
-			expect: false,
+			name: "custom-structreceiver-nonzero-structvalue",
+			t:    reflect.TypeOf(zeroTestTypeCustom{}),
+			v:    reflect.ValueOf(zeroTestTypeCustom{value: 1}),
+			want: false,
 		},
 		{
-			name:   "custom-interface-nil-pointerreceiver",
-			t:      isZeroerType,
-			v:      reflect.ValueOf((*zeroTestTypeCustomPointer)(nil)),
-			expect: true,
+			name: "custom-structreceiver-zero-pointervalue",
+			t:    reflect.TypeOf(zeroTestTypeCustom{}),
+			v:    reflect.ValueOf(&zeroTestTypeCustom{value: 42}),
+			want: true,
 		},
 		{
-			name:   "custom-interface-zero-pointerreceiver",
-			t:      isZeroerType,
-			v:      reflect.ValueOf(&zeroTestTypeCustomPointer{value: 42}),
-			expect: true,
+			name: "custom-structreceiver-nonzero-pointervalue",
+			t:    reflect.TypeOf(zeroTestTypeCustom{}),
+			v:    reflect.ValueOf(&zeroTestTypeCustom{value: 1}),
+			want: false,
+		},
+
+		{
+			name: "custom-structreceiver-zero-pointervalue",
+			t:    reflect.TypeOf(&zeroTestTypeCustom{}),
+			v:    reflect.ValueOf(&zeroTestTypeCustom{value: 42}),
+			want: true,
 		},
 		{
-			name:   "custom-interface-nonzero-pointerreceiver",
-			t:      isZeroerType,
-			v:      reflect.ValueOf(&zeroTestTypeCustomPointer{value: 1}),
-			expect: false,
+			name: "custom-structreceiver-nonzero-pointervalue",
+			t:    reflect.TypeOf(&zeroTestTypeCustom{}),
+			v:    reflect.ValueOf(&zeroTestTypeCustom{value: 1}),
+			want: false,
+		},
+		{
+			name: "custom-structreceiver-zero-nil-pointervalue",
+			t:    reflect.TypeOf(&zeroTestTypeCustom{}),
+			v:    reflect.ValueOf((*zeroTestTypeCustom)(nil)),
+			want: true,
+		},
+
+		{
+			name: "custom-pointerreceiver-zero-structvalue",
+			t:    reflect.TypeOf(zeroTestTypeCustomPointer{}),
+			v:    reflect.ValueOf(zeroTestTypeCustomPointer{value: 42}),
+			want: true,
+		},
+		{
+			name: "custom-pointerreceiver-nonzero-structvalue",
+			t:    reflect.TypeOf(zeroTestTypeCustomPointer{}),
+			v:    reflect.ValueOf(zeroTestTypeCustomPointer{value: 1}),
+			want: false,
+		},
+
+		{
+			name: "custom-pointerreceiver-zero-pointervalue",
+			t:    reflect.TypeOf(&zeroTestTypeCustomPointer{}),
+			v:    reflect.ValueOf(&zeroTestTypeCustomPointer{value: 42}),
+			want: true,
+		},
+		{
+			name: "custom-pointerreceiver-nonzero-pointervalue",
+			t:    reflect.TypeOf(&zeroTestTypeCustomPointer{}),
+			v:    reflect.ValueOf(&zeroTestTypeCustomPointer{value: 1}),
+			want: false,
+		},
+
+		{
+			name: "custom-interface-nil-pointer",
+			t:    isZeroerType,
+			v:    reflect.ValueOf((*zeroTestTypeCustom)(nil)),
+			want: true,
+		},
+		{
+			name: "custom-interface-zero-structreceiver-pointer",
+			t:    isZeroerType,
+			v:    reflect.ValueOf(&zeroTestTypeCustom{value: 42}),
+			want: true,
+		},
+		{
+			name: "custom-interface-zero-structreceiver",
+			t:    isZeroerType,
+			v:    reflect.ValueOf(zeroStructZeroer),
+			want: true,
+		},
+		{
+			name: "custom-interface-nonzero-struct",
+			t:    isZeroerType,
+			v:    reflect.ValueOf(&zeroTestTypeCustom{value: 1}),
+			want: false,
+		},
+		{
+			name: "custom-interface-nil-pointerreceiver",
+			t:    isZeroerType,
+			v:    reflect.ValueOf((*zeroTestTypeCustomPointer)(nil)),
+			want: true,
+		},
+		{
+			name: "custom-interface-zero-pointerreceiver",
+			t:    isZeroerType,
+			v:    reflect.ValueOf(&zeroTestTypeCustomPointer{value: 42}),
+			want: true,
+		},
+		{
+			name: "custom-interface-nonzero-pointerreceiver",
+			t:    isZeroerType,
+			v:    reflect.ValueOf(&zeroTestTypeCustomPointer{value: 1}),
+			want: false,
 		},
 	}
-	for _, tc := range testcases {
+	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if err := recover(); err != nil {
@@ -2428,11 +2428,11 @@ func TestIsZero(t *testing.T) {
 				}
 			}()
 			got, err := getIsZeroFunc(tc.t)(tc.v)
-			if tc.expectErr != (err != nil) {
-				t.Errorf("got err=%v, expected %v", err, tc.expectErr)
+			if tc.wantHasErr != (err != nil) {
+				t.Errorf("getIsZeroFunc() returned err=%v, wantErr=%v", err, tc.wantHasErr)
 			}
-			if tc.expect != got {
-				t.Errorf("got %v, expected %v", got, tc.expect)
+			if tc.want != got {
+				t.Errorf("getIsZeroFunc() returned %v, want %v", got, tc.want)
 			}
 		})
 	}
@@ -2466,7 +2466,7 @@ func TestJSONStdlibOmitZero(t *testing.T) {
 		S string `json:"s,omitzero"`
 	}
 
-	testcases := []struct {
+	testCases := []struct {
 		name   string
 		stdlib bool
 		obj    any
@@ -2513,7 +2513,7 @@ func TestJSONStdlibOmitZero(t *testing.T) {
 		})
 	}
 
-	for _, tc := range testcases {
+	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			reset()
 			jsonStdlibSupportsOmitzero = tc.stdlib
@@ -2521,7 +2521,7 @@ func TestJSONStdlibOmitZero(t *testing.T) {
 
 			em, _ := EncOptions{}.EncMode()
 			dm, _ := DecOptions{}.DecMode()
-			testRoundTrip(t, []roundTripTest{{tc.name, tc.obj, tc.want}}, em, dm)
+			testRoundTrip(t, []roundTripTestCase{{tc.name, tc.obj, tc.want}}, em, dm)
 		})
 	}
 }
@@ -3413,7 +3413,7 @@ func TestMarshalRawMessageValue(t *testing.T) {
 		raw      = RawMessage([]byte{0x01})
 	)
 
-	tests := []struct {
+	testCases := []struct {
 		obj  any
 		want []byte
 	}{
@@ -3640,7 +3640,7 @@ func TestMarshalRawMessageValue(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tests {
+	for _, tc := range testCases {
 		b, err := Marshal(tc.obj)
 		if err != nil {
 			t.Errorf("Marshal(%+v) returned error %v", tc.obj, err)
@@ -3686,12 +3686,12 @@ func TestMarshalUnmarshalStructKeyAsInt(t *testing.T) {
 		wantCborData []byte
 	}{
 		{
-			name:         "Zero value struct",
+			name:         "zero value struct",
 			obj:          T{},
 			wantCborData: mustHexDecode("a0"), // {}
 		},
 		{
-			name:         "Initialized value struct",
+			name:         "initialized value struct",
 			obj:          T{F1: 1, F2: 2, F3: 3},
 			wantCborData: mustHexDecode("a301012203613202"), // {1: 1, -3: 3, "2": 2}
 		},
@@ -3728,6 +3728,9 @@ func TestMarshalStructKeyAsIntNumError(t *testing.T) {
 	type T2 struct {
 		F1 int `cbor:"-18446744073709551616,keyasint"`
 	}
+	type T3 struct {
+		F1 int `cbor:"99999999999999999999,keyasint"`
+	}
 	testCases := []struct {
 		name         string
 		obj          any
@@ -3739,9 +3742,14 @@ func TestMarshalStructKeyAsIntNumError(t *testing.T) {
 			wantErrorMsg: "cbor: failed to parse field name \"2.0\" to int",
 		},
 		{
-			name:         "out of range int as key",
+			name:         "int key < math.MinInt",
 			obj:          T2{},
 			wantErrorMsg: "cbor: failed to parse field name \"-18446744073709551616\" to int",
+		},
+		{
+			name:         "int key > math.MaxInt",
+			obj:          T3{},
+			wantErrorMsg: "cbor: failed to parse field name \"99999999999999999999\" to int",
 		},
 	}
 	for _, tc := range testCases {
@@ -3779,17 +3787,17 @@ func TestMarshalUnmarshalStructToArray(t *testing.T) {
 		wantCborData []byte
 	}{
 		{
-			name:         "Zero value struct (test omitempty)",
+			name:         "zero value struct (test omitempty)",
 			obj:          T{},
 			wantCborData: mustHexDecode("8500a000f6f6"), // [0, {}, 0, nil, nil]
 		},
 		{
-			name:         "Initialized struct",
+			name:         "initialized struct",
 			obj:          T{A: 24, B: T1{M: 1}, T1: T1{M: 2}, T2: &T2{N: 3, O: 4}},
 			wantCborData: mustHexDecode("851818a1614d01020304"), // [24, {M: 1}, 2, 3, 4]
 		},
 		{
-			name:         "Null pointer to embedded struct",
+			name:         "null pointer to embedded struct",
 			obj:          T{A: 24, B: T1{M: 1}, T1: T1{M: 2}},
 			wantCborData: mustHexDecode("851818a1614d0102f6f6"), // [24, {M: 1}, 2, nil, nil]
 		},
@@ -3854,12 +3862,12 @@ func TestMapSort(t *testing.T) {
 		wantCborData []byte
 	}{
 		{
-			name:         "Length first sort",
+			name:         "length first sort",
 			opts:         EncOptions{Sort: SortLengthFirst},
 			wantCborData: lenFirstSortedCborData,
 		},
 		{
-			name:         "Bytewise sort",
+			name:         "bytewise sort",
 			opts:         EncOptions{Sort: SortBytewiseLexical},
 			wantCborData: bytewiseSortedCborData,
 		},
@@ -3874,7 +3882,7 @@ func TestMapSort(t *testing.T) {
 			wantCborData: bytewiseSortedCborData,
 		},
 		{
-			name:         "Core deterministic sort",
+			name:         "core deterministic sort",
 			opts:         EncOptions{Sort: SortCoreDeterministic},
 			wantCborData: bytewiseSortedCborData,
 		},
@@ -3916,22 +3924,22 @@ func TestStructSort(t *testing.T) {
 		wantCborData []byte
 	}{
 		{
-			name:         "No sort",
+			name:         "no sort",
 			opts:         EncOptions{},
 			wantCborData: unsortedCborData,
 		},
 		{
-			name:         "No sort",
+			name:         "no sort",
 			opts:         EncOptions{Sort: SortNone},
 			wantCborData: unsortedCborData,
 		},
 		{
-			name:         "Length first sort",
+			name:         "length first sort",
 			opts:         EncOptions{Sort: SortLengthFirst},
 			wantCborData: lenFirstSortedCborData,
 		},
 		{
-			name:         "Bytewise sort",
+			name:         "bytewise sort",
 			opts:         EncOptions{Sort: SortBytewiseLexical},
 			wantCborData: bytewiseSortedCborData,
 		},
@@ -3946,7 +3954,7 @@ func TestStructSort(t *testing.T) {
 			wantCborData: bytewiseSortedCborData,
 		},
 		{
-			name:         "Core deterministic sort",
+			name:         "core deterministic sort",
 			opts:         EncOptions{Sort: SortCoreDeterministic},
 			wantCborData: bytewiseSortedCborData,
 		},
@@ -4016,7 +4024,7 @@ func TestTypeAlias(t *testing.T) { //nolint:dupl,unconvert
 	type myIntArray = [4]int
 	type myMapIntInt = map[int]int
 
-	testCases := []roundTripTest{
+	testCases := []roundTripTestCase{
 		{
 			name:         "bool alias",
 			obj:          myBool(true),
@@ -4139,7 +4147,7 @@ func TestNewTypeWithBuiltinUnderlyingType(t *testing.T) { //nolint:dupl
 	type myIntArray [4]int
 	type myMapIntInt map[int]int
 
-	testCases := []roundTripTest{
+	testCases := []roundTripTestCase{
 		{
 			name:         "bool alias",
 			obj:          myBool(true),
@@ -4250,77 +4258,77 @@ func TestShortestFloat16(t *testing.T) {
 	}{
 		// Data from RFC 7049 appendix A
 		{
-			name:         "Shrink to float16",
+			name:         "shrink to float16",
 			f64:          0.0,
 			wantCborData: mustHexDecode("f90000"),
 		},
 		{
-			name:         "Shrink to float16",
+			name:         "shrink to float16",
 			f64:          1.0,
 			wantCborData: mustHexDecode("f93c00"),
 		},
 		{
-			name:         "Shrink to float16",
+			name:         "shrink to float16",
 			f64:          1.5,
 			wantCborData: mustHexDecode("f93e00"),
 		},
 		{
-			name:         "Shrink to float16",
+			name:         "shrink to float16",
 			f64:          65504.0,
 			wantCborData: mustHexDecode("f97bff"),
 		},
 		{
-			name:         "Shrink to float16",
+			name:         "shrink to float16",
 			f64:          5.960464477539063e-08,
 			wantCborData: mustHexDecode("f90001"),
 		},
 		{
-			name:         "Shrink to float16",
+			name:         "shrink to float16",
 			f64:          6.103515625e-05,
 			wantCborData: mustHexDecode("f90400"),
 		},
 		{
-			name:         "Shrink to float16",
+			name:         "shrink to float16",
 			f64:          -4.0,
 			wantCborData: mustHexDecode("f9c400"),
 		},
 		// Data from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
 		{
-			name:         "Shrink to float16",
+			name:         "shrink to float16",
 			f64:          0.333251953125,
 			wantCborData: mustHexDecode("f93555"),
 		},
 		// Data from 7049bis 4.2.1 and 5.5
 		{
-			name:         "Shrink to float16",
+			name:         "shrink to float16",
 			f64:          5.5,
 			wantCborData: mustHexDecode("f94580"),
 		},
 		// Data from RFC 7049 appendix A
 		{
-			name:         "Shrink to float32",
+			name:         "shrink to float32",
 			f64:          100000.0,
 			wantCborData: mustHexDecode("fa47c35000"),
 		},
 		{
-			name:         "Shrink to float32",
+			name:         "shrink to float32",
 			f64:          3.4028234663852886e+38,
 			wantCborData: mustHexDecode("fa7f7fffff"),
 		},
 		// Data from 7049bis 4.2.1 and 5.5
 		{
-			name:         "Shrink to float32",
+			name:         "shrink to float32",
 			f64:          5555.5,
 			wantCborData: mustHexDecode("fa45ad9c00"),
 		},
 		{
-			name:         "Shrink to float32",
+			name:         "shrink to float32",
 			f64:          1000000.5,
 			wantCborData: mustHexDecode("fa49742408"),
 		},
 		// Data from RFC 7049 appendix A
 		{
-			name:         "Shrink to float64",
+			name:         "shrink to float64",
 			f64:          1.0e+300,
 			wantCborData: mustHexDecode("fb7e37e43c8800759c"),
 		},
@@ -4638,7 +4646,7 @@ func TestInfConvert(t *testing.T) {
 			}
 			want := &UnsupportedValueError{msg: "floating-point infinity"}
 			if _, got := em.Marshal(tc.v); !reflect.DeepEqual(want, got) {
-				t.Errorf("expected Marshal(%v) to return error: %v, got: %v", tc.v, want, got)
+				t.Errorf("Marshal(%v) returned error %v, want %v", tc.v, got, want)
 			}
 		})
 	}
@@ -5315,7 +5323,7 @@ func TestNaNConvert(t *testing.T) {
 			}
 			want := &UnsupportedValueError{msg: "floating-point NaN"}
 			if _, got := em.Marshal(tc.v); !reflect.DeepEqual(want, got) {
-				t.Errorf("expected Marshal(%v) to return error: %v, got: %v", tc.v, want, got)
+				t.Errorf("Marshal(%v) returned error %v, want %v", tc.v, got, want)
 			}
 		})
 	}
@@ -5745,7 +5753,7 @@ func TestEncModeInvalidFieldNameMode(t *testing.T) {
 }
 
 func TestEncIndefiniteLengthOption(t *testing.T) {
-	// Default option allows indefinite length items
+	// Default option allows indefinite-length items
 	var buf bytes.Buffer
 	enc := NewEncoder(&buf)
 	if err := enc.StartIndefiniteByteString(); err != nil {
@@ -6024,10 +6032,10 @@ func TestStructWithSimpleValueFields(t *testing.T) {
 
 	em, _ := EncOptions{}.EncMode()
 	dm, _ := DecOptions{}.DecMode()
-	tests := []roundTripTest{
+	testCases := []roundTripTestCase{
 		{"default values", v1, want1},
 		{"non-default values", v2, want2}}
-	testRoundTrip(t, tests, em, dm)
+	testRoundTrip(t, testCases, em, dm)
 }
 
 func TestMapWithSimpleValueKey(t *testing.T) {
@@ -6277,13 +6285,13 @@ func TestMarshalerReturnsDisallowedCBORData(t *testing.T) {
 		wantErrorMsg string
 	}{
 		{
-			name:         "enc mode forbids indefinite length, data has indefinite length",
+			name:         "enc mode forbids indefinite-length, data has indefinite-length",
 			encOpts:      EncOptions{IndefLength: IndefLengthForbidden},
 			value:        marshaler{data: mustHexDecode("5f42010243030405ff")},
 			wantErrorMsg: "cbor: error calling MarshalCBOR for type cbor.marshaler: cbor: indefinite-length byte string isn't allowed",
 		},
 		{
-			name:    "enc mode allows indefinite length, data has indefinite length",
+			name:    "enc mode allows indefinite-length, data has indefinite-length",
 			encOpts: EncOptions{IndefLength: IndefLengthAllowed},
 			value:   marshaler{data: mustHexDecode("5f42010243030405ff")},
 		},
@@ -6451,28 +6459,28 @@ func TestInvalidByteArray(t *testing.T) {
 
 func TestMarshalByteArrayMode(t *testing.T) {
 	for _, tc := range []struct {
-		name     string
-		opts     EncOptions
-		in       any
-		expected []byte
+		name string
+		opts EncOptions
+		in   any
+		want []byte
 	}{
 		{
-			name:     "byte array treated as byte slice by default",
-			opts:     EncOptions{},
-			in:       [1]byte{},
-			expected: []byte{0x41, 0x00},
+			name: "byte array treated as byte slice by default",
+			opts: EncOptions{},
+			in:   [1]byte{},
+			want: []byte{0x41, 0x00},
 		},
 		{
-			name:     "byte array treated as byte slice with ByteArrayAsByteSlice",
-			opts:     EncOptions{ByteArray: ByteArrayToByteSlice},
-			in:       [1]byte{},
-			expected: []byte{0x41, 0x00},
+			name: "byte array treated as byte slice with ByteArrayAsByteSlice",
+			opts: EncOptions{ByteArray: ByteArrayToByteSlice},
+			in:   [1]byte{},
+			want: []byte{0x41, 0x00},
 		},
 		{
-			name:     "byte array treated as array of integers with ByteArrayToArray",
-			opts:     EncOptions{ByteArray: ByteArrayToArray},
-			in:       [1]byte{},
-			expected: []byte{0x81, 0x00},
+			name: "byte array treated as array of integers with ByteArrayToArray",
+			opts: EncOptions{ByteArray: ByteArrayToArray},
+			in:   [1]byte{},
+			want: []byte{0x81, 0x00},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -6486,8 +6494,8 @@ func TestMarshalByteArrayMode(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if !bytes.Equal(out, tc.expected) {
-				t.Errorf("unexpected output, got 0x%x want 0x%x", out, tc.expected)
+			if !bytes.Equal(out, tc.want) {
+				t.Errorf("unexpected output, got 0x%x want 0x%x", out, tc.want)
 			}
 		})
 	}
@@ -6501,69 +6509,69 @@ func TestMarshalByteSliceMode(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		name     string
-		tags     TagSet
-		opts     EncOptions
-		in       any
-		expected []byte
+		name string
+		tags TagSet
+		opts EncOptions
+		in   any
+		want []byte
 	}{
 		{
-			name:     "byte slice marshals to byte string by default",
-			opts:     EncOptions{},
-			in:       []byte{0xbb},
-			expected: []byte{0x41, 0xbb},
+			name: "byte slice marshals to byte string by default",
+			opts: EncOptions{},
+			in:   []byte{0xbb},
+			want: []byte{0x41, 0xbb},
 		},
 		{
-			name:     "byte slice marshals to byte string by with ByteSliceToByteString",
-			opts:     EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatNone},
-			in:       []byte{0xbb},
-			expected: []byte{0x41, 0xbb},
+			name: "byte slice marshals to byte string by with ByteSliceToByteString",
+			opts: EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatNone},
+			in:   []byte{0xbb},
+			want: []byte{0x41, 0xbb},
 		},
 		{
-			name:     "byte slice marshaled to byte string enclosed in base64url expected encoding tag",
-			opts:     EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64URL},
-			in:       []byte{0xbb},
-			expected: []byte{0xd5, 0x41, 0xbb},
+			name: "byte slice marshaled to byte string enclosed in base64url expected encoding tag",
+			opts: EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64URL},
+			in:   []byte{0xbb},
+			want: []byte{0xd5, 0x41, 0xbb},
 		},
 		{
-			name:     "byte slice marshaled to byte string enclosed in base64 expected encoding tag",
-			opts:     EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64},
-			in:       []byte{0xbb},
-			expected: []byte{0xd6, 0x41, 0xbb},
+			name: "byte slice marshaled to byte string enclosed in base64 expected encoding tag",
+			opts: EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64},
+			in:   []byte{0xbb},
+			want: []byte{0xd6, 0x41, 0xbb},
 		},
 		{
-			name:     "byte slice marshaled to byte string enclosed in base16 expected encoding tag",
-			opts:     EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase16},
-			in:       []byte{0xbb},
-			expected: []byte{0xd7, 0x41, 0xbb},
+			name: "byte slice marshaled to byte string enclosed in base16 expected encoding tag",
+			opts: EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase16},
+			in:   []byte{0xbb},
+			want: []byte{0xd7, 0x41, 0xbb},
 		},
 		{
-			name:     "user-registered tag numbers are encoded with no expected encoding tag",
-			tags:     ts,
-			opts:     EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatNone},
-			in:       namedByteSlice{0xbb},
-			expected: []byte{0xd8, 0xcc, 0x41, 0xbb},
+			name: "user-registered tag numbers are encoded with no expected encoding tag",
+			tags: ts,
+			opts: EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatNone},
+			in:   namedByteSlice{0xbb},
+			want: []byte{0xd8, 0xcc, 0x41, 0xbb},
 		},
 		{
-			name:     "user-registered tag numbers are encoded after base64url expected encoding tag",
-			tags:     ts,
-			opts:     EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64URL},
-			in:       namedByteSlice{0xbb},
-			expected: []byte{0xd5, 0xd8, 0xcc, 0x41, 0xbb},
+			name: "user-registered tag numbers are encoded after base64url expected encoding tag",
+			tags: ts,
+			opts: EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64URL},
+			in:   namedByteSlice{0xbb},
+			want: []byte{0xd5, 0xd8, 0xcc, 0x41, 0xbb},
 		},
 		{
-			name:     "user-registered tag numbers are encoded after base64 expected encoding tag",
-			tags:     ts,
-			opts:     EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64},
-			in:       namedByteSlice{0xbb},
-			expected: []byte{0xd6, 0xd8, 0xcc, 0x41, 0xbb},
+			name: "user-registered tag numbers are encoded after base64 expected encoding tag",
+			tags: ts,
+			opts: EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64},
+			in:   namedByteSlice{0xbb},
+			want: []byte{0xd6, 0xd8, 0xcc, 0x41, 0xbb},
 		},
 		{
-			name:     "user-registered tag numbers are encoded after base16 expected encoding tag",
-			tags:     ts,
-			opts:     EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase16},
-			in:       namedByteSlice{0xbb},
-			expected: []byte{0xd7, 0xd8, 0xcc, 0x41, 0xbb},
+			name: "user-registered tag numbers are encoded after base16 expected encoding tag",
+			tags: ts,
+			opts: EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase16},
+			in:   namedByteSlice{0xbb},
+			want: []byte{0xd7, 0xd8, 0xcc, 0x41, 0xbb},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -6585,8 +6593,8 @@ func TestMarshalByteSliceMode(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if !bytes.Equal(out, tc.expected) {
-				t.Errorf("unexpected output, got 0x%x want 0x%x", out, tc.expected)
+			if !bytes.Equal(out, tc.want) {
+				t.Errorf("unexpected output, got 0x%x want 0x%x", out, tc.want)
 			}
 		})
 	}
@@ -7081,6 +7089,59 @@ func TestJSONMarshalerTranscoder(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestMarshalerErrorUnwrap(t *testing.T) {
+	innerErr := errors.New("MarshalCBOR: error")
+	v := marshalCBORError(innerErr.Error())
+	_, err := Marshal(v)
+	if err == nil {
+		t.Fatal("Marshal() didn't return an error")
+	}
+	var me *MarshalerError
+	if errors.As(err, &me) {
+		if unwrapped := me.Unwrap(); unwrapped == nil || unwrapped.Error() != innerErr.Error() {
+			t.Errorf("MarshalerError.Unwrap() = %v, want error with message %q", unwrapped, innerErr.Error())
+		}
+	}
+	// The marshalCBORError type returns the raw error, not a MarshalerError,
+	// so also test Unwrap directly by constructing a MarshalerError.
+	me2 := &MarshalerError{typ: reflect.TypeOf(0), err: innerErr}
+	if unwrapped := me2.Unwrap(); unwrapped != innerErr {
+		t.Errorf("MarshalerError.Unwrap() = %v, want %v", unwrapped, innerErr)
+	}
+}
+
+func TestTranscodeErrorUnwrap(t *testing.T) {
+	innerErr := errors.New("transcode failed")
+	te := TranscodeError{err: innerErr, rtype: reflect.TypeOf(0), sourceFormat: "json", targetFormat: "cbor"}
+	if unwrapped := te.Unwrap(); unwrapped != innerErr {
+		t.Errorf("TranscodeError.Unwrap() = %v, want %v", unwrapped, innerErr)
+	}
+}
+
+func TestUnsupportedValueErrorMessage(t *testing.T) {
+	err := &UnsupportedValueError{msg: "floating-point infinity"}
+	want := "cbor: unsupported value: floating-point infinity"
+	if got := err.Error(); got != want {
+		t.Errorf("UnsupportedValueError.Error() = %q, want %q", got, want)
+	}
+}
+
+func TestMarshalToBufferNilBuffer(t *testing.T) {
+	// Test package-level function
+	if err := MarshalToBuffer(42, nil); err == nil {
+		t.Error("MarshalToBuffer(42, nil) didn't return an error")
+	}
+
+	// Test UserBufferEncMode method
+	bem, err := EncOptions{}.UserBufferEncMode()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := bem.MarshalToBuffer(42, nil); err == nil {
+		t.Error("UserBufferEncMode.MarshalToBuffer(42, nil) didn't return an error")
 	}
 }
 
