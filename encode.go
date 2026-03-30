@@ -1136,10 +1136,11 @@ func encodeFloat(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if fopt == ShortestFloat16 {
 		var f16 float16.Float16
 		p := float16.PrecisionFromfloat32(f32)
-		if p == float16.PrecisionExact {
+		switch p {
+		case float16.PrecisionExact:
 			// Roundtrip float32->float16->float32 test isn't needed.
 			f16 = float16.Fromfloat32(f32)
-		} else if p == float16.PrecisionUnknown {
+		case float16.PrecisionUnknown:
 			// Try roundtrip float32->float16->float32 to determine if float32 can fit into float16.
 			f16 = float16.Fromfloat32(f32)
 			if f16.Float32() == f32 {
@@ -1297,10 +1298,10 @@ func encodeByteString(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if slen == 0 {
 		return e.WriteByte(byte(cborTypeByteString))
 	}
-	encodeHead(e, byte(cborTypeByteString), uint64(slen))
+	encodeHead(e, byte(cborTypeByteString), uint64(slen)) //nolint:gosec
 	if vk == reflect.Array {
 		for i := 0; i < slen; i++ {
-			e.WriteByte(byte(v.Index(i).Uint()))
+			e.WriteByte(byte(v.Index(i).Uint())) //nolint:gosec
 		}
 		return nil
 	}
@@ -1337,7 +1338,7 @@ func (ae arrayEncodeFunc) encode(e *bytes.Buffer, em *encMode, v reflect.Value) 
 	if alen == 0 {
 		return e.WriteByte(byte(cborTypeArray))
 	}
-	encodeHead(e, byte(cborTypeArray), uint64(alen))
+	encodeHead(e, byte(cborTypeArray), uint64(alen)) //nolint:gosec
 	for i := 0; i < alen; i++ {
 		if err := ae.f(e, em, v.Index(i)); err != nil {
 			return err
@@ -1368,7 +1369,7 @@ func (me mapEncodeFunc) encode(e *bytes.Buffer, em *encMode, v reflect.Value) er
 		return e.WriteByte(byte(cborTypeMap))
 	}
 
-	encodeHead(e, byte(cborTypeMap), uint64(mlen))
+	encodeHead(e, byte(cborTypeMap), uint64(mlen)) //nolint:gosec
 	if em.sort == SortNone || em.sort == SortFastShuffle || mlen <= 1 {
 		return me.e(e, em, v, nil)
 	}
@@ -1654,7 +1655,7 @@ func encodeTime(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 
 	case TimeUnixDynamic:
 		t = t.UTC().Round(time.Microsecond)
-		secs, nsecs := t.Unix(), uint64(t.Nanosecond())
+		secs, nsecs := t.Unix(), uint64(t.Nanosecond()) //nolint:gosec
 		if nsecs == 0 {
 			return encodeInt(e, em, reflect.ValueOf(secs))
 		}

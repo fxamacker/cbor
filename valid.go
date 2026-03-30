@@ -113,7 +113,7 @@ func (d *decoder) wellformedInternal(depth int, checkBuiltinTags bool) (int, err
 			}
 			return d.wellformedIndefiniteString(t, depth, checkBuiltinTags)
 		}
-		valInt := int(val)
+		valInt := int(val) //nolint:gosec
 		if valInt < 0 {
 			// Detect integer overflow
 			return 0, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, causing integer overflow")
@@ -136,7 +136,7 @@ func (d *decoder) wellformedInternal(depth int, checkBuiltinTags bool) (int, err
 			return d.wellformedIndefiniteArrayOrMap(t, depth, checkBuiltinTags)
 		}
 
-		valInt := int(val)
+		valInt := int(val) //nolint:gosec
 		if valInt < 0 {
 			// Detect integer overflow
 			return 0, errors.New("cbor: " + t.String() + " length " + strconv.FormatUint(val, 10) + " is too large, it would cause integer overflow")
@@ -326,7 +326,7 @@ func (d *decoder) wellformedHead() (t cborType, ai byte, val uint64, err error) 
 		val = uint64(binary.BigEndian.Uint16(d.data[d.off : d.off+argumentSize]))
 		d.off += argumentSize
 		if t == cborTypePrimitives {
-			if err := d.acceptableFloat(float64(float16.Frombits(uint16(val)).Float32())); err != nil {
+			if err := d.acceptableFloat(float64(float16.Frombits(uint16(val)).Float32())); err != nil { //nolint:gosec
 				return 0, 0, 0, err
 			}
 		}
@@ -341,7 +341,7 @@ func (d *decoder) wellformedHead() (t cborType, ai byte, val uint64, err error) 
 		val = uint64(binary.BigEndian.Uint32(d.data[d.off : d.off+argumentSize]))
 		d.off += argumentSize
 		if t == cborTypePrimitives {
-			if err := d.acceptableFloat(float64(math.Float32frombits(uint32(val)))); err != nil {
+			if err := d.acceptableFloat(float64(math.Float32frombits(uint32(val)))); err != nil { //nolint:gosec
 				return 0, 0, 0, err
 			}
 		}

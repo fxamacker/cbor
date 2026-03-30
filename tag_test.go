@@ -689,7 +689,7 @@ func TestAddTagTypeAliasError(t *testing.T) {
 	tags := NewTagSet()
 	for i, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, tc.typ, uint64(100+i)); err == nil {
+			if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, tc.typ, uint64(100+i)); err == nil { //nolint:gosec
 				t.Errorf("TagSet.Add(%s, %d) didn't return an error", tc.typ.String(), 0)
 			} else if err.Error() != tc.wantErrorMsg {
 				t.Errorf("TagSet.Add(%s, %d) returned error msg %q, want %q", tc.typ.String(), 0, err, tc.wantErrorMsg)

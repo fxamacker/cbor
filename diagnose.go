@@ -357,7 +357,7 @@ func (di *diagnose) item() error { //nolint:gocyclo
 
 	case cborTypeArray:
 		_, _, val := di.d.getHead()
-		count := int(val)
+		count := int(val) //nolint:gosec
 		di.w.WriteByte('[')
 
 		for i := 0; i < count; i++ {
@@ -373,7 +373,7 @@ func (di *diagnose) item() error { //nolint:gocyclo
 
 	case cborTypeMap:
 		_, _, val := di.d.getHead()
-		count := int(val)
+		count := int(val) //nolint:gosec
 		di.w.WriteByte('{')
 
 		for i := 0; i < count; i++ {
@@ -474,8 +474,8 @@ func (di *diagnose) item() error { //nolint:gocyclo
 func (di *diagnose) writeU16(val rune) {
 	di.w.WriteString("\\u")
 	var in [2]byte
-	in[0] = byte(val >> 8)
-	in[1] = byte(val)
+	in[0] = byte(val >> 8) //nolint:gosec
+	in[1] = byte(val)      //nolint:gosec
 	sz := hex.EncodedLen(len(in))
 	di.w.Grow(sz)
 	dst := di.w.Bytes()[di.w.Len() : di.w.Len()+sz]
@@ -628,7 +628,7 @@ func (di *diagnose) encodeFloat(ai byte, val uint64) error {
 	f64 := float64(0)
 	switch ai {
 	case additionalInformationAsFloat16:
-		f16 := float16.Frombits(uint16(val))
+		f16 := float16.Frombits(uint16(val)) //nolint:gosec
 		switch {
 		case f16.IsNaN():
 			di.w.WriteString("NaN")
@@ -644,7 +644,7 @@ func (di *diagnose) encodeFloat(ai byte, val uint64) error {
 		}
 
 	case additionalInformationAsFloat32:
-		f32 := math.Float32frombits(uint32(val))
+		f32 := math.Float32frombits(uint32(val)) //nolint:gosec
 		switch {
 		case f32 != f32:
 			di.w.WriteString("NaN")

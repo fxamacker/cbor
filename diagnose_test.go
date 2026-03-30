@@ -504,13 +504,13 @@ func TestDiagnoseByteString(t *testing.T) {
 			opts:     &DiagOptions{},
 		},
 		{
-			name:     "indefinite-length byte string with a empty byte string",
+			name:     "indefinite-length byte string with an empty byte string",
 			data:     mustHexDecode("5f40ff"),
 			wantDiag: `(_ h'')`, // RFC 8949, Section 8.1 says `(_ '')` but it looks wrong and conflicts with Appendix A.
 			opts:     &DiagOptions{},
 		},
 		{
-			name:     "indefinite-length byte string with two empty byte string",
+			name:     "indefinite-length byte string with two empty byte strings",
 			data:     mustHexDecode("5f4040ff"),
 			wantDiag: `(_ h'', h'')`,
 			opts:     &DiagOptions{},
@@ -620,13 +620,13 @@ func TestDiagnoseTextString(t *testing.T) {
 			opts:     &DiagOptions{},
 		},
 		{
-			name:     "indefinite-length text string with a empty text string",
+			name:     "indefinite-length text string with an empty text string",
 			data:     mustHexDecode("7f60ff"),
 			wantDiag: `(_ "")`,
 			opts:     &DiagOptions{},
 		},
 		{
-			name:     "indefinite-length text string with two empty text string",
+			name:     "indefinite-length text string with two empty text strings",
 			data:     mustHexDecode("7f6060ff"),
 			wantDiag: `(_ "", "")`,
 			opts:     &DiagOptions{},

@@ -986,13 +986,13 @@ func BenchmarkUnmarshalMapToStruct(b *testing.B) {
 			b.Fatalf("invalid test assumption: ManyFields expected to have no more than 255 fields, has %d", rt.NumField())
 		}
 		buf.WriteByte(0xb8)
-		buf.WriteByte(byte(rt.NumField()))
+		buf.WriteByte(byte(rt.NumField()))        //nolint:gosec
 		for i := rt.NumField() - 1; i >= 0; i-- { // backwards
 			f := rt.Field(i)
 			if len(f.Name) > 23 {
 				b.Fatalf("invalid test assumption: field name %q longer than 23 bytes", f.Name)
 			}
-			buf.WriteByte(byte(0x60 + len(f.Name)))
+			buf.WriteByte(byte(0x60 + len(f.Name))) //nolint:gosec
 			buf.WriteString(f.Name)
 			buf.WriteByte(0xf5) // true
 		}
