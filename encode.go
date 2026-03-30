@@ -1480,6 +1480,47 @@ func putKeyValues(x *[]keyValue) {
 	keyValuePool.Put(x)
 }
 
+func encodeStructToIndefArray(e *bytes.Buffer, em *encMode, v reflect.Value) (err error) {
+	structType, err := getEncodingStructType(v.Type())
+	if err != nil {
+		return err
+	}
+
+	if b := em.encTagBytes(v.Type()); b != nil {
+		e.Write(b)
+	}
+
+	flds := structType.fields
+
+	// Write indefinite-length array header (0x9f)
+	e.WriteByte(cborArrayWithIndefiniteLengthHead)
+	for i := 0; i < len(flds); i++ {
+		f := flds[i]
+
+		var fv reflect.Value
+		if len(f.idx) == 1 {
+			fv = v.Field(f.idx[0])
+		} else {
+			// Get embedded field value.  No error is expected.
+			fv, _ = getFieldValue(v, f.idx, func(reflect.Value) (reflect.Value, error) {
+				// Write CBOR nil for null pointer to embedded struct
+				e.Write(cborNil)
+				return reflect.Value{}, nil
+			})
+			if !fv.IsValid() {
+				continue
+			}
+		}
+
+		if err := f.ef(e, em, fv); err != nil {
+			return err
+		}
+	}
+	// Write break code (0xff)
+	e.WriteByte(cborBreakFlag)
+	return nil
+}
+
 func encodeStructToArray(e *bytes.Buffer, em *encMode, v reflect.Value) (err error) {
 	structType, err := getEncodingStructType(v.Type())
 	if err != nil {
@@ -2079,6 +2120,9 @@ func getEncodeFuncInternal(t reflect.Type) (ef encodeFunc, ief isEmptyFunc, izf 
 		if f, ok := t.FieldByName("_"); ok {
 			tag := f.Tag.Get("cbor")
 			if tag != "-" {
+				if hasToIndefArrayOption(tag) {
+					return encodeStructToIndefArray, isEmptyStruct, isZeroFieldStruct
+				}
 				if hasToArrayOption(tag) {
 					return encodeStructToArray, isEmptyStruct, isZeroFieldStruct
 				}

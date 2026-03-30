@@ -97,6 +97,7 @@ type decodingStructType struct {
 	fieldIndicesByIntKey map[int64]int  // Only populated if toArray is false
 	err                  error
 	toArray              bool
+	toIndefArray         bool
 }
 
 func getDecodingStructType(t reflect.Type) (*decodingStructType, error) {
@@ -111,9 +112,10 @@ func getDecodingStructType(t reflect.Type) (*decodingStructType, error) {
 	flds, structOptions := getFields(t)
 
 	toArray := hasToArrayOption(structOptions)
+	toIndefArray := hasToIndefArrayOption(structOptions)
 
-	if toArray {
-		return getDecodingStructToArrayType(t, flds)
+	if toArray || toIndefArray {
+		return getDecodingStructToArrayType(t, flds, toIndefArray)
 	}
 
 	fieldIndicesByName := make(map[string]int, len(flds))
@@ -163,7 +165,7 @@ func getDecodingStructType(t reflect.Type) (*decodingStructType, error) {
 	return structType, nil
 }
 
-func getDecodingStructToArrayType(t reflect.Type, flds fields) (*decodingStructType, error) {
+func getDecodingStructToArrayType(t reflect.Type, flds fields, toIndefArray bool) (*decodingStructType, error) {
 	decFlds := make(decodingFields, len(flds))
 	for i, f := range flds {
 		// nameAsInt is set in getFields() except for fields with an unparsable tagged name.
@@ -185,8 +187,9 @@ func getDecodingStructToArrayType(t reflect.Type, flds fields) (*decodingStructT
 	}
 
 	structType := &decodingStructType{
-		fields:  decFlds,
-		toArray: true,
+		fields:       decFlds,
+		toArray:      true,
+		toIndefArray: toIndefArray,
 	}
 	decodingStructTypeCache.Store(t, structType)
 	return structType, nil
@@ -199,6 +202,7 @@ type encodingStructType struct {
 	omitEmptyFieldsIdx []int          // Only populated if toArray is false
 	err                error
 	toArray            bool
+	toIndefArray       bool
 }
 
 func (st *encodingStructType) getFields(em *encMode) encodingFields {
@@ -258,6 +262,9 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 
 	flds, structOptions := getFields(t)
 
+	if hasToIndefArrayOption(structOptions) {
+		return getEncodingStructToIndefArrayType(t, flds)
+	}
 	if hasToArrayOption(structOptions) {
 		return getEncodingStructToArrayType(t, flds)
 	}
@@ -354,6 +361,27 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 	return structType, nil
 }
 
+func getEncodingStructToIndefArrayType(t reflect.Type, flds fields) (*encodingStructType, error) {
+	encFlds := make(encodingFields, len(flds))
+	for i, f := range flds {
+		encFlds[i] = &encodingField{field: *f}
+		encFlds[i].ef, encFlds[i].ief, encFlds[i].izf = getEncodeFunc(f.typ)
+		if encFlds[i].ef == nil {
+			structType := &encodingStructType{err: &UnsupportedTypeError{t}}
+			encodingStructTypeCache.Store(t, structType)
+			return nil, structType.err
+		}
+	}
+
+	structType := &encodingStructType{
+		fields:       encFlds,
+		toArray:      true,
+		toIndefArray: true,
+	}
+	encodingStructTypeCache.Store(t, structType)
+	return structType, nil
+}
+
 func getEncodingStructToArrayType(t reflect.Type, flds fields) (*encodingStructType, error) {
 	encFlds := make(encodingFields, len(flds))
 	for i, f := range flds {
@@ -395,6 +423,12 @@ func getTypeInfo(t reflect.Type) *typeInfo {
 
 func hasToArrayOption(tag string) bool {
 	s := ",toarray"
+	idx := strings.Index(tag, s)
+	return idx >= 0 && (len(tag) == idx+len(s) || tag[idx+len(s)] == ',')
+}
+
+func hasToIndefArrayOption(tag string) bool {
+	s := ",toindefarray"
 	idx := strings.Index(tag, s)
 	return idx >= 0 && (len(tag) == idx+len(s) || tag[idx+len(s)] == ',')
 }
