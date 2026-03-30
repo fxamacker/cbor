@@ -16,10 +16,10 @@ on:
     branches: [main, master]
 
 env:
-  GO_VERSION: '1.22'
-  GOLINTERS_VERSION: 1.59.1
+  GO_VERSION: '1.25'
+  GOLINTERS_VERSION: 2.10.1
   GOLINTERS_ARCH: linux-amd64
-  GOLINTERS_TGZ_DGST: c30696f1292cff8778a495400745f0f9c0406a3f38d8bb12cef48d599f6c7791
+  GOLINTERS_TGZ_DGST: dfa775874cf0561b404a02a8f4481fc69b28091da95aa697259820d429b09c99
   GOLINTERS_TIMEOUT: 15m
   OPENSSL_DGST_CMD: openssl dgst -sha256 -r
   CURL_CMD: curl --proto =https --tlsv1.2 --location --silent --show-error --fail
