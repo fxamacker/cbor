@@ -5276,11 +5276,11 @@ func TestUnmarshalArrayToStructWrongFieldTypeError(t *testing.T) {
 func TestUnmarshalArrayToStructCannotSetEmbeddedPointerError(t *testing.T) {
 	type (
 		s1 struct {
-			x int //nolint:unused,structcheck
+			x int //nolint:unused
 			X int
 		}
 		S2 struct {
-			y int //nolint:unused,structcheck
+			y int //nolint:unused
 			Y int
 		}
 		S struct {

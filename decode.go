@@ -1055,7 +1055,7 @@ func (opts DecOptions) decMode() (*decMode, error) { //nolint:gocritic // ignore
 	}
 
 	if !opts.ExtraReturnErrors.valid() {
-		return nil, errors.New("cbor: invalid ExtraReturnErrors " + strconv.Itoa(int(opts.ExtraReturnErrors)))
+		return nil, errors.New("cbor: invalid ExtraReturnErrors " + strconv.Itoa(int(opts.ExtraReturnErrors))) //nolint:gosec
 	}
 
 	if opts.DefaultMapType != nil && opts.DefaultMapType.Kind() != reflect.Map {
@@ -1583,11 +1583,11 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		_, ai, val := d.getHead()
 		switch ai {
 		case additionalInformationAsFloat16:
-			f := float64(float16.Frombits(uint16(val)).Float32())
+			f := float64(float16.Frombits(uint16(val)).Float32()) //nolint:gosec
 			return fillFloat(t, f, v)
 
 		case additionalInformationAsFloat32:
-			f := float64(math.Float32frombits(uint32(val)))
+			f := float64(math.Float32frombits(uint32(val))) //nolint:gosec
 			return fillFloat(t, f, v)
 
 		case additionalInformationAsFloat64:
@@ -1595,10 +1595,10 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 			return fillFloat(t, f, v)
 
 		default: // ai <= 24
-			if d.dm.simpleValues.rejected[SimpleValue(val)] {
+			if d.dm.simpleValues.rejected[SimpleValue(val)] { //nolint:gosec
 				return &UnacceptableDataItemError{
 					CBORType: t.String(),
-					Message:  "simple value " + strconv.FormatInt(int64(val), 10) + " is not recognized",
+					Message:  "simple value " + strconv.FormatInt(int64(val), 10) + " is not recognized", //nolint:gosec
 				}
 			}
 
@@ -1677,11 +1677,12 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		return d.parseToValue(v, tInfo)
 
 	case cborTypeArray:
-		if tInfo.nonPtrKind == reflect.Slice {
+		switch tInfo.nonPtrKind {
+		case reflect.Slice:
 			return d.parseArrayToSlice(v, tInfo)
-		} else if tInfo.nonPtrKind == reflect.Array {
+		case reflect.Array:
 			return d.parseArrayToArray(v, tInfo)
-		} else if tInfo.nonPtrKind == reflect.Struct {
+		case reflect.Struct:
 			return d.parseArrayToStruct(v, tInfo)
 		}
 
@@ -1689,9 +1690,10 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		return &UnmarshalTypeError{CBORType: t.String(), GoType: tInfo.nonPtrType.String()}
 
 	case cborTypeMap:
-		if tInfo.nonPtrKind == reflect.Struct {
+		switch tInfo.nonPtrKind {
+		case reflect.Struct:
 			return d.parseMapToStruct(v, tInfo)
-		} else if tInfo.nonPtrKind == reflect.Map {
+		case reflect.Map:
 			return d.parseMapToMap(v, tInfo)
 		}
 		d.skip()
@@ -1746,8 +1748,8 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 			// Read tag number
 			_, _, tagNum := d.getHead()
 			if tagNum != 0 && tagNum != 1 {
-				d.skip() // skip tag content
-				return time.Time{}, false, errors.New("cbor: wrong tag number for time.Time, got " + strconv.Itoa(int(tagNum)) + ", expect 0 or 1")
+				d.skip()                                                                                                                            // skip tag content
+				return time.Time{}, false, errors.New("cbor: wrong tag number for time.Time, got " + strconv.Itoa(int(tagNum)) + ", expect 0 or 1") //nolint:gosec
 			}
 		}
 	} else {
@@ -1816,10 +1818,10 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 		var f float64
 		switch ai {
 		case additionalInformationAsFloat16:
-			f = float64(float16.Frombits(uint16(val)).Float32())
+			f = float64(float16.Frombits(uint16(val)).Float32()) //nolint:gosec
 
 		case additionalInformationAsFloat32:
-			f = float64(math.Float32frombits(uint32(val)))
+			f = float64(math.Float32frombits(uint32(val))) //nolint:gosec
 
 		case additionalInformationAsFloat64:
 			f = math.Float64frombits(val)
@@ -2153,14 +2155,14 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyc
 
 	case cborTypePrimitives:
 		_, ai, val := d.getHead()
-		if ai <= 24 && d.dm.simpleValues.rejected[SimpleValue(val)] {
+		if ai <= 24 && d.dm.simpleValues.rejected[SimpleValue(val)] { //nolint:gosec
 			return nil, &UnacceptableDataItemError{
 				CBORType: t.String(),
-				Message:  "simple value " + strconv.FormatInt(int64(val), 10) + " is not recognized",
+				Message:  "simple value " + strconv.FormatInt(int64(val), 10) + " is not recognized", //nolint:gosec
 			}
 		}
 		if ai < 20 || ai == 24 {
-			return SimpleValue(val), nil
+			return SimpleValue(val), nil //nolint:gosec
 		}
 
 		switch ai {
@@ -2173,11 +2175,11 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyc
 			return nil, nil
 
 		case additionalInformationAsFloat16:
-			f := float64(float16.Frombits(uint16(val)).Float32())
+			f := float64(float16.Frombits(uint16(val)).Float32()) //nolint:gosec
 			return f, nil
 
 		case additionalInformationAsFloat32:
-			f := float64(math.Float32frombits(uint32(val)))
+			f := float64(math.Float32frombits(uint32(val))) //nolint:gosec
 			return f, nil
 
 		case additionalInformationAsFloat64:
@@ -2210,16 +2212,16 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyc
 func (d *decoder) parseByteString() ([]byte, bool) {
 	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
 	if !indefiniteLength {
-		b := d.data[d.off : d.off+int(val)]
-		d.off += int(val)
+		b := d.data[d.off : d.off+int(val)] //nolint:gosec
+		d.off += int(val)                   //nolint:gosec
 		return b, false
 	}
 	// Process indefinite-length string chunks.
 	b := []byte{}
 	for !d.foundBreak() {
 		_, _, val = d.getHead()
-		b = append(b, d.data[d.off:d.off+int(val)]...)
-		d.off += int(val)
+		b = append(b, d.data[d.off:d.off+int(val)]...) //nolint:gosec
+		d.off += int(val)                              //nolint:gosec
 	}
 	return b, true
 }
@@ -2308,8 +2310,8 @@ func (d *decoder) applyByteStringTextConversion(
 func (d *decoder) parseTextString() ([]byte, error) {
 	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
 	if !indefiniteLength {
-		b := d.data[d.off : d.off+int(val)]
-		d.off += int(val)
+		b := d.data[d.off : d.off+int(val)] //nolint:gosec
+		d.off += int(val)                   //nolint:gosec
 		if d.dm.utf8 == UTF8RejectInvalid && !utf8.Valid(b) {
 			return nil, &SemanticError{"cbor: invalid UTF-8 string"}
 		}
@@ -2319,8 +2321,8 @@ func (d *decoder) parseTextString() ([]byte, error) {
 	b := []byte{}
 	for !d.foundBreak() {
 		_, _, val = d.getHead()
-		x := d.data[d.off : d.off+int(val)]
-		d.off += int(val)
+		x := d.data[d.off : d.off+int(val)] //nolint:gosec
+		d.off += int(val)                   //nolint:gosec
 		if d.dm.utf8 == UTF8RejectInvalid && !utf8.Valid(x) {
 			for !d.foundBreak() {
 				d.skip() // Skip remaining chunk on error
@@ -2335,7 +2337,7 @@ func (d *decoder) parseTextString() ([]byte, error) {
 func (d *decoder) parseArray() ([]any, error) {
 	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
 	hasSize := !indefiniteLength
-	count := int(val)
+	count := int(val) //nolint:gosec
 	if !hasSize {
 		count = d.numOfItemsUntilBreak() // peek ahead to get array size to preallocate slice for better performance
 	}
@@ -2357,7 +2359,7 @@ func (d *decoder) parseArray() ([]any, error) {
 func (d *decoder) parseArrayToSlice(v reflect.Value, tInfo *typeInfo) error {
 	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
 	hasSize := !indefiniteLength
-	count := int(val)
+	count := int(val) //nolint:gosec
 	if !hasSize {
 		count = d.numOfItemsUntilBreak() // peek ahead to get array size to preallocate slice for better performance
 	}
@@ -2379,7 +2381,7 @@ func (d *decoder) parseArrayToSlice(v reflect.Value, tInfo *typeInfo) error {
 func (d *decoder) parseArrayToArray(v reflect.Value, tInfo *typeInfo) error {
 	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
 	hasSize := !indefiniteLength
-	count := int(val)
+	count := int(val) //nolint:gosec
 	gi := 0
 	vLen := v.Len()
 	var err error
@@ -2408,7 +2410,7 @@ func (d *decoder) parseArrayToArray(v reflect.Value, tInfo *typeInfo) error {
 func (d *decoder) parseMap() (any, error) {
 	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
 	hasSize := !indefiniteLength
-	count := int(val)
+	count := int(val) //nolint:gosec
 	m := make(map[any]any)
 	var k, e any
 	var err, lastErr error
@@ -2473,7 +2475,7 @@ func (d *decoder) parseMap() (any, error) {
 func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
 	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
 	hasSize := !indefiniteLength
-	count := int(val)
+	count := int(val) //nolint:gosec
 	if v.IsNil() {
 		mapsize := count
 		if !hasSize {
@@ -2592,7 +2594,7 @@ func (d *decoder) parseArrayToStruct(v reflect.Value, tInfo *typeInfo) error {
 	start := d.off
 	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
 	hasSize := !indefiniteLength
-	count := int(val)
+	count := int(val) //nolint:gosec
 	if !hasSize {
 		count = d.numOfItemsUntilBreak() // peek ahead to get array size
 	}
@@ -2726,7 +2728,7 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 	// Get CBOR map size
 	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
 	hasSize := !indefiniteLength
-	count := int(val)
+	count := int(val) //nolint:gosec
 
 	// Keep track of matched struct fields to detect duplicate map keys.
 	var foundFldIdx []bool
@@ -2815,7 +2817,7 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 					d.skip() // skip value
 					continue
 				}
-				nameAsInt = int64(val)
+				nameAsInt = int64(val) //nolint:gosec
 			} else {
 				_, _, val := d.getHead()
 				if val > math.MaxInt64 {
@@ -2829,7 +2831,7 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 					d.skip() // skip value
 					continue
 				}
-				nameAsInt = int64(-1) ^ int64(val)
+				nameAsInt = int64(-1) ^ int64(val) //nolint:gosec
 			}
 
 			// Find field by integer key
@@ -2936,15 +2938,15 @@ func (d *decoder) skip() {
 
 	switch t {
 	case cborTypeByteString, cborTypeTextString:
-		d.off += int(val)
+		d.off += int(val) //nolint:gosec
 
 	case cborTypeArray:
-		for i := 0; i < int(val); i++ {
+		for i := 0; i < int(val); i++ { //nolint:gosec
 			d.skip()
 		}
 
 	case cborTypeMap:
-		for i := 0; i < int(val)*2; i++ {
+		for i := 0; i < int(val)*2; i++ { //nolint:gosec
 			d.skip()
 		}
 

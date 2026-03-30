@@ -308,10 +308,10 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 			}
 			nameAsInt := f.nameAsInt
 			if nameAsInt >= 0 {
-				encodeHead(e, byte(cborTypePositiveInt), uint64(nameAsInt))
+				encodeHead(e, byte(cborTypePositiveInt), uint64(nameAsInt)) //nolint:gosec
 			} else {
 				n := nameAsInt*(-1) - 1
-				encodeHead(e, byte(cborTypeNegativeInt), uint64(n))
+				encodeHead(e, byte(cborTypeNegativeInt), uint64(n)) //nolint:gosec
 			}
 			ef.cborName = make([]byte, e.Len())
 			copy(ef.cborName, e.Bytes())
