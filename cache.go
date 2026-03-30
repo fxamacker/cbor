@@ -121,31 +121,41 @@ func getDecodingStructType(t reflect.Type) (*decodingStructType, error) {
 
 	decFlds := make(decodingFields, len(flds))
 	for i, f := range flds {
-		if f.keyAsInt {
-			nameAsInt, numErr := strconv.Atoi(f.name)
-			if numErr != nil {
+		// nameAsInt is set in getFields() except for fields with an unparsable tagged name.
+		// Atoi() is called here to catch and save parsing errors.
+		if f.keyAsInt && f.nameAsInt == 0 {
+			if _, numErr := strconv.Atoi(f.name); numErr != nil {
 				structType := &decodingStructType{
 					err: errors.New("cbor: failed to parse field name \"" + f.name + "\" to int (" + numErr.Error() + ")"),
 				}
 				decodingStructTypeCache.Store(t, structType)
 				return nil, structType.err
 			}
-			f.nameAsInt = int64(nameAsInt)
 		}
 
-		if _, ok := fieldIndicesByName[f.name]; ok {
-			structType := &decodingStructType{
-				err: fmt.Errorf("cbor: two or more fields of %v have the same name %q", t, f.name),
-			}
-			decodingStructTypeCache.Store(t, structType)
-			return nil, structType.err
-		}
-		fieldIndicesByName[f.name] = i
 		if f.keyAsInt {
 			if fieldIndicesByIntKey == nil {
 				fieldIndicesByIntKey = make(map[int64]int, len(flds))
 			}
+			// The duplication check is only a safeguard, since getFields() already deduplicates fields.
+			if _, ok := fieldIndicesByIntKey[f.nameAsInt]; ok {
+				structType := &decodingStructType{
+					err: fmt.Errorf("cbor: two or more fields of %v have the same keyasint value %d", t, f.nameAsInt),
+				}
+				decodingStructTypeCache.Store(t, structType)
+				return nil, structType.err
+			}
 			fieldIndicesByIntKey[f.nameAsInt] = i
+		} else {
+			// The duplication check is only a safeguard, since getFields() already deduplicates fields.
+			if _, ok := fieldIndicesByName[f.name]; ok {
+				structType := &decodingStructType{
+					err: fmt.Errorf("cbor: two or more fields of %v have the same name %q", t, f.name),
+				}
+				decodingStructTypeCache.Store(t, structType)
+				return nil, structType.err
+			}
+			fieldIndicesByName[f.name] = i
 		}
 
 		decFlds[i] = &decodingField{
@@ -284,16 +294,19 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 		}
 
 		// Encode field name
-		if flds[i].keyAsInt {
-			nameAsInt, numErr := strconv.Atoi(flds[i].name)
-			if numErr != nil {
-				structType := &encodingStructType{
-					err: errors.New("cbor: failed to parse field name \"" + flds[i].name + "\" to int (" + numErr.Error() + ")"),
+		if f.keyAsInt {
+			if f.nameAsInt == 0 {
+				// nameAsInt is set in getFields() except for fields with an unparsable tagged name.
+				// Atoi() is called here to catch and save parsing errors.
+				if _, numErr := strconv.Atoi(f.name); numErr != nil {
+					structType := &encodingStructType{
+						err: errors.New("cbor: failed to parse field name \"" + f.name + "\" to int (" + numErr.Error() + ")"),
+					}
+					encodingStructTypeCache.Store(t, structType)
+					return nil, structType.err
 				}
-				encodingStructTypeCache.Store(t, structType)
-				return nil, structType.err
 			}
-			flds[i].nameAsInt = int64(nameAsInt)
+			nameAsInt := f.nameAsInt
 			if nameAsInt >= 0 {
 				encodeHead(e, byte(cborTypePositiveInt), uint64(nameAsInt))
 			} else {

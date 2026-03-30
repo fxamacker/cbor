@@ -52,6 +52,9 @@ func findStructFieldByKey(
 func findFieldCaseInsensitive(flds decodingFields, key string) (int, bool) {
 	keyLen := len(key)
 	for i, f := range flds {
+		if f.keyAsInt {
+			continue
+		}
 		if len(f.name) == keyLen && strings.EqualFold(f.name, key) {
 			return i, true
 		}

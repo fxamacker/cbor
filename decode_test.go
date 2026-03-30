@@ -3404,12 +3404,12 @@ var invalidCBORUnmarshalTestCases = []struct {
 		wantErrorMsg: "cbor: wrong element type byte string for indefinite-length UTF-8 text string",
 	},
 	{
-		name:         "indefinite-length string chunks not definite-length",
+		name:         "indefinite-length string chunks not definite length",
 		data:         mustHexDecode("5f5f4100ffff"),
 		wantErrorMsg: "cbor: indefinite-length byte string chunk is not definite-length",
 	},
 	{
-		name:         "indefinite-length string chunks not definite-length",
+		name:         "indefinite-length string chunks not definite length",
 		data:         mustHexDecode("7f7f6100ffff"),
 		wantErrorMsg: "cbor: indefinite-length UTF-8 text string chunk is not definite-length",
 	},
@@ -6208,13 +6208,13 @@ func TestUnmarshalDupMapKeyToStruct(t *testing.T) {
 		},
 		{
 			name: "keyasint duplicate key does not overwrite previous value",
-			data: mustHexDecode("a36131616901614961616141"), // {"1": "i", 1: "I", "a": "A"}
+			data: mustHexDecode("a301616901614961616141"), // {1: "i", 1: "I", "a": "A"}
 			want: s{I: "i", A: "A"},
 		},
 		{
 			name:    "keyasint duplicate key triggers error",
 			opts:    DecOptions{DupMapKey: DupMapKeyEnforcedAPF},
-			data:    mustHexDecode("a36131616901614961616141"), // {"1": "i", 1: "I", "a": "A"}
+			data:    mustHexDecode("a301616901614961616141"), // {1: "i", 1: "I", "a": "A"}
 			want:    s{I: "i"},
 			wantErr: &DupMapKeyError{Key: int64(1), Index: 1},
 		},
@@ -8149,7 +8149,7 @@ func (f *IntFoo) Foo() string {
 type ByteFoo []byte
 
 func (f *ByteFoo) Foo() string {
-	return fmt.Sprint(*f)
+	return string(*f)
 }
 
 type StringFoo string
@@ -10981,6 +10981,217 @@ func TestJSONUnmarshalerTranscoder(t *testing.T) {
 				}
 			}
 
+		})
+	}
+}
+
+// TestKeyAsIntTextKeyDoesNotMatchKeyAsIntField verifies that a CBOR text string
+// key does not match a struct field with the keyasint tag option, even if the
+// text content is the string representation of the integer key.
+func TestKeyAsIntTextKeyDoesNotMatchKeyAsIntField(t *testing.T) {
+	type s struct {
+		ID int `cbor:"1,keyasint"`
+	}
+
+	testCases := []struct {
+		name    string
+		opts    DecOptions
+		data    []byte
+		want    any
+		wantErr *UnknownFieldError
+	}{
+		{
+			name: "default options",
+			opts: defaultDecMode.DecOptions(),
+			data: mustHexDecode("a1613101"), // {"1": 1}
+			want: s{},
+		},
+		{
+			name:    "unknown field error options",
+			opts:    DecOptions{ExtraReturnErrors: ExtraDecErrorUnknownField},
+			data:    mustHexDecode("a1613101"), // {"1": 1}
+			want:    s{},
+			wantErr: &UnknownFieldError{Index: 0},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, err := tc.opts.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var v s
+			err = dm.Unmarshal(tc.data, &v)
+			if err != nil {
+				if !reflect.DeepEqual(err, tc.wantErr) {
+					t.Errorf("got error: %v, wanted: %v", err, tc.wantErr)
+				}
+			} else {
+				if tc.wantErr != nil {
+					t.Errorf("got nil error, wanted: %v", tc.wantErr)
+				}
+			}
+
+			if !reflect.DeepEqual(v, tc.want) {
+				t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", tc.data, v, v, tc.want, tc.want)
+			}
+		})
+	}
+}
+
+// TestKeyAsIntNormalizedDuplicateFields verifies that struct fields with
+// keyasint tag values that are identical after integer normalization (e.g., "01"
+// and "1") are eliminated during field deduplication, matching the behavior of
+// two string-keyed fields with the same name.
+func TestKeyAsIntNormalizedDuplicateFields(t *testing.T) {
+	type s struct {
+		ID  int `cbor:"01,keyasint"`
+		ID2 int `cbor:"1,keyasint"`
+		ID3 int `cbor:"+1,keyasint"`
+	}
+
+	testCases := []struct {
+		name    string
+		opts    DecOptions
+		data    []byte
+		want    any
+		wantErr *UnknownFieldError
+	}{
+		{
+			name: "default options",
+			opts: defaultDecMode.DecOptions(),
+			data: mustHexDecode("a10101"), // {1: 1}
+			want: s{},
+		},
+		{
+			name:    "unknown field error options",
+			opts:    DecOptions{ExtraReturnErrors: ExtraDecErrorUnknownField},
+			data:    mustHexDecode("a10101"), // {1: 1}
+			want:    s{},
+			wantErr: &UnknownFieldError{Index: 0},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, err := tc.opts.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var v s
+			err = dm.Unmarshal(tc.data, &v)
+			if err != nil {
+				if !reflect.DeepEqual(err, tc.wantErr) {
+					t.Errorf("got error: %v, wanted: %v", err, tc.wantErr)
+				}
+			} else {
+				if tc.wantErr != nil {
+					t.Errorf("got nil error, wanted: %v", tc.wantErr)
+				}
+			}
+
+			if !reflect.DeepEqual(v, tc.want) {
+				t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", tc.data, v, v, tc.want, tc.want)
+			}
+		})
+	}
+
+	v := s{ID: 1, ID2: 2, ID3: 3}
+	want := mustHexDecode("a0")
+
+	b, err := Marshal(v)
+	if err != nil {
+		t.Errorf("Marshal() returned an error %v", err)
+	}
+	if !bytes.Equal(b, want) {
+		t.Errorf("Marshal() returned 0x%x, want 0x%x", b, want)
+	}
+}
+
+// TestKeyAsIntAndStringFieldsWithSameName verifies that a struct with both a
+// keyasint field and a string-keyed field with the same tag name (e.g.
+// cbor:"1,keyasint" and cbor:"1") can decode CBOR maps with integer and text
+// keys independently.
+func TestKeyAsIntAndStringFieldsWithSameName(t *testing.T) {
+	type s struct {
+		ID        int `cbor:"1,keyasint"`
+		AnotherID int `cbor:"1"`
+	}
+
+	data := mustHexDecode("a20101613102") // {1: 1, "1": 2}
+	want := s{
+		ID:        1,
+		AnotherID: 2,
+	}
+
+	var v s
+	err := Unmarshal(data, &v)
+	if err != nil {
+		t.Errorf("Unmarshal returned unexpected error: %v", err)
+	}
+	if !reflect.DeepEqual(v, want) {
+		t.Errorf("Unmarshal(0x%x) returned %+v, want %+v", data, v, want)
+	}
+
+	// Roundtrip
+	b, err := Marshal(want)
+	if err != nil {
+		t.Errorf("Marshal returned unexpected error: %v", err)
+	}
+	if !bytes.Equal(b, data) {
+		t.Errorf("Marshal(%+v) returned 0x%x, want 0x%x", want, b, data)
+	}
+}
+
+// TestMapKeyOverflowStructKeyAsInt verifies that a CBOR integer map
+// key that is outside the range of math.MinInt64 and math.MaxInt64
+// is rejected with an UnmarshalTypeError.
+func TestMapKeyOverflowStructKeyAsInt(t *testing.T) {
+	type s struct {
+		ID int `cbor:"-1,keyasint"`
+	}
+
+	testCases := []struct {
+		name    string
+		data    []byte
+		wantErr *UnmarshalTypeError
+	}{
+		{
+			name: "map key < math.MinInt64",
+			data: mustHexDecode("a13bffffffffffffffff01"), // {-18446744073709551616: 1}
+			wantErr: &UnmarshalTypeError{
+				CBORType: cborTypeNegativeInt.String(),
+				GoType:   "int64",
+				errorMsg: "-1-18446744073709551615 overflows Go's int64",
+			},
+		},
+		{
+			name: "map key > math.MaxInt64",
+			data: mustHexDecode("a11bffffffffffffffff01"), // {18446744073709551615: 1}
+			wantErr: &UnmarshalTypeError{
+				CBORType: cborTypePositiveInt.String(),
+				GoType:   "int64",
+				errorMsg: "18446744073709551615 overflows Go's int64",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var v s
+			err := Unmarshal(tc.data, &v)
+			if err != nil {
+				if !reflect.DeepEqual(err, tc.wantErr) {
+					t.Errorf("got error: %v, wanted: %v", err, tc.wantErr)
+				}
+			} else {
+				if tc.wantErr != nil {
+					t.Errorf("got nil error, wanted: %v", tc.wantErr)
+				}
+			}
 		})
 	}
 }

@@ -377,6 +377,7 @@ const (
 	// - int64 if value fits
 	// - big.Int or *big.Int (see BigIntDecMode) if value < math.MinInt64
 	// - return UnmarshalTypeError if value > math.MaxInt64
+	//
 	// Deprecated: IntDecConvertSigned should not be used.
 	// Please use other options, such as IntDecConvertSignedOrError, IntDecConvertSignedOrBigInt, IntDecConvertNone.
 	IntDecConvertSigned
@@ -1683,6 +1684,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		} else if tInfo.nonPtrKind == reflect.Struct {
 			return d.parseArrayToStruct(v, tInfo)
 		}
+
 		d.skip()
 		return &UnmarshalTypeError{CBORType: t.String(), GoType: tInfo.nonPtrType.String()}
 
@@ -2802,6 +2804,17 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 
 			if t == cborTypePositiveInt {
 				_, _, val := d.getHead()
+				if val > math.MaxInt64 {
+					if err == nil {
+						err = &UnmarshalTypeError{
+							CBORType: t.String(),
+							GoType:   reflect.TypeOf(int64(0)).String(),
+							errorMsg: strconv.FormatUint(val, 10) + " overflows Go's int64",
+						}
+					}
+					d.skip() // skip value
+					continue
+				}
 				nameAsInt = int64(val)
 			} else {
 				_, _, val := d.getHead()
