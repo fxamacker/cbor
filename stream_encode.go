@@ -49,7 +49,7 @@ func (se *StreamEncoder) Flush() error {
 	if se.closed {
 		return ErrStreamClosed
 	}
-	_, err := se.buf.WriteTo(se.Encoder.w)
+	_, err := se.buf.WriteTo(se.w)
 	return err
 }
 
@@ -199,7 +199,7 @@ func (se *StreamEncoder) EncodeInt64(i int64) error {
 		t = cborTypeNegativeInt
 		i = i*(-1) - 1
 	}
-	encodeHead(se.buf, byte(t), uint64(i))
+	encodeHead(se.buf, byte(t), uint64(i)) //nolint:gosec
 	return nil
 }
 

@@ -391,9 +391,9 @@ func (sd *StreamDecoder) DecodeBytes() ([]byte, error) {
 		return nil, errors.New("cbor: indefinite length byte string isn't supported")
 	}
 
-	b := make([]byte, int(val))
-	copy(b, d.data[d.off:d.off+int(val)])
-	d.off += int(val)
+	b := make([]byte, int(val))           //nolint:gosec
+	copy(b, d.data[d.off:d.off+int(val)]) //nolint:gosec
+	d.off += int(val)                     //nolint:gosec
 
 	end := d.off
 
@@ -425,9 +425,9 @@ func (sd *StreamDecoder) DecodeString() (string, error) {
 		return "", errors.New("cbor: indefinite length text string isn't supported")
 	}
 
-	b := d.data[d.off : d.off+int(val)]
+	b := d.data[d.off : d.off+int(val)] //nolint:gosec
 
-	d.off += int(val)
+	d.off += int(val) //nolint:gosec
 	end := d.off
 
 	sd.updateState(end - start)
