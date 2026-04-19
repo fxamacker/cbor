@@ -5753,60 +5753,80 @@ func TestEncModeInvalidFieldNameMode(t *testing.T) {
 }
 
 func TestEncIndefiniteLengthOption(t *testing.T) {
-	// Default option allows indefinite-length items
-	var buf bytes.Buffer
-	enc := NewEncoder(&buf)
-	if err := enc.StartIndefiniteByteString(); err != nil {
-		t.Errorf("StartIndefiniteByteString() returned an error %v", err)
-	}
-	if err := enc.StartIndefiniteTextString(); err != nil {
-		t.Errorf("StartIndefiniteTextString() returned an error %v", err)
-	}
-	if err := enc.StartIndefiniteArray(); err != nil {
-		t.Errorf("StartIndefiniteArray() returned an error %v", err)
-	}
-	if err := enc.StartIndefiniteMap(); err != nil {
-		t.Errorf("StartIndefiniteMap() returned an error %v", err)
-	}
+	// Default option allows indefinite-length items.
+	t.Run("default option", func(t *testing.T) {
+		var buf bytes.Buffer
+		enc := NewEncoder(&buf)
+		if err := enc.StartIndefiniteByteString(); err != nil {
+			t.Errorf("StartIndefiniteByteString() returned an error %v", err)
+		}
+		if err := enc.EndIndefinite(); err != nil {
+			t.Errorf("EndIndefinite() returned an error %v", err)
+		}
+
+		if err := enc.StartIndefiniteTextString(); err != nil {
+			t.Errorf("StartIndefiniteTextString() returned an error %v", err)
+		}
+		if err := enc.EndIndefinite(); err != nil {
+			t.Errorf("EndIndefinite() returned an error %v", err)
+		}
+
+		if err := enc.StartIndefiniteArray(); err != nil {
+			t.Errorf("StartIndefiniteArray() returned an error %v", err)
+		}
+		if err := enc.EndIndefinite(); err != nil {
+			t.Errorf("EndIndefinite() returned an error %v", err)
+		}
+
+		if err := enc.StartIndefiniteMap(); err != nil {
+			t.Errorf("StartIndefiniteMap() returned an error %v", err)
+		}
+		if err := enc.EndIndefinite(); err != nil {
+			t.Errorf("EndIndefinite() returned an error %v", err)
+		}
+	})
 
 	// StartIndefiniteXXX returns error when IndefLength = IndefLengthForbidden
-	em, _ := EncOptions{IndefLength: IndefLengthForbidden}.EncMode()
-	enc = em.NewEncoder(&buf)
-	wantErrorMsg := "cbor: indefinite-length byte string isn't allowed"
-	if err := enc.StartIndefiniteByteString(); err == nil {
-		t.Errorf("StartIndefiniteByteString() didn't return an error")
-	} else if _, ok := err.(*IndefiniteLengthError); !ok {
-		t.Errorf("StartIndefiniteByteString() error type %T, want *IndefiniteLengthError", err)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("StartIndefiniteByteString() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	t.Run("forbid indefinite length", func(t *testing.T) {
+		var buf bytes.Buffer
+		em, _ := EncOptions{IndefLength: IndefLengthForbidden}.EncMode()
+		enc := em.NewEncoder(&buf)
+		wantErrorMsg := "cbor: indefinite-length byte string isn't allowed"
+		if err := enc.StartIndefiniteByteString(); err == nil {
+			t.Errorf("StartIndefiniteByteString() didn't return an error")
+		} else if _, ok := err.(*IndefiniteLengthError); !ok {
+			t.Errorf("StartIndefiniteByteString() error type %T, want *IndefiniteLengthError", err)
+		} else if err.Error() != wantErrorMsg {
+			t.Errorf("StartIndefiniteByteString() returned error %q, want %q", err.Error(), wantErrorMsg)
+		}
 
-	wantErrorMsg = "cbor: indefinite-length UTF-8 text string isn't allowed"
-	if err := enc.StartIndefiniteTextString(); err == nil {
-		t.Errorf("StartIndefiniteTextString() didn't return an error")
-	} else if _, ok := err.(*IndefiniteLengthError); !ok {
-		t.Errorf("StartIndefiniteTextString() error type %T, want *IndefiniteLengthError", err)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("StartIndefiniteTextString() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+		wantErrorMsg = "cbor: indefinite-length UTF-8 text string isn't allowed"
+		if err := enc.StartIndefiniteTextString(); err == nil {
+			t.Errorf("StartIndefiniteTextString() didn't return an error")
+		} else if _, ok := err.(*IndefiniteLengthError); !ok {
+			t.Errorf("StartIndefiniteTextString() error type %T, want *IndefiniteLengthError", err)
+		} else if err.Error() != wantErrorMsg {
+			t.Errorf("StartIndefiniteTextString() returned error %q, want %q", err.Error(), wantErrorMsg)
+		}
 
-	wantErrorMsg = "cbor: indefinite-length array isn't allowed"
-	if err := enc.StartIndefiniteArray(); err == nil {
-		t.Errorf("StartIndefiniteArray() didn't return an error")
-	} else if _, ok := err.(*IndefiniteLengthError); !ok {
-		t.Errorf("StartIndefiniteArray() error type %T, want *IndefiniteLengthError", err)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("StartIndefiniteArray() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+		wantErrorMsg = "cbor: indefinite-length array isn't allowed"
+		if err := enc.StartIndefiniteArray(); err == nil {
+			t.Errorf("StartIndefiniteArray() didn't return an error")
+		} else if _, ok := err.(*IndefiniteLengthError); !ok {
+			t.Errorf("StartIndefiniteArray() error type %T, want *IndefiniteLengthError", err)
+		} else if err.Error() != wantErrorMsg {
+			t.Errorf("StartIndefiniteArray() returned error %q, want %q", err.Error(), wantErrorMsg)
+		}
 
-	wantErrorMsg = "cbor: indefinite-length map isn't allowed"
-	if err := enc.StartIndefiniteMap(); err == nil {
-		t.Errorf("StartIndefiniteMap() didn't return an error")
-	} else if _, ok := err.(*IndefiniteLengthError); !ok {
-		t.Errorf("StartIndefiniteMap() error type %T, want *IndefiniteLengthError", err)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("StartIndefiniteMap() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+		wantErrorMsg = "cbor: indefinite-length map isn't allowed"
+		if err := enc.StartIndefiniteMap(); err == nil {
+			t.Errorf("StartIndefiniteMap() didn't return an error")
+		} else if _, ok := err.(*IndefiniteLengthError); !ok {
+			t.Errorf("StartIndefiniteMap() error type %T, want *IndefiniteLengthError", err)
+		} else if err.Error() != wantErrorMsg {
+			t.Errorf("StartIndefiniteMap() returned error %q, want %q", err.Error(), wantErrorMsg)
+		}
+	})
 }
 
 func TestEncTagsMdOption(t *testing.T) {
