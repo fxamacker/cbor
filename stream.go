@@ -6,6 +6,7 @@ package cbor
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"reflect"
 )
@@ -157,11 +158,31 @@ func (dec *Decoder) overwriteBuf(newBuf []byte) {
 	dec.off = 0
 }
 
+// indefDataItem tracks open indefinite-length data item during encoding.
+// typ is the CBOR type of the indefinite-length data item.
+// count is the number of items written so far.
+// For indefinite-length maps, count must be even (key/value pairs) when
+// the container is closed.
+type indefDataItem struct {
+	typ   cborType
+	count int
+}
+
+// IndefiniteLengthMapOddItemCountError indicates that EndIndefinite was
+// called on an open indefinite-length map with an odd number of items.
+type IndefiniteLengthMapOddItemCountError struct {
+	count int
+}
+
+func (e *IndefiniteLengthMapOddItemCountError) Error() string {
+	return fmt.Sprintf("cbor: cannot end indefinite-length map with %d item(s)", e.count)
+}
+
 // Encoder writes CBOR values to io.Writer.
 type Encoder struct {
-	w          io.Writer
-	em         *encMode
-	indefTypes []cborType
+	w      io.Writer
+	em     *encMode
+	indefs []indefDataItem
 }
 
 // NewEncoder returns a new encoder that writes to w using the default encoding options.
@@ -171,8 +192,8 @@ func NewEncoder(w io.Writer) *Encoder {
 
 // Encode writes the CBOR encoding of v.
 func (enc *Encoder) Encode(v any) error {
-	if len(enc.indefTypes) > 0 {
-		switch enc.indefTypes[len(enc.indefTypes)-1] {
+	if len(enc.indefs) > 0 {
+		switch enc.indefs[len(enc.indefs)-1].typ {
 		case cborTypeTextString:
 			if v == nil {
 				return errors.New("cbor: cannot encode nil for indefinite-length text string")
@@ -201,6 +222,10 @@ func (enc *Encoder) Encode(v any) error {
 	}
 
 	putEncodeBuffer(buf)
+
+	if err == nil && len(enc.indefs) > 0 {
+		enc.indefs[len(enc.indefs)-1].count++
+	}
 	return err
 }
 
@@ -233,13 +258,26 @@ func (enc *Encoder) StartIndefiniteMap() error {
 }
 
 // EndIndefinite closes last opened indefinite-length value.
+// It returns *IndefiniteLengthMapOddItemCountError without writing the
+// "break" code if the open indefinite-length map has an odd number of
+// items; the encoder state is unchanged so the caller can write the
+// missing value and retry.
 func (enc *Encoder) EndIndefinite() error {
-	if len(enc.indefTypes) == 0 {
+	if len(enc.indefs) == 0 {
 		return errors.New("cbor: cannot encode \"break\" code outside indefinite length values")
+	}
+	top := enc.indefs[len(enc.indefs)-1]
+	if top.typ == cborTypeMap && top.count%2 != 0 {
+		return &IndefiniteLengthMapOddItemCountError{count: top.count}
 	}
 	_, err := enc.w.Write([]byte{cborBreakFlag})
 	if err == nil {
-		enc.indefTypes = enc.indefTypes[:len(enc.indefTypes)-1]
+		enc.indefs = enc.indefs[:len(enc.indefs)-1]
+		// Increment parent container's item count because the child
+		// (indefinite-length data item) is fully written to the stream.
+		if len(enc.indefs) > 0 {
+			enc.indefs[len(enc.indefs)-1].count++
+		}
 	}
 	return err
 }
@@ -261,7 +299,7 @@ func (enc *Encoder) startIndefinite(typ cborType) error {
 	}
 	_, err := enc.w.Write([]byte{head})
 	if err == nil {
-		enc.indefTypes = append(enc.indefTypes, typ)
+		enc.indefs = append(enc.indefs, indefDataItem{typ: typ})
 	}
 	return err
 }

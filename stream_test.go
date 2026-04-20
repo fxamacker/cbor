@@ -1071,6 +1071,110 @@ func TestIndefiniteMapWithNilElement(t *testing.T) {
 	}
 }
 
+func TestIndefiniteLengthMapItemCount(t *testing.T) {
+	t.Run("odd item count", func(t *testing.T) {
+		var buf bytes.Buffer
+		encoder := NewEncoder(&buf)
+		if err := encoder.StartIndefiniteMap(); err != nil {
+			t.Fatalf("StartIndefiniteMap() returned error %v", err)
+		}
+		if err := encoder.Encode("a"); err != nil {
+			t.Fatalf("Encode() returned error %v", err)
+		}
+		err := encoder.EndIndefinite()
+		if err == nil {
+			t.Fatalf("EndIndefinite() returned nil error for indefinite-length map with odd number of items")
+		}
+		var oddErr *IndefiniteLengthMapOddItemCountError
+		if !errors.As(err, &oddErr) {
+			t.Fatalf("EndIndefinite() returned error of type %T, want *IndefiniteLengthMapOddItemCountError", err)
+		}
+		wantErrorMsg := "cbor: cannot end indefinite-length map with 1 item(s)"
+		if oddErr.Error() != wantErrorMsg {
+			t.Errorf("IndefiniteLengthMapOddItemCountError message = %q, want %q", oddErr.Error(), wantErrorMsg)
+		}
+		// Write the missing value.
+		if err := encoder.Encode(1); err != nil {
+			t.Fatalf("Encode() after odd-count error returned %v", err)
+		}
+		if err := encoder.EndIndefinite(); err != nil {
+			t.Fatalf("EndIndefinite() after recovery returned %v", err)
+		}
+		wantData := mustHexDecode("bf616101ff") // {_ "a": 1}
+		if !bytes.Equal(buf.Bytes(), wantData) {
+			t.Errorf("Encode returns %x, want %x", buf.Bytes(), wantData)
+		}
+	})
+
+	t.Run("even item count with nested container", func(t *testing.T) {
+		var buf bytes.Buffer
+		encoder := NewEncoder(&buf)
+		if err := encoder.StartIndefiniteMap(); err != nil {
+			t.Fatalf("StartIndefiniteMap() returned error %v", err)
+		}
+		if err := encoder.Encode("a"); err != nil {
+			t.Fatalf("Encode() returned error %v", err)
+		}
+		if err := encoder.StartIndefiniteMap(); err != nil {
+			t.Fatalf("nested StartIndefiniteMap() returned error %v", err)
+		}
+		if err := encoder.Encode("b"); err != nil {
+			t.Fatalf("Encode() returned error %v", err)
+		}
+		if err := encoder.Encode(1); err != nil {
+			t.Fatalf("Encode() returned error %v", err)
+		}
+		if err := encoder.EndIndefinite(); err != nil {
+			t.Fatalf("nested EndIndefinite() returned error %v", err)
+		}
+		if err := encoder.EndIndefinite(); err != nil {
+			t.Fatalf("outer EndIndefinite() returned error %v", err)
+		}
+		wantData := mustHexDecode("bf6161bf616201ffff") // {_ "a": {_ "b": 1}}
+		if !bytes.Equal(buf.Bytes(), wantData) {
+			t.Errorf("Encode returns %x, want %x", buf.Bytes(), wantData)
+		}
+	})
+
+	t.Run("odd item count with nested container", func(t *testing.T) {
+		var buf bytes.Buffer
+		encoder := NewEncoder(&buf)
+		if err := encoder.StartIndefiniteMap(); err != nil {
+			t.Fatalf("StartIndefiniteMap() returned error %v", err)
+		}
+		if err := encoder.Encode("a"); err != nil {
+			t.Fatalf("Encode() returned error %v", err)
+		}
+		if err := encoder.StartIndefiniteMap(); err != nil {
+			t.Fatalf("nested StartIndefiniteMap() returned error %v", err)
+		}
+		if err := encoder.Encode("b"); err != nil {
+			t.Fatalf("Encode() returned error %v", err)
+		}
+		if err := encoder.Encode(1); err != nil {
+			t.Fatalf("Encode() returned error %v", err)
+		}
+		if err := encoder.EndIndefinite(); err != nil {
+			t.Fatalf("nested EndIndefinite() returned error %v", err)
+		}
+		if err := encoder.Encode("c"); err != nil {
+			t.Fatalf("Encode() returned error %v", err)
+		}
+		err := encoder.EndIndefinite()
+		if err == nil {
+			t.Fatalf("outer EndIndefinite() didn't return error")
+		}
+		var oddErr *IndefiniteLengthMapOddItemCountError
+		if !errors.As(err, &oddErr) {
+			t.Fatalf("EndIndefinite() returned error of type %T, want *IndefiniteLengthMapOddItemCountError", err)
+		}
+		wantErrorMsg := "cbor: cannot end indefinite-length map with 3 item(s)"
+		if oddErr.Error() != wantErrorMsg {
+			t.Errorf("IndefiniteLengthMapOddItemCountError message = %q, want %q", oddErr.Error(), wantErrorMsg)
+		}
+	})
+}
+
 func TestIndefiniteLengthError(t *testing.T) {
 	var w bytes.Buffer
 	encoder := NewEncoder(&w)
