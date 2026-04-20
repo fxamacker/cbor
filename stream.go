@@ -286,6 +286,13 @@ func (enc *Encoder) startIndefinite(typ cborType) error {
 	if enc.em.indefLength == IndefLengthForbidden {
 		return &IndefiniteLengthError{typ}
 	}
+	if len(enc.indefs) > 0 {
+		parent := enc.indefs[len(enc.indefs)-1].typ
+		if parent == cborTypeByteString || parent == cborTypeTextString {
+			return errors.New("cbor: cannot encode indefinite-length " + typ.String() +
+				" as chunk of indefinite-length " + parent.String())
+		}
+	}
 	var head byte
 	switch typ {
 	case cborTypeByteString:

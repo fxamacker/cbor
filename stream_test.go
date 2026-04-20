@@ -844,21 +844,72 @@ func TestIndefiniteByteString(t *testing.T) {
 	}
 }
 
-func TestIndefiniteByteStringError(t *testing.T) {
-	var w bytes.Buffer
-	encoder := NewEncoder(&w)
-	if err := encoder.StartIndefiniteByteString(); err != nil {
-		t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+func TestIndefiniteByteStringWithInvalidChunk(t *testing.T) {
+	t.Run("array as chunk", func(t *testing.T) {
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		if err := encoder.Encode([]int{1, 2}); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != "cbor: cannot encode item type slice for indefinite-length byte string" {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type slice for indefinite-length byte string")
+		}
+	})
+
+	t.Run("text string as chunk", func(t *testing.T) {
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		if err := encoder.Encode("hello"); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != "cbor: cannot encode item type string for indefinite-length byte string" {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type string for indefinite-length byte string")
+		}
+	})
+
+	t.Run("nil as chunk", func(t *testing.T) {
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		if err := encoder.Encode(nil); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != "cbor: cannot encode nil for indefinite-length byte string" {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode nil for indefinite-length byte string")
+		}
+	})
+
+	children := []struct {
+		start func(*Encoder) error
+		typ   string
+	}{
+		{(*Encoder).StartIndefiniteByteString, "byte string"},
+		{(*Encoder).StartIndefiniteTextString, "UTF-8 text string"},
+		{(*Encoder).StartIndefiniteArray, "array"},
+		{(*Encoder).StartIndefiniteMap, "map"},
 	}
-	if err := encoder.Encode([]int{1, 2}); err == nil {
-		t.Errorf("Encode() didn't return an error")
-	} else if err.Error() != "cbor: cannot encode item type slice for indefinite-length byte string" {
-		t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type slice for indefinite-length byte string")
-	}
-	if err := encoder.Encode("hello"); err == nil {
-		t.Errorf("Encode() didn't return an error")
-	} else if err.Error() != "cbor: cannot encode item type string for indefinite-length byte string" {
-		t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type string for indefinite-length byte string")
+	for _, child := range children {
+		t.Run("indefinite-length "+child.typ+" as chunk", func(t *testing.T) {
+			var w bytes.Buffer
+			encoder := NewEncoder(&w)
+			if err := encoder.StartIndefiniteByteString(); err != nil {
+				t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+			}
+			err := child.start(encoder)
+			if err == nil {
+				t.Fatalf("encoding nested indefinite-length %s didn't return an error", child.typ)
+			}
+			wantErrMsg := "cbor: cannot encode indefinite-length " + child.typ +
+				" as chunk of indefinite-length byte string"
+			if err.Error() != wantErrMsg {
+				t.Errorf("error message = %q, want %q", err.Error(), wantErrMsg)
+			}
+		})
 	}
 }
 
@@ -883,47 +934,72 @@ func TestIndefiniteTextString(t *testing.T) {
 	}
 }
 
-func TestIndefiniteByteStringNilError(t *testing.T) {
-	var w bytes.Buffer
-	encoder := NewEncoder(&w)
-	if err := encoder.StartIndefiniteByteString(); err != nil {
-		t.Fatalf("StartIndefiniteByteString() returned error %v", err)
-	}
-	if err := encoder.Encode(nil); err == nil {
-		t.Errorf("Encode() didn't return an error")
-	} else if err.Error() != "cbor: cannot encode nil for indefinite-length byte string" {
-		t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode nil for indefinite-length byte string")
-	}
-}
+func TestIndefiniteTextStringWithInvalidChunk(t *testing.T) {
+	t.Run("array as chunk", func(t *testing.T) {
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteTextString(); err != nil {
+			t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+		}
+		if err := encoder.Encode([]byte{1, 2}); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != "cbor: cannot encode item type slice for indefinite-length text string" {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type slice for indefinite-length text string")
+		}
+	})
 
-func TestIndefiniteTextStringError(t *testing.T) {
-	var w bytes.Buffer
-	encoder := NewEncoder(&w)
-	if err := encoder.StartIndefiniteTextString(); err != nil {
-		t.Fatalf("StartIndefiniteTextString() returned error %v", err)
-	}
-	if err := encoder.Encode([]byte{1, 2}); err == nil {
-		t.Errorf("Encode() didn't return an error")
-	} else if err.Error() != "cbor: cannot encode item type slice for indefinite-length text string" {
-		t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type slice for indefinite-length text string")
-	}
-	if err := encoder.Encode(123); err == nil {
-		t.Errorf("Encode() didn't return an error")
-	} else if err.Error() != "cbor: cannot encode item type int for indefinite-length text string" {
-		t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type int for indefinite-length text string")
-	}
-}
+	t.Run("integer as chunk", func(t *testing.T) {
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteTextString(); err != nil {
+			t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+		}
+		if err := encoder.Encode(123); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != "cbor: cannot encode item type int for indefinite-length text string" {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type int for indefinite-length text string")
+		}
+	})
 
-func TestIndefiniteTextStringNilError(t *testing.T) {
-	var w bytes.Buffer
-	encoder := NewEncoder(&w)
-	if err := encoder.StartIndefiniteTextString(); err != nil {
-		t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+	t.Run("nil as chunk", func(t *testing.T) {
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteTextString(); err != nil {
+			t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+		}
+		if err := encoder.Encode(nil); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != "cbor: cannot encode nil for indefinite-length text string" {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode nil for indefinite-length text string")
+		}
+	})
+
+	children := []struct {
+		start func(*Encoder) error
+		typ   string
+	}{
+		{(*Encoder).StartIndefiniteByteString, "byte string"},
+		{(*Encoder).StartIndefiniteTextString, "UTF-8 text string"},
+		{(*Encoder).StartIndefiniteArray, "array"},
+		{(*Encoder).StartIndefiniteMap, "map"},
 	}
-	if err := encoder.Encode(nil); err == nil {
-		t.Errorf("Encode() didn't return an error")
-	} else if err.Error() != "cbor: cannot encode nil for indefinite-length text string" {
-		t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode nil for indefinite-length text string")
+	for _, child := range children {
+		t.Run("indefinite-length "+child.typ+" as chunk", func(t *testing.T) {
+			var w bytes.Buffer
+			encoder := NewEncoder(&w)
+			if err := encoder.StartIndefiniteTextString(); err != nil {
+				t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+			}
+			err := child.start(encoder)
+			if err == nil {
+				t.Fatalf("encoding nested indefinite-length %s didn't return an error", child.typ)
+			}
+			wantErrMsg := "cbor: cannot encode indefinite-length " + child.typ +
+				" as chunk of indefinite-length UTF-8 text string"
+			if err.Error() != wantErrMsg {
+				t.Errorf("error message = %q, want %q", err.Error(), wantErrMsg)
+			}
+		})
 	}
 }
 
@@ -1187,6 +1263,45 @@ func TestIndefiniteLengthError(t *testing.T) {
 	if err := encoder.EndIndefinite(); err == nil {
 		t.Fatalf("EndIndefinite() didn't return an error")
 	}
+}
+
+func TestEncodeNestedIndefiniteStringInArrayAndMap(t *testing.T) {
+	t.Run("indefinite-length byte string in indefinite-length array", func(t *testing.T) {
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteArray(); err != nil {
+			t.Fatalf("StartIndefiniteArray() returned error %v", err)
+		}
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() inside array returned error %v", err)
+		}
+		if err := encoder.EndIndefinite(); err != nil {
+			t.Fatalf("inner EndIndefinite() returned error %v", err)
+		}
+		if err := encoder.EndIndefinite(); err != nil {
+			t.Fatalf("outer EndIndefinite() returned error %v", err)
+		}
+	})
+
+	t.Run("indefinite-length text string in indefinite-length map", func(t *testing.T) {
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteMap(); err != nil {
+			t.Fatalf("StartIndefiniteMap() returned error %v", err)
+		}
+		if err := encoder.Encode("k"); err != nil {
+			t.Fatalf("Encode(key) returned error %v", err)
+		}
+		if err := encoder.StartIndefiniteTextString(); err != nil {
+			t.Fatalf("StartIndefiniteTextString() as map value returned error %v", err)
+		}
+		if err := encoder.EndIndefinite(); err != nil {
+			t.Fatalf("inner EndIndefinite() returned error %v", err)
+		}
+		if err := encoder.EndIndefinite(); err != nil {
+			t.Fatalf("outer EndIndefinite() returned error %v", err)
+		}
+	})
 }
 
 func TestEncoderStructTag(t *testing.T) {
