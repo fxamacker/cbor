@@ -569,6 +569,44 @@ func TestAddRemoveTag(t *testing.T) {
 	tags.Remove(myFloatType)
 }
 
+func TestTagSetRemoveNil(t *testing.T) {
+	type myInt int
+	myIntType := reflect.TypeOf(myInt(0))
+
+	tags := NewTagSet()
+	stags := tags.(*syncTagSet)
+
+	// Remove nil contentType from an empty TagSet
+	tags.Remove(nil)
+	if len(stags.t) != 0 {
+		t.Errorf("TagSet len is %d, want %d", len(stags.t), 0)
+	}
+
+	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100); err != nil {
+		t.Errorf("TagSet.Add(%s, %d) returned error %v", myIntType.String(), 100, err)
+	}
+	if len(stags.t) != 1 {
+		t.Errorf("TagSet len is %d, want %d", len(stags.t), 1)
+	}
+
+	// Remove nil contentType from non-empty TagSet
+	tags.Remove(nil)
+	if len(stags.t) != 1 {
+		t.Errorf("TagSet len is %d, want %d", len(stags.t), 1)
+	}
+
+	expectedTI := &tagItem{
+		num:         []uint64{100},
+		cborTagNum:  []byte{0xd8, 0x64},
+		contentType: myIntType,
+		opts:        TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
+	}
+	ti := tags.getTagItemFromType(myIntType)
+	if !reflect.DeepEqual(ti, expectedTI) {
+		t.Errorf("tagItem is %+v, want %+v", ti, expectedTI)
+	}
+}
+
 func TestAddTagTypeAliasError(t *testing.T) {
 	type myBool = bool
 	type myUint = uint
