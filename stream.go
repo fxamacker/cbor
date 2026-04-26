@@ -194,7 +194,7 @@ func NewEncoder(w io.Writer) *Encoder {
 // Encode writes the CBOR encoding of v.
 func (enc *Encoder) Encode(v any) error {
 	if len(enc.indefs) > 0 {
-		err := validateIndefiniteLengthChunk(enc.indefs[len(enc.indefs)-1].typ, v)
+		err := validateIndefiniteLengthChunkByType(enc.indefs[len(enc.indefs)-1].typ, v)
 		if err != nil {
 			return err
 		}
@@ -203,6 +203,15 @@ func (enc *Encoder) Encode(v any) error {
 	buf := getEncodeBuffer()
 
 	err := encode(buf, enc.em, reflect.ValueOf(v))
+
+	// Validate the encoded chunk against the indefinite-length data item using a byte-based check.
+	// This reliably detects chunks from cbor.Marshaler, registered tags, StringToByteString, etc.,
+	// which may produce a chunk inconsistent with the parent's major type.
+	// Applies only to indefinite-length byte/text string parents (RFC 8949 Section 3.2.3).
+	if err == nil && len(enc.indefs) > 0 {
+		err = validateIndefiniteLengthChunkByData(enc.indefs[len(enc.indefs)-1].typ, buf.Bytes(), v)
+	}
+
 	if err == nil {
 		_, err = enc.w.Write(buf.Bytes())
 	}
@@ -307,26 +316,41 @@ func (enc *Encoder) startIndefinite(typ cborType) error {
 	return nil
 }
 
-func validateIndefiniteLengthChunk(indefiniteLengthCborType cborType, chunk any) error {
-	switch indefiniteLengthCborType {
-	case cborTypeTextString:
-		if chunk == nil {
-			return errors.New("cbor: cannot encode nil for indefinite-length text string")
-		}
-		k := reflect.TypeOf(chunk).Kind()
-		if k != reflect.String {
-			return errors.New("cbor: cannot encode item type " + k.String() + " for indefinite-length text string")
-		}
+// validateIndefiniteLengthChunkByType rejects chunks based solely on their Go type.
+func validateIndefiniteLengthChunkByType(indefiniteLengthCborType cborType, v any) error {
+	if indefiniteLengthCborType != cborTypeByteString &&
+		indefiniteLengthCborType != cborTypeTextString {
+		return nil
+	}
+	if v == nil {
+		return errors.New("cbor: cannot encode nil for indefinite-length " + indefiniteLengthCborType.String())
+	}
+	return nil
+}
 
-	case cborTypeByteString:
-		if chunk == nil {
-			return errors.New("cbor: cannot encode nil for indefinite-length byte string")
-		}
-		t := reflect.TypeOf(chunk)
-		k := t.Kind()
-		if (k != reflect.Array && k != reflect.Slice) || t.Elem().Kind() != reflect.Uint8 {
-			return errors.New("cbor: cannot encode item type " + k.String() + " for indefinite-length byte string")
-		}
+// validateIndefiniteLengthChunkByData checks that chunk is a definite-length
+// CBOR data item with a matching major type.
+// No-op for indefinite-length array/map, where any data item is valid.
+func validateIndefiniteLengthChunkByData(indefiniteLengthCborType cborType, chunk []byte, v any) error {
+	if indefiniteLengthCborType != cborTypeByteString &&
+		indefiniteLengthCborType != cborTypeTextString {
+		return nil
+	}
+
+	if len(chunk) == 0 {
+		return errors.New("cbor: cannot encode item type " + reflect.TypeOf(v).Kind().String() +
+			" for indefinite-length " + indefiniteLengthCborType.String())
+	}
+
+	t, ai := parseInitialByte(chunk[0])
+	if t != indefiniteLengthCborType {
+		return errors.New("cbor: cannot encode item type " + reflect.TypeOf(v).Kind().String() +
+			" for indefinite-length " + indefiniteLengthCborType.String())
+	}
+
+	if ai == additionalInformationAsIndefiniteLengthFlag {
+		return errors.New("cbor: cannot encode indefinite-length " + indefiniteLengthCborType.String() +
+			" as chunk of indefinite-length " + indefiniteLengthCborType.String())
 	}
 	return nil
 }
