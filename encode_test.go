@@ -142,6 +142,14 @@ var marshalTestCases = []marshalTestCase{
 		wantData: mustHexDecode("3affffffff"),
 		values:   []any{int64(-4294967296)},
 	},
+	{
+		wantData: mustHexDecode("3b0000000100000000"),
+		values:   []any{int64(-4294967297)},
+	},
+	{
+		wantData: mustHexDecode("3b7fffffffffffffff"),
+		values:   []any{int64(math.MinInt64)},
+	},
 
 	// byte string
 	{
