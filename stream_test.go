@@ -844,7 +844,7 @@ func TestIndefiniteByteString(t *testing.T) {
 	}
 }
 
-func TestIndefiniteByteStringWithInvalidChunk(t *testing.T) {
+func TestIndefiniteByteStringWithInvalidChunk(t *testing.T) { //nolint:gocyclo
 	t.Run("array as chunk", func(t *testing.T) {
 		var w bytes.Buffer
 		encoder := NewEncoder(&w)
@@ -911,6 +911,126 @@ func TestIndefiniteByteStringWithInvalidChunk(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("byte slice with ByteSliceLaterFormat option", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode item type slice for indefinite-length byte string"
+
+		em, err := EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64}.EncMode()
+		if err != nil {
+			t.Fatalf("EncMode() returned error %v", err)
+		}
+
+		var w bytes.Buffer
+		encoder := em.NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		if err := encoder.Encode([]byte("foo")); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("nil byte slice with NilContainerAsNull (default) option", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode item type slice for indefinite-length byte string"
+
+		em, err := EncOptions{NilContainers: NilContainerAsNull}.EncMode() // NilContainerAsNull is the default option
+		if err != nil {
+			t.Fatalf("EncMode() returned error %v", err)
+		}
+
+		var w bytes.Buffer
+		encoder := em.NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		var nilBytes []byte
+		if err := encoder.Encode(nilBytes); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("RawMessage with tag chunk", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode item type slice for indefinite-length byte string"
+
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		raw := RawMessage{0xd8, 0x22, 0x43, 0x01, 0x02, 0x03} // 34(h'010203')
+		if err := encoder.Encode(raw); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("RawMessage with indefinite-length byte string chunk", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode indefinite-length byte string as chunk of indefinite-length byte string"
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		raw := RawMessage{0x5f, 0x41, 0x31, 0xff} // (_ h'31')
+		if err := encoder.Encode(raw); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("CBORMarshaler with byte slice kind emits int", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode item type slice for indefinite-length byte string"
+
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		cborData := []byte{0x18, 0x7b} // 123
+		if err := encoder.Encode(bytesMarshaler(cborData)); err == nil {
+			t.Errorf("Encode() didn't return an error ")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("CBORMarshaler with byte slice kind emits text string", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode item type slice for indefinite-length byte string"
+
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		cborData := []byte{0x63, 'f', 'o', 'o'} // "foo"
+		if err := encoder.Encode(bytesMarshaler(cborData)); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("CBORMarshaler with byte slice kind emits indefinite-length byte string", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode indefinite-length byte string as chunk of indefinite-length byte string"
+
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		cborData := []byte{0x5f, 0x41, 0x61, 0xff} // (_ h'61')
+		if err := encoder.Encode(bytesMarshaler(cborData)); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
 }
 
 func TestIndefiniteTextString(t *testing.T) {
@@ -943,8 +1063,8 @@ func TestIndefiniteTextStringWithInvalidChunk(t *testing.T) {
 		}
 		if err := encoder.Encode([]byte{1, 2}); err == nil {
 			t.Errorf("Encode() didn't return an error")
-		} else if err.Error() != "cbor: cannot encode item type slice for indefinite-length text string" {
-			t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type slice for indefinite-length text string")
+		} else if err.Error() != "cbor: cannot encode item type slice for indefinite-length UTF-8 text string" {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type slice for indefinite-length UTF-8 text string")
 		}
 	})
 
@@ -956,8 +1076,8 @@ func TestIndefiniteTextStringWithInvalidChunk(t *testing.T) {
 		}
 		if err := encoder.Encode(123); err == nil {
 			t.Errorf("Encode() didn't return an error")
-		} else if err.Error() != "cbor: cannot encode item type int for indefinite-length text string" {
-			t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type int for indefinite-length text string")
+		} else if err.Error() != "cbor: cannot encode item type int for indefinite-length UTF-8 text string" {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type int for indefinite-length UTF-8 text string")
 		}
 	})
 
@@ -969,8 +1089,8 @@ func TestIndefiniteTextStringWithInvalidChunk(t *testing.T) {
 		}
 		if err := encoder.Encode(nil); err == nil {
 			t.Errorf("Encode() didn't return an error")
-		} else if err.Error() != "cbor: cannot encode nil for indefinite-length text string" {
-			t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode nil for indefinite-length text string")
+		} else if err.Error() != "cbor: cannot encode nil for indefinite-length UTF-8 text string" {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode nil for indefinite-length UTF-8 text string")
 		}
 	})
 
@@ -1001,6 +1121,101 @@ func TestIndefiniteTextStringWithInvalidChunk(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("string with StringToByteString option", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode item type string for indefinite-length UTF-8 text string"
+
+		em, err := EncOptions{String: StringToByteString}.EncMode()
+		if err != nil {
+			t.Fatalf("EncMode() returned error %v", err)
+		}
+		var w bytes.Buffer
+		encoder := em.NewEncoder(&w)
+		if err := encoder.StartIndefiniteTextString(); err != nil {
+			t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+		}
+		if err := encoder.Encode("foo"); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("RawMessage with indefinite-length text string chunk", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode indefinite-length UTF-8 text string as chunk of indefinite-length UTF-8 text string"
+
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteTextString(); err != nil {
+			t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+		}
+		raw := RawMessage{0x7f, 0x61, 0x61, 0xff} // (_ "a")
+		if err := encoder.Encode(raw); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("CBORMarshaler with string kind emits uint", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode item type string for indefinite-length UTF-8 text string"
+
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteTextString(); err != nil {
+			t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+		}
+		cborData := []byte{0x18, 0x7b} // 123
+		if err := encoder.Encode(stringMarshaler(cborData)); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("CBORMarshaler with string kind emits byte string", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode item type string for indefinite-length UTF-8 text string"
+
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteTextString(); err != nil {
+			t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+		}
+		cborData := []byte{0x43, 0x01, 0x02, 0x03} // h'010203'
+		if err := encoder.Encode(stringMarshaler(cborData)); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("CBORMarshaler with string kind emits indefinite-length text string", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode indefinite-length UTF-8 text string as chunk of indefinite-length UTF-8 text string"
+
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteTextString(); err != nil {
+			t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+		}
+		cborData := []byte{0x7f, 0x61, 0x61, 0xff} // (_ "a")
+		if err := encoder.Encode(stringMarshaler(cborData)); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+}
+
+type bytesMarshaler []byte
+
+func (m bytesMarshaler) MarshalCBOR() ([]byte, error) {
+	return []byte(m), nil
+}
+
+type stringMarshaler string
+
+func (m stringMarshaler) MarshalCBOR() ([]byte, error) {
+	return []byte(m), nil
 }
 
 func TestIndefiniteArray(t *testing.T) {
