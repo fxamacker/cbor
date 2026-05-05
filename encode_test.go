@@ -5667,6 +5667,13 @@ func TestEncOptions(t *testing.T) {
 				// non-zero value for other options (e.g. TimeTag).
 				continue
 			}
+			if fn == "ToIndefArrayStructTag" {
+				// Roundtripping non-zero values for ToIndefArrayStructTag is tested
+				// separately since the non-zero value (ToIndefArrayStructTagAllowed)
+				// is incompatible with IndefLengthForbidden, which is the non-zero
+				// value used by IndefLength above.
+				continue
+			}
 			t.Errorf("options field %q is unset or set to the zero value for its type", fn)
 		}
 	}
