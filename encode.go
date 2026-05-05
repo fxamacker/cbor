@@ -546,6 +546,25 @@ func (tmm TextMarshalerMode) valid() bool {
 	return tmm >= 0 && tmm < maxTextMarshalerMode
 }
 
+// ToIndefArrayStructTagMode specifies whether to honor the `toindefarray`
+// struct tag option. Indefinite-length encoding via the streaming API is
+// governed separately by IndefLength.
+type ToIndefArrayStructTagMode int
+
+const (
+	// ToIndefArrayStructTagForbidden rejects encoding of structs tagged with `toindefarray`.
+	ToIndefArrayStructTagForbidden ToIndefArrayStructTagMode = iota
+
+	// ToIndefArrayStructTagAllowed encodes structs tagged with `toindefarray` as indefinite-length arrays.
+	ToIndefArrayStructTagAllowed
+
+	maxToIndefArrayStructTagMode
+)
+
+func (m ToIndefArrayStructTagMode) valid() bool {
+	return m >= 0 && m < maxToIndefArrayStructTagMode
+}
+
 // EncOptions specifies encoding options.
 type EncOptions struct {
 	// Sort specifies sorting order.
@@ -611,6 +630,9 @@ type EncOptions struct {
 	// json.Marshaler but do not also implement cbor.Marshaler. If nil, encoding behavior is not
 	// influenced by whether or not a type implements json.Marshaler.
 	JSONMarshalerTranscoder Transcoder
+
+	// ToIndefArrayStructTag specifies whether the `toindefarray` struct tag option is honored.
+	ToIndefArrayStructTag ToIndefArrayStructTagMode
 }
 
 // CanonicalEncOptions returns EncOptions for "Canonical CBOR" encoding,
@@ -824,6 +846,12 @@ func (opts EncOptions) encMode() (*encMode, error) { //nolint:gocritic // ignore
 	if !opts.TextMarshaler.valid() {
 		return nil, errors.New("cbor: invalid TextMarshaler " + strconv.Itoa(int(opts.TextMarshaler)))
 	}
+	if !opts.ToIndefArrayStructTag.valid() {
+		return nil, errors.New("cbor: invalid ToIndefArrayStructTag " + strconv.Itoa(int(opts.ToIndefArrayStructTag)))
+	}
+	if opts.IndefLength == IndefLengthForbidden && opts.ToIndefArrayStructTag == ToIndefArrayStructTagAllowed {
+		return nil, errors.New("cbor: cannot set ToIndefArrayStructTag to ToIndefArrayStructTagAllowed when IndefLength is IndefLengthForbidden")
+	}
 	em := encMode{
 		sort:                      opts.Sort,
 		shortestFloat:             opts.ShortestFloat,
@@ -845,6 +873,7 @@ func (opts EncOptions) encMode() (*encMode, error) { //nolint:gocritic // ignore
 		binaryMarshaler:           opts.BinaryMarshaler,
 		textMarshaler:             opts.TextMarshaler,
 		jsonMarshalerTranscoder:   opts.JSONMarshalerTranscoder,
+		toIndefArrayStructTag:     opts.ToIndefArrayStructTag,
 	}
 	return &em, nil
 }
@@ -892,6 +921,7 @@ type encMode struct {
 	binaryMarshaler           BinaryMarshalerMode
 	textMarshaler             TextMarshalerMode
 	jsonMarshalerTranscoder   Transcoder
+	toIndefArrayStructTag     ToIndefArrayStructTagMode
 }
 
 var defaultEncMode, _ = EncOptions{}.encMode()
@@ -986,6 +1016,7 @@ func (em *encMode) EncOptions() EncOptions {
 		BinaryMarshaler:         em.binaryMarshaler,
 		TextMarshaler:           em.textMarshaler,
 		JSONMarshalerTranscoder: em.jsonMarshalerTranscoder,
+		ToIndefArrayStructTag:   em.toIndefArrayStructTag,
 	}
 }
 
@@ -1479,6 +1510,50 @@ func getKeyValues(length int) *[]keyValue {
 func putKeyValues(x *[]keyValue) {
 	*x = (*x)[:0]
 	keyValuePool.Put(x)
+}
+
+func encodeStructToIndefArray(e *bytes.Buffer, em *encMode, v reflect.Value) (err error) {
+	if em.toIndefArrayStructTag != ToIndefArrayStructTagAllowed {
+		return errors.New("cbor: cannot encode struct " + v.Type().String() +
+			" with `toindefarray` when ToIndefArrayStructTag is not ToIndefArrayStructTagAllowed")
+	}
+
+	structType, err := getEncodingStructType(v.Type())
+	if err != nil {
+		return err
+	}
+
+	if b := em.encTagBytes(v.Type()); b != nil {
+		e.Write(b)
+	}
+
+	flds := structType.fields
+
+	e.WriteByte(cborArrayWithIndefiniteLengthHead)
+	for i := 0; i < len(flds); i++ {
+		f := flds[i]
+
+		var fv reflect.Value
+		if len(f.idx) == 1 {
+			fv = v.Field(f.idx[0])
+		} else {
+			// Get embedded field value.  No error is expected.
+			fv, _ = getFieldValue(v, f.idx, func(reflect.Value) (reflect.Value, error) {
+				// Write CBOR nil for null pointer to embedded struct
+				e.Write(cborNil)
+				return reflect.Value{}, nil
+			})
+			if !fv.IsValid() {
+				continue
+			}
+		}
+
+		if err := f.ef(e, em, fv); err != nil {
+			return err
+		}
+	}
+	e.WriteByte(cborBreakFlag)
+	return nil
 }
 
 func encodeStructToArray(e *bytes.Buffer, em *encMode, v reflect.Value) (err error) {
@@ -2080,6 +2155,9 @@ func getEncodeFuncInternal(t reflect.Type) (ef encodeFunc, ief isEmptyFunc, izf 
 		if f, ok := t.FieldByName("_"); ok {
 			tag := f.Tag.Get("cbor")
 			if tag != "-" {
+				if hasToIndefArrayOption(tag) {
+					return encodeStructToIndefArray, isEmptyStruct, isZeroFieldStruct
+				}
 				if hasToArrayOption(tag) {
 					return encodeStructToArray, isEmptyStruct, isZeroFieldStruct
 				}
