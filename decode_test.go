@@ -5560,7 +5560,7 @@ func TestDecOptions(t *testing.T) {
 		JSONUnmarshalerTranscoder: stubTranscoder{},
 	}
 	ov := reflect.ValueOf(opts1)
-	for i := 0; i < ov.NumField(); i++ {
+	for i := range ov.NumField() {
 		fv := ov.Field(i)
 		if fv.IsZero() {
 			t.Errorf("options field %q is unset or set to the zero value for its type", ov.Type().Field(i).Name)
