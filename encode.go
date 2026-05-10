@@ -14,7 +14,7 @@ import (
 	"math/big"
 	"math/rand"
 	"reflect"
-	"sort"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -1391,9 +1391,18 @@ func (me mapEncodeFunc) encode(e *bytes.Buffer, em *encMode, v reflect.Value) er
 	dst := e.Bytes()[kvBeginOffset:]
 
 	if em.sort == SortBytewiseLexical {
-		sort.Sort(&bytewiseKeyValueSorter{kvs: kvs, data: dst})
+		// Sort kvs by map keys in bytewise lexical order.
+		slices.SortFunc(kvs, func(kvi, kvj keyValue) int {
+			return bytes.Compare(dst[kvi.offset:kvi.valueOffset], dst[kvj.offset:kvj.valueOffset])
+		})
 	} else {
-		sort.Sort(&lengthFirstKeyValueSorter{kvs: kvs, data: dst})
+		// Sort kvs by map keys in length first order.
+		slices.SortFunc(kvs, func(kvi, kvj keyValue) int {
+			if keyLengthDifference := (kvi.valueOffset - kvi.offset) - (kvj.valueOffset - kvj.offset); keyLengthDifference != 0 {
+				return keyLengthDifference
+			}
+			return bytes.Compare(dst[kvi.offset:kvi.valueOffset], dst[kvj.offset:kvj.valueOffset])
+		})
 	}
 
 	// This is where the encoded bytes are actually rearranged in the output buffer to reflect
@@ -1415,45 +1424,6 @@ type keyValue struct {
 	offset      int
 	valueOffset int
 	nextOffset  int
-}
-
-type bytewiseKeyValueSorter struct {
-	kvs  []keyValue
-	data []byte
-}
-
-func (x *bytewiseKeyValueSorter) Len() int {
-	return len(x.kvs)
-}
-
-func (x *bytewiseKeyValueSorter) Swap(i, j int) {
-	x.kvs[i], x.kvs[j] = x.kvs[j], x.kvs[i]
-}
-
-func (x *bytewiseKeyValueSorter) Less(i, j int) bool {
-	kvi, kvj := x.kvs[i], x.kvs[j]
-	return bytes.Compare(x.data[kvi.offset:kvi.valueOffset], x.data[kvj.offset:kvj.valueOffset]) < 0
-}
-
-type lengthFirstKeyValueSorter struct {
-	kvs  []keyValue
-	data []byte
-}
-
-func (x *lengthFirstKeyValueSorter) Len() int {
-	return len(x.kvs)
-}
-
-func (x *lengthFirstKeyValueSorter) Swap(i, j int) {
-	x.kvs[i], x.kvs[j] = x.kvs[j], x.kvs[i]
-}
-
-func (x *lengthFirstKeyValueSorter) Less(i, j int) bool {
-	kvi, kvj := x.kvs[i], x.kvs[j]
-	if keyLengthDifference := (kvi.valueOffset - kvi.offset) - (kvj.valueOffset - kvj.offset); keyLengthDifference != 0 {
-		return keyLengthDifference < 0
-	}
-	return bytes.Compare(x.data[kvi.offset:kvi.valueOffset], x.data[kvj.offset:kvj.valueOffset]) < 0
 }
 
 var keyValuePool = sync.Pool{}

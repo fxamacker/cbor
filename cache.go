@@ -5,10 +5,11 @@ package cbor
 
 import (
 	"bytes"
+	"cmp"
 	"errors"
 	"fmt"
 	"reflect"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -222,39 +223,15 @@ func (st *encodingStructType) getFields(em *encMode) encodingFields {
 	}
 }
 
-type bytewiseFieldSorter struct {
-	fields encodingFields
+func bytewiseFieldCmp(fi, fj *encodingField) int {
+	return bytes.Compare(fi.cborName, fj.cborName)
 }
 
-func (x *bytewiseFieldSorter) Len() int {
-	return len(x.fields)
-}
-
-func (x *bytewiseFieldSorter) Swap(i, j int) {
-	x.fields[i], x.fields[j] = x.fields[j], x.fields[i]
-}
-
-func (x *bytewiseFieldSorter) Less(i, j int) bool {
-	return bytes.Compare(x.fields[i].cborName, x.fields[j].cborName) < 0
-}
-
-type lengthFirstFieldSorter struct {
-	fields encodingFields
-}
-
-func (x *lengthFirstFieldSorter) Len() int {
-	return len(x.fields)
-}
-
-func (x *lengthFirstFieldSorter) Swap(i, j int) {
-	x.fields[i], x.fields[j] = x.fields[j], x.fields[i]
-}
-
-func (x *lengthFirstFieldSorter) Less(i, j int) bool {
-	if len(x.fields[i].cborName) != len(x.fields[j].cborName) {
-		return len(x.fields[i].cborName) < len(x.fields[j].cborName)
+func lengthFirstFieldCmp(fi, fj *encodingField) int {
+	if len(fi.cborName) != len(fj.cborName) {
+		return cmp.Compare(len(fi.cborName), len(fj.cborName))
 	}
-	return bytes.Compare(x.fields[i].cborName, x.fields[j].cborName) < 0
+	return bytes.Compare(fi.cborName, fj.cborName)
 }
 
 func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
@@ -347,13 +324,13 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 	// Sort fields by canonical order
 	bytewiseFields := make(encodingFields, len(encFlds))
 	copy(bytewiseFields, encFlds)
-	sort.Sort(&bytewiseFieldSorter{bytewiseFields})
+	slices.SortFunc(bytewiseFields, bytewiseFieldCmp)
 
 	lengthFirstFields := bytewiseFields
 	if hasKeyAsInt && hasKeyAsStr {
 		lengthFirstFields = make(encodingFields, len(encFlds))
 		copy(lengthFirstFields, encFlds)
-		sort.Sort(&lengthFirstFieldSorter{lengthFirstFields})
+		slices.SortFunc(lengthFirstFields, lengthFirstFieldCmp)
 	}
 
 	structType := &encodingStructType{
