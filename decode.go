@@ -1954,7 +1954,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyc
 			if val > math.MaxInt64 {
 				return nil, &UnmarshalTypeError{
 					CBORType: t.String(),
-					GoType:   reflect.TypeOf(int64(0)).String(),
+					GoType:   reflect.TypeFor[int64]().String(),
 					errorMsg: strconv.FormatUint(val, 10) + " overflows Go's int64",
 				}
 			}
@@ -1988,7 +1988,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyc
 			if d.dm.intDec == IntDecConvertSignedOrFail {
 				return nil, &UnmarshalTypeError{
 					CBORType: t.String(),
-					GoType:   reflect.TypeOf(int64(0)).String(),
+					GoType:   reflect.TypeFor[int64]().String(),
 					errorMsg: bi.String() + " overflows Go's int64",
 				}
 			}
@@ -2494,7 +2494,7 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 		existingKeys = make(map[any]bool, keyCount)
 		if keyCount > 0 {
 			vKeys := v.MapKeys()
-			for i := 0; i < len(vKeys); i++ {
+			for i := range vKeys {
 				existingKeys[vKeys[i].Interface()] = true
 			}
 		}
@@ -2810,7 +2810,7 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 					if err == nil {
 						err = &UnmarshalTypeError{
 							CBORType: t.String(),
-							GoType:   reflect.TypeOf(int64(0)).String(),
+							GoType:   reflect.TypeFor[int64]().String(),
 							errorMsg: strconv.FormatUint(val, 10) + " overflows Go's int64",
 						}
 					}
@@ -2824,7 +2824,7 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 					if err == nil {
 						err = &UnmarshalTypeError{
 							CBORType: t.String(),
-							GoType:   reflect.TypeOf(int64(0)).String(),
+							GoType:   reflect.TypeFor[int64]().String(),
 							errorMsg: "-1-" + strconv.FormatUint(val, 10) + " overflows Go's int64",
 						}
 					}
@@ -2863,7 +2863,7 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 			if err == nil {
 				err = &UnmarshalTypeError{
 					CBORType: t.String(),
-					GoType:   reflect.TypeOf("").String(),
+					GoType:   reflect.TypeFor[string]().String(),
 					errorMsg: "map key is of type " + t.String() + " and cannot be used to match struct field name",
 				}
 			}
@@ -2941,12 +2941,12 @@ func (d *decoder) skip() {
 		d.off += int(val) //nolint:gosec
 
 	case cborTypeArray:
-		for i := 0; i < int(val); i++ { //nolint:gosec
+		for range int(val) { //nolint:gosec
 			d.skip()
 		}
 
 	case cborTypeMap:
-		for i := 0; i < int(val)*2; i++ { //nolint:gosec
+		for range int(val) * 2 { //nolint:gosec
 			d.skip()
 		}
 
@@ -3044,16 +3044,16 @@ func (d *decoder) nextCBORNil() bool {
 type jsonUnmarshaler interface{ UnmarshalJSON([]byte) error }
 
 var (
-	typeIntf                  = reflect.TypeOf([]any(nil)).Elem()
-	typeTime                  = reflect.TypeOf(time.Time{})
-	typeBigInt                = reflect.TypeOf(big.Int{})
-	typeUnmarshaler           = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
-	typeUnexportedUnmarshaler = reflect.TypeOf((*unmarshaler)(nil)).Elem()
-	typeBinaryUnmarshaler     = reflect.TypeOf((*encoding.BinaryUnmarshaler)(nil)).Elem()
-	typeTextUnmarshaler       = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
-	typeJSONUnmarshaler       = reflect.TypeOf((*jsonUnmarshaler)(nil)).Elem()
-	typeString                = reflect.TypeOf("")
-	typeByteSlice             = reflect.TypeOf([]byte(nil))
+	typeIntf                  = reflect.TypeFor[any]()
+	typeTime                  = reflect.TypeFor[time.Time]()
+	typeBigInt                = reflect.TypeFor[big.Int]()
+	typeUnmarshaler           = reflect.TypeFor[Unmarshaler]()
+	typeUnexportedUnmarshaler = reflect.TypeFor[unmarshaler]()
+	typeBinaryUnmarshaler     = reflect.TypeFor[encoding.BinaryUnmarshaler]()
+	typeTextUnmarshaler       = reflect.TypeFor[encoding.TextUnmarshaler]()
+	typeJSONUnmarshaler       = reflect.TypeFor[jsonUnmarshaler]()
+	typeString                = reflect.TypeFor[string]()
+	typeByteSlice             = reflect.TypeFor[[]byte]()
 )
 
 func fillNil(_ cborType, v reflect.Value) error {

@@ -456,7 +456,7 @@ func Example_signedCWTWithTag() {
 	tags := cbor.NewTagSet()
 	if err := tags.Add(
 		cbor.TagOptions{EncTag: cbor.EncTagRequired, DecTag: cbor.DecTagRequired},
-		reflect.TypeOf(signedCWT{}),
+		reflect.TypeFor[signedCWT](),
 		18); err != nil {
 		fmt.Println("error:", err)
 	}

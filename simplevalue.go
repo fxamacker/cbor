@@ -21,7 +21,7 @@ import (
 type SimpleValue uint8
 
 var (
-	typeSimpleValue = reflect.TypeOf(SimpleValue(0))
+	typeSimpleValue = reflect.TypeFor[SimpleValue]()
 )
 
 // MarshalCBOR encodes SimpleValue as CBOR simple value (major type 7).

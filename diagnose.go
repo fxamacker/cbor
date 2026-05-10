@@ -360,7 +360,7 @@ func (di *diagnose) item() error { //nolint:gocyclo
 		count := int(val) //nolint:gosec
 		di.w.WriteByte('[')
 
-		for i := 0; i < count; i++ {
+		for i := range count {
 			if i > 0 {
 				di.w.WriteString(", ")
 			}
@@ -376,7 +376,7 @@ func (di *diagnose) item() error { //nolint:gocyclo
 		count := int(val) //nolint:gosec
 		di.w.WriteByte('{')
 
-		for i := 0; i < count; i++ {
+		for i := range count {
 			if i > 0 {
 				di.w.WriteString(", ")
 			}

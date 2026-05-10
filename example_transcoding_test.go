@@ -66,7 +66,7 @@ func ExampleTranscoder_fromJSON() {
 func ExampleTranscoder_toJSON() {
 	var dec cbor.DecMode
 	dec, _ = cbor.DecOptions{
-		DefaultMapType: reflect.TypeOf(map[string]any{}),
+		DefaultMapType: reflect.TypeFor[map[string]any](),
 		JSONUnmarshalerTranscoder: TranscoderFunc(func(w io.Writer, r io.Reader) error {
 			var tmp any
 			if err := dec.NewDecoder(r).Decode(&tmp); err != nil {

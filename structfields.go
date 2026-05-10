@@ -190,7 +190,7 @@ func appendFields(
 	_flds fields,
 	_nTypes map[reflect.Type][][]int,
 ) {
-	for i := 0; i < t.NumField(); i++ {
+	for i := range t.NumField() {
 		f := t.Field(i)
 
 		ft := f.Type
@@ -202,11 +202,9 @@ func appendFields(
 			continue
 		}
 
-		cborTag := true
 		tag := f.Tag.Get("cbor")
 		if tag == "" {
 			tag = f.Tag.Get("json")
-			cborTag = false
 		}
 		if tag == "-" {
 			continue
@@ -219,11 +217,11 @@ func appendFields(
 		var omitempty, omitzero, keyasint bool
 		for j := 0; tag != ""; j++ {
 			var token string
-			idx := strings.IndexByte(tag, ',')
-			if idx == -1 {
+			before, after, ok := strings.Cut(tag, ",")
+			if !ok {
 				token, tag = tag, ""
 			} else {
-				token, tag = tag[:idx], tag[idx+1:]
+				token, tag = before, after
 			}
 			if j == 0 {
 				tagFieldName = token
@@ -232,9 +230,7 @@ func appendFields(
 				case "omitempty":
 					omitempty = true
 				case "omitzero":
-					if cborTag || jsonStdlibSupportsOmitzero {
-						omitzero = true
-					}
+					omitzero = true
 				case "keyasint":
 					keyasint = true
 				}

@@ -77,7 +77,7 @@ func TestValidOnStreamingData(t *testing.T) {
 		buf.Write(tc.wantData)
 	}
 	d := decoder{data: buf.Bytes(), dm: defaultDecMode}
-	for i := 0; i < len(marshalTestCases); i++ {
+	for range marshalTestCases {
 		if err := d.wellformed(true, false); err != nil {
 			t.Errorf("wellformed() returned error %v", err)
 		}

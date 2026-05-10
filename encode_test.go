@@ -560,7 +560,7 @@ func TestMarshalLargeByteString(t *testing.T) {
 	for i, length := range lengths {
 		data := bytes.NewBuffer(encodeCborHeader(cborTypeByteString, uint64(length)))
 		value := make([]byte, length)
-		for j := 0; j < length; j++ {
+		for j := range length {
 			data.WriteByte(100)
 			value[j] = 100
 		}
@@ -577,7 +577,7 @@ func TestMarshalLargeTextString(t *testing.T) {
 	for i, length := range lengths {
 		data := bytes.NewBuffer(encodeCborHeader(cborTypeTextString, uint64(length)))
 		value := make([]byte, length)
-		for j := 0; j < length; j++ {
+		for j := range length {
 			data.WriteByte(100)
 			value[j] = 100
 		}
@@ -594,7 +594,7 @@ func TestMarshalLargeArray(t *testing.T) {
 	for i, length := range lengths {
 		data := bytes.NewBuffer(encodeCborHeader(cborTypeArray, uint64(length)))
 		value := make([]string, length)
-		for j := 0; j < length; j++ {
+		for j := range length {
 			data.Write([]byte{0x63, 0xe6, 0xb0, 0xb4})
 			value[j] = "水"
 		}
@@ -611,7 +611,7 @@ func TestMarshalLargeMapCanonical(t *testing.T) {
 	for i, length := range lengths {
 		data := bytes.NewBuffer(encodeCborHeader(cborTypeMap, uint64(length)))
 		value := make(map[int]int, length)
-		for j := 0; j < length; j++ {
+		for j := range length {
 			d := encodeCborHeader(cborTypePositiveInt, uint64(j))
 			data.Write(d)
 			data.Write(d)
@@ -628,7 +628,7 @@ func TestMarshalLargeMap(t *testing.T) {
 	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 131072}
 	for _, length := range lengths {
 		m1 := make(map[int]int, length)
-		for i := 0; i < length; i++ {
+		for i := range length {
 			m1[i] = i
 		}
 
@@ -2199,91 +2199,91 @@ func TestIsZero(t *testing.T) {
 		},
 		{
 			name: "string-zero",
-			t:    reflect.TypeOf(""),
+			t:    reflect.TypeFor[string](),
 			v:    reflect.ValueOf(""),
 			want: true,
 		},
 
 		{
 			name: "string-nonzero",
-			t:    reflect.TypeOf(""),
+			t:    reflect.TypeFor[string](),
 			v:    reflect.ValueOf("a"),
 			want: false,
 		},
 		{
 			name: "int-zero",
-			t:    reflect.TypeOf(0),
+			t:    reflect.TypeFor[int](),
 			v:    reflect.ValueOf(0),
 			want: true,
 		},
 		{
 			name: "int-nonzero",
-			t:    reflect.TypeOf(0),
+			t:    reflect.TypeFor[int](),
 			v:    reflect.ValueOf(1),
 			want: false,
 		},
 
 		{
 			name: "bool-zero",
-			t:    reflect.TypeOf(false),
+			t:    reflect.TypeFor[bool](),
 			v:    reflect.ValueOf(false),
 			want: true,
 		},
 		{
 			name: "bool-nonzero",
-			t:    reflect.TypeOf(false),
+			t:    reflect.TypeFor[bool](),
 			v:    reflect.ValueOf(true),
 			want: false,
 		},
 
 		{
 			name: "slice-zero",
-			t:    reflect.TypeOf([]string(nil)),
+			t:    reflect.TypeFor[[]string](),
 			v:    reflect.ValueOf([]string(nil)),
 			want: true,
 		},
 		{
 			name: "slice-nonzero",
-			t:    reflect.TypeOf([]string(nil)),
+			t:    reflect.TypeFor[[]string](),
 			v:    reflect.ValueOf([]string{}),
 			want: false,
 		},
 
 		{
 			name: "map-zero",
-			t:    reflect.TypeOf(map[string]string(nil)),
+			t:    reflect.TypeFor[map[string]string](),
 			v:    reflect.ValueOf(map[string]string(nil)),
 			want: true,
 		},
 		{
 			name: "map-nonzero",
-			t:    reflect.TypeOf(map[string]string(nil)),
+			t:    reflect.TypeFor[map[string]string](),
 			v:    reflect.ValueOf(map[string]string{}),
 			want: false,
 		},
 
 		{
 			name: "struct-zero",
-			t:    reflect.TypeOf(zeroTestType{}),
+			t:    reflect.TypeFor[zeroTestType](),
 			v:    reflect.ValueOf(zeroTestType{}),
 			want: true,
 		},
 		{
 			name: "struct-nonzero",
-			t:    reflect.TypeOf(zeroTestType{}),
+			t:    reflect.TypeFor[zeroTestType](),
 			v:    reflect.ValueOf(zeroTestType{value: 42}),
 			want: false,
 		},
 
 		{
 			name: "pointer-zero",
-			t:    reflect.TypeOf((*zeroTestType)(nil)),
+			t:    reflect.TypeFor[*zeroTestType](),
 			v:    reflect.ValueOf((*zeroTestType)(nil)),
 			want: true,
 		},
 		{
 			name: "pointer-nonzero",
-			t:    reflect.TypeOf((*zeroTestType)(nil)),
+			t:    reflect.TypeFor[*zeroTestType](),
 			v:    reflect.ValueOf(&zeroTestType{}),
 			want: false,
 		},
@@ -2316,70 +2316,70 @@ func TestIsZero(t *testing.T) {
 
 		{
 			name: "custom-structreceiver-zero-structvalue",
-			t:    reflect.TypeOf(zeroTestTypeCustom{}),
+			t:    reflect.TypeFor[zeroTestTypeCustom](),
 			v:    reflect.ValueOf(zeroTestTypeCustom{value: 42}),
 			want: true,
 		},
 		{
 			name: "custom-structreceiver-nonzero-structvalue",
-			t:    reflect.TypeOf(zeroTestTypeCustom{}),
+			t:    reflect.TypeFor[zeroTestTypeCustom](),
 			v:    reflect.ValueOf(zeroTestTypeCustom{value: 1}),
 			want: false,
 		},
 		{
 			name: "custom-structreceiver-zero-pointervalue",
-			t:    reflect.TypeOf(zeroTestTypeCustom{}),
+			t:    reflect.TypeFor[zeroTestTypeCustom](),
 			v:    reflect.ValueOf(&zeroTestTypeCustom{value: 42}),
 			want: true,
 		},
 		{
 			name: "custom-structreceiver-nonzero-pointervalue",
-			t:    reflect.TypeOf(zeroTestTypeCustom{}),
+			t:    reflect.TypeFor[zeroTestTypeCustom](),
 			v:    reflect.ValueOf(&zeroTestTypeCustom{value: 1}),
 			want: false,
 		},
 
 		{
 			name: "custom-structreceiver-zero-pointervalue",
-			t:    reflect.TypeOf(&zeroTestTypeCustom{}),
+			t:    reflect.TypeFor[*zeroTestTypeCustom](),
 			v:    reflect.ValueOf(&zeroTestTypeCustom{value: 42}),
 			want: true,
 		},
 		{
 			name: "custom-structreceiver-nonzero-pointervalue",
-			t:    reflect.TypeOf(&zeroTestTypeCustom{}),
+			t:    reflect.TypeFor[*zeroTestTypeCustom](),
 			v:    reflect.ValueOf(&zeroTestTypeCustom{value: 1}),
 			want: false,
 		},
 		{
 			name: "custom-structreceiver-zero-nil-pointervalue",
-			t:    reflect.TypeOf(&zeroTestTypeCustom{}),
+			t:    reflect.TypeFor[*zeroTestTypeCustom](),
 			v:    reflect.ValueOf((*zeroTestTypeCustom)(nil)),
 			want: true,
 		},
 
 		{
 			name: "custom-pointerreceiver-zero-structvalue",
-			t:    reflect.TypeOf(zeroTestTypeCustomPointer{}),
+			t:    reflect.TypeFor[zeroTestTypeCustomPointer](),
 			v:    reflect.ValueOf(zeroTestTypeCustomPointer{value: 42}),
 			want: true,
 		},
 		{
 			name: "custom-pointerreceiver-nonzero-structvalue",
-			t:    reflect.TypeOf(zeroTestTypeCustomPointer{}),
+			t:    reflect.TypeFor[zeroTestTypeCustomPointer](),
 			v:    reflect.ValueOf(zeroTestTypeCustomPointer{value: 1}),
 			want: false,
 		},
 
 		{
 			name: "custom-pointerreceiver-zero-pointervalue",
-			t:    reflect.TypeOf(&zeroTestTypeCustomPointer{}),
+			t:    reflect.TypeFor[*zeroTestTypeCustomPointer](),
 			v:    reflect.ValueOf(&zeroTestTypeCustomPointer{value: 42}),
 			want: true,
 		},
 		{
 			name: "custom-pointerreceiver-nonzero-pointervalue",
-			t:    reflect.TypeOf(&zeroTestTypeCustomPointer{}),
+			t:    reflect.TypeFor[*zeroTestTypeCustomPointer](),
 			v:    reflect.ValueOf(&zeroTestTypeCustomPointer{value: 1}),
 			want: false,
 		},
@@ -2475,58 +2475,24 @@ func TestJSONStdlibOmitZero(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name   string
-		stdlib bool
-		obj    any
-		want   []byte
+		name string
+		obj  any
+		want []byte
 	}{
 		{
-			name:   "cbor-stdlib-off",
-			stdlib: false,
-			obj:    CBOR{},
-			want:   []byte{0xa0}, // {}
+			name: "cbor tag",
+			obj:  CBOR{},
+			want: []byte{0xa0}, // {}
 		},
 		{
-			name:   "cbor-stdlib-on",
-			stdlib: true,
-			obj:    CBOR{},
-			want:   []byte{0xa0}, // {}
+			name: "json stag",
+			obj:  JSON{},
+			want: []byte{0xa0}, // {}
 		},
-		{
-			name:   "json-stdlib-off",
-			stdlib: false,
-			obj:    JSON{},
-			want:   []byte{0xa1, 0x61, 0x73, 0x60}, // {"s":""}
-		},
-		{
-			name:   "json-stdlib-on",
-			stdlib: true,
-			obj:    JSON{},
-			want:   []byte{0xa0}, // {}
-		},
-	}
-
-	original := jsonStdlibSupportsOmitzero
-	reset := func() {
-		// reset to original
-		jsonStdlibSupportsOmitzero = original
-		// clear type caches
-		encodingStructTypeCache.Range(func(key, _ any) bool {
-			encodingStructTypeCache.Delete(key)
-			return true
-		})
-		typeInfoCache.Range(func(key, _ any) bool {
-			typeInfoCache.Delete(key)
-			return true
-		})
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			reset()
-			jsonStdlibSupportsOmitzero = tc.stdlib
-			t.Cleanup(reset)
-
 			em, _ := EncOptions{}.EncMode()
 			dm, _ := DecOptions{}.DecMode()
 			testRoundTrip(t, []roundTripTestCase{{tc.name, tc.obj, tc.want}}, em, dm)
@@ -6532,7 +6498,7 @@ func TestMarshalByteArrayMode(t *testing.T) {
 func TestMarshalByteSliceMode(t *testing.T) {
 	type namedByteSlice []byte
 	ts := NewTagSet()
-	if err := ts.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeOf(namedByteSlice{}), 0xcc); err != nil {
+	if err := ts.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeFor[namedByteSlice](), 0xcc); err != nil {
 		t.Fatal(err)
 	}
 
@@ -6783,7 +6749,7 @@ func (tm *testTextMarshaler) MarshalText() ([]byte, error) {
 
 func TestTextMarshalerMode(t *testing.T) {
 	testTags := NewTagSet()
-	if err := testTags.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeOf(testTextMarshaler{}), 9999); err != nil {
+	if err := testTags.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeFor[testTextMarshaler](), 9999); err != nil {
 		t.Fatal(err)
 	}
 
@@ -6863,7 +6829,7 @@ func TestTextMarshalerMode(t *testing.T) {
 
 func TestTextMarshalerModeError(t *testing.T) {
 	testTags := NewTagSet()
-	if err := testTags.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeOf(testTextMarshaler{}), 9999); err != nil {
+	if err := testTags.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeFor[testTextMarshaler](), 9999); err != nil {
 		t.Fatal(err)
 	}
 
@@ -6969,7 +6935,7 @@ func TestJSONMarshalerTranscoderNil(t *testing.T) {
 
 func TestJSONMarshalerTranscoder(t *testing.T) {
 	testTags := NewTagSet()
-	if err := testTags.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeOf(stubJSONMarshaler{}), 9999); err != nil {
+	if err := testTags.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeFor[stubJSONMarshaler](), 9999); err != nil {
 		t.Fatal(err)
 	}
 
@@ -6999,7 +6965,7 @@ func TestJSONMarshalerTranscoder(t *testing.T) {
 			transcodeError: errors.New("test"),
 			wantErrorMsg: TranscodeError{
 				err:          errors.New("test"),
-				rtype:        reflect.TypeOf(stubJSONMarshaler{}),
+				rtype:        reflect.TypeFor[stubJSONMarshaler](),
 				sourceFormat: "json",
 				targetFormat: "cbor",
 			}.Error(),
@@ -7011,7 +6977,7 @@ func TestJSONMarshalerTranscoder(t *testing.T) {
 			transcodeOutput: []byte{0xff},
 			wantErrorMsg: TranscodeError{
 				err:          errors.New(`cbor: unexpected "break" code`),
-				rtype:        reflect.TypeOf(stubJSONMarshaler{}),
+				rtype:        reflect.TypeFor[stubJSONMarshaler](),
 				sourceFormat: "json",
 				targetFormat: "cbor",
 			}.Error(),
@@ -7023,7 +6989,7 @@ func TestJSONMarshalerTranscoder(t *testing.T) {
 			transcodeOutput: []byte{0x61},
 			wantErrorMsg: TranscodeError{
 				err:          io.ErrUnexpectedEOF,
-				rtype:        reflect.TypeOf(stubJSONMarshaler{}),
+				rtype:        reflect.TypeFor[stubJSONMarshaler](),
 				sourceFormat: "json",
 				targetFormat: "cbor",
 			}.Error(),
@@ -7035,7 +7001,7 @@ func TestJSONMarshalerTranscoder(t *testing.T) {
 			transcodeOutput: []byte{0x61, 'a', 0x61, 'b'},
 			wantErrorMsg: TranscodeError{
 				err:          &ExtraneousDataError{numOfBytes: 2, index: 2},
-				rtype:        reflect.TypeOf(stubJSONMarshaler{}),
+				rtype:        reflect.TypeFor[stubJSONMarshaler](),
 				sourceFormat: "json",
 				targetFormat: "cbor",
 			}.Error(),
@@ -7135,7 +7101,7 @@ func TestMarshalerErrorUnwrap(t *testing.T) {
 	}
 	// The marshalCBORError type returns the raw error, not a MarshalerError,
 	// so also test Unwrap directly by constructing a MarshalerError.
-	me2 := &MarshalerError{typ: reflect.TypeOf(0), err: innerErr}
+	me2 := &MarshalerError{typ: reflect.TypeFor[int](), err: innerErr}
 	if unwrapped := me2.Unwrap(); unwrapped != innerErr {
 		t.Errorf("MarshalerError.Unwrap() = %v, want %v", unwrapped, innerErr)
 	}
@@ -7143,7 +7109,7 @@ func TestMarshalerErrorUnwrap(t *testing.T) {
 
 func TestTranscodeErrorUnwrap(t *testing.T) {
 	innerErr := errors.New("transcode failed")
-	te := TranscodeError{err: innerErr, rtype: reflect.TypeOf(0), sourceFormat: "json", targetFormat: "cbor"}
+	te := TranscodeError{err: innerErr, rtype: reflect.TypeFor[int](), sourceFormat: "json", targetFormat: "cbor"}
 	if unwrapped := te.Unwrap(); unwrapped != innerErr {
 		t.Errorf("TranscodeError.Unwrap() = %v, want %v", unwrapped, innerErr)
 	}

@@ -157,8 +157,8 @@ func (d *decoder) wellformedInternal(depth int, checkBuiltinTags bool) (int, err
 			count = 2
 		}
 		maxDepth := depth
-		for j := 0; j < count; j++ {
-			for i := 0; i < valInt; i++ {
+		for range count {
+			for range valInt {
 				var dpt int
 				if dpt, err = d.wellformedInternal(depth, checkBuiltinTags); err != nil {
 					return 0, err
