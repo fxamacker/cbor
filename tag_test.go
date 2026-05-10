@@ -5,6 +5,7 @@ package cbor
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -35,24 +36,24 @@ func TestTagNewTypeWithBuiltinUnderlyingType(t *testing.T) {
 	type myMapIntInt map[int]int
 
 	types := []reflect.Type{
-		reflect.TypeOf(myBool(false)),
-		reflect.TypeOf(myUint(0)),
-		reflect.TypeOf(myUint8(0)),
-		reflect.TypeOf(myUint16(0)),
-		reflect.TypeOf(myUint32(0)),
-		reflect.TypeOf(myUint64(0)),
-		reflect.TypeOf(myInt(0)),
-		reflect.TypeOf(myInt8(0)),
-		reflect.TypeOf(myInt16(0)),
-		reflect.TypeOf(myInt32(0)),
-		reflect.TypeOf(myInt64(0)),
-		reflect.TypeOf(myFloat32(0)),
-		reflect.TypeOf(myFloat64(0)),
-		reflect.TypeOf(myString("")),
-		reflect.TypeOf(myByteSlice([]byte{})),
-		reflect.TypeOf(myIntSlice([]int{})),
-		reflect.TypeOf(myIntArray([4]int{})),
-		reflect.TypeOf(myMapIntInt(map[int]int{})),
+		reflect.TypeFor[myBool](),
+		reflect.TypeFor[myUint](),
+		reflect.TypeFor[myUint8](),
+		reflect.TypeFor[myUint16](),
+		reflect.TypeFor[myUint32](),
+		reflect.TypeFor[myUint64](),
+		reflect.TypeFor[myInt](),
+		reflect.TypeFor[myInt8](),
+		reflect.TypeFor[myInt16](),
+		reflect.TypeFor[myInt32](),
+		reflect.TypeFor[myInt64](),
+		reflect.TypeFor[myFloat32](),
+		reflect.TypeFor[myFloat64](),
+		reflect.TypeFor[myString](),
+		reflect.TypeFor[myByteSlice](),
+		reflect.TypeFor[myIntSlice](),
+		reflect.TypeFor[myIntArray](),
+		reflect.TypeFor[myMapIntInt](),
 	}
 
 	tags := NewTagSet()
@@ -163,8 +164,8 @@ func TestTagNewTypeWithBuiltinUnderlyingType(t *testing.T) {
 }
 
 func TestTagBinaryMarshalerUnmarshaler(t *testing.T) {
-	t1 := reflect.TypeOf((*number)(nil)) // Use *number for testing purpose
-	t2 := reflect.TypeOf(stru{})
+	t1 := reflect.TypeFor[*number]() // Use *number for testing purpose
+	t2 := reflect.TypeFor[stru]()
 
 	tags := NewTagSet()
 	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 123); err != nil {
@@ -198,7 +199,7 @@ func TestTagStruct(t *testing.T) {
 		S string `cbor:"s,omitempty"`
 	}
 
-	t1 := reflect.TypeOf(T{})
+	t1 := reflect.TypeFor[T]()
 
 	tags := NewTagSet()
 	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 100); err != nil {
@@ -227,7 +228,7 @@ func TestTagFixedLengthStruct(t *testing.T) {
 		S string `cbor:"s"`
 	}
 
-	t1 := reflect.TypeOf(T{})
+	t1 := reflect.TypeFor[T]()
 
 	tags := NewTagSet()
 	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 100); err != nil {
@@ -265,7 +266,7 @@ func TestTagToArrayStruct(t *testing.T) {
 		Signature   []byte
 	}
 
-	t1 := reflect.TypeOf(signedCWT{})
+	t1 := reflect.TypeFor[signedCWT]()
 
 	tags := NewTagSet()
 	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 18); err != nil {
@@ -304,7 +305,7 @@ func TestNestedTagStruct(t *testing.T) {
 		Tag         []byte
 	}
 
-	t1 := reflect.TypeOf(macedCOSE{})
+	t1 := reflect.TypeFor[macedCOSE]()
 
 	// Register tag CBOR Web Token (CWT) 61 and COSE_Mac0 17 with macedCOSE type
 	tags := NewTagSet()
@@ -348,21 +349,21 @@ func TestAddTagError(t *testing.T) {
 		},
 		{
 			name:         "DecTag is DecTagIgnored && EncTag is EncTagNone",
-			typ:          reflect.TypeOf(myInt(0)),
+			typ:          reflect.TypeFor[myInt](),
 			num:          100,
 			opts:         TagOptions{DecTag: DecTagIgnored, EncTag: EncTagNone},
 			wantErrorMsg: "cbor: cannot add tag with DecTagIgnored and EncTagNone options to TagSet",
 		},
 		{
 			name:         "time.Time",
-			typ:          reflect.TypeOf(time.Time{}),
+			typ:          reflect.TypeFor[time.Time](),
 			num:          101,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
 			wantErrorMsg: "cbor: cannot add time.Time to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead",
 		},
 		{
 			name:         "builtin type string",
-			typ:          reflect.TypeOf(""),
+			typ:          reflect.TypeFor[string](),
 			num:          102,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
 			wantErrorMsg: "cbor: can only add named types to TagSet, got string",
@@ -376,28 +377,28 @@ func TestAddTagError(t *testing.T) {
 		},
 		{
 			name:         "interface",
-			typ:          reflect.TypeOf((*io.Reader)(nil)).Elem(),
+			typ:          reflect.TypeFor[io.Reader](),
 			num:          104,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
 			wantErrorMsg: "cbor: can only add named types to TagSet, got io.Reader",
 		},
 		{
 			name:         "cbor.Tag",
-			typ:          reflect.TypeOf(Tag{}),
+			typ:          reflect.TypeFor[Tag](),
 			num:          105,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
 			wantErrorMsg: "cbor: cannot add cbor.Tag to TagSet",
 		},
 		{
 			name:         "cbor.RawTag",
-			typ:          reflect.TypeOf(RawTag{}),
+			typ:          reflect.TypeFor[RawTag](),
 			num:          106,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
 			wantErrorMsg: "cbor: cannot add cbor.RawTag to TagSet",
 		},
 		{
 			name:         "big.Int",
-			typ:          reflect.TypeOf(big.Int{}),
+			typ:          reflect.TypeFor[big.Int](),
 			num:          107,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
 			wantErrorMsg: "cbor: cannot add big.Int to TagSet, it's built-in and supported automatically",
@@ -420,35 +421,35 @@ func TestAddTagError(t *testing.T) {
 		*/
 		{
 			name:         "tag number 0",
-			typ:          reflect.TypeOf(myInt(0)),
+			typ:          reflect.TypeFor[myInt](),
 			num:          0,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
 			wantErrorMsg: "cbor: cannot add tag number 0 or 1 to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead",
 		},
 		{
 			name:         "tag number 1",
-			typ:          reflect.TypeOf(myInt(0)),
+			typ:          reflect.TypeFor[myInt](),
 			num:          1,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
 			wantErrorMsg: "cbor: cannot add tag number 0 or 1 to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead",
 		},
 		{
 			name:         "tag number 2",
-			typ:          reflect.TypeOf(myInt(0)),
+			typ:          reflect.TypeFor[myInt](),
 			num:          2,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
 			wantErrorMsg: "cbor: cannot add tag number 2 or 3 to TagSet, it's built-in and supported automatically",
 		},
 		{
 			name:         "tag number 3",
-			typ:          reflect.TypeOf(myInt(0)),
+			typ:          reflect.TypeFor[myInt](),
 			num:          3,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
 			wantErrorMsg: "cbor: cannot add tag number 2 or 3 to TagSet, it's built-in and supported automatically",
 		},
 		{
 			name:         "tag number 55799",
-			typ:          reflect.TypeOf(myInt(0)),
+			typ:          reflect.TypeFor[myInt](),
 			num:          55799,
 			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
 			wantErrorMsg: "cbor: cannot add tag number 55799 to TagSet, it's built-in and ignored automatically",
@@ -474,7 +475,7 @@ func TestAddTagError(t *testing.T) {
 
 func TestAddDuplicateTagContentTypeError(t *testing.T) {
 	type myInt int
-	myIntType := reflect.TypeOf(myInt(0))
+	myIntType := reflect.TypeFor[myInt]()
 	wantErrorMsg := "cbor: content type cbor.myInt already exists in TagSet"
 
 	tags := NewTagSet()
@@ -493,8 +494,8 @@ func TestAddDuplicateTagContentTypeError(t *testing.T) {
 func TestAddDuplicateTagNumError(t *testing.T) {
 	type myBool bool
 	type myInt int
-	myBoolType := reflect.TypeOf(myBool(false))
-	myIntType := reflect.TypeOf(myInt(0))
+	myBoolType := reflect.TypeFor[myBool]()
+	myIntType := reflect.TypeFor[myInt]()
 	wantErrorMsg := "cbor: tag number [100] already exists in TagSet"
 
 	tags := NewTagSet()
@@ -514,8 +515,8 @@ func TestAddDuplicateTagNumError(t *testing.T) {
 func TestAddDuplicateTagNumsError(t *testing.T) {
 	type myBool bool
 	type myInt int
-	myBoolType := reflect.TypeOf(myBool(false))
-	myIntType := reflect.TypeOf(myInt(0))
+	myBoolType := reflect.TypeFor[myBool]()
+	myIntType := reflect.TypeFor[myInt]()
 	wantErrorMsg := "cbor: tag number [100 101] already exists in TagSet"
 
 	tags := NewTagSet()
@@ -535,10 +536,10 @@ func TestAddDuplicateTagNumsError(t *testing.T) {
 func TestAddRemoveTag(t *testing.T) {
 	type myInt int
 	type myFloat float64
-	myIntType := reflect.TypeOf(myInt(0))
-	myFloatType := reflect.TypeOf(myFloat(0.0))
-	pMyIntType := reflect.TypeOf((*myInt)(nil))
-	pMyFloatType := reflect.TypeOf((*myFloat)(nil))
+	myIntType := reflect.TypeFor[myInt]()
+	myFloatType := reflect.TypeFor[myFloat]()
+	pMyIntType := reflect.TypeFor[*myInt]()
+	pMyFloatType := reflect.TypeFor[*myFloat]()
 
 	tags := NewTagSet()
 	stags := tags.(*syncTagSet)
@@ -571,7 +572,7 @@ func TestAddRemoveTag(t *testing.T) {
 
 func TestTagSetRemoveNil(t *testing.T) {
 	type myInt int
-	myIntType := reflect.TypeOf(myInt(0))
+	myIntType := reflect.TypeFor[myInt]()
 
 	tags := NewTagSet()
 	stags := tags.(*syncTagSet)
@@ -634,92 +635,92 @@ func TestAddTagTypeAliasError(t *testing.T) {
 	}{
 		{
 			name:         "bool",
-			typ:          reflect.TypeOf(myBool(false)),
+			typ:          reflect.TypeFor[myBool](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got bool",
 		},
 		{
 			name:         "uint",
-			typ:          reflect.TypeOf(myUint(0)),
+			typ:          reflect.TypeFor[myUint](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got uint",
 		},
 		{
 			name:         "uint8",
-			typ:          reflect.TypeOf(myUint8(0)),
+			typ:          reflect.TypeFor[myUint8](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got uint8",
 		},
 		{
 			name:         "uint16",
-			typ:          reflect.TypeOf(myUint16(0)),
+			typ:          reflect.TypeFor[myUint16](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got uint16",
 		},
 		{
 			name:         "uint32",
-			typ:          reflect.TypeOf(myUint32(0)),
+			typ:          reflect.TypeFor[myUint32](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got uint32",
 		},
 		{
 			name:         "uint64",
-			typ:          reflect.TypeOf(myUint64(0)),
+			typ:          reflect.TypeFor[myUint64](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got uint64",
 		},
 		{
 			name:         "int",
-			typ:          reflect.TypeOf(myInt(0)),
+			typ:          reflect.TypeFor[myInt](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got int",
 		},
 		{
 			name:         "int8",
-			typ:          reflect.TypeOf(myInt8(0)),
+			typ:          reflect.TypeFor[myInt8](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got int8",
 		},
 		{
 			name:         "int16",
-			typ:          reflect.TypeOf(myInt16(0)),
+			typ:          reflect.TypeFor[myInt16](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got int16",
 		},
 		{
 			name:         "int32",
-			typ:          reflect.TypeOf(myInt32(0)),
+			typ:          reflect.TypeFor[myInt32](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got int32",
 		},
 		{
 			name:         "int64",
-			typ:          reflect.TypeOf(myInt64(0)),
+			typ:          reflect.TypeFor[myInt64](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got int64",
 		},
 		{
 			name:         "float32",
-			typ:          reflect.TypeOf(myFloat32(0.0)),
+			typ:          reflect.TypeFor[myFloat32](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got float32",
 		},
 		{
 			name:         "float64",
-			typ:          reflect.TypeOf(myFloat64(0.0)),
+			typ:          reflect.TypeFor[myFloat64](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got float64",
 		},
 		{
 			name:         "string",
-			typ:          reflect.TypeOf(myString("")),
+			typ:          reflect.TypeFor[myString](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got string",
 		},
 		{
 			name:         "[]byte",
-			typ:          reflect.TypeOf(myByteSlice([]byte{})), //nolint:unconvert
+			typ:          reflect.TypeFor[myByteSlice](), //nolint:unconvert
 			wantErrorMsg: "cbor: can only add named types to TagSet, got []uint8",
 		},
 		{
 			name:         "[]int",
-			typ:          reflect.TypeOf(myIntSlice([]int{})), //nolint:unconvert
+			typ:          reflect.TypeFor[myIntSlice](), //nolint:unconvert
 			wantErrorMsg: "cbor: can only add named types to TagSet, got []int",
 		},
 		{
 			name:         "[4]int",
-			typ:          reflect.TypeOf(myIntArray([4]int{})), //nolint:unconvert
+			typ:          reflect.TypeFor[myIntArray](), //nolint:unconvert
 			wantErrorMsg: "cbor: can only add named types to TagSet, got [4]int",
 		},
 		{
 			name:         "map[int]int",
-			typ:          reflect.TypeOf(myMapIntInt(map[int]int{})), //nolint:unconvert
+			typ:          reflect.TypeFor[myMapIntInt](), //nolint:unconvert
 			wantErrorMsg: "cbor: can only add named types to TagSet, got map[int]int",
 		},
 	}
@@ -750,10 +751,10 @@ func TestDecodeTagData(t *testing.T) {
 		n []uint64
 	}
 	tagInfos := []tagInfo{
-		{reflect.TypeOf((*number)(nil)), []uint64{123}}, // BinaryMarshaler *number
-		{reflect.TypeOf(stru{}), []uint64{124}},         // BinaryMarshaler stru
-		{reflect.TypeOf(myInt(0)), []uint64{125}},       // non-struct type
-		{reflect.TypeOf(s{}), []uint64{126}},            // struct type
+		{reflect.TypeFor[*number](), []uint64{123}}, // BinaryMarshaler *number
+		{reflect.TypeFor[stru](), []uint64{124}},    // BinaryMarshaler stru
+		{reflect.TypeFor[myInt](), []uint64{125}},   // non-struct type
+		{reflect.TypeFor[s](), []uint64{126}},       // struct type
 	}
 
 	tagsDecRequired := NewTagSet()
@@ -826,10 +827,10 @@ func TestDecodeNoTagData(t *testing.T) {
 		n []uint64
 	}
 	tagInfos := []tagInfo{
-		{reflect.TypeOf((*number)(nil)), []uint64{123}}, // BinaryMarshaler *number
-		{reflect.TypeOf(stru{}), []uint64{124}},         // BinaryMarshaler stru
-		{reflect.TypeOf(myInt(0)), []uint64{125}},       // non-struct type
-		{reflect.TypeOf(s{}), []uint64{126}},            // struct type
+		{reflect.TypeFor[*number](), []uint64{123}}, // BinaryMarshaler *number
+		{reflect.TypeFor[stru](), []uint64{124}},    // BinaryMarshaler stru
+		{reflect.TypeFor[myInt](), []uint64{125}},   // non-struct type
+		{reflect.TypeFor[s](), []uint64{126}},       // struct type
 	}
 
 	tagsDecRequired := NewTagSet()
@@ -915,10 +916,10 @@ func TestDecodeWrongTag(t *testing.T) {
 		n []uint64
 	}
 	tagInfos := []tagInfo{
-		{reflect.TypeOf((*number)(nil)), []uint64{123}}, // BinaryMarshaler *number
-		{reflect.TypeOf(stru{}), []uint64{124}},         // BinaryMarshaler stru
-		{reflect.TypeOf(myInt(0)), []uint64{100}},       // non-struct type
-		{reflect.TypeOf(s{}), []uint64{101, 102}},       // struct type
+		{reflect.TypeFor[*number](), []uint64{123}}, // BinaryMarshaler *number
+		{reflect.TypeFor[stru](), []uint64{124}},    // BinaryMarshaler stru
+		{reflect.TypeFor[myInt](), []uint64{100}},   // non-struct type
+		{reflect.TypeFor[s](), []uint64{101, 102}},  // struct type
 	}
 
 	tagsDecRequired := NewTagSet()
@@ -1014,7 +1015,7 @@ func TestDecodeWrongTag(t *testing.T) {
 func TestEncodeSharedTag(t *testing.T) {
 	type myInt int
 
-	myIntType := reflect.TypeOf(myInt(0))
+	myIntType := reflect.TypeFor[myInt]()
 
 	sharedTagSet := NewTagSet()
 
@@ -1074,7 +1075,7 @@ func TestEncodeSharedTag(t *testing.T) {
 func TestDecodeSharedTag(t *testing.T) {
 	type myInt int
 
-	myIntType := reflect.TypeOf(myInt(0))
+	myIntType := reflect.TypeFor[myInt]()
 
 	sharedTagSet := NewTagSet()
 
@@ -1319,8 +1320,8 @@ func TestDecodeTagToEmptyIface(t *testing.T) {
 	type myBool bool
 	type myUint uint
 
-	typeMyBool := reflect.TypeOf(myBool(false))
-	typeMyUint := reflect.TypeOf(myUint(0))
+	typeMyBool := reflect.TypeFor[myBool]()
+	typeMyUint := reflect.TypeFor[myUint]()
 
 	tags := NewTagSet()
 	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typeMyBool, 100); err != nil {
@@ -1389,7 +1390,7 @@ func TestDecodeTagToEmptyIface(t *testing.T) {
 func TestDecodeRegisteredTagToEmptyIfaceError(t *testing.T) {
 	type myInt int
 
-	typeMyInt := reflect.TypeOf(myInt(0))
+	typeMyInt := reflect.TypeFor[myInt]()
 
 	tags := NewTagSet()
 	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typeMyInt, 101, 102); err != nil {
@@ -1430,7 +1431,7 @@ func (n *number3) UnmarshalCBOR(data []byte) (err error) {
 	}
 
 	if getType(rawTag.Content[0]) != cborTypeMap {
-		return fmt.Errorf("wrong tag content type, want map")
+		return errors.New("wrong tag content type, want map")
 	}
 
 	var v map[string]uint64
@@ -1442,7 +1443,7 @@ func (n *number3) UnmarshalCBOR(data []byte) (err error) {
 }
 
 func TestDecodeRegisterTagForUnmarshaler(t *testing.T) {
-	typ := reflect.TypeOf(number3(0))
+	typ := reflect.TypeFor[number3]()
 
 	tags := NewTagSet()
 	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 100); err != nil {

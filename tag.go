@@ -183,7 +183,7 @@ func (t *tagItem) equalTagNum(num []uint64) bool {
 		return false
 	}
 
-	for i := 0; i < len(t.num); i++ {
+	for i := range len(t.num) {
 		if t.num[i] != num[i] {
 			return false
 		}
@@ -318,8 +318,8 @@ func newTagItem(opts TagOptions, contentType reflect.Type, num uint64, nestedNum
 }
 
 var (
-	typeTag    = reflect.TypeOf(Tag{})
-	typeRawTag = reflect.TypeOf(RawTag{})
+	typeTag    = reflect.TypeFor[Tag]()
+	typeRawTag = reflect.TypeFor[RawTag]()
 )
 
 // WrongTagError describes mismatch between CBOR tag and registered tag.

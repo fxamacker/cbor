@@ -20,24 +20,24 @@ import (
 )
 
 var (
-	typeBool            = reflect.TypeOf(true)
-	typeUint8           = reflect.TypeOf(uint8(0))
-	typeUint16          = reflect.TypeOf(uint16(0))
-	typeUint32          = reflect.TypeOf(uint32(0))
-	typeUint64          = reflect.TypeOf(uint64(0))
-	typeInt8            = reflect.TypeOf(int8(0))
-	typeInt16           = reflect.TypeOf(int16(0))
-	typeInt32           = reflect.TypeOf(int32(0))
-	typeInt64           = reflect.TypeOf(int64(0))
-	typeFloat32         = reflect.TypeOf(float32(0))
-	typeFloat64         = reflect.TypeOf(float64(0))
-	typeByteArray       = reflect.TypeOf([5]byte{})
-	typeIntSlice        = reflect.TypeOf([]int{})
-	typeStringSlice     = reflect.TypeOf([]string{})
-	typeMapIntfIntf     = reflect.TypeOf(map[any]any{})
-	typeMapStringInt    = reflect.TypeOf(map[string]int{})
-	typeMapStringString = reflect.TypeOf(map[string]string{})
-	typeMapStringIntf   = reflect.TypeOf(map[string]any{})
+	typeBool            = reflect.TypeFor[bool]()
+	typeUint8           = reflect.TypeFor[uint8]()
+	typeUint16          = reflect.TypeFor[uint16]()
+	typeUint32          = reflect.TypeFor[uint32]()
+	typeUint64          = reflect.TypeFor[uint64]()
+	typeInt8            = reflect.TypeFor[int8]()
+	typeInt16           = reflect.TypeFor[int16]()
+	typeInt32           = reflect.TypeFor[int32]()
+	typeInt64           = reflect.TypeFor[int64]()
+	typeFloat32         = reflect.TypeFor[float32]()
+	typeFloat64         = reflect.TypeFor[float64]()
+	typeByteArray       = reflect.TypeFor[[5]byte]()
+	typeIntSlice        = reflect.TypeFor[[]int]()
+	typeStringSlice     = reflect.TypeFor[[]string]()
+	typeMapIntfIntf     = reflect.TypeFor[map[any]any]()
+	typeMapStringInt    = reflect.TypeFor[map[string]int]()
+	typeMapStringString = reflect.TypeFor[map[string]string]()
+	typeMapStringIntf   = reflect.TypeFor[map[string]any]()
 )
 
 type unmarshalTestCase struct {
@@ -893,7 +893,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 			typeBool,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -923,7 +923,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 			typeBool,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -953,7 +953,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 			typeBool,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -983,7 +983,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 			typeBool,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -1020,7 +1020,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 			typeBool,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -1085,7 +1085,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 			typeBool,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -1115,7 +1115,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 			typeBool,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -1152,7 +1152,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 			typeBool,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -1183,7 +1183,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 			typeByteArray,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -1214,7 +1214,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 			typeByteArray,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -2035,7 +2035,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 			typeBool,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeByteString,
 			typeSimpleValue,
 		},
@@ -2667,7 +2667,7 @@ func TestUnmarshalIntoPtrArrayPtrElem(t *testing.T) {
 
 	// Unmarshal CBOR array into a non-nil pointer.
 	if err := Unmarshal(data, &ppslc); err != nil {
-		t.Errorf("Unmarshal(0x%x, %s) returned error %v", data, reflect.TypeOf(ppslc), err)
+		t.Errorf("Unmarshal(0x%x, %s) returned error %v", data, reflect.TypeFor[**[]*int](), err)
 	} else if !reflect.DeepEqual(slc, wantArray) {
 		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", data, slc, slc, wantArray)
 	}
@@ -2694,7 +2694,7 @@ func TestUnmarshalIntoPtrMapPtrElem(t *testing.T) {
 
 	// Unmarshal CBOR map into a non-nil pointer.
 	if err := Unmarshal(data, &ppm); err != nil {
-		t.Errorf("Unmarshal(0x%x, %s) returned error %v", data, reflect.TypeOf(ppm), err)
+		t.Errorf("Unmarshal(0x%x, %s) returned error %v", data, reflect.TypeFor[**map[int]*int](), err)
 	} else if !reflect.DeepEqual(m, wantMap) {
 		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", data, m, m, wantMap)
 	}
@@ -2728,7 +2728,7 @@ func TestUnmarshalIntoPtrStructPtrElem(t *testing.T) {
 
 	// Unmarshal CBOR map into a non-nil pointer.
 	if err := Unmarshal(data, &pps); err != nil {
-		t.Errorf("Unmarshal(0x%x, %s) returned error %v", data, reflect.TypeOf(pps), err)
+		t.Errorf("Unmarshal(0x%x, %s) returned error %v", data, reflect.TypeFor[**s1](), err)
 	} else if !reflect.DeepEqual(s, wantObj) {
 		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", data, s, s, wantObj)
 	}
@@ -4304,7 +4304,7 @@ func TestDecodeTimeError(t *testing.T) {
 			name: "untagged byte string content cannot be decoded into time.Time with DefaultByteStringType string",
 			opts: DecOptions{
 				TimeTag:               DecTagOptional,
-				DefaultByteStringType: reflect.TypeOf(""),
+				DefaultByteStringType: reflect.TypeFor[string](),
 			},
 			data:         mustHexDecode("54323031332d30332d32315432303a30343a30305a"),
 			wantErrorMsg: "cbor: cannot unmarshal byte string into Go value of type time.Time",
@@ -4332,7 +4332,7 @@ func TestDecodeTimeError(t *testing.T) {
 }
 
 func TestDecodeInvalidTagTime(t *testing.T) {
-	typeTimeSlice := reflect.TypeOf([]time.Time{})
+	typeTimeSlice := reflect.TypeFor[[]time.Time]()
 
 	testCases := []struct {
 		name          string
@@ -4878,13 +4878,13 @@ func TestBinaryUnmarshalerError(t *testing.T) { //nolint:dupl
 	}{
 		{
 			name:         "primitive type",
-			typ:          reflect.TypeOf(number(0)),
+			typ:          reflect.TypeFor[number](),
 			data:         mustHexDecode("44499602d2"),
 			wantErrorMsg: "number:UnmarshalBinary: invalid length",
 		},
 		{
 			name:         "struct type",
-			typ:          reflect.TypeOf(stru{}),
+			typ:          reflect.TypeFor[stru](),
 			data:         mustHexDecode("47612C622C632C64"),
 			wantErrorMsg: "stru:UnmarshalBinary: invalid element count",
 		},
@@ -4986,13 +4986,13 @@ func TestUnmarshalerError(t *testing.T) { //nolint:dupl
 	}{
 		{
 			name:         "primitive type",
-			typ:          reflect.TypeOf(number2(0)),
+			typ:          reflect.TypeFor[number2](),
 			data:         mustHexDecode("44499602d2"),
 			wantErrorMsg: "cbor: cannot unmarshal byte string into Go value of type map[string]uint64",
 		},
 		{
 			name:         "struct type",
-			typ:          reflect.TypeOf(stru2{}),
+			typ:          reflect.TypeFor[stru2](),
 			data:         mustHexDecode("47612C622C632C64"),
 			wantErrorMsg: "cbor: cannot unmarshal byte string into Go value of type []string",
 		},
@@ -5425,7 +5425,7 @@ func TestUnmarshalDeepNesting(t *testing.T) {
 	}
 	n := &TestNode{Value: 0}
 	root := n
-	for i := 0; i < 65534; i++ {
+	for i := range 65534 {
 		child := &TestNode{Value: i}
 		n.Child = child
 		n = child
@@ -5540,11 +5540,11 @@ func TestDecOptions(t *testing.T) {
 		IntDec:                    IntDecConvertSigned,
 		MapKeyByteString:          MapKeyByteStringForbidden,
 		ExtraReturnErrors:         ExtraDecErrorUnknownField,
-		DefaultMapType:            reflect.TypeOf(map[string]any(nil)),
+		DefaultMapType:            reflect.TypeFor[map[string]any](),
 		UTF8:                      UTF8DecodeInvalid,
 		FieldNameMatching:         FieldNameMatchingCaseSensitive,
 		BigIntDec:                 BigIntDecodePointer,
-		DefaultByteStringType:     reflect.TypeOf(""),
+		DefaultByteStringType:     reflect.TypeFor[string](),
 		ByteStringToString:        ByteStringToStringAllowed,
 		FieldNameByteString:       FieldNameByteStringAllowed,
 		UnrecognizedTagToAny:      UnrecognizedTagContentToAny,
@@ -5957,14 +5957,14 @@ func TestStreamDupMapKeyToEmptyInterface(t *testing.T) {
 	data := mustHexDecode("a6616161416162614261636143616161466164614461656145") // map with duplicate key "c": {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	var b []byte
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
 	wantV := map[any]any{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
 	dec := NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var v1 any
 		if err := dec.Decode(&v1); err != nil {
 			t.Errorf("Decode() returned error %v", err)
@@ -5983,7 +5983,7 @@ func TestStreamDupMapKeyToEmptyInterface(t *testing.T) {
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var v2 any
 		if err := dec.Decode(&v2); err == nil {
 			t.Errorf("Decode() didn't return an error")
@@ -6035,14 +6035,14 @@ func TestStreamDupMapKeyToEmptyMap(t *testing.T) {
 	data := mustHexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	var b []byte
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
 	wantM := map[string]string{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
 	dec := NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var m1 map[string]string
 		if err := dec.Decode(&m1); err != nil {
 			t.Errorf("Decode() returned error %v", err)
@@ -6061,7 +6061,7 @@ func TestStreamDupMapKeyToEmptyMap(t *testing.T) {
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var m2 map[string]string
 		if err := dec.Decode(&m2); err == nil {
 			t.Errorf("Decode() didn't return an error")
@@ -6113,14 +6113,14 @@ func TestStreamDupMapKeyToNotEmptyMap(t *testing.T) {
 	data := mustHexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	var b []byte
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
 	wantM := map[string]string{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E", "f": "Z"}
 	dec := NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		m1 := map[string]string{"a": "Z", "b": "Z", "c": "Z", "d": "Z", "e": "Z", "f": "Z"}
 		if err := dec.Decode(&m1); err != nil {
 			t.Errorf("Decode() returned error %v", err)
@@ -6139,7 +6139,7 @@ func TestStreamDupMapKeyToNotEmptyMap(t *testing.T) {
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		m2 := map[string]string{"a": "Z", "b": "Z", "c": "Z", "d": "Z", "e": "Z", "f": "Z"}
 		if err := dec.Decode(&m2); err == nil {
 			t.Errorf("Decode() didn't return an error")
@@ -6254,14 +6254,14 @@ func TestStreamDupMapKeyToStruct(t *testing.T) {
 	data := mustHexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	var b []byte
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
 	wantS := s{A: "A", B: "B", C: "C", D: "D", E: "E"}
 	dec := NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s1 s
 		if err := dec.Decode(&s1); err != nil {
 			t.Errorf("Decode() returned error %v", err)
@@ -6280,7 +6280,7 @@ func TestStreamDupMapKeyToStruct(t *testing.T) {
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s2 s
 		if err := dec.Decode(&s2); err == nil {
 			t.Errorf("Decode() didn't return an error")
@@ -6323,7 +6323,7 @@ func TestUnmarshalDupMapKeyToStructKeyAsInt(t *testing.T) {
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
 	} else if _, ok := err.(*DupMapKeyError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -6343,14 +6343,14 @@ func TestStreamDupMapKeyToStructKeyAsInt(t *testing.T) {
 	data := mustHexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
 
 	var b []byte
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
 	wantS := s{A: 2, B: 4, C: 6}
 	dec := NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s1 s
 		if err := dec.Decode(&s1); err != nil {
 			t.Errorf("Decode() returned error %v", err)
@@ -6369,7 +6369,7 @@ func TestStreamDupMapKeyToStructKeyAsInt(t *testing.T) {
 	wantErrorMsg := "cbor: found duplicate map key 1 at map element index 2"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s2 s
 		if err := dec.Decode(&s2); err == nil {
 			t.Errorf("Decode() didn't return an error")
@@ -6411,7 +6411,7 @@ func TestUnmarshalDupMapKeyToStructNoMatchingField(t *testing.T) {
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
 	} else if _, ok := err.(*DupMapKeyError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -6432,14 +6432,14 @@ func TestStreamDupMapKeyToStructNoMatchingField(t *testing.T) {
 	data := mustHexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	var b []byte
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
 	wantS := s{B: "B", C: "C", D: "D", E: "E"}
 	dec := NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s1 s
 		if err := dec.Decode(&s1); err != nil {
 			t.Errorf("Decode() returned error %v", err)
@@ -6458,7 +6458,7 @@ func TestStreamDupMapKeyToStructNoMatchingField(t *testing.T) {
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s2 s
 		if err := dec.Decode(&s2); err == nil {
 			t.Errorf("Decode() didn't return an error")
@@ -6498,7 +6498,7 @@ func TestUnmarshalDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
 	} else if _, ok := err.(*DupMapKeyError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -6517,14 +6517,14 @@ func TestStreamDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
 	data := mustHexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
 
 	var b []byte
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
 	wantS := s{B: 4, C: 6}
 	dec := NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s1 s
 		if err := dec.Decode(&s1); err != nil {
 			t.Errorf("Decode() returned error %v", err)
@@ -6543,7 +6543,7 @@ func TestStreamDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
 	wantErrorMsg := "cbor: found duplicate map key 1 at map element index 2"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s2 s
 		if err := dec.Decode(&s2); err == nil {
 			t.Errorf("Decode() didn't return an error")
@@ -6590,7 +6590,7 @@ func TestUnmarshalDupMapKeyToStructWrongType(t *testing.T) {
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
 	} else if _, ok := err.(*DupMapKeyError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -6612,14 +6612,14 @@ func TestStreamDupMapKeyToStructWrongType(t *testing.T) {
 	data := mustHexDecode("a861616141fa47c35000026162614261636143fa47c3500003616161466164614461656145") // {"a": "A", 100000.0:2, "b": "B", "c": "C", 100000.0:3, "a": "F", "d": "D", "e": "E"}
 
 	var b []byte
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		b = append(b, data...)
 	}
 
 	wantS := s{A: "A", B: "B", C: "C", D: "D", E: "E"}
 	wantErrorMsg := "cbor: cannot unmarshal"
 	dec := NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s1 s
 		if err := dec.Decode(&s1); err == nil {
 			t.Errorf("Unmarshal(0x%x) didn't return an error", data)
@@ -6642,7 +6642,7 @@ func TestStreamDupMapKeyToStructWrongType(t *testing.T) {
 	wantErrorMsg = "cbor: found duplicate map key 100000 at map element index 4"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s2 s
 		if err := dec.Decode(&s2); err == nil {
 			t.Errorf("Decode() didn't return an error")
@@ -6689,7 +6689,7 @@ func TestUnmarshalDupMapKeyToStructStringParseError(t *testing.T) {
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
 	} else if _, ok := err.(*SemanticError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*SemanticError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -6727,7 +6727,7 @@ func TestUnmarshalDupMapKeyToStructIntParseError(t *testing.T) {
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -6767,7 +6767,7 @@ func TestUnmarshalDupMapKeyToStructWrongTypeParseError(t *testing.T) {
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -6807,7 +6807,7 @@ func TestUnmarshalDupMapKeyToStructWrongTypeUnhashableError(t *testing.T) {
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -6847,7 +6847,7 @@ func TestUnmarshalDupMapKeyToStructTagTypeError(t *testing.T) {
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -7682,7 +7682,7 @@ func TestUnmarshalTagNum55799AsElement(t *testing.T) {
 			data:                mustHexDecode("d9d9f783d9d9f701d9d9f702d9d9f703"), // 55799([55799(1), 55799(2), 55799(3)])
 			emptyInterfaceValue: []any{uint64(1), uint64(2), uint64(3)},
 			values:              []any{[]any{uint64(1), uint64(2), uint64(3)}, []byte{1, 2, 3}, []int{1, 2, 3}, []uint{1, 2, 3}, [0]int{}, [1]int{1}, [3]int{1, 2, 3}, [5]int{1, 2, 3, 0, 0}, []float32{1, 2, 3}, []float64{1, 2, 3}},
-			wrongTypes:          []reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag},
+			wrongTypes:          []reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeFor[[3]string](), typeTag, typeRawTag},
 		},
 		{
 			name:                "map",
@@ -7767,7 +7767,7 @@ func TestUnmarshalTagNum55799ToUnmarshaler(t *testing.T) {
 
 func TestUnmarshalTagNum55799ToRegisteredGoType(t *testing.T) {
 	type myInt int
-	typ := reflect.TypeOf(myInt(0))
+	typ := reflect.TypeFor[myInt]()
 
 	tags := NewTagSet()
 	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 125); err != nil {
@@ -7863,7 +7863,7 @@ func TestUnmarshalNestedTagNum55799ToUnmarshaler(t *testing.T) {
 
 func TestUnmarshalNestedTagNum55799ToRegisteredGoType(t *testing.T) {
 	type myInt int
-	typ := reflect.TypeOf(myInt(0))
+	typ := reflect.TypeFor[myInt]()
 
 	tags := NewTagSet()
 	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 125); err != nil {
@@ -8089,7 +8089,7 @@ func TestUnmarshalTag3(t *testing.T) {
 }
 
 func TestUnmarshalInvalidTagBignum(t *testing.T) {
-	typeBigIntSlice := reflect.TypeOf([]big.Int{})
+	typeBigIntSlice := reflect.TypeFor[[]big.Int]()
 
 	testCases := []struct {
 		name          string
@@ -8311,7 +8311,7 @@ func TestUnmarshalTaggedDataToInterface(t *testing.T) {
 	var tags = NewTagSet()
 	err := tags.Add(
 		TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired},
-		reflect.TypeOf(&Bar{}),
+		reflect.TypeFor[*Bar](),
 		4,
 	)
 	if err != nil {
@@ -8381,11 +8381,11 @@ type A2 struct {
 func TestUnmarshalRegisteredTagToInterface(t *testing.T) {
 	var err error
 	tags := NewTagSet()
-	err = tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeOf(C{}), 279)
+	err = tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeFor[C](), 279)
 	if err != nil {
 		t.Error(err)
 	}
-	err = tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeOf(D{}), 280)
+	err = tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeFor[D](), 280)
 	if err != nil {
 		t.Error(err)
 	}
@@ -8452,17 +8452,17 @@ func TestDecModeInvalidDefaultMapType(t *testing.T) {
 	}{
 		{
 			name:         "byte slice",
-			opts:         DecOptions{DefaultMapType: reflect.TypeOf([]byte(nil))},
+			opts:         DecOptions{DefaultMapType: reflect.TypeFor[[]byte]()},
 			wantErrorMsg: "cbor: invalid DefaultMapType []uint8",
 		},
 		{
 			name:         "int slice",
-			opts:         DecOptions{DefaultMapType: reflect.TypeOf([]int(nil))},
+			opts:         DecOptions{DefaultMapType: reflect.TypeFor[[]int]()},
 			wantErrorMsg: "cbor: invalid DefaultMapType []int",
 		},
 		{
 			name:         "string",
-			opts:         DecOptions{DefaultMapType: reflect.TypeOf("")},
+			opts:         DecOptions{DefaultMapType: reflect.TypeFor[string]()},
 			wantErrorMsg: "cbor: invalid DefaultMapType string",
 		},
 		{
@@ -8491,9 +8491,9 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 	cborDataNestedMap := mustHexDecode("a268496e744669656c6401684d61704669656c64a2616101616202") // {"IntField": 1, "MapField": {"a": 1, "b": 2}}
 
 	decOptionsDefault := DecOptions{}
-	decOptionsMapIntfIntfType := DecOptions{DefaultMapType: reflect.TypeOf(map[any]any(nil))}
-	decOptionsMapStringIntType := DecOptions{DefaultMapType: reflect.TypeOf(map[string]int(nil))}
-	decOptionsMapStringIntfType := DecOptions{DefaultMapType: reflect.TypeOf(map[string]any(nil))}
+	decOptionsMapIntfIntfType := DecOptions{DefaultMapType: reflect.TypeFor[map[any]any]()}
+	decOptionsMapStringIntType := DecOptions{DefaultMapType: reflect.TypeFor[map[string]int]()}
+	decOptionsMapStringIntfType := DecOptions{DefaultMapType: reflect.TypeFor[map[string]any]()}
 
 	testCases := []struct {
 		name         string
@@ -8914,22 +8914,22 @@ func TestDecModeInvalidDefaultByteStringType(t *testing.T) {
 	}{
 		{
 			name:         "neither slice nor string",
-			opts:         DecOptions{DefaultByteStringType: reflect.TypeOf(int(42))},
+			opts:         DecOptions{DefaultByteStringType: reflect.TypeFor[int]()},
 			wantErrorMsg: "cbor: invalid DefaultByteStringType: int is not of kind string or []uint8",
 		},
 		{
 			name:         "slice of non-byte",
-			opts:         DecOptions{DefaultByteStringType: reflect.TypeOf([]int{})},
+			opts:         DecOptions{DefaultByteStringType: reflect.TypeFor[[]int]()},
 			wantErrorMsg: "cbor: invalid DefaultByteStringType: []int is not of kind string or []uint8",
 		},
 		{
 			name:         "pointer to byte array",
-			opts:         DecOptions{DefaultByteStringType: reflect.TypeOf(&[42]byte{})},
+			opts:         DecOptions{DefaultByteStringType: reflect.TypeFor[*[42]byte]()},
 			wantErrorMsg: "cbor: invalid DefaultByteStringType: *[42]uint8 is not of kind string or []uint8",
 		},
 		{
 			name:         "byte array",
-			opts:         DecOptions{DefaultByteStringType: reflect.TypeOf([42]byte{})},
+			opts:         DecOptions{DefaultByteStringType: reflect.TypeFor[[42]byte]()},
 			wantErrorMsg: "cbor: invalid DefaultByteStringType: [42]uint8 is not of kind string or []uint8",
 		},
 	} {
@@ -8961,25 +8961,25 @@ func TestUnmarshalDefaultByteStringType(t *testing.T) {
 		},
 		{
 			name: "explicitly []byte",
-			opts: DecOptions{DefaultByteStringType: reflect.TypeOf([]byte(nil))},
+			opts: DecOptions{DefaultByteStringType: reflect.TypeFor[[]byte]()},
 			data: mustHexDecode("43414243"),
 			want: []byte("ABC"),
 		},
 		{
 			name: "string",
-			opts: DecOptions{DefaultByteStringType: reflect.TypeOf("")},
+			opts: DecOptions{DefaultByteStringType: reflect.TypeFor[string]()},
 			data: mustHexDecode("43414243"),
 			want: "ABC",
 		},
 		{
 			name: "ByteString",
-			opts: DecOptions{DefaultByteStringType: reflect.TypeOf(ByteString(""))},
+			opts: DecOptions{DefaultByteStringType: reflect.TypeFor[ByteString]()},
 			data: mustHexDecode("43414243"),
 			want: ByteString("ABC"),
 		},
 		{
 			name: "named []byte type",
-			opts: DecOptions{DefaultByteStringType: reflect.TypeOf(namedByteSliceType(nil))},
+			opts: DecOptions{DefaultByteStringType: reflect.TypeFor[namedByteSliceType]()},
 			data: mustHexDecode("43414243"),
 			want: namedByteSliceType("ABC"),
 		},
@@ -9266,7 +9266,7 @@ func TestUnmarshalWithUnrecognizedTagToAnyModeForSupportedTags(t *testing.T) {
 func TestUnmarshalWithUnrecognizedTagToAnyModeForSharedTag(t *testing.T) {
 
 	type myInt int
-	typ := reflect.TypeOf(myInt(0))
+	typ := reflect.TypeFor[myInt]()
 
 	tags := NewTagSet()
 	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 125); err != nil {
@@ -10231,7 +10231,7 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 			name: "base64url encoding tag ignored by default",
 			opts: DecOptions{},
 			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 21)
+				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 21)
 			},
 			wantErrorMsg: "",
 		},
@@ -10239,7 +10239,7 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 			name: "base64url encoding tag conflicts in ByteStringToStringAllowedWithExpectedLaterEncoding mode",
 			opts: DecOptions{ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding},
 			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 21)
+				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 21)
 			},
 			wantErrorMsg: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 21 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
@@ -10247,7 +10247,7 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 			name: "base64url encoding tag conflicts with non-default ByteSliceExpectedEncoding option",
 			opts: DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
 			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 21)
+				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 21)
 			},
 			wantErrorMsg: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 21 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
@@ -10255,7 +10255,7 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 			name: "base64 encoding tag ignored by default",
 			opts: DecOptions{},
 			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 22)
+				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 22)
 			},
 			wantErrorMsg: "",
 		},
@@ -10263,7 +10263,7 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 			name: "base64 encoding tag conflicts in ByteStringToStringAllowedWithExpectedLaterEncoding mode",
 			opts: DecOptions{ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding},
 			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 22)
+				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 22)
 			},
 			wantErrorMsg: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 22 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
@@ -10271,7 +10271,7 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 			name: "base64 encoding tag conflicts with non-default ByteSliceExpectedEncoding option",
 			opts: DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
 			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 22)
+				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 22)
 			},
 			wantErrorMsg: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 22 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
@@ -10279,7 +10279,7 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 			name: "base16 encoding tag ignored by default",
 			opts: DecOptions{},
 			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 23)
+				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 23)
 			},
 			wantErrorMsg: "",
 		},
@@ -10287,7 +10287,7 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 			name: "base16 encoding tag conflicts in ByteStringToStringAllowedWithExpectedLaterEncoding mode",
 			opts: DecOptions{ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding},
 			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 23)
+				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 23)
 			},
 			wantErrorMsg: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 23 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
@@ -10295,7 +10295,7 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 			name: "base16 encoding tag conflicts with non-default ByteSliceExpectedEncoding option",
 			opts: DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
 			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 23)
+				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 23)
 			},
 			wantErrorMsg: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 23 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
@@ -10344,42 +10344,42 @@ func TestUnmarshalByteStringTextConversionError(t *testing.T) {
 		{
 			name:         "reject untagged byte string containing invalid base64url",
 			opts:         DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase64URL},
-			dstType:      reflect.TypeOf([]byte{}),
+			dstType:      reflect.TypeFor[[]byte](),
 			data:         []byte{0x41, 0x00},
 			wantErrorMsg: "cbor: failed to decode base64url from byte string: illegal base64 data at input byte 0",
 		},
 		{
 			name:         "reject untagged byte string containing invalid base64url",
 			opts:         DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase64},
-			dstType:      reflect.TypeOf([]byte{}),
+			dstType:      reflect.TypeFor[[]byte](),
 			data:         []byte{0x41, 0x00},
 			wantErrorMsg: "cbor: failed to decode base64 from byte string: illegal base64 data at input byte 0",
 		},
 		{
 			name:         "reject untagged byte string containing invalid base16",
 			opts:         DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
-			dstType:      reflect.TypeOf([]byte{}),
+			dstType:      reflect.TypeFor[[]byte](),
 			data:         []byte{0x41, 0x00},
 			wantErrorMsg: "cbor: failed to decode hex from byte string: encoding/hex: invalid byte: U+0000",
 		},
 		{
 			name:         "accept tagged byte string containing invalid base64url",
 			opts:         DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase64URL},
-			dstType:      reflect.TypeOf([]byte{}),
+			dstType:      reflect.TypeFor[[]byte](),
 			data:         []byte{0xd5, 0x41, 0x00},
 			wantErrorMsg: "",
 		},
 		{
 			name:         "accept tagged byte string containing invalid base64url",
 			opts:         DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase64},
-			dstType:      reflect.TypeOf([]byte{}),
+			dstType:      reflect.TypeFor[[]byte](),
 			data:         []byte{0xd5, 0x41, 0x00},
 			wantErrorMsg: "",
 		},
 		{
 			name:         "accept tagged byte string containing invalid base16",
 			opts:         DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
-			dstType:      reflect.TypeOf([]byte{}),
+			dstType:      reflect.TypeFor[[]byte](),
 			data:         []byte{0xd5, 0x41, 0x00},
 			wantErrorMsg: "",
 		},
@@ -10418,7 +10418,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
 			},
-			dstType: reflect.TypeOf(""),
+			dstType: reflect.TypeFor[string](),
 			data:    []byte{0x41, 0xff}, // h'ff'
 			want:    "\xff",
 		},
@@ -10427,7 +10427,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
 			},
-			dstType: reflect.TypeOf(""),
+			dstType: reflect.TypeFor[string](),
 			data:    []byte{0xd5, 0x41, 0xff}, // 21(h'ff')
 			want:    "_w",
 		},
@@ -10436,7 +10436,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
 			},
-			dstType: reflect.TypeOf(""),
+			dstType: reflect.TypeFor[string](),
 			data:    []byte{0xd5, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 21(55799(h'ff'))
 			want:    "_w",
 		},
@@ -10445,7 +10445,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowed,
 			},
-			dstType: reflect.TypeOf(""),
+			dstType: reflect.TypeFor[string](),
 			data:    []byte{0xd5, 0x41, 0xff}, // 21(h'ff')
 			want:    "\xff",
 		},
@@ -10454,7 +10454,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringExpectedFormat: ByteStringExpectedBase64URL,
 			},
-			dstType: reflect.TypeOf([]byte{}),
+			dstType: reflect.TypeFor[[]byte](),
 			data:    []byte{0xd5, 0x41, 0xff}, // 21(h'ff')
 			want:    []byte{0xff},
 		},
@@ -10463,7 +10463,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringExpectedFormat: ByteStringExpectedBase64URL,
 			},
-			dstType: reflect.TypeOf([]byte{}),
+			dstType: reflect.TypeFor[[]byte](),
 			data:    []byte{0xd5, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 21(55799(h'ff'))
 			want:    []byte{0xff},
 		},
@@ -10472,7 +10472,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringExpectedFormat: ByteStringExpectedBase64URL,
 			},
-			dstType: reflect.TypeOf([]byte{}),
+			dstType: reflect.TypeFor[[]byte](),
 			data:    []byte{0x42, '_', 'w'}, // '_w'
 			want:    []byte{0xff},
 		},
@@ -10481,7 +10481,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
 			},
-			dstType: reflect.TypeOf(""),
+			dstType: reflect.TypeFor[string](),
 			data:    []byte{0xd6, 0x41, 0xff}, // 22(h'ff')
 			want:    "/w==",
 		},
@@ -10490,7 +10490,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
 			},
-			dstType: reflect.TypeOf(""),
+			dstType: reflect.TypeFor[string](),
 			data:    []byte{0xd6, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 22(55799(h'ff'))
 			want:    "/w==",
 		},
@@ -10499,7 +10499,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowed,
 			},
-			dstType: reflect.TypeOf(""),
+			dstType: reflect.TypeFor[string](),
 			data:    []byte{0xd6, 0x41, 0xff}, // 22(h'ff')
 			want:    "\xff",
 		},
@@ -10508,7 +10508,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringExpectedFormat: ByteStringExpectedBase64,
 			},
-			dstType: reflect.TypeOf([]byte{}),
+			dstType: reflect.TypeFor[[]byte](),
 			data:    []byte{0xd6, 0x41, 0xff}, // 22(h'ff')
 			want:    []byte{0xff},
 		},
@@ -10517,7 +10517,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringExpectedFormat: ByteStringExpectedBase64,
 			},
-			dstType: reflect.TypeOf([]byte{}),
+			dstType: reflect.TypeFor[[]byte](),
 			data:    []byte{0xd6, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 22(55799(h'ff'))
 			want:    []byte{0xff},
 		},
@@ -10526,7 +10526,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringExpectedFormat: ByteStringExpectedBase64,
 			},
-			dstType: reflect.TypeOf([]byte{}),
+			dstType: reflect.TypeFor[[]byte](),
 			data:    []byte{0x44, '/', 'w', '=', '='}, // '/w=='
 			want:    []byte{0xff},
 		},
@@ -10535,7 +10535,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
 			},
-			dstType: reflect.TypeOf(""),
+			dstType: reflect.TypeFor[string](),
 			data:    []byte{0xd7, 0x41, 0xff}, // 23(h'ff')
 			want:    "ff",
 		},
@@ -10544,7 +10544,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
 			},
-			dstType: reflect.TypeOf(""),
+			dstType: reflect.TypeFor[string](),
 			data:    []byte{0xd7, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 23(55799(h'ff'))
 			want:    "ff",
 		},
@@ -10553,7 +10553,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowed,
 			},
-			dstType: reflect.TypeOf(""),
+			dstType: reflect.TypeFor[string](),
 			data:    []byte{0xd7, 0x41, 0xff}, // 23(h'ff')
 			want:    "\xff",
 		},
@@ -10562,7 +10562,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringExpectedFormat: ByteStringExpectedBase16,
 			},
-			dstType: reflect.TypeOf([]byte{}),
+			dstType: reflect.TypeFor[[]byte](),
 			data:    []byte{0xd7, 0x41, 0xff}, // 23(h'ff')
 			want:    []byte{0xff},
 		},
@@ -10571,7 +10571,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringExpectedFormat: ByteStringExpectedBase16,
 			},
-			dstType: reflect.TypeOf([]byte{}),
+			dstType: reflect.TypeFor[[]byte](),
 			data:    []byte{0xd7, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 23(55799(h'ff'))
 			want:    []byte{0xff},
 		},
@@ -10580,7 +10580,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringExpectedFormat: ByteStringExpectedBase16,
 			},
-			dstType: reflect.TypeOf([]byte{}),
+			dstType: reflect.TypeFor[[]byte](),
 			data:    []byte{0x42, 'f', 'f'},
 			want:    []byte{0xff},
 		},
@@ -10589,7 +10589,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
 			},
-			dstType: reflect.TypeOf(""),
+			dstType: reflect.TypeFor[string](),
 			data:    []byte{0xd5, 0xd6, 0x42, 0x01, 0x02}, // 21(22(h'0102'))
 			want:    "AQI=",                               // base64 of [0x01, 0x02] with padding
 		},
@@ -10598,7 +10598,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
 			},
-			dstType: reflect.TypeOf(""),
+			dstType: reflect.TypeFor[string](),
 			data:    []byte{0xd6, 0xd5, 0x42, 0x01, 0x02}, // 22(21(h'0102'))
 			want:    "AQI",                                // base64 of [0x01, 0x02] without padding
 		},
@@ -10935,7 +10935,7 @@ func TestJSONUnmarshalerTranscoder(t *testing.T) {
 			want: json.RawMessage("true"),
 			wantErrorMsg: TranscodeError{
 				err:          errors.New("test"),
-				rtype:        reflect.TypeOf((*json.RawMessage)(nil)),
+				rtype:        reflect.TypeFor[*json.RawMessage](),
 				sourceFormat: "cbor",
 				targetFormat: "json",
 			}.Error(),

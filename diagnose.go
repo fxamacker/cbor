@@ -170,7 +170,7 @@ func Diagnose(data []byte) (string, error) {
 	return defaultDiagMode.Diagnose(data)
 }
 
-// Diagnose returns extended diagnostic notation (EDN) of the first CBOR data item using the DiagMode. Any remaining bytes are returned in rest.
+// DiagnoseFirst returns extended diagnostic notation (EDN) of the first CBOR data item using the DiagMode. Any remaining bytes are returned in rest.
 func DiagnoseFirst(data []byte) (diagNotation string, rest []byte, err error) {
 	return defaultDiagMode.DiagnoseFirst(data)
 }
@@ -360,7 +360,7 @@ func (di *diagnose) item() error { //nolint:gocyclo
 		count := int(val) //nolint:gosec
 		di.w.WriteByte('[')
 
-		for i := 0; i < count; i++ {
+		for i := range count {
 			if i > 0 {
 				di.w.WriteString(", ")
 			}
@@ -376,7 +376,7 @@ func (di *diagnose) item() error { //nolint:gocyclo
 		count := int(val) //nolint:gosec
 		di.w.WriteByte('{')
 
-		for i := 0; i < count; i++ {
+		for i := range count {
 			if i > 0 {
 				di.w.WriteString(", ")
 			}

@@ -306,37 +306,37 @@ func BenchmarkUnmarshal(b *testing.B) {
 		{
 			name:         "CBOR map to Go map[string]interface{}",
 			data:         mustHexDecode("a86154f56255691bffffffffffffffff61493903e76146fbc0106666666666666142581a0102030405060708090a0b0c0d0e0f101112131415161718191a6153782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6764536c6369981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a634d7373ad6163614361656145616661466167614761686148616e614e616d614d61616141616261426164614461696149616a614a616c614c"),
-			decodeToType: reflect.TypeOf(map[string]any{}),
+			decodeToType: reflect.TypeFor[map[string]any](),
 		},
 		// Unmarshal CBOR map with string key to struct.
 		{
 			name:         "CBOR map to Go struct",
 			data:         mustHexDecode("a86154f56255491bffffffffffffffff61493903e76146fbc0106666666666666142581a0102030405060708090a0b0c0d0e0f101112131415161718191a6153782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6764536c6369981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a634d7373ad6163614361656145616661466167614761686148616e614e616d614d61616141616261426164614461696149616a614a616c614c"),
-			decodeToType: reflect.TypeOf(T1{}),
+			decodeToType: reflect.TypeFor[T1](),
 		},
 		// Unmarshal CBOR map with integer key, such as COSE Key and SenML, to map[int]interface{}.
 		{
 			name:         "CBOR map to Go map[int]interface{}",
 			data:         mustHexDecode("a801f5021bffffffffffffffff033903e704fbc01066666666666605581a0102030405060708090a0b0c0d0e0f101112131415161718191a06782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6707981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a08ad61646144616661466167614761686148616d614d616e614e6161614161626142616361436165614561696149616a614a616c614c"),
-			decodeToType: reflect.TypeOf(map[int]any{}),
+			decodeToType: reflect.TypeFor[map[int]any](),
 		},
 		// Unmarshal CBOR map with integer key, such as COSE Key and SenML, to struct.
 		{
 			name:         "CBOR map to Go struct keyasint",
 			data:         mustHexDecode("a801f5021bffffffffffffffff033903e704fbc01066666666666605581a0102030405060708090a0b0c0d0e0f101112131415161718191a06782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6707981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a08ad61646144616661466167614761686148616d614d616e614e6161614161626142616361436165614561696149616a614a616c614c"),
-			decodeToType: reflect.TypeOf(T2{}),
+			decodeToType: reflect.TypeFor[T2](),
 		},
 		// Unmarshal CBOR array of known sequence of data types, such as signed/maced/encrypted CWT, to []interface{}.
 		{
 			name:         "CBOR array to Go []interface{}",
 			data:         mustHexDecode("88f51bffffffffffffffff3903e7fbc010666666666666581a0102030405060708090a0b0c0d0e0f101112131415161718191a782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67981a0102030405060708090a0b0c0d0e0f101112131415161718181819181aad616261426163614361646144616561456166614661696149616e614e616161416167614761686148616a614a616c614c616d614d"),
-			decodeToType: reflect.TypeOf([]any{}),
+			decodeToType: reflect.TypeFor[[]any](),
 		},
 		// Unmarshal CBOR array of known sequence of data types, such as signed/maced/encrypted CWT, to struct.
 		{
 			name:         "CBOR array to Go struct toarray",
 			data:         mustHexDecode("88f51bffffffffffffffff3903e7fbc010666666666666581a0102030405060708090a0b0c0d0e0f101112131415161718191a782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67981a0102030405060708090a0b0c0d0e0f101112131415161718181819181aad616261426163614361646144616561456166614661696149616e614e616161416167614761686148616a614a616c614c616d614d"),
-			decodeToType: reflect.TypeOf(T3{}),
+			decodeToType: reflect.TypeFor[T3](),
 		},
 	}
 	for _, bm := range moreBenchmarks {
@@ -429,11 +429,10 @@ func BenchmarkDecodeStream(b *testing.B) {
 		}
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		buf := bytes.NewReader(data)
 		decoder := NewDecoder(buf)
-		for j := 0; j < rounds; j++ {
+		for range rounds {
 			for _, bm := range decodeBenchmarks {
 				for _, t := range bm.decodeToTypes {
 					vPtr := reflect.New(t).Interface()
@@ -702,9 +701,9 @@ func BenchmarkEncode(b *testing.B) {
 }
 
 func BenchmarkEncodeStream(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		encoder := NewEncoder(io.Discard)
-		for i := 0; i < rounds; i++ {
+		for range rounds {
 			for _, bm := range encodeBenchmarks {
 				for _, v := range bm.values {
 					if err := encoder.Encode(v); err != nil {
@@ -784,7 +783,7 @@ func BenchmarkMarshalCOSE(b *testing.B) {
 func BenchmarkUnmarshalCWTClaims(b *testing.B) {
 	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.1
 	data := mustHexDecode("a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b71")
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		var v claims
 		if err := Unmarshal(data, &v); err != nil {
 			b.Fatal("Unmarshal:", err)
@@ -796,7 +795,7 @@ func BenchmarkUnmarshalCWTClaimsWithDupMapKeyOpt(b *testing.B) {
 	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.1
 	data := mustHexDecode("a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b71")
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		var v claims
 		if err := dm.Unmarshal(data, &v); err != nil {
 			b.Fatal("Unmarshal:", err)
@@ -811,7 +810,7 @@ func BenchmarkMarshalCWTClaims(b *testing.B) {
 	if err := Unmarshal(data, &v); err != nil {
 		b.Fatal("Unmarshal:", err)
 	}
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if _, err := Marshal(v); err != nil {
 			b.Fatal("Unmarshal:", err)
 		}
@@ -821,7 +820,7 @@ func BenchmarkMarshalCWTClaims(b *testing.B) {
 func BenchmarkUnmarshalSenML(b *testing.B) {
 	// Data from https://tools.ietf.org/html/rfc8428#section-6
 	data := mustHexDecode("87a721781b75726e3a6465763a6f773a3130653230373361303130383030363a22fb41d303a15b00106223614120050067766f6c7461676501615602fb405e066666666666a3006763757272656e74062402fb3ff3333333333333a3006763757272656e74062302fb3ff4cccccccccccda3006763757272656e74062202fb3ff6666666666666a3006763757272656e74062102f93e00a3006763757272656e74062002fb3ff999999999999aa3006763757272656e74060002fb3ffb333333333333")
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		var v []SenMLRecord
 		if err := Unmarshal(data, &v); err != nil {
 			b.Fatal("Unmarshal:", err)
@@ -836,7 +835,7 @@ func BenchmarkMarshalSenML(b *testing.B) {
 	if err := Unmarshal(data, &v); err != nil {
 		b.Fatal("Unmarshal:", err)
 	}
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if _, err := Marshal(v); err != nil {
 			b.Fatal("Unmarshal:", err)
 		}
@@ -851,7 +850,7 @@ func BenchmarkMarshalSenMLShortestFloat16(b *testing.B) {
 		b.Fatal("Unmarshal:", err)
 	}
 	em, _ := EncOptions{ShortestFloat: ShortestFloat16}.EncMode()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if _, err := em.Marshal(v); err != nil {
 			b.Fatal("Unmarshal:", err)
 		}
@@ -861,7 +860,7 @@ func BenchmarkMarshalSenMLShortestFloat16(b *testing.B) {
 func BenchmarkUnmarshalWebAuthn(b *testing.B) {
 	// Data generated from Yubico security key
 	data := mustHexDecode("a363666d74686669646f2d7532666761747453746d74a26373696758483046022100e7ab373cfbd99fcd55fd59b0f6f17fef5b77a20ddec3db7f7e4d55174e366236022100828336b4822125fb56541fb14a8a273876acd339395ec2dad95cf41c1dd2a9ae637835638159024e3082024a30820132a0030201020204124a72fe300d06092a864886f70d01010b0500302e312c302a0603550403132359756269636f2055324620526f6f742043412053657269616c203435373230303633313020170d3134303830313030303030305a180f32303530303930343030303030305a302c312a302806035504030c2159756269636f205532462045452053657269616c203234393431343937323135383059301306072a8648ce3d020106082a8648ce3d030107034200043d8b1bbd2fcbf6086e107471601468484153c1c6d3b4b68a5e855e6e40757ee22bcd8988bf3befd7cdf21cb0bf5d7a150d844afe98103c6c6607d9faae287c02a33b3039302206092b0601040182c40a020415312e332e362e312e342e312e34313438322e312e313013060b2b0601040182e51c020101040403020520300d06092a864886f70d01010b05000382010100a14f1eea0076f6b8476a10a2be72e60d0271bb465b2dfbfc7c1bd12d351989917032631d795d097fa30a26a325634e85721bc2d01a86303f6bc075e5997319e122148b0496eec8d1f4f94cf4110de626c289443d1f0f5bbb239ca13e81d1d5aa9df5af8e36126475bfc23af06283157252762ff68879bcf0ef578d55d67f951b4f32b63c8aea5b0f99c67d7d814a7ff5a6f52df83e894a3a5d9c8b82e7f8bc8daf4c80175ff8972fda79333ec465d806eacc948f1bab22045a95558a48c20226dac003d41fbc9e05ea28a6bb5e10a49de060a0a4f6a2676a34d68c4abe8c61874355b9027e828ca9e064b002d62e8d8cf0744921753d35e3c87c5d5779453e7768617574684461746158c449960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d976341000000000000000000000000000000000000000000408903fd7dfd2c9770e98cae0123b13a2c27828a106349bc6277140e7290b7e9eb7976aa3c04ed347027caf7da3a2fa76304751c02208acfc4e7fc6c7ebbc375c8a5010203262001215820ad7f7992c335b90d882b2802061b97a4fabca7e2ee3e7a51e728b8055e4eb9c7225820e0966ba7005987fece6f0e0e13447aa98cec248e4000a594b01b74c1cb1d40b3")
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		var v attestationObject
 		if err := Unmarshal(data, &v); err != nil {
 			b.Fatal("Unmarshal:", err)
@@ -876,7 +875,7 @@ func BenchmarkMarshalWebAuthn(b *testing.B) {
 	if err := Unmarshal(data, &v); err != nil {
 		b.Fatal("Unmarshal:", err)
 	}
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if _, err := Marshal(v); err != nil {
 			b.Fatal("Marshal:", err)
 		}
@@ -887,7 +886,7 @@ func BenchmarkUnmarshalCOSEMAC(b *testing.B) {
 	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.4
 	data := mustHexDecode("d83dd18443a10104a1044c53796d6d65747269633235365850a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b7148093101ef6d789200")
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		var v macedCOSE
 		if err := Unmarshal(data, &v); err != nil {
 			b.Fatal("Unmarshal:", err)
@@ -901,14 +900,14 @@ func BenchmarkUnmarshalCOSEMACWithTag(b *testing.B) {
 
 	// Register tag CBOR Web Token (CWT) 61 and COSE_Mac0 17 with macedCOSE type
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeOf(macedCOSE{}), 61, 17); err != nil {
+	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeFor[macedCOSE](), 61, 17); err != nil {
 		b.Fatal("TagSet.Add:", err)
 	}
 
 	// Create DecMode with tags
 	dm, _ := DecOptions{}.DecModeWithTags(tags)
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		var v macedCOSE
 		if err := dm.Unmarshal(data, &v); err != nil {
 			b.Fatal("Unmarshal:", err)
@@ -924,7 +923,7 @@ func BenchmarkMarshalCOSEMAC(b *testing.B) {
 		b.Fatal("Unmarshal():", err)
 	}
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if _, err := Marshal(v); err != nil {
 			b.Fatal("Marshal():", v, err)
 		}
@@ -937,7 +936,7 @@ func BenchmarkMarshalCOSEMACWithTag(b *testing.B) {
 
 	// Register tag CBOR Web Token (CWT) 61 and COSE_Mac0 17 with macedCOSE type
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeOf(macedCOSE{}), 61, 17); err != nil {
+	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeFor[macedCOSE](), 61, 17); err != nil {
 		b.Fatal("TagSet.Add:", err)
 	}
 
@@ -950,7 +949,7 @@ func BenchmarkMarshalCOSEMACWithTag(b *testing.B) {
 		b.Fatal("Unmarshal():", err)
 	}
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if _, err := em.Marshal(v); err != nil {
 			b.Fatal("Marshal():", v, err)
 		}
@@ -980,7 +979,7 @@ func BenchmarkUnmarshalMapToStruct(b *testing.B) {
 		// An EncOption that accepts a function to sort or shuffle keys might be useful for
 		// cases like this. Here we are manually encoding the fields in reverse order to
 		// target worst-case key-to-field matching.
-		rt := reflect.TypeOf(ManyFields{})
+		rt := reflect.TypeFor[ManyFields]()
 		var buf bytes.Buffer
 		if rt.NumField() > 255 {
 			b.Fatalf("invalid test assumption: ManyFields expected to have no more than 255 fields, has %d", rt.NumField())

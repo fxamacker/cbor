@@ -186,7 +186,7 @@ const (
 	// in RFC 7049bis.
 	SortBytewiseLexical SortMode = 2
 
-	// SortShuffle encodes map pairs and struct fields in a shuffled
+	// SortFastShuffle encodes map pairs and struct fields in a shuffled
 	// order. This mode does not guarantee an unbiased permutation, but it
 	// does guarantee that the runtime of the shuffle algorithm used will be
 	// constant.
@@ -1027,7 +1027,7 @@ func (em *encMode) Marshal(v any) ([]byte, error) {
 // See Marshal for more details.
 func (em *encMode) MarshalToBuffer(v any, buf *bytes.Buffer) error {
 	if buf == nil {
-		return fmt.Errorf("cbor: encoding buffer provided by user is nil")
+		return errors.New("cbor: encoding buffer provided by user is nil")
 	}
 	return encode(buf, em, reflect.ValueOf(v))
 }
@@ -1300,7 +1300,7 @@ func encodeByteString(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	}
 	encodeHead(e, byte(cborTypeByteString), uint64(slen)) //nolint:gosec
 	if vk == reflect.Array {
-		for i := 0; i < slen; i++ {
+		for i := range slen {
 			e.WriteByte(byte(v.Index(i).Uint())) //nolint:gosec
 		}
 		return nil
@@ -1339,7 +1339,7 @@ func (ae arrayEncodeFunc) encode(e *bytes.Buffer, em *encMode, v reflect.Value) 
 		return e.WriteByte(byte(cborTypeArray))
 	}
 	encodeHead(e, byte(cborTypeArray), uint64(alen)) //nolint:gosec
-	for i := 0; i < alen; i++ {
+	for i := range alen {
 		if err := ae.f(e, em, v.Index(i)); err != nil {
 			return err
 		}
@@ -1494,7 +1494,7 @@ func encodeStructToArray(e *bytes.Buffer, em *encMode, v reflect.Value) (err err
 	flds := structType.fields
 
 	encodeHead(e, byte(cborTypeArray), uint64(len(flds)))
-	for i := 0; i < len(flds); i++ {
+	for i := range flds {
 		f := flds[i]
 
 		var fv reflect.Value
@@ -1542,7 +1542,7 @@ func encodeStruct(e *bytes.Buffer, em *encMode, v reflect.Value) (err error) {
 
 	kvBeginOffset := e.Len()
 	kvCount := 0
-	for offset := 0; offset < len(flds); offset++ {
+	for offset := range flds {
 		f := flds[(start+offset)%len(flds)]
 
 		var fv reflect.Value
@@ -1969,12 +1969,12 @@ func encodeHead(e *bytes.Buffer, t byte, n uint64) int {
 type jsonMarshaler interface{ MarshalJSON() ([]byte, error) }
 
 var (
-	typeMarshaler       = reflect.TypeOf((*Marshaler)(nil)).Elem()
-	typeBinaryMarshaler = reflect.TypeOf((*encoding.BinaryMarshaler)(nil)).Elem()
-	typeTextMarshaler   = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
-	typeJSONMarshaler   = reflect.TypeOf((*jsonMarshaler)(nil)).Elem()
-	typeRawMessage      = reflect.TypeOf(RawMessage(nil))
-	typeByteString      = reflect.TypeOf(ByteString(""))
+	typeMarshaler       = reflect.TypeFor[Marshaler]()
+	typeBinaryMarshaler = reflect.TypeFor[encoding.BinaryMarshaler]()
+	typeTextMarshaler   = reflect.TypeFor[encoding.TextMarshaler]()
+	typeJSONMarshaler   = reflect.TypeFor[jsonMarshaler]()
+	typeRawMessage      = reflect.TypeFor[RawMessage]()
+	typeByteString      = reflect.TypeFor[ByteString]()
 )
 
 func getEncodeFuncInternal(t reflect.Type) (ef encodeFunc, ief isEmptyFunc, izf isZeroFunc) {
@@ -2210,7 +2210,7 @@ func float32NaNFromReflectValue(v reflect.Value) float32 {
 	// Keith Randall's workaround for issue https://github.com/golang/go/issues/36400
 	p := reflect.New(v.Type())
 	p.Elem().Set(v)
-	f32 := p.Convert(reflect.TypeOf((*float32)(nil))).Elem().Interface().(float32)
+	f32 := p.Convert(reflect.TypeFor[*float32]()).Elem().Interface().(float32)
 	return f32
 }
 
@@ -2218,7 +2218,7 @@ type isZeroer interface {
 	IsZero() bool
 }
 
-var isZeroerType = reflect.TypeOf((*isZeroer)(nil)).Elem()
+var isZeroerType = reflect.TypeFor[isZeroer]()
 
 // getIsZeroFunc returns a function for the given type that can be called to determine if a given value is zero.
 // Types that implement `IsZero() bool` are delegated to for non-nil values.
