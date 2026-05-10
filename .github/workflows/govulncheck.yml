@@ -35,11 +35,11 @@ jobs:
     - name: Install Go and setup env
       uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
       with:
-        go-version: 1.23
+        go-version: 1.26
         check-latest: true
  
     - name: Install latest govulncheck
-      run: go install golang.org/x/vuln/cmd/govulncheck@d1f380186385b4f64e00313f31743df8e4b89a77 # v1.1.4
+      run: go install golang.org/x/vuln/cmd/govulncheck@0782b76014f15f24e22a438f30f308df42899ba1 # v1.3.0
 
     - name: Run govulncheck
       run: govulncheck -show=traces ./...
