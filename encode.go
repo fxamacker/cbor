@@ -186,7 +186,7 @@ const (
 	// in RFC 7049bis.
 	SortBytewiseLexical SortMode = 2
 
-	// SortShuffle encodes map pairs and struct fields in a shuffled
+	// SortFastShuffle encodes map pairs and struct fields in a shuffled
 	// order. This mode does not guarantee an unbiased permutation, but it
 	// does guarantee that the runtime of the shuffle algorithm used will be
 	// constant.
@@ -1027,7 +1027,7 @@ func (em *encMode) Marshal(v any) ([]byte, error) {
 // See Marshal for more details.
 func (em *encMode) MarshalToBuffer(v any, buf *bytes.Buffer) error {
 	if buf == nil {
-		return fmt.Errorf("cbor: encoding buffer provided by user is nil")
+		return errors.New("cbor: encoding buffer provided by user is nil")
 	}
 	return encode(buf, em, reflect.ValueOf(v))
 }

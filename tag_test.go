@@ -5,6 +5,7 @@ package cbor
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -1430,7 +1431,7 @@ func (n *number3) UnmarshalCBOR(data []byte) (err error) {
 	}
 
 	if getType(rawTag.Content[0]) != cborTypeMap {
-		return fmt.Errorf("wrong tag content type, want map")
+		return errors.New("wrong tag content type, want map")
 	}
 
 	var v map[string]uint64

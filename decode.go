@@ -611,7 +611,7 @@ func WithRejectedSimpleValue(sv SimpleValue) func(*SimpleValueRegistry) error {
 	}
 }
 
-// Creates a new SimpleValueRegistry. The registry state is initialized by executing the provided
+// NewSimpleValueRegistryFromDefaults creates a new SimpleValueRegistry. The registry state is initialized by executing the provided
 // functions in order against a registry that is pre-populated with the defaults for all well-formed
 // simple value numbers.
 func NewSimpleValueRegistryFromDefaults(fns ...func(*SimpleValueRegistry) error) (*SimpleValueRegistry, error) {
