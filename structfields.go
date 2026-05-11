@@ -4,7 +4,9 @@
 package cbor
 
 import (
+	"cmp"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -44,27 +46,15 @@ type decodingField struct {
 
 type decodingFields []*decodingField
 
-// indexFieldSorter sorts fields by field idx at each level, breaking ties with idx depth.
-type indexFieldSorter struct {
-	fields fields
-}
-
-func (x *indexFieldSorter) Len() int {
-	return len(x.fields)
-}
-
-func (x *indexFieldSorter) Swap(i, j int) {
-	x.fields[i], x.fields[j] = x.fields[j], x.fields[i]
-}
-
-func (x *indexFieldSorter) Less(i, j int) bool {
-	iIdx, jIdx := x.fields[i].idx, x.fields[j].idx
+// indexFieldCmp compares fields by field idx at each level, breaking ties with idx depth.
+func indexFieldCmp(fi, fj *field) int {
+	iIdx, jIdx := fi.idx, fj.idx
 	for k := 0; k < len(iIdx) && k < len(jIdx); k++ {
 		if iIdx[k] != jIdx[k] {
-			return iIdx[k] < jIdx[k]
+			return cmp.Compare(iIdx[k], jIdx[k])
 		}
 	}
-	return len(iIdx) < len(jIdx)
+	return cmp.Compare(len(iIdx), len(jIdx))
 }
 
 // nameLevelAndTagFieldSorter sorts fields by field name, idx depth, and presence of tag.
@@ -175,7 +165,7 @@ func getFields(t reflect.Type) (flds fields, structOptions string) {
 	}
 
 	// Sort fields by field index
-	sort.Sort(&indexFieldSorter{flds})
+	slices.SortFunc(flds, indexFieldCmp)
 
 	return flds, structOptions
 }
