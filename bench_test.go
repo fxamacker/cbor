@@ -288,7 +288,7 @@ func BenchmarkUnmarshal(b *testing.B) {
 				name = "CBOR " + bm.name + " to Go " + t.Kind().String()
 			}
 			b.Run(name, func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					vPtr := reflect.New(t).Interface()
 					if err := Unmarshal(bm.data, vPtr); err != nil {
 						b.Fatal("Unmarshal:", err)
@@ -341,7 +341,7 @@ func BenchmarkUnmarshal(b *testing.B) {
 	}
 	for _, bm := range moreBenchmarks {
 		b.Run(bm.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				vPtr := reflect.New(bm.decodeToType).Interface()
 				if err := Unmarshal(bm.data, vPtr); err != nil {
 					b.Fatal("Unmarshal:", err)
@@ -364,7 +364,7 @@ func BenchmarkUnmarshalFirst(b *testing.B) {
 			data = append(data, bm.data...)
 			data = append(data, trailingData...)
 			b.Run(name, func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					vPtr := reflect.New(t).Interface()
 					if _, err := UnmarshalFirst(data, vPtr); err != nil {
 						b.Fatal("UnmarshalFirst:", err)
@@ -388,7 +388,7 @@ func BenchmarkUnmarshalFirstViaDecoder(b *testing.B) {
 			data = append(data, bm.data...)
 			data = append(data, trailingData...)
 			b.Run(name, func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					vPtr := reflect.New(t).Interface()
 					if err := NewDecoder(bytes.NewReader(data)).Decode(vPtr); err != nil {
 						b.Fatal("UnmarshalDecoder:", err)
@@ -409,7 +409,7 @@ func BenchmarkDecode(b *testing.B) {
 			buf := bytes.NewReader(bm.data)
 			decoder := NewDecoder(buf)
 			b.Run(name, func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					vPtr := reflect.New(t).Interface()
 					if err := decoder.Decode(vPtr); err != nil {
 						b.Fatal("Decode:", err)
@@ -424,7 +424,7 @@ func BenchmarkDecode(b *testing.B) {
 func BenchmarkDecodeStream(b *testing.B) {
 	var data []byte
 	for _, bm := range decodeBenchmarks {
-		for i := 0; i < len(bm.decodeToTypes); i++ {
+		for range len(bm.decodeToTypes) {
 			data = append(data, bm.data...)
 		}
 	}
@@ -454,7 +454,7 @@ func BenchmarkMarshal(b *testing.B) {
 				name = "Go " + reflect.TypeOf(v).Kind().String() + " to CBOR " + bm.name
 			}
 			b.Run(name, func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					if _, err := Marshal(v); err != nil {
 						b.Fatal("Marshal:", err)
 					}
@@ -588,7 +588,7 @@ func BenchmarkMarshal(b *testing.B) {
 	}
 	for _, bm := range moreBenchmarks {
 		b.Run(bm.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				if _, err := Marshal(bm.value); err != nil {
 					b.Fatal("Marshal:", err)
 				}
@@ -634,7 +634,7 @@ func BenchmarkMarshalCanonical(b *testing.B) {
 				name = "Go " + reflect.TypeOf(v).Kind().String() + " to CBOR " + bm.name
 			}
 			b.Run(name, func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					if _, err := Marshal(v); err != nil {
 						b.Fatal("Marshal:", err)
 					}
@@ -647,7 +647,7 @@ func BenchmarkMarshalCanonical(b *testing.B) {
 			}
 			em, _ := EncOptions{Sort: SortCanonical}.EncMode()
 			b.Run(name, func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					if _, err := em.Marshal(v); err != nil {
 						b.Fatal("Marshal:", err)
 					}
@@ -666,8 +666,7 @@ func BenchmarkNewEncoderEncode(b *testing.B) {
 				name = "Go " + reflect.TypeOf(v).Kind().String() + " to CBOR " + bm.name
 			}
 			b.Run(name, func(b *testing.B) {
-				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					encoder := NewEncoder(io.Discard)
 					if err := encoder.Encode(v); err != nil {
 						b.Fatal("Encode:", err)
@@ -689,8 +688,7 @@ func BenchmarkEncode(b *testing.B) {
 			}
 			b.Run(name, func(b *testing.B) {
 				encoder := NewEncoder(io.Discard)
-				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					if err := encoder.Encode(v); err != nil {
 						b.Fatal("Encode:", err)
 					}
@@ -736,7 +734,7 @@ func BenchmarkUnmarshalCOSE(b *testing.B) {
 	}
 	for _, tc := range testCases {
 		b.Run(tc.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				var v coseKey
 				if err := Unmarshal(tc.data, &v); err != nil {
 					b.Fatal("Unmarshal:", err)
@@ -771,7 +769,7 @@ func BenchmarkMarshalCOSE(b *testing.B) {
 			b.Fatal("Unmarshal:", err)
 		}
 		b.Run(tc.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				if _, err := Marshal(v); err != nil {
 					b.Fatal("Marshal:", err)
 				}
@@ -1149,8 +1147,7 @@ func BenchmarkUnmarshalMapToStruct(b *testing.B) {
 
 				dst := reflect.New(reflect.TypeOf(in.into)).Interface()
 
-				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					if err := dm.Unmarshal(in.data, dst); !in.reject && err != nil {
 						b.Fatalf("unexpected error: %v", err)
 					} else if in.reject && err == nil {

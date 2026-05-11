@@ -13,7 +13,7 @@ import (
 
 func TestUnmarshalSimpleValue(t *testing.T) {
 	t.Run("0..23", func(t *testing.T) {
-		for i := 0; i <= 23; i++ {
+		for i := range 24 {
 			data := []byte{byte(cborTypePrimitives) | byte(i)}
 			want := SimpleValue(i)
 
@@ -253,7 +253,7 @@ func testUnmarshalSimpleValue(t *testing.T, data []byte, want SimpleValue) {
 
 func TestMarshalSimpleValue(t *testing.T) {
 	t.Run("0..23", func(t *testing.T) {
-		for i := 0; i <= 23; i++ {
+		for i := range 24 {
 			wantData := []byte{byte(cborTypePrimitives) | byte(i)}
 			v := SimpleValue(i)
 

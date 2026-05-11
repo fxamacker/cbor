@@ -5623,7 +5623,7 @@ func TestEncOptions(t *testing.T) {
 		JSONMarshalerTranscoder: stubTranscoder{},
 	}
 	ov := reflect.ValueOf(opts1)
-	for i := 0; i < ov.NumField(); i++ {
+	for i := range ov.NumField() {
 		fv := ov.Field(i)
 		if fv.IsZero() {
 			fn := ov.Type().Field(i).Name
