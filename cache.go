@@ -111,9 +111,16 @@ func getDecodingStructType(t reflect.Type) (*decodingStructType, error) {
 
 	flds, structOptions := getFields(t)
 
-	toArray := hasToArrayOption(structOptions)
-
-	if toArray {
+	hasToArray, hasToIndefArray, err := arrayStructOptions(t, structOptions)
+	if err != nil {
+		structType := &decodingStructType{err: err}
+		decodingStructTypeCache.Store(t, structType)
+		return nil, err
+	}
+	// Both options describe a struct laid out as a CBOR array. The decoder
+	// accepts definite- and indefinite-length arrays interchangeably, so
+	// the same code path serves both options.
+	if hasToArray || hasToIndefArray {
 		return getDecodingStructToArrayType(t, flds)
 	}
 
@@ -205,11 +212,12 @@ func getDecodingStructToArrayType(t reflect.Type, flds fields) (*decodingStructT
 
 type encodingStructType struct {
 	fields             encodingFields
-	bytewiseFields     encodingFields // Only populated if toArray is false
-	lengthFirstFields  encodingFields // Only populated if toArray is false
-	omitEmptyFieldsIdx []int          // Only populated if toArray is false
+	bytewiseFields     encodingFields // Only populated if struct is not array-shaped
+	lengthFirstFields  encodingFields // Only populated if struct is not array-shaped
+	omitEmptyFieldsIdx []int          // Only populated if struct is not array-shaped
 	err                error
-	toArray            bool
+	toArray            bool // True iff the struct declares the `toarray` option
+	toIndefArray       bool // True iff the struct declares the `toindefarray` option
 }
 
 func (st *encodingStructType) getFields(em *encMode) encodingFields {
@@ -245,8 +253,14 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 
 	flds, structOptions := getFields(t)
 
-	if hasToArrayOption(structOptions) {
-		return getEncodingStructToArrayType(t, flds)
+	hasToArray, hasToIndefArray, err := arrayStructOptions(t, structOptions)
+	if err != nil {
+		structType := &encodingStructType{err: err}
+		encodingStructTypeCache.Store(t, structType)
+		return nil, err
+	}
+	if hasToArray || hasToIndefArray {
+		return getEncodingStructToArrayType(t, flds, hasToArray, hasToIndefArray)
 	}
 
 	var hasKeyAsInt bool
@@ -344,7 +358,7 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 	return structType, nil
 }
 
-func getEncodingStructToArrayType(t reflect.Type, flds fields) (*encodingStructType, error) {
+func getEncodingStructToArrayType(t reflect.Type, flds fields, toArray, toIndefArray bool) (*encodingStructType, error) {
 	encFlds := make(encodingFields, len(flds))
 	for i, f := range flds {
 		encFlds[i] = &encodingField{field: *f}
@@ -357,8 +371,9 @@ func getEncodingStructToArrayType(t reflect.Type, flds fields) (*encodingStructT
 	}
 
 	structType := &encodingStructType{
-		fields:  encFlds,
-		toArray: true,
+		fields:       encFlds,
+		toArray:      toArray,
+		toIndefArray: toIndefArray,
 	}
 	encodingStructTypeCache.Store(t, structType)
 	return structType, nil
@@ -387,4 +402,22 @@ func hasToArrayOption(tag string) bool {
 	s := ",toarray"
 	idx := strings.Index(tag, s)
 	return idx >= 0 && (len(tag) == idx+len(s) || tag[idx+len(s)] == ',')
+}
+
+func hasToIndefArrayOption(tag string) bool {
+	s := ",toindefarray"
+	idx := strings.Index(tag, s)
+	return idx >= 0 && (len(tag) == idx+len(s) || tag[idx+len(s)] == ',')
+}
+
+// arrayStructOptions reports whether the struct options request encoding as
+// a CBOR array (definite- or indefinite-length), and returns an error if the
+// two options are specified together (they are mutually exclusive).
+func arrayStructOptions(t reflect.Type, structOptions string) (hasToArray, hasToIndefArray bool, err error) {
+	hasToArray = hasToArrayOption(structOptions)
+	hasToIndefArray = hasToIndefArrayOption(structOptions)
+	if hasToArray && hasToIndefArray {
+		return false, false, fmt.Errorf("cbor: struct %v cannot have both \"toarray\" and \"toindefarray\" options", t)
+	}
+	return hasToArray, hasToIndefArray, nil
 }
