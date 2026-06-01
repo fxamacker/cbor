@@ -235,7 +235,6 @@ var marshalTestCases = []marshalTestCase{
 		values: []any{
 			[...]any{1, [...]int{2, 3}, [...]int{4, 5}},
 			[]any{1, []uint{2, 3}, []uint{4, 5}},
-			// []interface{}{1, []uint8{2, 3}, []uint8{4, 5}},
 			[]any{1, []uint16{2, 3}, []uint16{4, 5}},
 			[]any{1, []uint32{2, 3}, []uint32{4, 5}},
 			[]any{1, []uint64{2, 3}, []uint64{4, 5}},
