@@ -1818,7 +1818,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 	// {
 	// data: hexDecode("f818"),
 	// wantInterfaceValue: uint64(24),
-	// wantValues: []interface{}{uint8(24), uint16(24), uint32(24), uint64(24), uint(24), int8(24), int16(24), int32(24), int64(24), int(24), float32(24), float64(24)},
+	// wantValues: []any{uint8(24), uint16(24), uint32(24), uint64(24), uint(24), int8(24), int16(24), int32(24), int64(24), int(24), float32(24), float64(24)},
 	// wrongTypes: []reflect.Type{typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	// },
 	{
@@ -2561,7 +2561,7 @@ func compareFloats(t *testing.T, data []byte, got any, want any, equalityThresho
 func TestNegIntOverflow(t *testing.T) {
 	data := mustHexDecode("3bffffffffffffffff") // -18446744073709551616
 
-	// Decode CBOR neg int that overflows Go int64 to empty interface
+	// Decode CBOR neg int that overflows Go int64 to a value of type any.
 	var v1 any
 	wantObj := mustBigInt("-18446744073709551616")
 	if err := Unmarshal(data, &v1); err != nil {
@@ -2966,7 +2966,7 @@ var invalidUnmarshalTestCases = []struct {
 	wantErrorMsg string
 }{
 	{
-		name:         "unmarshal into nil interface{}",
+		name:         "unmarshal into nil",
 		v:            nil,
 		wantErrorMsg: "cbor: Unmarshal(nil)",
 	},
@@ -3569,7 +3569,7 @@ func TestValidUTF8String(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Decode to empty interface
+			// Decode to a value of type any.
 			var i any
 			err = tc.dm.Unmarshal(tc.data, &i)
 			if err != nil {
@@ -3661,7 +3661,7 @@ func TestInvalidUTF8String(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Decode to empty interface
+			// Decode to a value of type any.
 			var v any
 			err = tc.dm.Unmarshal(tc.data, &v)
 			if tc.wantErrorMsg != "" {
@@ -3952,7 +3952,7 @@ func TestUnmarshalPrefilledStruct(t *testing.T) {
 	}
 	prefilledStruct := s{a: 100, B: []int{200, 300, 400, 500}, C: true}
 	want := s{a: 100, B: []int{2, 3}, C: true}
-	data := mustHexDecode("a26161016162820203") // map[string]interface{} {"a": 1, "b": []int{2, 3}}
+	data := mustHexDecode("a26161016162820203") // map[string]any {"a": 1, "b": []int{2, 3}}
 	if err := Unmarshal(data, &prefilledStruct); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
@@ -4441,7 +4441,7 @@ func TestDecodeTag0Error(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Decode to interface{}
+			// Decode to a value of type any.
 			var v any
 			if err := tc.dm.Unmarshal(data, &v); err == nil {
 				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", data, wantErrorMsg)
@@ -4487,7 +4487,7 @@ func TestDecodeTag1Error(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Decode to interface{}
+			// Decode to a value of type any.
 			var v any
 			if err := tc.dm.Unmarshal(data, &v); err == nil {
 				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", data, wantErrorMsg)
@@ -5309,7 +5309,7 @@ func TestUnmarshalIntoSliceError(t *testing.T) {
 	wantErrorMsg := invalidUTF8ErrorMsg
 	var want any
 
-	// Unmarshal CBOR array into Go empty interface.
+	// Unmarshal CBOR array into a value of type any.
 	var v1 any
 	want = []any{"a", any(nil), "b"}
 	if err := Unmarshal(data, &v1); err == nil {
@@ -5367,7 +5367,7 @@ func TestUnmarshalIntoMapError(t *testing.T) {
 	var want any
 
 	for _, data := range data {
-		// Unmarshal CBOR map into Go empty interface.
+		// Unmarshal CBOR map into a value of type any.
 		var v1 any
 		want = map[any]any{"a": "A", "b": "B"}
 		if err := Unmarshal(data, &v1); err == nil {
@@ -5379,7 +5379,7 @@ func TestUnmarshalIntoMapError(t *testing.T) {
 			t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v1, want)
 		}
 
-		// Unmarshal CBOR map into Go map[interface{}]interface{}.
+		// Unmarshal CBOR map into Go map[any]any.
 		var v2 map[any]any
 		want = map[any]any{"a": "A", "b": "B"}
 		if err := Unmarshal(data, &v2); err == nil {
@@ -5512,7 +5512,7 @@ func TestStructKeyAsIntError(t *testing.T) {
 func TestUnmarshalToNotNilInterface(t *testing.T) {
 	data := mustHexDecode("83010203") // []uint64{1, 2, 3}
 	s := "hello"                      //nolint:goconst
-	var v any = s                     // Unmarshal() sees v as type interface{} and sets CBOR data as default Go type.  s is unmodified.  Same behavior as encoding/json.
+	var v any = s                     // Unmarshal() sees v as a value of type any and sets CBOR data as default Go type.  s is unmodified.  Same behavior as encoding/json.
 	wantV := []any{uint64(1), uint64(2), uint64(3)}
 	if err := Unmarshal(data, &v); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
@@ -7562,7 +7562,7 @@ func TestUnmarshalTagNum55799(t *testing.T) {
 		copy(data[3:], tagNum55799)
 		copy(data[6:], tc.data)
 
-		// Test unmarshaling CBOR into empty interface.
+		// Test unmarshaling CBOR into a value of type any.
 		var v any
 		if err := Unmarshal(data, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
@@ -7627,7 +7627,7 @@ func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
 		copy(data, tagNum55799)
 		copy(data[3:], tc.data)
 
-		// Test unmarshaling CBOR into empty interface.
+		// Test unmarshaling CBOR into a value of type any.
 		var v any
 		if err := Unmarshal(tc.data, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
@@ -7694,7 +7694,7 @@ func TestUnmarshalTagNum55799AsElement(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Test unmarshaling CBOR into empty interface.
+			// Test unmarshaling CBOR into a value of type any.
 			var v any
 			if err := Unmarshal(tc.data, &v); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
@@ -8275,7 +8275,7 @@ func TestUnmarshalToInterface(t *testing.T) {
 				t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.v, data, tc.data)
 			}
 
-			// Unmarshal to empty interface
+			// Unmarshal to a value of type TestExample with uninitialized Foo interface.
 			var einterface TestExample
 			if err = Unmarshal(data, &einterface); err == nil {
 				t.Errorf("Unmarshal(0x%x) didn't return an error, want error (*UnmarshalTypeError)", data)
@@ -8334,7 +8334,7 @@ func TestUnmarshalTaggedDataToInterface(t *testing.T) {
 
 	dm, _ := DecOptions{}.DecModeWithTags(tags)
 
-	// Unmarshal to empty interface
+	// Unmarshal to wrong type.
 	var v1 Bar
 	if err = dm.Unmarshal(data, &v1); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error, want error (*UnmarshalTypeError)", data)
@@ -8502,21 +8502,21 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 		wantValue    any
 		wantErrorMsg string
 	}{
-		// Decode CBOR map to map[interface{}]interface{} using default options
+		// Decode CBOR map to map[any]any using default options
 		{
-			name:      "decode CBOR map[int]int to Go map[interface{}]interface{} (default)",
+			name:      "decode CBOR map[int]int to Go map[any]any (default)",
 			opts:      decOptionsDefault,
 			data:      cborDataMapIntInt,
 			wantValue: map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)},
 		},
 		{
-			name:      "decode CBOR map[string]int to Go map[interface{}]interface{} (default)",
+			name:      "decode CBOR map[string]int to Go map[any]any (default)",
 			opts:      decOptionsDefault,
 			data:      cborDataMapStringInt,
 			wantValue: map[any]any{"a": uint64(1), "b": uint64(2)},
 		},
 		{
-			name: "decode CBOR array of map[string]int to Go []map[interface{}]interface{} (default)",
+			name: "decode CBOR array of map[string]int to Go []map[any]any (default)",
 			opts: decOptionsDefault,
 			data: cborDataArrayOfMapStringint,
 			wantValue: []any{
@@ -8525,7 +8525,7 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 			},
 		},
 		{
-			name: "decode CBOR nested map to Go map[interface{}]interface{} (default)",
+			name: "decode CBOR nested map to Go map[any]any (default)",
 			opts: decOptionsDefault,
 			data: cborDataNestedMap,
 			wantValue: map[any]any{
@@ -8533,21 +8533,21 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 				"MapField": map[any]any{"a": uint64(1), "b": uint64(2)},
 			},
 		},
-		// Decode CBOR map to map[interface{}]interface{} using default map type option
+		// Decode CBOR map to map[any]any using default map type option
 		{
-			name:      "decode CBOR map[int]int to Go map[interface{}]interface{}",
+			name:      "decode CBOR map[int]int to Go map[any]any",
 			opts:      decOptionsMapIntfIntfType,
 			data:      cborDataMapIntInt,
 			wantValue: map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)},
 		},
 		{
-			name:      "decode CBOR map[string]int to Go map[interface{}]interface{}",
+			name:      "decode CBOR map[string]int to Go map[any]any",
 			opts:      decOptionsMapIntfIntfType,
 			data:      cborDataMapStringInt,
 			wantValue: map[any]any{"a": uint64(1), "b": uint64(2)},
 		},
 		{
-			name: "decode CBOR array of map[string]int to Go []map[interface{}]interface{}",
+			name: "decode CBOR array of map[string]int to Go []map[any]any",
 			opts: decOptionsMapIntfIntfType,
 			data: cborDataArrayOfMapStringint,
 			wantValue: []any{
@@ -8556,7 +8556,7 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 			},
 		},
 		{
-			name: "decode CBOR nested map to Go map[interface{}]interface{}",
+			name: "decode CBOR nested map to Go map[any]any",
 			opts: decOptionsMapIntfIntfType,
 			data: cborDataNestedMap,
 			wantValue: map[any]any{
@@ -8564,21 +8564,21 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 				"MapField": map[any]any{"a": uint64(1), "b": uint64(2)},
 			},
 		},
-		// Decode CBOR map to map[string]interface{} using default map type option
+		// Decode CBOR map to map[string]any using default map type option
 		{
-			name:         "decode CBOR map[int]int to Go map[string]interface{}",
+			name:         "decode CBOR map[int]int to Go map[string]any",
 			opts:         decOptionsMapStringIntfType,
 			data:         cborDataMapIntInt,
 			wantErrorMsg: "cbor: cannot unmarshal positive integer into Go value of type string",
 		},
 		{
-			name:      "decode CBOR map[string]int to Go map[string]interface{}",
+			name:      "decode CBOR map[string]int to Go map[string]any",
 			opts:      decOptionsMapStringIntfType,
 			data:      cborDataMapStringInt,
 			wantValue: map[string]any{"a": uint64(1), "b": uint64(2)},
 		},
 		{
-			name: "decode CBOR array of map[string]int to Go []map[string]interface{}",
+			name: "decode CBOR array of map[string]int to Go []map[string]any",
 			opts: decOptionsMapStringIntfType,
 			data: cborDataArrayOfMapStringint,
 			wantValue: []any{
@@ -8587,7 +8587,7 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 			},
 		},
 		{
-			name: "decode CBOR nested map to Go map[string]interface{}",
+			name: "decode CBOR nested map to Go map[string]any",
 			opts: decOptionsMapStringIntfType,
 			data: cborDataNestedMap,
 			wantValue: map[string]any{
@@ -8633,7 +8633,7 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 			err := decMode.Unmarshal(tc.data, &v)
 			if err != nil {
 				if tc.wantErrorMsg == "" {
-					t.Errorf("Unmarshal(0x%x) to empty interface returned error %v", tc.data, err)
+					t.Errorf("Unmarshal(0x%x) to type any returned error %v", tc.data, err)
 				} else if tc.wantErrorMsg != err.Error() {
 					t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 				}
@@ -8896,7 +8896,7 @@ func TestDecodeBignumToEmptyInterface(t *testing.T) {
 			var v any
 			err := decMode.Unmarshal(tc.data, &v)
 			if err != nil {
-				t.Errorf("Unmarshal(0x%x) to empty interface returned error %v", tc.data, err)
+				t.Errorf("Unmarshal(0x%x) to type any returned error %v", tc.data, err)
 			} else { //nolint:gocritic // ignore elseif
 				if !reflect.DeepEqual(v, tc.wantValue) {
 					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.wantValue, tc.wantValue)
@@ -9365,7 +9365,7 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 		assertOnError func(t *testing.T, e error)
 	}{
 		{
-			name:          "default false into interface{}",
+			name:          "default false into any",
 			fns:           nil,
 			data:          []byte{0xf4},
 			into:          typeIntf,
@@ -9381,7 +9381,7 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 			assertOnError: assertNilError,
 		},
 		{
-			name:          "default true into interface{}",
+			name:          "default true into any",
 			fns:           nil,
 			data:          []byte{0xf5},
 			into:          typeIntf,
@@ -9397,7 +9397,7 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 			assertOnError: assertNilError,
 		},
 		{
-			name:          "default null into interface{}",
+			name:          "default null into any",
 			fns:           nil,
 			data:          []byte{0xf6},
 			into:          typeIntf,
@@ -9405,7 +9405,7 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 			assertOnError: assertNilError,
 		},
 		{
-			name:          "default undefined into interface{}",
+			name:          "default undefined into any",
 			fns:           nil,
 			data:          []byte{0xf7},
 			into:          typeIntf,
@@ -9413,7 +9413,7 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 			assertOnError: assertNilError,
 		},
 		{
-			name: "reject undefined into interface{}",
+			name: "reject undefined into any",
 			fns:  []func(*SimpleValueRegistry) error{WithRejectedSimpleValue(23)},
 			data: []byte{0xf7},
 			into: typeIntf,

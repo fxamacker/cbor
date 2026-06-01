@@ -12,7 +12,7 @@ import (
 )
 
 // TestStdlibJSONCompatibility tests compatibility as a drop-in replacement for the standard library
-// encoding/json package on a round trip encoding from Go object to interface{}.
+// encoding/json package on a round trip encoding from Go object to a value of type any.
 func TestStdlibJSONCompatibility(t *testing.T) {
 	// TODO: With better coverage and compatibility, it could be useful to expose these option
 	// configurations to users.
@@ -38,7 +38,7 @@ func TestStdlibJSONCompatibility(t *testing.T) {
 	testCases := []struct {
 		name       string
 		original   any
-		ifaceEqual bool // require equal intermediate interface{} values from both protocols
+		ifaceEqual bool // require equal intermediate values of type any from both protocols
 	}{
 		{
 			name:       "byte slice to base64-encoded string",
@@ -76,20 +76,20 @@ func TestStdlibJSONCompatibility(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			t.Logf("json to interface{} (%T): %#v", jintf, jintf)
+			t.Logf("json to any (%T): %#v", jintf, jintf)
 
 			var cintf any
 			err = dec.Unmarshal(c1, &cintf)
 			if err != nil {
 				t.Fatal(err)
 			}
-			t.Logf("cbor to interface{} (%T): %#v", cintf, cintf)
+			t.Logf("cbor to any (%T): %#v", cintf, cintf)
 
 			j2, err := json.Marshal(jintf)
 			if err != nil {
 				t.Fatal(err)
 			}
-			t.Logf("interface{} to json: %s", string(j2))
+			t.Logf("any to json: %s", string(j2))
 
 			c2, err := enc.Marshal(cintf)
 			if err != nil {
@@ -99,13 +99,13 @@ func TestStdlibJSONCompatibility(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			t.Logf("interface{} to cbor: %s", diag2)
+			t.Logf("any to cbor: %s", diag2)
 
 			if !reflect.DeepEqual(jintf, cintf) {
 				if tc.ifaceEqual {
-					t.Errorf("native-to-interface{} via cbor differed from native-to-interface{} via json")
+					t.Errorf("native-to-any via cbor differed from native-to-any via json")
 				} else {
-					t.Logf("native-to-interface{} via cbor differed from native-to-interface{} via json")
+					t.Logf("native-to-any via cbor differed from native-to-any via json")
 				}
 			}
 

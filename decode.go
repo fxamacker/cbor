@@ -39,7 +39,7 @@ import (
 // unmarshals CBOR into the value pointed to by the pointer.  If the
 // pointer is nil, Unmarshal creates a new value for it to point to.
 //
-// To unmarshal CBOR into an empty interface value, Unmarshal uses the
+// To unmarshal CBOR into a value of type any, Unmarshal uses the
 // following rules:
 //
 //	CBOR booleans decode to bool.
@@ -48,8 +48,8 @@ import (
 //	CBOR floating points decode to float64.
 //	CBOR byte strings decode to []byte.
 //	CBOR text strings decode to string.
-//	CBOR arrays decode to []interface{}.
-//	CBOR maps decode to map[interface{}]interface{}.
+//	CBOR arrays decode to []any.
+//	CBOR maps decode to map[any]any.
 //	CBOR null and undefined values decode to nil.
 //	CBOR times (tag 0 and 1) decode to time.Time.
 //	CBOR bignums (tag 2 and 3) decode to big.Int.
@@ -299,7 +299,7 @@ func (e *InadmissibleTagContentTypeError) Error() string {
 
 // DupMapKeyMode specifies how to enforce duplicate map key. Two map keys are considered duplicates if:
 //  1. When decoding into a struct, both keys match the same struct field. The keys are also
-//     considered duplicates if neither matches any field and decoding to interface{} would produce
+//     considered duplicates if neither matches any field and decoding to a value of type any would produce
 //     equal (==) values for both keys.
 //  2. When decoding into a map, both keys are equal (==) when decoded into values of the
 //     destination map's key type.
@@ -360,11 +360,11 @@ func (tm TagsMode) valid() bool {
 }
 
 // IntDecMode specifies which Go type (int64, uint64, or big.Int) should
-// be used when decoding CBOR integers (major type 0 and 1) to Go interface{}.
+// be used when decoding CBOR integers (major type 0 and 1) to a value of type any.
 type IntDecMode int
 
 const (
-	// IntDecConvertNone affects how CBOR integers (major type 0 and 1) decode to Go interface{}.
+	// IntDecConvertNone affects how CBOR integers (major type 0 and 1) decode to a value of type any.
 	// It decodes CBOR unsigned integer (major type 0) to:
 	// - uint64
 	// It decodes CBOR negative integer (major type 1) to:
@@ -372,7 +372,7 @@ const (
 	// - big.Int or *big.Int (see BigIntDecMode) if value doesn't fit into int64
 	IntDecConvertNone IntDecMode = iota
 
-	// IntDecConvertSigned affects how CBOR integers (major type 0 and 1) decode to Go interface{}.
+	// IntDecConvertSigned affects how CBOR integers (major type 0 and 1) decode to a value of type any.
 	// It decodes CBOR integers (major type 0 and 1) to:
 	// - int64 if value fits
 	// - big.Int or *big.Int (see BigIntDecMode) if value < math.MinInt64
@@ -382,13 +382,13 @@ const (
 	// Please use other options, such as IntDecConvertSignedOrError, IntDecConvertSignedOrBigInt, IntDecConvertNone.
 	IntDecConvertSigned
 
-	// IntDecConvertSignedOrFail affects how CBOR integers (major type 0 and 1) decode to Go interface{}.
+	// IntDecConvertSignedOrFail affects how CBOR integers (major type 0 and 1) decode to a value of type any.
 	// It decodes CBOR integers (major type 0 and 1) to:
 	// - int64 if value fits
 	// - return UnmarshalTypeError if value doesn't fit into int64
 	IntDecConvertSignedOrFail
 
-	// IntDecConvertSignedOrBigInt affects how CBOR integers (major type 0 and 1) decode to Go interface{}.
+	// IntDecConvertSignedOrBigInt affects how CBOR integers (major type 0 and 1) decode to a value of type any.
 	// It makes CBOR integers (major type 0 and 1) decode to:
 	// - int64 if value fits
 	// - big.Int or *big.Int (see BigIntDecMode) if value doesn't fit into int64
@@ -402,10 +402,10 @@ func (idm IntDecMode) valid() bool {
 }
 
 // MapKeyByteStringMode specifies how to decode CBOR byte string (major type 2)
-// as Go map key when decoding CBOR map key into an empty Go interface value.
+// as Go map key when decoding CBOR map key into a value of type any.
 // Specifically, this option applies when decoding CBOR map into
-// - Go empty interface, or
-// - Go map with empty interface as key type.
+// - any, or
+// - Go map with type any as key type.
 // The CBOR map key types handled by this option are
 // - byte string
 // - tagged byte string
@@ -420,7 +420,7 @@ const (
 	MapKeyByteStringAllowed MapKeyByteStringMode = iota
 
 	// MapKeyByteStringForbidden forbids CBOR byte string being decoded as Go map key.
-	// Attempting to decode CBOR byte string as map key into empty interface value
+	// Attempting to decode CBOR byte string as map key into a value of type any
 	// returns a decoding error.
 	MapKeyByteStringForbidden
 
@@ -489,16 +489,16 @@ func (fnmm FieldNameMatchingMode) valid() bool {
 	return fnmm >= 0 && fnmm < maxFieldNameMatchingMode
 }
 
-// BigIntDecMode specifies how to decode CBOR bignum to Go interface{}.
+// BigIntDecMode specifies how to decode CBOR bignum to a value of type any.
 type BigIntDecMode int
 
 const (
 	// BigIntDecodeValue makes CBOR bignum decode to big.Int (instead of *big.Int)
-	// when unmarshaling into a Go interface{}.
+	// when unmarshaling into a value of type any.
 	BigIntDecodeValue BigIntDecMode = iota
 
 	// BigIntDecodePointer makes CBOR bignum decode to *big.Int when
-	// unmarshaling into a Go interface{}.
+	// unmarshaling into a value of type any.
 	BigIntDecodePointer
 
 	maxBigIntDecMode
@@ -549,17 +549,17 @@ func (fnbsm FieldNameByteStringMode) valid() bool {
 	return fnbsm >= 0 && fnbsm < maxFieldNameByteStringMode
 }
 
-// UnrecognizedTagToAnyMode specifies how to decode unrecognized CBOR tag into an empty interface (any).
+// UnrecognizedTagToAnyMode specifies how to decode unrecognized CBOR tag into a value of type any.
 // Currently, recognized CBOR tag numbers are 0, 1, 2, 3, or registered by TagSet.
 type UnrecognizedTagToAnyMode int
 
 const (
 	// UnrecognizedTagNumAndContentToAny decodes CBOR tag number and tag content to cbor.Tag
-	// when decoding unrecognized CBOR tag into an empty interface.
+	// when decoding unrecognized CBOR tag into a value of type any.
 	UnrecognizedTagNumAndContentToAny UnrecognizedTagToAnyMode = iota
 
 	// UnrecognizedTagContentToAny decodes only CBOR tag content (into its default type)
-	// when decoding unrecognized CBOR tag into an empty interface.
+	// when decoding unrecognized CBOR tag into a value of type any.
 	UnrecognizedTagContentToAny
 
 	maxUnrecognizedTagToAny
@@ -569,21 +569,21 @@ func (uttam UnrecognizedTagToAnyMode) valid() bool {
 	return uttam >= 0 && uttam < maxUnrecognizedTagToAny
 }
 
-// TimeTagToAnyMode specifies how to decode CBOR tag 0 and 1 into an empty interface (any).
+// TimeTagToAnyMode specifies how to decode CBOR tag 0 and 1 into a value of type any.
 // Based on the specified mode, Unmarshal can return a time.Time value or a time string in a specific format.
 type TimeTagToAnyMode int
 
 const (
 	// TimeTagToTime decodes CBOR tag 0 and 1 into a time.Time value
-	// when decoding tag 0 or 1 into an empty interface.
+	// when decoding tag 0 or 1 into a value of type any.
 	TimeTagToTime TimeTagToAnyMode = iota
 
 	// TimeTagToRFC3339 decodes CBOR tag 0 and 1 into a time string in RFC3339 format
-	// when decoding tag 0 or 1 into an empty interface.
+	// when decoding tag 0 or 1 into a value of type any.
 	TimeTagToRFC3339
 
 	// TimeTagToRFC3339Nano decodes CBOR tag 0 and 1 into a time string in RFC3339Nano format
-	// when decoding tag 0 or 1 into an empty interface.
+	// when decoding tag 0 or 1 into a value of type any.
 	TimeTagToRFC3339Nano
 
 	maxTimeTagToAnyMode
@@ -818,11 +818,11 @@ type DecOptions struct {
 	TagsMd TagsMode
 
 	// IntDec specifies which Go integer type (int64, uint64, or [big.Int]) to use
-	// when decoding CBOR int (major type 0 and 1) to Go interface{}.
+	// when decoding CBOR int (major type 0 and 1) to a value of type any.
 	IntDec IntDecMode
 
 	// MapKeyByteString specifies how to decode CBOR byte string as map key
-	// when decoding CBOR map with byte string key into an empty interface value.
+	// when decoding CBOR map with byte string key into a value of type any.
 	// By default, an error is returned when attempting to decode CBOR byte string
 	// as map key because Go doesn't allow []byte as map key.
 	MapKeyByteString MapKeyByteStringMode
@@ -831,8 +831,8 @@ type DecOptions struct {
 	ExtraReturnErrors ExtraDecErrorCond
 
 	// DefaultMapType specifies Go map type to create and decode to
-	// when unmarshaling CBOR into an empty interface value.
-	// By default, unmarshal uses map[interface{}]interface{}.
+	// when unmarshaling CBOR into a value of type any.
+	// By default, unmarshal uses map[any]any.
 	DefaultMapType reflect.Type
 
 	// UTF8 specifies if decoder should decode CBOR Text containing invalid UTF-8.
@@ -842,11 +842,11 @@ type DecOptions struct {
 	// FieldNameMatching specifies how string keys in CBOR maps are matched to Go struct field names.
 	FieldNameMatching FieldNameMatchingMode
 
-	// BigIntDec specifies how to decode CBOR bignum to Go interface{}.
+	// BigIntDec specifies how to decode CBOR bignum to a value of type any.
 	BigIntDec BigIntDecMode
 
 	// DefaultByteStringType is the Go type that should be produced when decoding a CBOR byte
-	// string into an empty interface value. Types to which a []byte is convertible are valid
+	// string into a value of type any. Types to which a []byte is convertible are valid
 	// for this option, except for array and pointer-to-array types. If nil, the default is
 	// []byte.
 	DefaultByteStringType reflect.Type
@@ -858,11 +858,11 @@ type DecOptions struct {
 	// Go struct field name.
 	FieldNameByteString FieldNameByteStringMode
 
-	// UnrecognizedTagToAny specifies how to decode unrecognized CBOR tag into an empty interface.
+	// UnrecognizedTagToAny specifies how to decode unrecognized CBOR tag into a value of type any.
 	// Currently, recognized CBOR tag numbers are 0, 1, 2, 3, or registered by TagSet.
 	UnrecognizedTagToAny UnrecognizedTagToAnyMode
 
-	// TimeTagToAny specifies how to decode CBOR tag 0 and 1 into an empty interface (any).
+	// TimeTagToAny specifies how to decode CBOR tag 0 and 1 into a value of type any.
 	// Based on the specified mode, Unmarshal can return a time.Time value or a time string in a specific format.
 	TimeTagToAny TimeTagToAnyMode
 
@@ -2486,7 +2486,7 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 	keyType, eleType := tInfo.keyTypeInfo.typ, tInfo.elemTypeInfo.typ
 	reuseKey, reuseEle := isImmutableKind(tInfo.keyTypeInfo.kind), isImmutableKind(tInfo.elemTypeInfo.kind)
 	var keyValue, eleValue reflect.Value
-	keyIsInterfaceType := keyType == typeIntf // If key type is interface{}, need to check if key value is hashable.
+	keyIsInterfaceType := keyType == typeIntf // If key type is any, need to check if key value is hashable.
 	var err, lastErr error
 	keyCount := v.Len()
 	var existingKeys map[any]bool // Store existing map keys, used for detecting duplicate map key.

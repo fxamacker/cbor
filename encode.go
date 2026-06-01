@@ -60,8 +60,7 @@ import (
 // field's tag.  CBOR format string can specify the name of the field,
 // "omitempty", "omitzero" and "keyasint" options, and special case "-" for
 // field omission. If "cbor" key is absent, Marshal uses "json" key.
-// When using the "json" key, the "omitzero" option is honored when building
-// with Go 1.24+ to match stdlib encoding/json behavior.
+// The "omitzero" option matches Go 1.24+ stdlib encoding/json behavior.
 //
 // Struct field name is treated as integer if it has "keyasint" option in
 // its format string.  The format string must specify an integer as its

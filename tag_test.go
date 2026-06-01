@@ -1373,7 +1373,7 @@ func TestDecodeTagToEmptyIface(t *testing.T) {
 				t.Errorf("Unmarshal() returned error %v", err)
 			}
 			if !reflect.DeepEqual(tc.wantObj, v1) {
-				t.Errorf("Unmarshal to interface{} returned different values: %v, %v", tc.wantObj, v1)
+				t.Errorf("Unmarshal to any returned different values: %v, %v", tc.wantObj, v1)
 			}
 
 			var v2 any
@@ -1381,7 +1381,7 @@ func TestDecodeTagToEmptyIface(t *testing.T) {
 				t.Errorf("Unmarshal() returned error %v", err)
 			}
 			if !reflect.DeepEqual(tc.wantObj, v2) {
-				t.Errorf("Unmarshal to interface{} returned different values: %v, %v", tc.wantObj, v2)
+				t.Errorf("Unmarshal to any returned different values: %v, %v", tc.wantObj, v2)
 			}
 		})
 	}
@@ -1456,7 +1456,7 @@ func TestDecodeRegisterTagForUnmarshaler(t *testing.T) {
 	dm, _ := DecOptions{}.DecModeWithTags(tags)
 	em, _ := EncOptions{}.EncModeWithTags(tags)
 
-	// Decode to empty interface.  Unmarshal() should return object of registered type.
+	// Decode to a value of type any.  Unmarshal() should return object of registered type.
 	var v1 any
 	if err := dm.Unmarshal(data, &v1); err != nil {
 		t.Errorf("Unmarshal() returned error %v", err)

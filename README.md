@@ -854,7 +854,7 @@ This library checks tag validity for built-in tags (currently tag numbers 0, 1, 
 
 Unknown tag data items (not tag number 0, 1, 2, 3, or 55799) are handled in two ways:
 
-* When decoding into an empty interface, unknown tag data item will be decoded into `cbor.Tag` data type, which contains tag number and tag content.  The tag content will be decoded into the default Go data type for the CBOR data type.
+* When decoding into a value of type any, unknown tag data item will be decoded into `cbor.Tag` data type, which contains tag number and tag content.  The tag content will be decoded into the default Go data type for the CBOR data type.
 * When decoding into other Go types, unknown tag data item is decoded into the specified Go type.  If Go type is registered with a tag number, the tag number can optionally be verified.
 
 Decoder also has an option to forbid tag data items (treat any tag data item as error) which is specified by protocols such as CTAP2 Canonical CBOR.  

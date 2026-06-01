@@ -144,8 +144,6 @@ very compact formats like COSE and CWT (CBOR Web Tokens) with structs.
 
 The "omitzero" option omits zero values from encoding, matching
 [stdlib encoding/json behavior](https://pkg.go.dev/encoding/json#Marshal).
-When specified in the `cbor` tag, the option is always honored.
-When specified in the `json` tag, the option is honored when building with Go 1.24+.
 
 For example, "toarray" makes struct fields encode to array elements.  And "keyasint"
 makes struct fields encode to elements of CBOR map with int keys.
@@ -156,7 +154,7 @@ Struct tag options are listed at https://github.com/fxamacker/cbor#struct-tags-1
 
 # Tests and Fuzzing
 
-Over 375 tests are included in this package. Cover-guided fuzzing is handled by
+Over 400 tests are included in this package. Cover-guided fuzzing is handled by
 a private fuzzer that replaced fxamacker/cbor-fuzz years ago.
 */
 package cbor
