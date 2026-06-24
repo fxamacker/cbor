@@ -5558,6 +5558,7 @@ func TestDecOptions(t *testing.T) {
 		BinaryUnmarshaler:         BinaryUnmarshalerNone,
 		TextUnmarshaler:           TextUnmarshalerTextString,
 		JSONUnmarshalerTranscoder: stubTranscoder{},
+		FloatToInt:                FloatToIntAllowExact,
 	}
 	ov := reflect.ValueOf(opts1)
 	for i := range ov.NumField() {
@@ -11211,5 +11212,454 @@ func TestByteStringExpectedFormatErrorDefaultCase(t *testing.T) {
 	want := "cbor: failed to decode byte string in expected format 99: test error"
 	if got != want {
 		t.Errorf("Error() = %q, want %q", got, want)
+	}
+}
+
+func TestDecModeInvalidFloatToInt(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{FloatToInt: -1},
+			wantErrorMsg: "cbor: invalid FloatToInt -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{FloatToInt: 101},
+			wantErrorMsg: "cbor: invalid FloatToInt 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if gotErrorMsg := err.Error(); gotErrorMsg != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", gotErrorMsg, tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestFloatToIntDecMode(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opt          FloatToIntMode
+		src          []byte
+		dst          any
+		want         any
+		wantErrorMsg string
+	}{
+		// FloatToIntForbidden: float into integer produces an error.
+		{
+			name:         "FloatToIntForbidden float32 into int",
+			opt:          FloatToIntForbidden,
+			src:          mustHexDecode("fa42280000"), // 42.0
+			dst:          new(int),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type int",
+		},
+		{
+			name:         "FloatToIntForbidden float32 into uint",
+			opt:          FloatToIntForbidden,
+			src:          mustHexDecode("fa42280000"), // 42.0
+			dst:          new(uint),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type uint",
+		},
+
+		// FloatToIntForbidden: float into float is still fine.
+		{
+			name: "FloatToIntForbidden float32 into float32",
+			opt:  FloatToIntForbidden,
+			src:  mustHexDecode("fa42280000"), // 42.0
+			dst:  new(float32),
+			want: float32(42.0),
+		},
+		{
+			name: "FloatToIntForbidden float32 into float64",
+			opt:  FloatToIntForbidden,
+			src:  mustHexDecode("fa42280000"), // 42.0
+			dst:  new(float64),
+			want: float64(42.0),
+		},
+
+		// FloatToIntAllowExact: successful conversions for float32.
+		{
+			name: "float32 into int",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fa42280000"), // 42.0
+			dst:  new(int),
+			want: int(42),
+		},
+		{
+			name: "float32 into int8",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fa42280000"), // 42.0
+			dst:  new(int8),
+			want: int8(42),
+		},
+		{
+			name: "float32 into int16",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fa42280000"), // 42.0
+			dst:  new(int16),
+			want: int16(42),
+		},
+		{
+			name: "float32 into int32",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fa42280000"), // 42.0
+			dst:  new(int32),
+			want: int32(42),
+		},
+		{
+			name: "float32 into int64",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fa42280000"), // 42.0
+			dst:  new(int64),
+			want: int64(42),
+		},
+		{
+			name: "float32 into uint",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fa42280000"), // 42.0
+			dst:  new(uint),
+			want: uint(42),
+		},
+		{
+			name: "float32 into uint8",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fa42280000"), // 42.0
+			dst:  new(uint8),
+			want: uint8(42),
+		},
+		{
+			name: "float32 into uint16",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fa42280000"), // 42.0
+			dst:  new(uint16),
+			want: uint16(42),
+		},
+		{
+			name: "float32 into uint32",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fa42280000"), // 42.0
+			dst:  new(uint32),
+			want: uint32(42),
+		},
+		{
+			name: "float32 into uint64",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fa42280000"), // 42.0
+			dst:  new(uint64),
+			want: uint64(42),
+		},
+
+		// FloatToIntAllowExact: successful conversions for float64.
+		{
+			name: "float64 into int",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fb3ff0000000000000"), // 1.0
+			dst:  new(int),
+			want: int(1),
+		},
+		{
+			name: "float64 into uint",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fb3ff0000000000000"), // 1.0
+			dst:  new(uint),
+			want: uint(1),
+		},
+
+		// FloatToIntAllowExact: successful conversion for float16.
+		{
+			name: "float16 NaN into float32 unaffected",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("f97e00"), // NaN encoded as float16
+			dst:  new(float32),
+		},
+
+		// FloatToIntAllowExact: negative integral float into signed type.
+		{
+			name: "negative float32 into int",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fabf800000"), // -1.0
+			dst:  new(int),
+			want: int(-1),
+		},
+		{
+			name: "negative float32 into int8",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fac3000000"), // -128.0
+			dst:  new(int8),
+			want: int8(-128),
+		},
+
+		// FloatToIntAllowExact: zero and negative zero.
+		{
+			name: "float32 0.0 into int",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fa00000000"), // 0.0
+			dst:  new(int),
+			want: int(0),
+		},
+		{
+			name: "float32 0.0 into uint",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fa00000000"), // 0.0
+			dst:  new(uint),
+			want: uint(0),
+		},
+		{
+			name: "float64 -0.0 into int",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fb8000000000000000"), // -0.0
+			dst:  new(int),
+			want: int(0),
+		},
+		{
+			name: "float64 -0.0 into uint",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fb8000000000000000"), // -0.0
+			dst:  new(uint),
+			want: uint(0),
+		},
+
+		// FloatToIntAllowExact: fractional values rejected.
+		{
+			name:         "fractional float32 into int",
+			opt:          FloatToIntAllowExact,
+			src:          mustHexDecode("fa4048f5c3"), // 3.14
+			dst:          new(int),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type int (3.140000104904175 is not an integral value)",
+		},
+		{
+			name:         "fractional float64 into int",
+			opt:          FloatToIntAllowExact,
+			src:          mustHexDecode("fb40091eb851eb851f"), // 3.14
+			dst:          new(int),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type int (3.14 is not an integral value)",
+		},
+		{
+			name:         "fractional float32 into uint",
+			opt:          FloatToIntAllowExact,
+			src:          mustHexDecode("fa4048f5c3"), // 3.14
+			dst:          new(uint),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type uint (3.140000104904175 is not an integral value)",
+		},
+
+		// FloatToIntAllowExact: NaN rejected.
+		{
+			name:         "NaN into int",
+			opt:          FloatToIntAllowExact,
+			src:          mustHexDecode("f97e00"), // NaN
+			dst:          new(int),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type int (NaN is not an integral value)",
+		},
+		{
+			name:         "NaN into uint",
+			opt:          FloatToIntAllowExact,
+			src:          mustHexDecode("f97e00"), // NaN
+			dst:          new(uint),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type uint (NaN is not an integral value)",
+		},
+
+		// FloatToIntAllowExact: Infinity rejected.
+		{
+			name:         "+Inf into int",
+			opt:          FloatToIntAllowExact,
+			src:          mustHexDecode("f97c00"), // +Inf
+			dst:          new(int),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type int (+Inf is not an integral value)",
+		},
+		{
+			name:         "-Inf into int",
+			opt:          FloatToIntAllowExact,
+			src:          mustHexDecode("f9fc00"), // -Inf
+			dst:          new(int),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type int (-Inf is not an integral value)",
+		},
+		{
+			name:         "+Inf into uint",
+			opt:          FloatToIntAllowExact,
+			src:          mustHexDecode("f97c00"), // +Inf
+			dst:          new(uint),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type uint (+Inf is not an integral value)",
+		},
+		{
+			name:         "-Inf into uint",
+			opt:          FloatToIntAllowExact,
+			src:          mustHexDecode("f9fc00"), // -Inf
+			dst:          new(uint),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type uint (-Inf is not an integral value)",
+		},
+
+		// FloatToIntAllowExact: signed overflow.
+		{
+			name:         "float32 128.0 overflows int8",
+			opt:          FloatToIntAllowExact,
+			src:          mustHexDecode("fa43000000"), // 128.0
+			dst:          new(int8),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type int8 (128 overflows int8)",
+		},
+		{
+			name:         "float32 -129.0 overflows int8",
+			opt:          FloatToIntAllowExact,
+			src:          mustHexDecode("fac3010000"), // -129.0
+			dst:          new(int8),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type int8 (-129 overflows int8)",
+		},
+		{
+			name:         "float64 overflows int64",
+			opt:          FloatToIntAllowExact,
+			src:          mustHexDecode("fb43e0000000000000"), // math.MaxInt64+1
+			dst:          new(int64),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type int64 (9223372036854776000 overflows int64)",
+		},
+
+		// FloatToIntAllowExact: unsigned overflow.
+		{
+			name:         "float32 256.0 overflows uint8",
+			opt:          FloatToIntAllowExact,
+			src:          mustHexDecode("fa43800000"), // 256.0
+			dst:          new(uint8),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type uint8 (256 overflows uint8)",
+		},
+		{
+			name:         "float64 overflows uint64",
+			opt:          FloatToIntAllowExact,
+			src:          mustHexDecode("fb43f0000000000000"), // math.MaxUint64+1
+			dst:          new(uint64),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type uint64 (18446744073709552000 overflows uint64)",
+		},
+
+		// FloatToIntAllowExact: negative into unsigned.
+		{
+			name:         "negative float32 into uint",
+			opt:          FloatToIntAllowExact,
+			src:          mustHexDecode("fabf800000"), // -1.0
+			dst:          new(uint),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type uint (-1 overflows uint)",
+		},
+		{
+			name:         "negative float32 into uint8",
+			opt:          FloatToIntAllowExact,
+			src:          mustHexDecode("fabf800000"), // -1.0
+			dst:          new(uint8),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type uint8 (-1 overflows uint8)",
+		},
+
+		// FloatToIntAllowExact: float destinations unaffected.
+		{
+			name: "float32 into float32 still works",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fa4048f5c3"), // 3.14
+			dst:  new(float32),
+			want: float32(3.14),
+		},
+		{
+			name: "float64 into float64 still works",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fb40091eb851eb851f"), // 3.14
+			dst:  new(float64),
+			want: float64(3.14),
+		},
+		{
+			name: "float64 into any still works",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("fb40091eb851eb851f"), // 3.14
+			dst:  new(any),
+			want: float64(3.14),
+		},
+
+		// FloatToIntAllowExact: float16 integral value into integer.
+		{
+			name: "float16 into int",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("f93c00"), // float16 1.0
+			dst:  new(int),
+			want: int(1),
+		},
+		{
+			name: "float16 into uint",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("f93c00"), // float16 1.0
+			dst:  new(uint),
+			want: uint(1),
+		},
+
+		// FloatToIntAllowExact: struct field.
+		{
+			name: "float32 into struct int field",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("a16146fa42280000"), // {"F": 42.0}
+			dst:  &struct{ F int }{},
+			want: struct{ F int }{F: 42},
+		},
+
+		// FloatToIntAllowExact: map with float key and value into map[int]int.
+		{
+			name: "float32 key and value into map[int]int",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("a1fa3f800000fa40000000"), // {1.0: 2.0}
+			dst:  &map[int]int{},
+			want: map[int]int{1: 2},
+		},
+
+		// FloatToIntAllowExact: array of float into []int and [1]int.
+		{
+			name: "float32 array into []int",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("81fa42280000"), // [42.0]
+			dst:  &[]int{},
+			want: []int{42},
+		},
+		{
+			name: "float32 array into [1]int",
+			opt:  FloatToIntAllowExact,
+			src:  mustHexDecode("81fa42280000"), // [42.0]
+			dst:  &[1]int{},
+			want: [1]int{42},
+		},
+
+		// FloatToIntAllowExact: non-numeric destination still errors.
+		{
+			name:         "float32 into string",
+			opt:          FloatToIntAllowExact,
+			src:          mustHexDecode("fa42280000"), // 42.0
+			dst:          new(string),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type string",
+		},
+		{
+			name:         "float32 into bool",
+			opt:          FloatToIntAllowExact,
+			src:          mustHexDecode("fa42280000"), // 42.0
+			dst:          new(bool),
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type bool",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, err := DecOptions{FloatToInt: tc.opt}.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = dm.Unmarshal(tc.src, tc.dst)
+			if err != nil {
+				if tc.wantErrorMsg == "" {
+					t.Errorf("Unmarshal(0x%x) returned unexpected error %v", tc.src, err)
+				} else if gotErrorMsg := err.Error(); gotErrorMsg != tc.wantErrorMsg {
+					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.src, gotErrorMsg, tc.wantErrorMsg)
+				}
+			} else if tc.wantErrorMsg != "" {
+				t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.src, tc.wantErrorMsg)
+			} else if tc.want != nil {
+				got := reflect.ValueOf(tc.dst).Elem().Interface()
+				if !reflect.DeepEqual(got, tc.want) {
+					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.src, got, got, tc.want, tc.want)
+				}
+			}
+		})
 	}
 }
