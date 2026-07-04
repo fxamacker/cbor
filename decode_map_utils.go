@@ -42,24 +42,70 @@ func findStructFieldByKey(
 		return fldIdx, true
 	}
 	if caseInsensitive {
-		return findFieldCaseInsensitive(structType.fields, string(keyBytes))
+		return findFieldCaseInsensitiveBytes(structType.fields, keyBytes)
 	}
 	return -1, false
 }
 
-// findFieldCaseInsensitive returns the index of the first field whose name
-// case-insensitively matches key, or -1 and false if no field matches.
-func findFieldCaseInsensitive(flds decodingFields, key string) (int, bool) {
-	keyLen := len(key)
+// findFieldCaseInsensitiveBytes returns the index of the first field whose name
+// case-insensitively matches keyBytes, or -1 and false if no field matches.
+//
+// It keeps the common ASCII path allocation-free and avoids strings.EqualFold's
+// Unicode machinery unless either side contains non-ASCII bytes.
+func findFieldCaseInsensitiveBytes(flds decodingFields, keyBytes []byte) (int, bool) {
+	keyLen := len(keyBytes)
+	var key string
+	var keySet bool
+
 	for i, f := range flds {
-		if f.keyAsInt {
+		if f.keyAsInt || len(f.name) != keyLen {
 			continue
 		}
-		if len(f.name) == keyLen && strings.EqualFold(f.name, key) {
+
+		if match, ascii := equalFoldASCIIStringBytes(f.name, keyBytes); ascii {
+			if match {
+				return i, true
+			}
+			continue
+		}
+
+		if !keySet {
+			key = string(keyBytes)
+			keySet = true
+		}
+		if strings.EqualFold(f.name, key) {
 			return i, true
 		}
 	}
 	return -1, false
+}
+
+// equalFoldASCIIStringBytes compares s and b using ASCII case folding.
+// ascii is false if either input contains non-ASCII bytes, in which case the
+// caller must use strings.EqualFold to preserve Unicode case-folding semantics.
+func equalFoldASCIIStringBytes(s string, b []byte) (match bool, ascii bool) {
+	if len(s) != len(b) {
+		return false, true
+	}
+
+	for i := 0; i < len(b); i++ {
+		c := s[i]
+		d := b[i]
+		if c|d >= 0x80 {
+			return false, false
+		}
+
+		if 'A' <= c && c <= 'Z' {
+			c += 'a' - 'A'
+		}
+		if 'A' <= d && d <= 'Z' {
+			d += 'a' - 'A'
+		}
+		if c != d {
+			return false, true
+		}
+	}
+	return true, true
 }
 
 // handleUnmatchedMapKey handles a map entry whose key does not match any struct
