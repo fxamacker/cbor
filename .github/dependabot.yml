@@ -7,8 +7,12 @@ updates:
       interval: "weekly"
       day: "friday"
       time: "12:00"
-      timezone: "UTC"      
-      
+      timezone: "UTC"
+    groups:
+      codeql:
+        patterns:
+          - "github/codeql-action*"
+
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
