@@ -88,7 +88,7 @@ func equalFoldASCIIStringBytes(s string, b []byte) (match bool, ascii bool) {
 		return false, true
 	}
 
-	for i := 0; i < len(b); i++ {
+	for i := range b {
 		c := s[i]
 		d := b[i]
 		if c|d >= 0x80 {
