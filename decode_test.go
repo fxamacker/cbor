@@ -8340,7 +8340,7 @@ type A2 struct {
 	Fields []B
 }
 
-func TestUnmarshalRegisteredTagToConcreteType(t *testing.T) {
+func TestUnmarshalRegisteredTagToInterface(t *testing.T) {
 	var err error
 	tags := NewTagSet()
 	err = tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeFor[C](), 279)
@@ -8361,6 +8361,12 @@ func TestUnmarshalRegisteredTagToConcreteType(t *testing.T) {
 		t.Fatalf("Marshal(%+v) returned error %v", v1, err)
 	}
 
+	v2 := A2{Fields: []B{&C{Field: 5}, &D{Field: "a"}}}
+	data2, err := encMode.Marshal(v2)
+	if err != nil {
+		t.Fatalf("Marshal(%+v) returned error %v", v2, err)
+	}
+
 	testCases := []struct {
 		name           string
 		data           []byte
@@ -8368,10 +8374,22 @@ func TestUnmarshalRegisteredTagToConcreteType(t *testing.T) {
 		wantValue      any
 	}{
 		{
+			name:           "interface type",
+			data:           data1,
+			unmarshalToObj: &A1{},
+			wantValue:      &v1,
+		},
+		{
 			name:           "concrete type",
 			data:           data1,
 			unmarshalToObj: &A1{Field: &C{}},
 			wantValue:      &v1,
+		},
+		{
+			name:           "slice of interface type",
+			data:           data2,
+			unmarshalToObj: &A2{},
+			wantValue:      &v2,
 		},
 	}
 

@@ -5,15 +5,8 @@
 
 package cbor
 
-import "reflect"
-
 const (
 	defaultMaxNestedLevels = 32
 	minMaxNestedLevels     = 4
 	maxMaxNestedLevels     = 65535
 )
-
-func implements(concreteType reflect.Type, interfaceType reflect.Type) bool {
-	return concreteType.Implements(interfaceType) ||
-		reflect.PtrTo(concreteType).Implements(interfaceType)
-}
