@@ -16,8 +16,8 @@ import (
 
 func TestDecoder(t *testing.T) {
 	var buf bytes.Buffer
-	for i := 0; i < 5; i++ {
-		for _, tc := range unmarshalTests {
+	for range 5 {
+		for _, tc := range unmarshalTestCases {
 			buf.Write(tc.data)
 		}
 	}
@@ -26,18 +26,27 @@ func TestDecoder(t *testing.T) {
 		name   string
 		reader io.Reader
 	}{
-		{"bytes.Buffer", &buf},
-		{"1 byte reader", newNBytesReader(buf.Bytes(), 1)},
-		{"toggled reader", newToggledReader(buf.Bytes(), 1)},
+		{
+			name:   "bytes.Buffer",
+			reader: &buf,
+		},
+		{
+			name:   "1 byte reader",
+			reader: newNBytesReader(buf.Bytes(), 1),
+		},
+		{
+			name:   "toggled reader",
+			reader: newToggledReader(buf.Bytes(), 1),
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			decoder := NewDecoder(tc.reader)
 			bytesRead := 0
-			for i := 0; i < 5; i++ {
-				for _, tc := range unmarshalTests {
-					var v interface{}
+			for range 5 {
+				for _, tc := range unmarshalTestCases {
+					var v any
 					if err := decoder.Decode(&v); err != nil {
 						t.Fatalf("Decode() returned error %v", err)
 					}
@@ -54,9 +63,9 @@ func TestDecoder(t *testing.T) {
 					}
 				}
 			}
-			for i := 0; i < 2; i++ {
+			for range 2 {
 				// no more data
-				var v interface{}
+				var v any
 				err := decoder.Decode(&v)
 				if v != nil {
 					t.Errorf("Decode() = %v (%T), want nil (no more data)", v, v)
@@ -71,9 +80,9 @@ func TestDecoder(t *testing.T) {
 
 func TestDecoderUnmarshalTypeError(t *testing.T) {
 	var buf bytes.Buffer
-	for i := 0; i < 5; i++ {
-		for _, tc := range unmarshalTests {
-			for j := 0; j < len(tc.wrongTypes)*2; j++ {
+	for range 5 {
+		for _, tc := range unmarshalTestCases {
+			for range len(tc.wrongTypes) * 2 {
 				buf.Write(tc.data)
 			}
 		}
@@ -83,17 +92,26 @@ func TestDecoderUnmarshalTypeError(t *testing.T) {
 		name   string
 		reader io.Reader
 	}{
-		{"bytes.Buffer", &buf},
-		{"1 byte reader", newNBytesReader(buf.Bytes(), 1)},
-		{"toggled reader", newToggledReader(buf.Bytes(), 1)},
+		{
+			name:   "bytes.Buffer",
+			reader: &buf,
+		},
+		{
+			name:   "1 byte reader",
+			reader: newNBytesReader(buf.Bytes(), 1),
+		},
+		{
+			name:   "toggled reader",
+			reader: newToggledReader(buf.Bytes(), 1),
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			decoder := NewDecoder(tc.reader)
 			bytesRead := 0
-			for i := 0; i < 5; i++ {
-				for _, tc := range unmarshalTests {
+			for range 5 {
+				for _, tc := range unmarshalTestCases {
 					for _, typ := range tc.wrongTypes {
 						v := reflect.New(typ)
 						if err := decoder.Decode(v.Interface()); err == nil {
@@ -106,7 +124,7 @@ func TestDecoderUnmarshalTypeError(t *testing.T) {
 							t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
 						}
 
-						var vi interface{}
+						var vi any
 						if err := decoder.Decode(&vi); err != nil {
 							t.Errorf("Decode() returned error %v", err)
 						}
@@ -124,9 +142,9 @@ func TestDecoderUnmarshalTypeError(t *testing.T) {
 					}
 				}
 			}
-			for i := 0; i < 2; i++ {
+			for range 2 {
 				// no more data
-				var v interface{}
+				var v any
 				err := decoder.Decode(&v)
 				if v != nil {
 					t.Errorf("Decode() = %v (%T), want nil (no more data)", v, v)
@@ -141,7 +159,7 @@ func TestDecoderUnmarshalTypeError(t *testing.T) {
 
 func TestDecoderUnexpectedEOFError(t *testing.T) {
 	var buf bytes.Buffer
-	for _, tc := range unmarshalTests {
+	for _, tc := range unmarshalTestCases {
 		buf.Write(tc.data)
 	}
 	buf.Truncate(buf.Len() - 1)
@@ -150,9 +168,18 @@ func TestDecoderUnexpectedEOFError(t *testing.T) {
 		name   string
 		reader io.Reader
 	}{
-		{"bytes.Buffer", &buf},
-		{"1 byte reader", newNBytesReader(buf.Bytes(), 1)},
-		{"toggled reader", newToggledReader(buf.Bytes(), 1)},
+		{
+			name:   "bytes.Buffer",
+			reader: &buf,
+		},
+		{
+			name:   "1 byte reader",
+			reader: newNBytesReader(buf.Bytes(), 1),
+		},
+		{
+			name:   "toggled reader",
+			reader: newToggledReader(buf.Bytes(), 1),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -160,9 +187,9 @@ func TestDecoderUnexpectedEOFError(t *testing.T) {
 
 			decoder := NewDecoder(tc.reader)
 			bytesRead := 0
-			for i := 0; i < len(unmarshalTests)-1; i++ {
-				tc := unmarshalTests[i]
-				var v interface{}
+			for i := range len(unmarshalTestCases) - 1 {
+				tc := unmarshalTestCases[i]
+				var v any
 				if err := decoder.Decode(&v); err != nil {
 					t.Fatalf("Decode() returned error %v", err)
 				}
@@ -178,9 +205,9 @@ func TestDecoderUnexpectedEOFError(t *testing.T) {
 					t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
 				}
 			}
-			for i := 0; i < 2; i++ {
+			for range 2 {
 				// truncated data
-				var v interface{}
+				var v any
 				err := decoder.Decode(&v)
 				if v != nil {
 					t.Errorf("Decode() = %v (%T), want nil (no more data)", v, v)
@@ -195,7 +222,7 @@ func TestDecoderUnexpectedEOFError(t *testing.T) {
 
 func TestDecoderReadError(t *testing.T) {
 	var buf bytes.Buffer
-	for _, tc := range unmarshalTests {
+	for _, tc := range unmarshalTestCases {
 		buf.Write(tc.data)
 	}
 	buf.Truncate(buf.Len() - 1)
@@ -206,18 +233,27 @@ func TestDecoderReadError(t *testing.T) {
 		name   string
 		reader io.Reader
 	}{
-		{"byte reader", newNBytesReaderWithError(buf.Bytes(), 512, readerErr)},
-		{"1 byte reader", newNBytesReaderWithError(buf.Bytes(), 1, readerErr)},
-		{"toggled reader", newToggledReaderWithError(buf.Bytes(), 1, readerErr)},
+		{
+			name:   "byte reader",
+			reader: newNBytesReaderWithError(buf.Bytes(), 512, readerErr),
+		},
+		{
+			name:   "1 byte reader",
+			reader: newNBytesReaderWithError(buf.Bytes(), 1, readerErr),
+		},
+		{
+			name:   "toggled reader",
+			reader: newToggledReaderWithError(buf.Bytes(), 1, readerErr),
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			decoder := NewDecoder(tc.reader)
 			bytesRead := 0
-			for i := 0; i < len(unmarshalTests)-1; i++ {
-				tc := unmarshalTests[i]
-				var v interface{}
+			for i := range len(unmarshalTestCases) - 1 {
+				tc := unmarshalTestCases[i]
+				var v any
 				if err := decoder.Decode(&v); err != nil {
 					t.Fatalf("Decode() returned error %v", err)
 				}
@@ -233,9 +269,9 @@ func TestDecoderReadError(t *testing.T) {
 					t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
 				}
 			}
-			for i := 0; i < 2; i++ {
+			for range 2 {
 				// truncated data because Reader returned error
-				var v interface{}
+				var v any
 				err := decoder.Decode(&v)
 				if v != nil {
 					t.Errorf("Decode() = %v (%T), want nil (no more data)", v, v)
@@ -256,16 +292,28 @@ func TestDecoderNoData(t *testing.T) {
 		reader  io.Reader
 		wantErr error
 	}{
-		{"byte.Buffer", new(bytes.Buffer), io.EOF},
-		{"1 byte reader", newNBytesReaderWithError(nil, 0, readerErr), readerErr},
-		{"toggled reader", newToggledReaderWithError(nil, 0, readerErr), readerErr},
+		{
+			name:    "bytes.Buffer",
+			reader:  new(bytes.Buffer),
+			wantErr: io.EOF,
+		},
+		{
+			name:    "1 byte reader",
+			reader:  newNBytesReaderWithError(nil, 0, readerErr),
+			wantErr: readerErr,
+		},
+		{
+			name:    "toggled reader",
+			reader:  newToggledReaderWithError(nil, 0, readerErr),
+			wantErr: readerErr,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			decoder := NewDecoder(tc.reader)
-			for i := 0; i < 2; i++ {
-				var v interface{}
+			for range 2 {
+				var v any
 				err := decoder.Decode(&v)
 				if v != nil {
 					t.Errorf("Decode() = %v (%T), want nil", v, v)
@@ -279,13 +327,13 @@ func TestDecoderNoData(t *testing.T) {
 }
 
 func TestDecoderRecoverableReadError(t *testing.T) {
-	data := hexDecode("83010203") // [1,2,3]
-	wantValue := []interface{}{uint64(1), uint64(2), uint64(3)}
+	data := mustHexDecode("83010203") // [1,2,3]
+	wantValue := []any{uint64(1), uint64(2), uint64(3)}
 	recoverableReaderErr := errors.New("recoverable reader error")
 
 	decoder := NewDecoder(newRecoverableReader(data, 1, recoverableReaderErr))
 
-	var v interface{}
+	var v any
 	err := decoder.Decode(&v)
 	if err != recoverableReaderErr {
 		t.Fatalf("Decode() returned error %v, want error %v", err, recoverableReaderErr)
@@ -303,7 +351,7 @@ func TestDecoderRecoverableReadError(t *testing.T) {
 	}
 
 	// no more data
-	v = interface{}(nil)
+	v = any(nil)
 	err = decoder.Decode(&v)
 	if v != nil {
 		t.Errorf("Decode() = %v (%T), want nil (no more data)", v, v)
@@ -317,13 +365,13 @@ func TestDecoderInvalidData(t *testing.T) {
 	data := []byte{0x01, 0x3e}
 	decoder := NewDecoder(bytes.NewReader(data))
 
-	var v1 interface{}
+	var v1 any
 	err := decoder.Decode(&v1)
 	if err != nil {
 		t.Errorf("Decode() returned error %v when decoding valid data item", err)
 	}
 
-	var v2 interface{}
+	var v2 any
 	err = decoder.Decode(&v2)
 	if err == nil {
 		t.Errorf("Decode() didn't return error when decoding invalid data item")
@@ -334,8 +382,8 @@ func TestDecoderInvalidData(t *testing.T) {
 
 func TestDecoderSkip(t *testing.T) {
 	var buf bytes.Buffer
-	for i := 0; i < 5; i++ {
-		for _, tc := range unmarshalTests {
+	for range 5 {
+		for _, tc := range unmarshalTestCases {
 			buf.Write(tc.data)
 		}
 	}
@@ -344,17 +392,26 @@ func TestDecoderSkip(t *testing.T) {
 		name   string
 		reader io.Reader
 	}{
-		{"bytes.Buffer", &buf},
-		{"1 byte reader", newNBytesReader(buf.Bytes(), 1)},
-		{"toggled reader", newToggledReader(buf.Bytes(), 1)},
+		{
+			name:   "bytes.Buffer",
+			reader: &buf,
+		},
+		{
+			name:   "1 byte reader",
+			reader: newNBytesReader(buf.Bytes(), 1),
+		},
+		{
+			name:   "toggled reader",
+			reader: newToggledReader(buf.Bytes(), 1),
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			decoder := NewDecoder(tc.reader)
 			bytesRead := 0
-			for i := 0; i < 5; i++ {
-				for _, tc := range unmarshalTests {
+			for range 5 {
+				for _, tc := range unmarshalTestCases {
 					if err := decoder.Skip(); err != nil {
 						t.Fatalf("Skip() returned error %v", err)
 					}
@@ -364,7 +421,7 @@ func TestDecoderSkip(t *testing.T) {
 					}
 				}
 			}
-			for i := 0; i < 2; i++ {
+			for range 2 {
 				// no more data
 				err := decoder.Skip()
 				if err != io.EOF {
@@ -377,7 +434,7 @@ func TestDecoderSkip(t *testing.T) {
 
 func TestDecoderSkipInvalidDataError(t *testing.T) {
 	var buf bytes.Buffer
-	for _, tc := range unmarshalTests {
+	for _, tc := range unmarshalTestCases {
 		buf.Write(tc.data)
 	}
 	buf.WriteByte(0x3e)
@@ -386,17 +443,26 @@ func TestDecoderSkipInvalidDataError(t *testing.T) {
 		name   string
 		reader io.Reader
 	}{
-		{"bytes.Buffer", &buf},
-		{"1 byte reader", newNBytesReader(buf.Bytes(), 1)},
-		{"toggled reader", newToggledReader(buf.Bytes(), 1)},
+		{
+			name:   "bytes.Buffer",
+			reader: &buf,
+		},
+		{
+			name:   "1 byte reader",
+			reader: newNBytesReader(buf.Bytes(), 1),
+		},
+		{
+			name:   "toggled reader",
+			reader: newToggledReader(buf.Bytes(), 1),
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			decoder := NewDecoder(tc.reader)
 			bytesRead := 0
-			for i := 0; i < len(unmarshalTests); i++ {
-				tc := unmarshalTests[i]
+			for i := range unmarshalTestCases {
+				tc := unmarshalTestCases[i]
 				if err := decoder.Skip(); err != nil {
 					t.Fatalf("Skip() returned error %v", err)
 				}
@@ -405,7 +471,7 @@ func TestDecoderSkipInvalidDataError(t *testing.T) {
 					t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
 				}
 			}
-			for i := 0; i < 2; i++ {
+			for range 2 {
 				// last data item is invalid
 				err := decoder.Skip()
 				if err == nil {
@@ -420,7 +486,7 @@ func TestDecoderSkipInvalidDataError(t *testing.T) {
 
 func TestDecoderSkipUnexpectedEOFError(t *testing.T) {
 	var buf bytes.Buffer
-	for _, tc := range unmarshalTests {
+	for _, tc := range unmarshalTestCases {
 		buf.Write(tc.data)
 	}
 	buf.Truncate(buf.Len() - 1)
@@ -429,17 +495,26 @@ func TestDecoderSkipUnexpectedEOFError(t *testing.T) {
 		name   string
 		reader io.Reader
 	}{
-		{"bytes.Buffer", &buf},
-		{"1 byte reader", newNBytesReader(buf.Bytes(), 1)},
-		{"toggled reader", newToggledReader(buf.Bytes(), 1)},
+		{
+			name:   "bytes.Buffer",
+			reader: &buf,
+		},
+		{
+			name:   "1 byte reader",
+			reader: newNBytesReader(buf.Bytes(), 1),
+		},
+		{
+			name:   "toggled reader",
+			reader: newToggledReader(buf.Bytes(), 1),
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			decoder := NewDecoder(tc.reader)
 			bytesRead := 0
-			for i := 0; i < len(unmarshalTests)-1; i++ {
-				tc := unmarshalTests[i]
+			for i := range len(unmarshalTestCases) - 1 {
+				tc := unmarshalTestCases[i]
 				if err := decoder.Skip(); err != nil {
 					t.Fatalf("Skip() returned error %v", err)
 				}
@@ -448,7 +523,7 @@ func TestDecoderSkipUnexpectedEOFError(t *testing.T) {
 					t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
 				}
 			}
-			for i := 0; i < 2; i++ {
+			for range 2 {
 				// last data item is invalid
 				err := decoder.Skip()
 				if err != io.ErrUnexpectedEOF {
@@ -461,7 +536,7 @@ func TestDecoderSkipUnexpectedEOFError(t *testing.T) {
 
 func TestDecoderSkipReadError(t *testing.T) {
 	var buf bytes.Buffer
-	for _, tc := range unmarshalTests {
+	for _, tc := range unmarshalTestCases {
 		buf.Write(tc.data)
 	}
 	buf.Truncate(buf.Len() - 1)
@@ -472,17 +547,26 @@ func TestDecoderSkipReadError(t *testing.T) {
 		name   string
 		reader io.Reader
 	}{
-		{"byte reader", newNBytesReaderWithError(buf.Bytes(), 512, readerErr)},
-		{"1 byte reader", newNBytesReaderWithError(buf.Bytes(), 1, readerErr)},
-		{"toggled reader", newToggledReaderWithError(buf.Bytes(), 1, readerErr)},
+		{
+			name:   "byte reader",
+			reader: newNBytesReaderWithError(buf.Bytes(), 512, readerErr),
+		},
+		{
+			name:   "1 byte reader",
+			reader: newNBytesReaderWithError(buf.Bytes(), 1, readerErr),
+		},
+		{
+			name:   "toggled reader",
+			reader: newToggledReaderWithError(buf.Bytes(), 1, readerErr),
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			decoder := NewDecoder(tc.reader)
 			bytesRead := 0
-			for i := 0; i < len(unmarshalTests)-1; i++ {
-				tc := unmarshalTests[i]
+			for i := range len(unmarshalTestCases) - 1 {
+				tc := unmarshalTestCases[i]
 				if err := decoder.Skip(); err != nil {
 					t.Fatalf("Skip() returned error %v", err)
 				}
@@ -491,7 +575,7 @@ func TestDecoderSkipReadError(t *testing.T) {
 					t.Errorf("NumBytesRead() = %v, want %v", decoder.NumBytesRead(), bytesRead)
 				}
 			}
-			for i := 0; i < 2; i++ {
+			for range 2 {
 				// truncated data because Reader returned error
 				err := decoder.Skip()
 				if err != readerErr {
@@ -510,15 +594,27 @@ func TestDecoderSkipNoData(t *testing.T) {
 		reader  io.Reader
 		wantErr error
 	}{
-		{"byte.Buffer", new(bytes.Buffer), io.EOF},
-		{"1 byte reader", newNBytesReaderWithError(nil, 0, readerErr), readerErr},
-		{"toggled reader", newToggledReaderWithError(nil, 0, readerErr), readerErr},
+		{
+			name:    "bytes.Buffer",
+			reader:  new(bytes.Buffer),
+			wantErr: io.EOF,
+		},
+		{
+			name:    "1 byte reader",
+			reader:  newNBytesReaderWithError(nil, 0, readerErr),
+			wantErr: readerErr,
+		},
+		{
+			name:    "toggled reader",
+			reader:  newToggledReaderWithError(nil, 0, readerErr),
+			wantErr: readerErr,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			decoder := NewDecoder(tc.reader)
-			for i := 0; i < 2; i++ {
+			for range 2 {
 				err := decoder.Skip()
 				if err != tc.wantErr {
 					t.Errorf("Decode() returned error %v, want error %v", err, tc.wantErr)
@@ -529,7 +625,7 @@ func TestDecoderSkipNoData(t *testing.T) {
 }
 
 func TestDecoderSkipRecoverableReadError(t *testing.T) {
-	data := hexDecode("83010203") // [1,2,3]
+	data := mustHexDecode("83010203") // [1,2,3]
 	recoverableReaderErr := errors.New("recoverable reader error")
 
 	decoder := NewDecoder(newRecoverableReader(data, 1, recoverableReaderErr))
@@ -565,7 +661,7 @@ func TestDecoderStructTag(t *testing.T) {
 		B: "B",
 		C: "C",
 	}
-	data := hexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
+	data := mustHexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
 
 	var v strc
 	dec := NewDecoder(bytes.NewReader(data))
@@ -645,7 +741,7 @@ func TestDecoderBuffered(t *testing.T) {
 				t.Errorf("Buffered() = 0x%x (%d bytes), want 0 bytes", buffered, len(buffered))
 			}
 
-			var v interface{}
+			var v any
 			err = decoder.Decode(&v)
 			if err != tc.decodeErr {
 				t.Errorf("Decode() returned error %v, want %v", err, tc.decodeErr)
@@ -671,7 +767,7 @@ func TestEncoder(t *testing.T) {
 		t.Errorf("EncMode() returned an error %v", err)
 	}
 	encoder := em.NewEncoder(&w)
-	for _, tc := range marshalTests {
+	for _, tc := range marshalTestCases {
 		for _, value := range tc.values {
 			want.Write(tc.wantData)
 
@@ -686,18 +782,30 @@ func TestEncoder(t *testing.T) {
 }
 
 func TestEncoderError(t *testing.T) {
-	testcases := []struct {
+	testCases := []struct {
 		name         string
-		value        interface{}
+		value        any
 		wantErrorMsg string
 	}{
-		{"channel cannot be marshaled", make(chan bool), "cbor: unsupported type: chan bool"},
-		{"function cannot be marshaled", func(i int) int { return i * i }, "cbor: unsupported type: func"},
-		{"complex cannot be marshaled", complex(100, 8), "cbor: unsupported type: complex128"},
+		{
+			name:         "channel cannot be marshaled",
+			value:        make(chan bool),
+			wantErrorMsg: "cbor: unsupported type: chan bool",
+		},
+		{
+			name:         "function cannot be marshaled",
+			value:        func(i int) int { return i * i },
+			wantErrorMsg: "cbor: unsupported type: func",
+		},
+		{
+			name:         "complex cannot be marshaled",
+			value:        complex(100, 8),
+			wantErrorMsg: "cbor: unsupported type: complex128",
+		},
 	}
 	var w bytes.Buffer
 	encoder := NewEncoder(&w)
-	for _, tc := range testcases {
+	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			v := tc.value
 			err := encoder.Encode(&v)
@@ -716,7 +824,7 @@ func TestEncoderError(t *testing.T) {
 }
 
 func TestIndefiniteByteString(t *testing.T) {
-	want := hexDecode("5f42010243030405ff")
+	want := mustHexDecode("5f42010243030405ff")
 	var w bytes.Buffer
 	encoder := NewEncoder(&w)
 	if err := encoder.StartIndefiniteByteString(); err != nil {
@@ -736,26 +844,197 @@ func TestIndefiniteByteString(t *testing.T) {
 	}
 }
 
-func TestIndefiniteByteStringError(t *testing.T) {
-	var w bytes.Buffer
-	encoder := NewEncoder(&w)
-	if err := encoder.StartIndefiniteByteString(); err != nil {
-		t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+func TestIndefiniteByteStringWithInvalidChunk(t *testing.T) { //nolint:gocyclo
+	t.Run("array as chunk", func(t *testing.T) {
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		if err := encoder.Encode([]int{1, 2}); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != "cbor: cannot encode item type slice for indefinite-length byte string" {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type slice for indefinite-length byte string")
+		}
+	})
+
+	t.Run("text string as chunk", func(t *testing.T) {
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		if err := encoder.Encode("hello"); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != "cbor: cannot encode item type string for indefinite-length byte string" {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type string for indefinite-length byte string")
+		}
+	})
+
+	t.Run("nil as chunk", func(t *testing.T) {
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		if err := encoder.Encode(nil); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != "cbor: cannot encode nil for indefinite-length byte string" {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode nil for indefinite-length byte string")
+		}
+	})
+
+	children := []struct {
+		start func(*Encoder) error
+		typ   string
+	}{
+		{(*Encoder).StartIndefiniteByteString, "byte string"},
+		{(*Encoder).StartIndefiniteTextString, "UTF-8 text string"},
+		{(*Encoder).StartIndefiniteArray, "array"},
+		{(*Encoder).StartIndefiniteMap, "map"},
 	}
-	if err := encoder.Encode([]int{1, 2}); err == nil {
-		t.Errorf("Encode() didn't return an error")
-	} else if err.Error() != "cbor: cannot encode item type slice for indefinite-length byte string" {
-		t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type slice for indefinite-length byte string")
+	for _, child := range children {
+		t.Run("indefinite-length "+child.typ+" as chunk", func(t *testing.T) {
+			var w bytes.Buffer
+			encoder := NewEncoder(&w)
+			if err := encoder.StartIndefiniteByteString(); err != nil {
+				t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+			}
+			err := child.start(encoder)
+			if err == nil {
+				t.Fatalf("encoding nested indefinite-length %s didn't return an error", child.typ)
+			}
+			wantErrMsg := "cbor: cannot encode indefinite-length " + child.typ +
+				" as chunk of indefinite-length byte string"
+			if err.Error() != wantErrMsg {
+				t.Errorf("error message = %q, want %q", err.Error(), wantErrMsg)
+			}
+		})
 	}
-	if err := encoder.Encode("hello"); err == nil {
-		t.Errorf("Encode() didn't return an error")
-	} else if err.Error() != "cbor: cannot encode item type string for indefinite-length byte string" {
-		t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type string for indefinite-length byte string")
-	}
+
+	t.Run("byte slice with ByteSliceLaterFormat option", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode item type slice for indefinite-length byte string"
+
+		em, err := EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64}.EncMode()
+		if err != nil {
+			t.Fatalf("EncMode() returned error %v", err)
+		}
+
+		var w bytes.Buffer
+		encoder := em.NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		if err := encoder.Encode([]byte("foo")); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("nil byte slice with NilContainerAsNull (default) option", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode item type slice for indefinite-length byte string"
+
+		em, err := EncOptions{NilContainers: NilContainerAsNull}.EncMode() // NilContainerAsNull is the default option
+		if err != nil {
+			t.Fatalf("EncMode() returned error %v", err)
+		}
+
+		var w bytes.Buffer
+		encoder := em.NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		var nilBytes []byte
+		if err := encoder.Encode(nilBytes); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("RawMessage with tag chunk", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode item type slice for indefinite-length byte string"
+
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		raw := RawMessage{0xd8, 0x22, 0x43, 0x01, 0x02, 0x03} // 34(h'010203')
+		if err := encoder.Encode(raw); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("RawMessage with indefinite-length byte string chunk", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode indefinite-length byte string as chunk of indefinite-length byte string"
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		raw := RawMessage{0x5f, 0x41, 0x31, 0xff} // (_ h'31')
+		if err := encoder.Encode(raw); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("CBORMarshaler with byte slice kind emits int", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode item type slice for indefinite-length byte string"
+
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		cborData := []byte{0x18, 0x7b} // 123
+		if err := encoder.Encode(bytesMarshaler(cborData)); err == nil {
+			t.Errorf("Encode() didn't return an error ")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("CBORMarshaler with byte slice kind emits text string", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode item type slice for indefinite-length byte string"
+
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		cborData := []byte{0x63, 'f', 'o', 'o'} // "foo"
+		if err := encoder.Encode(bytesMarshaler(cborData)); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("CBORMarshaler with byte slice kind emits indefinite-length byte string", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode indefinite-length byte string as chunk of indefinite-length byte string"
+
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() returned error %v", err)
+		}
+		cborData := []byte{0x5f, 0x41, 0x61, 0xff} // (_ h'61')
+		if err := encoder.Encode(bytesMarshaler(cborData)); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
 }
 
 func TestIndefiniteTextString(t *testing.T) {
-	want := hexDecode("7f657374726561646d696e67ff")
+	want := mustHexDecode("7f657374726561646d696e67ff")
 	var w bytes.Buffer
 	encoder := NewEncoder(&w)
 	if err := encoder.StartIndefiniteTextString(); err != nil {
@@ -775,21 +1054,172 @@ func TestIndefiniteTextString(t *testing.T) {
 	}
 }
 
-func TestIndefiniteTextStringError(t *testing.T) {
-	var w bytes.Buffer
-	encoder := NewEncoder(&w)
-	if err := encoder.StartIndefiniteTextString(); err != nil {
-		t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+func TestIndefiniteTextStringWithInvalidChunk(t *testing.T) {
+	t.Run("array as chunk", func(t *testing.T) {
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteTextString(); err != nil {
+			t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+		}
+		if err := encoder.Encode([]byte{1, 2}); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != "cbor: cannot encode item type slice for indefinite-length UTF-8 text string" {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type slice for indefinite-length UTF-8 text string")
+		}
+	})
+
+	t.Run("integer as chunk", func(t *testing.T) {
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteTextString(); err != nil {
+			t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+		}
+		if err := encoder.Encode(123); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != "cbor: cannot encode item type int for indefinite-length UTF-8 text string" {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type int for indefinite-length UTF-8 text string")
+		}
+	})
+
+	t.Run("nil as chunk", func(t *testing.T) {
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteTextString(); err != nil {
+			t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+		}
+		if err := encoder.Encode(nil); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != "cbor: cannot encode nil for indefinite-length UTF-8 text string" {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode nil for indefinite-length UTF-8 text string")
+		}
+	})
+
+	children := []struct {
+		start func(*Encoder) error
+		typ   string
+	}{
+		{(*Encoder).StartIndefiniteByteString, "byte string"},
+		{(*Encoder).StartIndefiniteTextString, "UTF-8 text string"},
+		{(*Encoder).StartIndefiniteArray, "array"},
+		{(*Encoder).StartIndefiniteMap, "map"},
 	}
-	if err := encoder.Encode([]byte{1, 2}); err == nil {
-		t.Errorf("Encode() didn't return an error")
-	} else if err.Error() != "cbor: cannot encode item type slice for indefinite-length text string" {
-		t.Errorf("Encode() returned error %q, want %q", err.Error(), "cbor: cannot encode item type slice for indefinite-length text string")
+	for _, child := range children {
+		t.Run("indefinite-length "+child.typ+" as chunk", func(t *testing.T) {
+			var w bytes.Buffer
+			encoder := NewEncoder(&w)
+			if err := encoder.StartIndefiniteTextString(); err != nil {
+				t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+			}
+			err := child.start(encoder)
+			if err == nil {
+				t.Fatalf("encoding nested indefinite-length %s didn't return an error", child.typ)
+			}
+			wantErrMsg := "cbor: cannot encode indefinite-length " + child.typ +
+				" as chunk of indefinite-length UTF-8 text string"
+			if err.Error() != wantErrMsg {
+				t.Errorf("error message = %q, want %q", err.Error(), wantErrMsg)
+			}
+		})
 	}
+
+	t.Run("string with StringToByteString option", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode item type string for indefinite-length UTF-8 text string"
+
+		em, err := EncOptions{String: StringToByteString}.EncMode()
+		if err != nil {
+			t.Fatalf("EncMode() returned error %v", err)
+		}
+		var w bytes.Buffer
+		encoder := em.NewEncoder(&w)
+		if err := encoder.StartIndefiniteTextString(); err != nil {
+			t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+		}
+		if err := encoder.Encode("foo"); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("RawMessage with indefinite-length text string chunk", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode indefinite-length UTF-8 text string as chunk of indefinite-length UTF-8 text string"
+
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteTextString(); err != nil {
+			t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+		}
+		raw := RawMessage{0x7f, 0x61, 0x61, 0xff} // (_ "a")
+		if err := encoder.Encode(raw); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("CBORMarshaler with string kind emits uint", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode item type string for indefinite-length UTF-8 text string"
+
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteTextString(); err != nil {
+			t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+		}
+		cborData := []byte{0x18, 0x7b} // 123
+		if err := encoder.Encode(stringMarshaler(cborData)); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("CBORMarshaler with string kind emits byte string", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode item type string for indefinite-length UTF-8 text string"
+
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteTextString(); err != nil {
+			t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+		}
+		cborData := []byte{0x43, 0x01, 0x02, 0x03} // h'010203'
+		if err := encoder.Encode(stringMarshaler(cborData)); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+
+	t.Run("CBORMarshaler with string kind emits indefinite-length text string", func(t *testing.T) {
+		expectedErrorMsg := "cbor: cannot encode indefinite-length UTF-8 text string as chunk of indefinite-length UTF-8 text string"
+
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteTextString(); err != nil {
+			t.Fatalf("StartIndefiniteTextString() returned error %v", err)
+		}
+		cborData := []byte{0x7f, 0x61, 0x61, 0xff} // (_ "a")
+		if err := encoder.Encode(stringMarshaler(cborData)); err == nil {
+			t.Errorf("Encode() didn't return an error")
+		} else if err.Error() != expectedErrorMsg {
+			t.Errorf("Encode() returned error %q, want %q", err.Error(), expectedErrorMsg)
+		}
+	})
+}
+
+type bytesMarshaler []byte
+
+func (m bytesMarshaler) MarshalCBOR() ([]byte, error) {
+	return []byte(m), nil
+}
+
+type stringMarshaler string
+
+func (m stringMarshaler) MarshalCBOR() ([]byte, error) {
+	return []byte(m), nil
 }
 
 func TestIndefiniteArray(t *testing.T) {
-	want := hexDecode("9f018202039f0405ffff")
+	want := mustHexDecode("9f018202039f0405ffff")
 	var w bytes.Buffer
 	encoder := NewEncoder(&w)
 	if err := encoder.StartIndefiniteArray(); err != nil {
@@ -821,8 +1251,43 @@ func TestIndefiniteArray(t *testing.T) {
 	}
 }
 
+func TestIndefiniteArrayWithNilElement(t *testing.T) {
+	want := mustHexDecode("9f01f6ff") // [1, null]
+	var w bytes.Buffer
+	encoder := NewEncoder(&w)
+	if err := encoder.StartIndefiniteArray(); err != nil {
+		t.Fatalf("StartIndefiniteArray() returned error %v", err)
+	}
+	if err := encoder.Encode(1); err != nil {
+		t.Fatalf("Encode() returned error %v", err)
+	}
+	if err := encoder.Encode(nil); err != nil {
+		t.Fatalf("Encode() returned error %v", err)
+	}
+	if err := encoder.EndIndefinite(); err != nil {
+		t.Fatalf("EndIndefinite() returned error %v", err)
+	}
+	if !bytes.Equal(w.Bytes(), want) {
+		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+	}
+
+	var decoded []any
+	if err := Unmarshal(w.Bytes(), &decoded); err != nil {
+		t.Fatalf("Unmarshal() returned error %v", err)
+	}
+	if len(decoded) != 2 {
+		t.Fatalf("Unmarshal() returned %d elements, want 2", len(decoded))
+	}
+	if decoded[0] != uint64(1) {
+		t.Errorf("decoded[0] = %v (%T), want uint64(1)", decoded[0], decoded[0])
+	}
+	if decoded[1] != nil {
+		t.Errorf("decoded[1] = %v (%T), want nil", decoded[1], decoded[1])
+	}
+}
+
 func TestIndefiniteMap(t *testing.T) {
-	want := hexDecode("bf61610161629f0203ffff")
+	want := mustHexDecode("bf61610161629f0203ffff")
 	var w bytes.Buffer
 	em, err := EncOptions{Sort: SortCanonical}.EncMode()
 	if err != nil {
@@ -861,6 +1326,146 @@ func TestIndefiniteMap(t *testing.T) {
 	}
 }
 
+func TestIndefiniteMapWithNilElement(t *testing.T) {
+	want := mustHexDecode("bf6161f6ff") // {"a": null}
+	var w bytes.Buffer
+	encoder := NewEncoder(&w)
+	if err := encoder.StartIndefiniteMap(); err != nil {
+		t.Fatalf("StartIndefiniteMap() returned error %v", err)
+	}
+	if err := encoder.Encode("a"); err != nil {
+		t.Fatalf("Encode() returned error %v", err)
+	}
+	if err := encoder.Encode(nil); err != nil {
+		t.Fatalf("Encode() returned error %v", err)
+	}
+	if err := encoder.EndIndefinite(); err != nil {
+		t.Fatalf("EndIndefinite() returned error %v", err)
+	}
+	if !bytes.Equal(w.Bytes(), want) {
+		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+	}
+
+	var decoded map[string]any
+	if err := Unmarshal(w.Bytes(), &decoded); err != nil {
+		t.Fatalf("Unmarshal() returned error %v", err)
+	}
+	if len(decoded) != 1 {
+		t.Fatalf("Unmarshal() returned %d entries, want 1", len(decoded))
+	}
+	v, ok := decoded["a"]
+	if !ok {
+		t.Fatalf("decoded map missing key \"a\"")
+	}
+	if v != nil {
+		t.Errorf("decoded[\"a\"] = %v (%T), want nil", v, v)
+	}
+}
+
+func TestIndefiniteLengthMapItemCount(t *testing.T) {
+	t.Run("odd item count", func(t *testing.T) {
+		var buf bytes.Buffer
+		encoder := NewEncoder(&buf)
+		if err := encoder.StartIndefiniteMap(); err != nil {
+			t.Fatalf("StartIndefiniteMap() returned error %v", err)
+		}
+		if err := encoder.Encode("a"); err != nil {
+			t.Fatalf("Encode() returned error %v", err)
+		}
+		err := encoder.EndIndefinite()
+		if err == nil {
+			t.Fatalf("EndIndefinite() returned nil error for indefinite-length map with odd number of items")
+		}
+		var oddErr *IndefiniteLengthMapOddItemCountError
+		if !errors.As(err, &oddErr) {
+			t.Fatalf("EndIndefinite() returned error of type %T, want *IndefiniteLengthMapOddItemCountError", err)
+		}
+		wantErrorMsg := "cbor: cannot end indefinite-length map with 1 item(s)"
+		if oddErr.Error() != wantErrorMsg {
+			t.Errorf("IndefiniteLengthMapOddItemCountError message = %q, want %q", oddErr.Error(), wantErrorMsg)
+		}
+		// Write the missing value.
+		if err := encoder.Encode(1); err != nil {
+			t.Fatalf("Encode() after odd-count error returned %v", err)
+		}
+		if err := encoder.EndIndefinite(); err != nil {
+			t.Fatalf("EndIndefinite() after recovery returned %v", err)
+		}
+		wantData := mustHexDecode("bf616101ff") // {_ "a": 1}
+		if !bytes.Equal(buf.Bytes(), wantData) {
+			t.Errorf("Encode returns %x, want %x", buf.Bytes(), wantData)
+		}
+	})
+
+	t.Run("even item count with nested container", func(t *testing.T) {
+		var buf bytes.Buffer
+		encoder := NewEncoder(&buf)
+		if err := encoder.StartIndefiniteMap(); err != nil {
+			t.Fatalf("StartIndefiniteMap() returned error %v", err)
+		}
+		if err := encoder.Encode("a"); err != nil {
+			t.Fatalf("Encode() returned error %v", err)
+		}
+		if err := encoder.StartIndefiniteMap(); err != nil {
+			t.Fatalf("nested StartIndefiniteMap() returned error %v", err)
+		}
+		if err := encoder.Encode("b"); err != nil {
+			t.Fatalf("Encode() returned error %v", err)
+		}
+		if err := encoder.Encode(1); err != nil {
+			t.Fatalf("Encode() returned error %v", err)
+		}
+		if err := encoder.EndIndefinite(); err != nil {
+			t.Fatalf("nested EndIndefinite() returned error %v", err)
+		}
+		if err := encoder.EndIndefinite(); err != nil {
+			t.Fatalf("outer EndIndefinite() returned error %v", err)
+		}
+		wantData := mustHexDecode("bf6161bf616201ffff") // {_ "a": {_ "b": 1}}
+		if !bytes.Equal(buf.Bytes(), wantData) {
+			t.Errorf("Encode returns %x, want %x", buf.Bytes(), wantData)
+		}
+	})
+
+	t.Run("odd item count with nested container", func(t *testing.T) {
+		var buf bytes.Buffer
+		encoder := NewEncoder(&buf)
+		if err := encoder.StartIndefiniteMap(); err != nil {
+			t.Fatalf("StartIndefiniteMap() returned error %v", err)
+		}
+		if err := encoder.Encode("a"); err != nil {
+			t.Fatalf("Encode() returned error %v", err)
+		}
+		if err := encoder.StartIndefiniteMap(); err != nil {
+			t.Fatalf("nested StartIndefiniteMap() returned error %v", err)
+		}
+		if err := encoder.Encode("b"); err != nil {
+			t.Fatalf("Encode() returned error %v", err)
+		}
+		if err := encoder.Encode(1); err != nil {
+			t.Fatalf("Encode() returned error %v", err)
+		}
+		if err := encoder.EndIndefinite(); err != nil {
+			t.Fatalf("nested EndIndefinite() returned error %v", err)
+		}
+		if err := encoder.Encode("c"); err != nil {
+			t.Fatalf("Encode() returned error %v", err)
+		}
+		err := encoder.EndIndefinite()
+		if err == nil {
+			t.Fatalf("outer EndIndefinite() didn't return error")
+		}
+		var oddErr *IndefiniteLengthMapOddItemCountError
+		if !errors.As(err, &oddErr) {
+			t.Fatalf("EndIndefinite() returned error of type %T, want *IndefiniteLengthMapOddItemCountError", err)
+		}
+		wantErrorMsg := "cbor: cannot end indefinite-length map with 3 item(s)"
+		if oddErr.Error() != wantErrorMsg {
+			t.Errorf("IndefiniteLengthMapOddItemCountError message = %q, want %q", oddErr.Error(), wantErrorMsg)
+		}
+	})
+}
+
 func TestIndefiniteLengthError(t *testing.T) {
 	var w bytes.Buffer
 	encoder := NewEncoder(&w)
@@ -875,6 +1480,45 @@ func TestIndefiniteLengthError(t *testing.T) {
 	}
 }
 
+func TestEncodeNestedIndefiniteStringInArrayAndMap(t *testing.T) {
+	t.Run("indefinite-length byte string in indefinite-length array", func(t *testing.T) {
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteArray(); err != nil {
+			t.Fatalf("StartIndefiniteArray() returned error %v", err)
+		}
+		if err := encoder.StartIndefiniteByteString(); err != nil {
+			t.Fatalf("StartIndefiniteByteString() inside array returned error %v", err)
+		}
+		if err := encoder.EndIndefinite(); err != nil {
+			t.Fatalf("inner EndIndefinite() returned error %v", err)
+		}
+		if err := encoder.EndIndefinite(); err != nil {
+			t.Fatalf("outer EndIndefinite() returned error %v", err)
+		}
+	})
+
+	t.Run("indefinite-length text string in indefinite-length map", func(t *testing.T) {
+		var w bytes.Buffer
+		encoder := NewEncoder(&w)
+		if err := encoder.StartIndefiniteMap(); err != nil {
+			t.Fatalf("StartIndefiniteMap() returned error %v", err)
+		}
+		if err := encoder.Encode("k"); err != nil {
+			t.Fatalf("Encode(key) returned error %v", err)
+		}
+		if err := encoder.StartIndefiniteTextString(); err != nil {
+			t.Fatalf("StartIndefiniteTextString() as map value returned error %v", err)
+		}
+		if err := encoder.EndIndefinite(); err != nil {
+			t.Fatalf("inner EndIndefinite() returned error %v", err)
+		}
+		if err := encoder.EndIndefinite(); err != nil {
+			t.Fatalf("outer EndIndefinite() returned error %v", err)
+		}
+	})
+}
+
 func TestEncoderStructTag(t *testing.T) {
 	type strc struct {
 		A string `json:"x" cbor:"a"`
@@ -886,7 +1530,7 @@ func TestEncoderStructTag(t *testing.T) {
 		B: "B",
 		C: "C",
 	}
-	want := hexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
+	want := mustHexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
 
 	var w bytes.Buffer
 	encoder := NewEncoder(&w)
@@ -904,8 +1548,8 @@ func TestRawMessage(t *testing.T) {
 		B *RawMessage `cbor:"b"`
 		C *RawMessage `cbor:"c"`
 	}
-	data := hexDecode("a361610161628202036163f6") // {"a": 1, "b": [2, 3], "c": nil},
-	r := RawMessage(hexDecode("820203"))
+	data := mustHexDecode("a361610161628202036163f6") // {"a": 1, "b": [2, 3], "c": nil},
+	r := RawMessage(mustHexDecode("820203"))
 	want := strc{
 		A: RawMessage([]byte{0x01}),
 		B: &r,
@@ -967,7 +1611,7 @@ func TestEmptyRawMessage(t *testing.T) {
 func TestNilRawMessageUnmarshalCBORError(t *testing.T) {
 	wantErrorMsg := "cbor.RawMessage: UnmarshalCBOR on nil pointer"
 	var r *RawMessage
-	data := hexDecode("01")
+	data := mustHexDecode("01")
 	if err := r.UnmarshalCBOR(data); err == nil {
 		t.Errorf("UnmarshalCBOR() didn't return error")
 	} else if err.Error() != wantErrorMsg {
@@ -1002,10 +1646,7 @@ func newNBytesReaderWithError(data []byte, maxBytesPerRead int, err error) *nByt
 func (r *nBytesReader) Read(b []byte) (int, error) {
 	var n int
 	if r.off < len(r.data) {
-		numOfBytesToRead := len(r.data) - r.off
-		if numOfBytesToRead > r.maxBytesPerRead {
-			numOfBytesToRead = r.maxBytesPerRead
-		}
+		numOfBytesToRead := min(len(r.data)-r.off, r.maxBytesPerRead)
 		n = copy(b, r.data[r.off:r.off+numOfBytesToRead])
 		r.off += n
 	}

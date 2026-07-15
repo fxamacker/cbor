@@ -82,7 +82,7 @@ func ExampleMarshal_canonical() {
 	// a46341676504644d616c65f4644e616d656543616e647968436f6e7461637473a2634a6f656c3232322d3232322d32323232644d6172796c3131312d3131312d31313131
 }
 
-// This example uses "toarray" struct tag to encode struct as CBOR array.
+// This example uses "toarray" struct tag option to encode struct as CBOR array.
 func ExampleMarshal_toarray() {
 	type Record struct {
 		_           struct{} `cbor:",toarray"`
@@ -100,8 +100,8 @@ func ExampleMarshal_toarray() {
 	// 836763757272656e74615601
 }
 
-// This example uses "keyasint" struct tag to encode struct's fiele names as integer.
-// This feautre is very useful in handling COSE, CWT, SenML data.
+// This example uses "keyasint" struct tag option to encode struct's field names as integer.
+// This feature is very useful in handling COSE, CWT, SenML data.
 func ExampleMarshal_keyasint() {
 	type Record struct {
 		Name        string `cbor:"1,keyasint"`
@@ -184,11 +184,11 @@ func ExampleEncoder() {
 }
 
 // ExampleEncoder_indefiniteLengthByteString encodes a stream of definite
-// length byte string ("chunks") as an indefinite length byte string.
+// length byte string ("chunks") as an indefinite-length byte string.
 func ExampleEncoder_indefiniteLengthByteString() {
 	var buf bytes.Buffer
 	encoder := cbor.NewEncoder(&buf)
-	// Start indefinite length byte string encoding.
+	// Start indefinite-length byte string encoding.
 	if err := encoder.StartIndefiniteByteString(); err != nil {
 		fmt.Println("error:", err)
 	}
@@ -200,7 +200,7 @@ func ExampleEncoder_indefiniteLengthByteString() {
 	if err := encoder.Encode([3]byte{3, 4, 5}); err != nil {
 		fmt.Println("error:", err)
 	}
-	// Close indefinite length byte string.
+	// Close indefinite-length byte string.
 	if err := encoder.EndIndefinite(); err != nil {
 		fmt.Println("error:", err)
 	}
@@ -210,11 +210,11 @@ func ExampleEncoder_indefiniteLengthByteString() {
 }
 
 // ExampleEncoder_indefiniteLengthTextString encodes a stream of definite
-// length text string ("chunks") as an indefinite length text string.
+// length text string ("chunks") as an indefinite-length text string.
 func ExampleEncoder_indefiniteLengthTextString() {
 	var buf bytes.Buffer
 	encoder := cbor.NewEncoder(&buf)
-	// Start indefinite length text string encoding.
+	// Start indefinite-length text string encoding.
 	if err := encoder.StartIndefiniteTextString(); err != nil {
 		fmt.Println("error:", err)
 	}
@@ -226,7 +226,7 @@ func ExampleEncoder_indefiniteLengthTextString() {
 	if err := encoder.Encode("ming"); err != nil {
 		fmt.Println("error:", err)
 	}
-	// Close indefinite length text string.
+	// Close indefinite-length text string.
 	if err := encoder.EndIndefinite(); err != nil {
 		fmt.Println("error:", err)
 	}
@@ -236,11 +236,11 @@ func ExampleEncoder_indefiniteLengthTextString() {
 }
 
 // ExampleEncoder_indefiniteLengthArray encodes a stream of elements as an
-// indefinite length array.  Encoder supports nested indefinite length values.
+// indefinite-length array.  Encoder supports nested indefinite-length values.
 func ExampleEncoder_indefiniteLengthArray() {
 	var buf bytes.Buffer
 	enc := cbor.NewEncoder(&buf)
-	// Start indefinite length array encoding.
+	// Start indefinite-length array encoding.
 	if err := enc.StartIndefiniteArray(); err != nil {
 		fmt.Println("error:", err)
 	}
@@ -252,7 +252,7 @@ func ExampleEncoder_indefiniteLengthArray() {
 	if err := enc.Encode([]int{2, 3}); err != nil {
 		fmt.Println("error:", err)
 	}
-	// Start a nested indefinite length array as array element.
+	// Start a nested indefinite-length array as array element.
 	if err := enc.StartIndefiniteArray(); err != nil {
 		fmt.Println("error:", err)
 	}
@@ -264,11 +264,11 @@ func ExampleEncoder_indefiniteLengthArray() {
 	if err := enc.Encode(5); err != nil {
 		fmt.Println("error:", err)
 	}
-	// Close nested indefinite length array.
+	// Close nested indefinite-length array.
 	if err := enc.EndIndefinite(); err != nil {
 		fmt.Println("error:", err)
 	}
-	// Close outer indefinite length array.
+	// Close outer indefinite-length array.
 	if err := enc.EndIndefinite(); err != nil {
 		fmt.Println("error:", err)
 	}
@@ -278,7 +278,7 @@ func ExampleEncoder_indefiniteLengthArray() {
 }
 
 // ExampleEncoder_indefiniteLengthMap encodes a stream of elements as an
-// indefinite length map.  Encoder supports nested indefinite length values.
+// indefinite-length map.  Encoder supports nested indefinite-length values.
 func ExampleEncoder_indefiniteLengthMap() {
 	var buf bytes.Buffer
 	em, err := cbor.EncOptions{Sort: cbor.SortCanonical}.EncMode()
@@ -286,7 +286,7 @@ func ExampleEncoder_indefiniteLengthMap() {
 		fmt.Println("error:", err)
 	}
 	enc := em.NewEncoder(&buf)
-	// Start indefinite length map encoding.
+	// Start indefinite-length map encoding.
 	if err := enc.StartIndefiniteMap(); err != nil {
 		fmt.Println("error:", err)
 	}
@@ -302,7 +302,7 @@ func ExampleEncoder_indefiniteLengthMap() {
 	if err := enc.Encode("b"); err != nil {
 		fmt.Println("error:", err)
 	}
-	// Start an indefinite length array as map value.
+	// Start an indefinite-length array as map value.
 	if err := enc.StartIndefiniteArray(); err != nil {
 		fmt.Println("error:", err)
 	}
@@ -314,11 +314,11 @@ func ExampleEncoder_indefiniteLengthMap() {
 	if err := enc.Encode(3); err != nil {
 		fmt.Println("error:", err)
 	}
-	// Close indefinite length array.
+	// Close indefinite-length array.
 	if err := enc.EndIndefinite(); err != nil {
 		fmt.Println("error:", err)
 	}
-	// Close indefinite length map.
+	// Close indefinite-length map.
 	if err := enc.EndIndefinite(); err != nil {
 		fmt.Println("error:", err)
 	}
@@ -353,7 +353,7 @@ func ExampleDecoder() {
 }
 
 func Example_cWT() {
-	// Use "keyasint" struct tag to encode/decode struct to/from CBOR map.
+	// Use "keyasint" struct tag option to encode/decode struct to/from CBOR map.
 	type claims struct {
 		Iss string `cbor:"1,keyasint"`
 		Sub string `cbor:"2,keyasint"`
@@ -403,14 +403,14 @@ func Example_cWTWithDupMapKeyOption() {
 }
 
 func Example_signedCWT() {
-	// Use "keyasint" struct tag to encode/decode struct to/from CBOR map.
+	// Use "keyasint" struct tag option to encode/decode struct to/from CBOR map.
 	// Partial COSE header definition
 	type coseHeader struct {
 		Alg int    `cbor:"1,keyasint,omitempty"`
 		Kid []byte `cbor:"4,keyasint,omitempty"`
 		IV  []byte `cbor:"5,keyasint,omitempty"`
 	}
-	// Use "toarray" struct tag to encode/decode struct to/from CBOR array.
+	// Use "toarray" struct tag option to encode/decode struct to/from CBOR array.
 	type signedCWT struct {
 		_           struct{} `cbor:",toarray"`
 		Protected   []byte
@@ -433,14 +433,14 @@ func Example_signedCWT() {
 }
 
 func Example_signedCWTWithTag() {
-	// Use "keyasint" struct tag to encode/decode struct to/from CBOR map.
+	// Use "keyasint" struct tag option to encode/decode struct to/from CBOR map.
 	// Partial COSE header definition
 	type coseHeader struct {
 		Alg int    `cbor:"1,keyasint,omitempty"`
 		Kid []byte `cbor:"4,keyasint,omitempty"`
 		IV  []byte `cbor:"5,keyasint,omitempty"`
 	}
-	// Use "toarray" struct tag to encode/decode struct to/from CBOR array.
+	// Use "toarray" struct tag option to encode/decode struct to/from CBOR array.
 	type signedCWT struct {
 		_           struct{} `cbor:",toarray"`
 		Protected   []byte
@@ -456,7 +456,7 @@ func Example_signedCWTWithTag() {
 	tags := cbor.NewTagSet()
 	if err := tags.Add(
 		cbor.TagOptions{EncTag: cbor.EncTagRequired, DecTag: cbor.DecTagRequired},
-		reflect.TypeOf(signedCWT{}),
+		reflect.TypeFor[signedCWT](),
 		18); err != nil {
 		fmt.Println("error:", err)
 	}
@@ -478,7 +478,7 @@ func Example_signedCWTWithTag() {
 }
 
 func Example_cOSE() {
-	// Use "keyasint" struct tag to encode/decode struct to/from CBOR map.
+	// Use "keyasint" struct tag option to encode/decode struct to/from CBOR map.
 	// Use cbor.RawMessage to delay unmarshaling (CrvOrNOrK's data type depends on Kty's value).
 	type coseKey struct {
 		Kty       int             `cbor:"1,keyasint,omitempty"`
@@ -488,7 +488,7 @@ func Example_cOSE() {
 		IV        []byte          `cbor:"5,keyasint,omitempty"`
 		CrvOrNOrK cbor.RawMessage `cbor:"-1,keyasint,omitempty"` // K for symmetric keys, Crv for elliptic curve keys, N for RSA modulus
 		XOrE      cbor.RawMessage `cbor:"-2,keyasint,omitempty"` // X for curve x-coordinate, E for RSA public exponent
-		Y         cbor.RawMessage `cbor:"-3,keyasint,omitempty"` // Y for curve y-cooridate
+		Y         cbor.RawMessage `cbor:"-3,keyasint,omitempty"` // Y for curve y-coordinate
 		D         []byte          `cbor:"-4,keyasint,omitempty"`
 	}
 	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.2
@@ -507,7 +507,7 @@ func Example_cOSE() {
 }
 
 func Example_senML() {
-	// Use "keyasint" struct tag to encode/decode struct to/from CBOR map.
+	// Use "keyasint" struct tag option to encode/decode struct to/from CBOR map.
 	type SenMLRecord struct {
 		BaseName    string  `cbor:"-2,keyasint,omitempty"`
 		BaseTime    float64 `cbor:"-3,keyasint,omitempty"`

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -19,41 +20,41 @@ import (
 )
 
 var (
-	typeBool            = reflect.TypeOf(true)
-	typeUint8           = reflect.TypeOf(uint8(0))
-	typeUint16          = reflect.TypeOf(uint16(0))
-	typeUint32          = reflect.TypeOf(uint32(0))
-	typeUint64          = reflect.TypeOf(uint64(0))
-	typeInt8            = reflect.TypeOf(int8(0))
-	typeInt16           = reflect.TypeOf(int16(0))
-	typeInt32           = reflect.TypeOf(int32(0))
-	typeInt64           = reflect.TypeOf(int64(0))
-	typeFloat32         = reflect.TypeOf(float32(0))
-	typeFloat64         = reflect.TypeOf(float64(0))
-	typeByteArray       = reflect.TypeOf([5]byte{})
-	typeIntSlice        = reflect.TypeOf([]int{})
-	typeStringSlice     = reflect.TypeOf([]string{})
-	typeMapIntfIntf     = reflect.TypeOf(map[interface{}]interface{}{})
-	typeMapStringInt    = reflect.TypeOf(map[string]int{})
-	typeMapStringString = reflect.TypeOf(map[string]string{})
-	typeMapStringIntf   = reflect.TypeOf(map[string]interface{}{})
+	typeBool            = reflect.TypeFor[bool]()
+	typeUint8           = reflect.TypeFor[uint8]()
+	typeUint16          = reflect.TypeFor[uint16]()
+	typeUint32          = reflect.TypeFor[uint32]()
+	typeUint64          = reflect.TypeFor[uint64]()
+	typeInt8            = reflect.TypeFor[int8]()
+	typeInt16           = reflect.TypeFor[int16]()
+	typeInt32           = reflect.TypeFor[int32]()
+	typeInt64           = reflect.TypeFor[int64]()
+	typeFloat32         = reflect.TypeFor[float32]()
+	typeFloat64         = reflect.TypeFor[float64]()
+	typeByteArray       = reflect.TypeFor[[5]byte]()
+	typeIntSlice        = reflect.TypeFor[[]int]()
+	typeStringSlice     = reflect.TypeFor[[]string]()
+	typeMapIntfIntf     = reflect.TypeFor[map[any]any]()
+	typeMapStringInt    = reflect.TypeFor[map[string]int]()
+	typeMapStringString = reflect.TypeFor[map[string]string]()
+	typeMapStringIntf   = reflect.TypeFor[map[string]any]()
 )
 
-type unmarshalTest struct {
+type unmarshalTestCase struct {
 	data               []byte
-	wantInterfaceValue interface{}
-	wantValues         []interface{}
+	wantInterfaceValue any
+	wantValues         []any
 	wrongTypes         []reflect.Type
 }
 
-var unmarshalTests = []unmarshalTest{
+var unmarshalTestCases = []unmarshalTestCase{
 	// CBOR test data are from https://tools.ietf.org/html/rfc7049#appendix-A.
 
 	// unsigned integer
 	{
-		data:               hexDecode("00"),
+		data:               mustHexDecode("00"),
 		wantInterfaceValue: uint64(0),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint8(0),
 			uint16(0),
 			uint32(0),
@@ -66,7 +67,7 @@ var unmarshalTests = []unmarshalTest{
 			int(0),
 			float32(0),
 			float64(0),
-			bigIntOrPanic("0"),
+			mustBigInt("0"),
 		},
 		wrongTypes: []reflect.Type{
 			typeString,
@@ -81,9 +82,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("01"),
+		data:               mustHexDecode("01"),
 		wantInterfaceValue: uint64(1),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint8(1),
 			uint16(1),
 			uint32(1),
@@ -96,7 +97,7 @@ var unmarshalTests = []unmarshalTest{
 			int(1),
 			float32(1),
 			float64(1),
-			bigIntOrPanic("1"),
+			mustBigInt("1"),
 		},
 		wrongTypes: []reflect.Type{
 			typeString,
@@ -111,9 +112,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("0a"),
+		data:               mustHexDecode("0a"),
 		wantInterfaceValue: uint64(10),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint8(10),
 			uint16(10),
 			uint32(10),
@@ -126,7 +127,7 @@ var unmarshalTests = []unmarshalTest{
 			int(10),
 			float32(10),
 			float64(10),
-			bigIntOrPanic("10"),
+			mustBigInt("10"),
 		},
 		wrongTypes: []reflect.Type{
 			typeString,
@@ -141,9 +142,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("17"),
+		data:               mustHexDecode("17"),
 		wantInterfaceValue: uint64(23),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint8(23),
 			uint16(23),
 			uint32(23),
@@ -156,7 +157,7 @@ var unmarshalTests = []unmarshalTest{
 			int(23),
 			float32(23),
 			float64(23),
-			bigIntOrPanic("23"),
+			mustBigInt("23"),
 		},
 		wrongTypes: []reflect.Type{
 			typeString,
@@ -171,9 +172,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("1818"),
+		data:               mustHexDecode("1818"),
 		wantInterfaceValue: uint64(24),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint8(24),
 			uint16(24),
 			uint32(24),
@@ -186,7 +187,7 @@ var unmarshalTests = []unmarshalTest{
 			int(24),
 			float32(24),
 			float64(24),
-			bigIntOrPanic("24"),
+			mustBigInt("24"),
 		},
 		wrongTypes: []reflect.Type{
 			typeString,
@@ -201,9 +202,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("1819"),
+		data:               mustHexDecode("1819"),
 		wantInterfaceValue: uint64(25),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint8(25),
 			uint16(25),
 			uint32(25),
@@ -216,7 +217,7 @@ var unmarshalTests = []unmarshalTest{
 			int(25),
 			float32(25),
 			float64(25),
-			bigIntOrPanic("25"),
+			mustBigInt("25"),
 		},
 		wrongTypes: []reflect.Type{
 			typeString,
@@ -231,9 +232,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("1864"),
+		data:               mustHexDecode("1864"),
 		wantInterfaceValue: uint64(100),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint8(100),
 			uint16(100),
 			uint32(100),
@@ -246,7 +247,7 @@ var unmarshalTests = []unmarshalTest{
 			int(100),
 			float32(100),
 			float64(100),
-			bigIntOrPanic("100"),
+			mustBigInt("100"),
 		},
 		wrongTypes: []reflect.Type{
 			typeString,
@@ -261,9 +262,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("1903e8"),
+		data:               mustHexDecode("1903e8"),
 		wantInterfaceValue: uint64(1000),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint16(1000),
 			uint32(1000),
 			uint64(1000),
@@ -274,7 +275,7 @@ var unmarshalTests = []unmarshalTest{
 			int(1000),
 			float32(1000),
 			float64(1000),
-			bigIntOrPanic("1000"),
+			mustBigInt("1000"),
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -291,9 +292,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("1a000f4240"),
+		data:               mustHexDecode("1a000f4240"),
 		wantInterfaceValue: uint64(1000000),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint32(1000000),
 			uint64(1000000),
 			uint(1000000),
@@ -302,7 +303,7 @@ var unmarshalTests = []unmarshalTest{
 			int(1000000),
 			float32(1000000),
 			float64(1000000),
-			bigIntOrPanic("1000000"),
+			mustBigInt("1000000"),
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -321,16 +322,16 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("1b000000e8d4a51000"),
+		data:               mustHexDecode("1b000000e8d4a51000"),
 		wantInterfaceValue: uint64(1000000000000),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint64(1000000000000),
 			uint(1000000000000),
 			int64(1000000000000),
 			int(1000000000000),
 			float32(1000000000000),
 			float64(1000000000000),
-			bigIntOrPanic("1000000000000"),
+			mustBigInt("1000000000000"),
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -351,14 +352,14 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("1bffffffffffffffff"),
+		data:               mustHexDecode("1bffffffffffffffff"),
 		wantInterfaceValue: uint64(18446744073709551615),
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint64(18446744073709551615),
 			uint(18446744073709551615),
 			float32(18446744073709551615),
 			float64(18446744073709551615),
-			bigIntOrPanic("18446744073709551615"),
+			mustBigInt("18446744073709551615"),
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -381,9 +382,9 @@ var unmarshalTests = []unmarshalTest{
 
 	// negative integer
 	{
-		data:               hexDecode("20"),
+		data:               mustHexDecode("20"),
 		wantInterfaceValue: int64(-1),
-		wantValues: []interface{}{
+		wantValues: []any{
 			int8(-1),
 			int16(-1),
 			int32(-1),
@@ -391,7 +392,7 @@ var unmarshalTests = []unmarshalTest{
 			int(-1),
 			float32(-1),
 			float64(-1),
-			bigIntOrPanic("-1"),
+			mustBigInt("-1"),
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -410,9 +411,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("29"),
+		data:               mustHexDecode("29"),
 		wantInterfaceValue: int64(-10),
-		wantValues: []interface{}{
+		wantValues: []any{
 			int8(-10),
 			int16(-10),
 			int32(-10),
@@ -420,7 +421,7 @@ var unmarshalTests = []unmarshalTest{
 			int(-10),
 			float32(-10),
 			float64(-10),
-			bigIntOrPanic("-10"),
+			mustBigInt("-10"),
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -439,9 +440,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("3863"),
+		data:               mustHexDecode("3863"),
 		wantInterfaceValue: int64(-100),
-		wantValues: []interface{}{
+		wantValues: []any{
 			int8(-100),
 			int16(-100),
 			int32(-100),
@@ -449,7 +450,7 @@ var unmarshalTests = []unmarshalTest{
 			int(-100),
 			float32(-100),
 			float64(-100),
-			bigIntOrPanic("-100"),
+			mustBigInt("-100"),
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -468,16 +469,16 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("3903e7"),
+		data:               mustHexDecode("3903e7"),
 		wantInterfaceValue: int64(-1000),
-		wantValues: []interface{}{
+		wantValues: []any{
 			int16(-1000),
 			int32(-1000),
 			int64(-1000),
 			int(-1000),
 			float32(-1000),
 			float64(-1000),
-			bigIntOrPanic("-1000"),
+			mustBigInt("-1000"),
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -497,10 +498,10 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("3bffffffffffffffff"),
-		wantInterfaceValue: bigIntOrPanic("-18446744073709551616"),
-		wantValues: []interface{}{
-			bigIntOrPanic("-18446744073709551616"),
+		data:               mustHexDecode("3bffffffffffffffff"),
+		wantInterfaceValue: mustBigInt("-18446744073709551616"),
+		wantValues: []any{
+			mustBigInt("-18446744073709551616"),
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -525,9 +526,9 @@ var unmarshalTests = []unmarshalTest{
 
 	// byte string
 	{
-		data:               hexDecode("40"),
+		data:               mustHexDecode("40"),
 		wantInterfaceValue: []byte{},
-		wantValues: []interface{}{
+		wantValues: []any{
 			[]byte{},
 			[0]byte{},
 			[1]byte{0},
@@ -555,9 +556,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("4401020304"),
+		data:               mustHexDecode("4401020304"),
 		wantInterfaceValue: []byte{1, 2, 3, 4},
-		wantValues: []interface{}{
+		wantValues: []any{
 			[]byte{1, 2, 3, 4},
 			[0]byte{},
 			[1]byte{1},
@@ -585,9 +586,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("5f42010243030405ff"),
+		data:               mustHexDecode("5f42010243030405ff"),
 		wantInterfaceValue: []byte{1, 2, 3, 4, 5},
-		wantValues: []interface{}{
+		wantValues: []any{
 			[]byte{1, 2, 3, 4, 5},
 			[0]byte{},
 			[1]byte{1},
@@ -618,9 +619,9 @@ var unmarshalTests = []unmarshalTest{
 
 	// text string
 	{
-		data:               hexDecode("60"),
+		data:               mustHexDecode("60"),
 		wantInterfaceValue: "",
-		wantValues:         []interface{}{""},
+		wantValues:         []any{""},
 		wrongTypes: []reflect.Type{
 			typeUint8,
 			typeUint16,
@@ -644,9 +645,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("6161"),
+		data:               mustHexDecode("6161"),
 		wantInterfaceValue: "a",
-		wantValues:         []interface{}{"a"},
+		wantValues:         []any{"a"},
 		wrongTypes: []reflect.Type{
 			typeUint8,
 			typeUint16,
@@ -670,9 +671,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("6449455446"),
+		data:               mustHexDecode("6449455446"),
 		wantInterfaceValue: "IETF",
-		wantValues:         []interface{}{"IETF"},
+		wantValues:         []any{"IETF"},
 		wrongTypes: []reflect.Type{
 			typeUint8,
 			typeUint16,
@@ -696,9 +697,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("62225c"),
+		data:               mustHexDecode("62225c"),
 		wantInterfaceValue: "\"\\",
-		wantValues:         []interface{}{"\"\\"},
+		wantValues:         []any{"\"\\"},
 		wrongTypes: []reflect.Type{
 			typeUint8,
 			typeUint16,
@@ -722,9 +723,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("62c3bc"),
+		data:               mustHexDecode("62c3bc"),
 		wantInterfaceValue: "ü",
-		wantValues:         []interface{}{"ü"},
+		wantValues:         []any{"ü"},
 		wrongTypes: []reflect.Type{
 			typeUint8,
 			typeUint16,
@@ -748,9 +749,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("63e6b0b4"),
+		data:               mustHexDecode("63e6b0b4"),
 		wantInterfaceValue: "水",
-		wantValues:         []interface{}{"水"},
+		wantValues:         []any{"水"},
 		wrongTypes: []reflect.Type{
 			typeUint8,
 			typeUint16,
@@ -774,9 +775,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("64f0908591"),
+		data:               mustHexDecode("64f0908591"),
 		wantInterfaceValue: "𐅑",
-		wantValues:         []interface{}{"𐅑"},
+		wantValues:         []any{"𐅑"},
 		wrongTypes: []reflect.Type{
 			typeUint8,
 			typeUint16,
@@ -800,9 +801,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("7f657374726561646d696e67ff"),
+		data:               mustHexDecode("7f657374726561646d696e67ff"),
 		wantInterfaceValue: "streaming",
-		wantValues:         []interface{}{"streaming"},
+		wantValues:         []any{"streaming"},
 		wrongTypes: []reflect.Type{
 			typeUint8,
 			typeUint16,
@@ -828,10 +829,10 @@ var unmarshalTests = []unmarshalTest{
 
 	// array
 	{
-		data:               hexDecode("80"),
-		wantInterfaceValue: []interface{}{},
-		wantValues: []interface{}{
-			[]interface{}{},
+		data:               mustHexDecode("80"),
+		wantInterfaceValue: []any{},
+		wantValues: []any{
+			[]any{},
 			[]byte{},
 			[]string{},
 			[]int{},
@@ -863,10 +864,10 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("83010203"),
-		wantInterfaceValue: []interface{}{uint64(1), uint64(2), uint64(3)},
-		wantValues: []interface{}{
-			[]interface{}{uint64(1), uint64(2), uint64(3)},
+		data:               mustHexDecode("83010203"),
+		wantInterfaceValue: []any{uint64(1), uint64(2), uint64(3)},
+		wantValues: []any{
+			[]any{uint64(1), uint64(2), uint64(3)},
 			[]byte{1, 2, 3},
 			[]int{1, 2, 3},
 			[]uint{1, 2, 3},
@@ -892,7 +893,7 @@ var unmarshalTests = []unmarshalTest{
 			typeBool,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -901,11 +902,11 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("8301820203820405"),
-		wantInterfaceValue: []interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-		wantValues: []interface{}{
-			[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-			[...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		data:               mustHexDecode("8301820203820405"),
+		wantInterfaceValue: []any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+		wantValues: []any{
+			[]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[...]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -922,7 +923,7 @@ var unmarshalTests = []unmarshalTest{
 			typeBool,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -931,11 +932,11 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("83018202039f0405ff"),
-		wantInterfaceValue: []interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-		wantValues: []interface{}{
-			[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-			[...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		data:               mustHexDecode("83018202039f0405ff"),
+		wantInterfaceValue: []any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+		wantValues: []any{
+			[]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[...]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -952,7 +953,7 @@ var unmarshalTests = []unmarshalTest{
 			typeBool,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -961,11 +962,11 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("83019f0203ff820405"),
-		wantInterfaceValue: []interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-		wantValues: []interface{}{
-			[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-			[...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		data:               mustHexDecode("83019f0203ff820405"),
+		wantInterfaceValue: []any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+		wantValues: []any{
+			[]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[...]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -982,7 +983,7 @@ var unmarshalTests = []unmarshalTest{
 			typeBool,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -991,10 +992,10 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("98190102030405060708090a0b0c0d0e0f101112131415161718181819"),
-		wantInterfaceValue: []interface{}{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
-		wantValues: []interface{}{
-			[]interface{}{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
+		data:               mustHexDecode("98190102030405060708090a0b0c0d0e0f101112131415161718181819"),
+		wantInterfaceValue: []any{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
+		wantValues: []any{
+			[]any{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
 			[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
@@ -1019,7 +1020,7 @@ var unmarshalTests = []unmarshalTest{
 			typeBool,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -1028,10 +1029,10 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("9fff"),
-		wantInterfaceValue: []interface{}{},
-		wantValues: []interface{}{
-			[]interface{}{},
+		data:               mustHexDecode("9fff"),
+		wantInterfaceValue: []any{},
+		wantValues: []any{
+			[]any{},
 			[]byte{},
 			[]string{},
 			[]int{},
@@ -1063,11 +1064,11 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("9f018202039f0405ffff"),
-		wantInterfaceValue: []interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-		wantValues: []interface{}{
-			[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-			[...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		data:               mustHexDecode("9f018202039f0405ffff"),
+		wantInterfaceValue: []any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+		wantValues: []any{
+			[]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[...]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1084,7 +1085,7 @@ var unmarshalTests = []unmarshalTest{
 			typeBool,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -1093,11 +1094,11 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("9f01820203820405ff"),
-		wantInterfaceValue: []interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-		wantValues: []interface{}{
-			[]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
-			[...]interface{}{uint64(1), []interface{}{uint64(2), uint64(3)}, []interface{}{uint64(4), uint64(5)}},
+		data:               mustHexDecode("9f01820203820405ff"),
+		wantInterfaceValue: []any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+		wantValues: []any{
+			[]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[...]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1114,7 +1115,7 @@ var unmarshalTests = []unmarshalTest{
 			typeBool,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -1123,10 +1124,10 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("9f0102030405060708090a0b0c0d0e0f101112131415161718181819ff"),
-		wantInterfaceValue: []interface{}{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
-		wantValues: []interface{}{
-			[]interface{}{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
+		data:               mustHexDecode("9f0102030405060708090a0b0c0d0e0f101112131415161718181819ff"),
+		wantInterfaceValue: []any{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
+		wantValues: []any{
+			[]any{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
 			[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
@@ -1151,7 +1152,7 @@ var unmarshalTests = []unmarshalTest{
 			typeBool,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -1160,11 +1161,11 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("826161a161626163"),
-		wantInterfaceValue: []interface{}{"a", map[interface{}]interface{}{"b": "c"}},
-		wantValues: []interface{}{
-			[]interface{}{"a", map[interface{}]interface{}{"b": "c"}},
-			[...]interface{}{"a", map[interface{}]interface{}{"b": "c"}},
+		data:               mustHexDecode("826161a161626163"),
+		wantInterfaceValue: []any{"a", map[any]any{"b": "c"}},
+		wantValues: []any{
+			[]any{"a", map[any]any{"b": "c"}},
+			[...]any{"a", map[any]any{"b": "c"}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1182,7 +1183,7 @@ var unmarshalTests = []unmarshalTest{
 			typeByteArray,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -1191,11 +1192,11 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("826161bf61626163ff"),
-		wantInterfaceValue: []interface{}{"a", map[interface{}]interface{}{"b": "c"}},
-		wantValues: []interface{}{
-			[]interface{}{"a", map[interface{}]interface{}{"b": "c"}},
-			[...]interface{}{"a", map[interface{}]interface{}{"b": "c"}},
+		data:               mustHexDecode("826161bf61626163ff"),
+		wantInterfaceValue: []any{"a", map[any]any{"b": "c"}},
+		wantValues: []any{
+			[]any{"a", map[any]any{"b": "c"}},
+			[...]any{"a", map[any]any{"b": "c"}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1213,7 +1214,7 @@ var unmarshalTests = []unmarshalTest{
 			typeByteArray,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeTag,
 			typeRawTag,
 			typeBigInt,
@@ -1224,10 +1225,10 @@ var unmarshalTests = []unmarshalTest{
 
 	// map
 	{
-		data:               hexDecode("a0"),
-		wantInterfaceValue: map[interface{}]interface{}{},
-		wantValues: []interface{}{
-			map[interface{}]interface{}{},
+		data:               mustHexDecode("a0"),
+		wantInterfaceValue: map[any]any{},
+		wantValues: []any{
+			map[any]any{},
 			map[string]bool{},
 			map[string]int{},
 			map[int]string{},
@@ -1256,10 +1257,10 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("a201020304"),
-		wantInterfaceValue: map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)},
-		wantValues: []interface{}{
-			map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)},
+		data:               mustHexDecode("a201020304"),
+		wantInterfaceValue: map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)},
+		wantValues: []any{
+			map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)},
 			map[uint]int{1: 2, 3: 4}, map[int]uint{1: 2, 3: 4},
 		},
 		wrongTypes: []reflect.Type{
@@ -1286,11 +1287,11 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("a26161016162820203"),
-		wantInterfaceValue: map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
-		wantValues: []interface{}{
-			map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
-			map[string]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
+		data:               mustHexDecode("a26161016162820203"),
+		wantInterfaceValue: map[any]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
+		wantValues: []any{
+			map[any]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
+			map[string]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1316,11 +1317,11 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("a56161614161626142616361436164614461656145"),
-		wantInterfaceValue: map[interface{}]interface{}{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
-		wantValues: []interface{}{
-			map[interface{}]interface{}{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
-			map[string]interface{}{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
+		data:               mustHexDecode("a56161614161626142616361436164614461656145"),
+		wantInterfaceValue: map[any]any{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
+		wantValues: []any{
+			map[any]any{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
+			map[string]any{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
 			map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
 		},
 		wrongTypes: []reflect.Type{
@@ -1347,11 +1348,11 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("bf61610161629f0203ffff"),
-		wantInterfaceValue: map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
-		wantValues: []interface{}{
-			map[interface{}]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
-			map[string]interface{}{"a": uint64(1), "b": []interface{}{uint64(2), uint64(3)}},
+		data:               mustHexDecode("bf61610161629f0203ffff"),
+		wantInterfaceValue: map[any]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
+		wantValues: []any{
+			map[any]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
+			map[string]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1377,11 +1378,11 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("bf6346756ef563416d7421ff"),
-		wantInterfaceValue: map[interface{}]interface{}{"Fun": true, "Amt": int64(-2)},
-		wantValues: []interface{}{
-			map[interface{}]interface{}{"Fun": true, "Amt": int64(-2)},
-			map[string]interface{}{"Fun": true, "Amt": int64(-2)},
+		data:               mustHexDecode("bf6346756ef563416d7421ff"),
+		wantInterfaceValue: map[any]any{"Fun": true, "Amt": int64(-2)},
+		wantValues: []any{
+			map[any]any{"Fun": true, "Amt": int64(-2)},
+			map[string]any{"Fun": true, "Amt": int64(-2)},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1409,13 +1410,13 @@ var unmarshalTests = []unmarshalTest{
 
 	// tag
 	{
-		data:               hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+		data:               mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 		wantInterfaceValue: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), // 2013-03-21 20:04:00 +0000 UTC
-		wantValues: []interface{}{
+		wantValues: []any{
 			"2013-03-21T20:04:00Z",
 			time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
 			Tag{0, "2013-03-21T20:04:00Z"},
-			RawTag{0, hexDecode("74323031332d30332d32315432303a30343a30305a")},
+			RawTag{0, mustHexDecode("74323031332d30332d32315432303a30343a30305a")},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1438,9 +1439,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	}, // 0: standard date/time
 	{
-		data:               hexDecode("c11a514b67b0"),
+		data:               mustHexDecode("c11a514b67b0"),
 		wantInterfaceValue: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC), // 2013-03-21 20:04:00 +0000 UTC
-		wantValues: []interface{}{
+		wantValues: []any{
 			uint32(1363896240),
 			uint64(1363896240),
 			int32(1363896240),
@@ -1449,7 +1450,7 @@ var unmarshalTests = []unmarshalTest{
 			float64(1363896240),
 			time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
 			Tag{1, uint64(1363896240)},
-			RawTag{1, hexDecode("1a514b67b0")},
+			RawTag{1, mustHexDecode("1a514b67b0")},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1467,9 +1468,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	}, // 1: epoch-based date/time
 	{
-		data:               hexDecode("c249010000000000000000"),
-		wantInterfaceValue: bigIntOrPanic("18446744073709551616"),
-		wantValues: []interface{}{
+		data:               mustHexDecode("c249010000000000000000"),
+		wantInterfaceValue: mustBigInt("18446744073709551616"),
+		wantValues: []any{
 			// Decode to byte slice
 			[]byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 			// Decode to array of various lengths
@@ -1480,9 +1481,9 @@ var unmarshalTests = []unmarshalTest{
 			[10]byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 			// Decode to Tag and RawTag
 			Tag{2, []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
-			RawTag{2, hexDecode("49010000000000000000")},
+			RawTag{2, mustHexDecode("49010000000000000000")},
 			// Decode to big.Int
-			bigIntOrPanic("18446744073709551616"),
+			mustBigInt("18446744073709551616"),
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1503,9 +1504,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	}, // 2: positive bignum: 18446744073709551616
 	{
-		data:               hexDecode("c349010000000000000000"),
-		wantInterfaceValue: bigIntOrPanic("-18446744073709551617"),
-		wantValues: []interface{}{
+		data:               mustHexDecode("c349010000000000000000"),
+		wantInterfaceValue: mustBigInt("-18446744073709551617"),
+		wantValues: []any{
 			// Decode to byte slice
 			[]byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 			// Decode to array of various lengths
@@ -1516,9 +1517,9 @@ var unmarshalTests = []unmarshalTest{
 			[10]byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 			// Decode to Tag and RawTag
 			Tag{3, []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
-			RawTag{3, hexDecode("49010000000000000000")},
+			RawTag{3, mustHexDecode("49010000000000000000")},
 			// Decode to big.Int
-			bigIntOrPanic("-18446744073709551617"),
+			mustBigInt("-18446744073709551617"),
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1539,14 +1540,14 @@ var unmarshalTests = []unmarshalTest{
 		},
 	}, // 3: negative bignum: -18446744073709551617
 	{
-		data:               hexDecode("c1fb41d452d9ec200000"),
+		data:               mustHexDecode("c1fb41d452d9ec200000"),
 		wantInterfaceValue: time.Date(2013, 3, 21, 20, 4, 0, 500000000, time.UTC), // 2013-03-21 20:04:00.5 +0000 UTC
-		wantValues: []interface{}{
+		wantValues: []any{
 			float32(1363896240.5),
 			float64(1363896240.5),
 			time.Date(2013, 3, 21, 20, 4, 0, 500000000, time.UTC),
 			Tag{1, float64(1363896240.5)},
-			RawTag{1, hexDecode("fb41d452d9ec200000")},
+			RawTag{1, mustHexDecode("fb41d452d9ec200000")},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1569,9 +1570,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	}, // 1: epoch-based date/time
 	{
-		data:               hexDecode("d74401020304"),
+		data:               mustHexDecode("d74401020304"),
 		wantInterfaceValue: Tag{23, []byte{0x01, 0x02, 0x03, 0x04}},
-		wantValues: []interface{}{
+		wantValues: []any{
 			[]byte{0x01, 0x02, 0x03, 0x04},
 			[0]byte{},
 			[1]byte{0x01},
@@ -1579,7 +1580,7 @@ var unmarshalTests = []unmarshalTest{
 			[...]byte{0x01, 0x02, 0x03, 0x04},
 			[5]byte{0x01, 0x02, 0x03, 0x04, 0x00},
 			Tag{23, []byte{0x01, 0x02, 0x03, 0x04}},
-			RawTag{23, hexDecode("4401020304")},
+			RawTag{23, mustHexDecode("4401020304")},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1601,9 +1602,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	}, // 23: expected conversion to base16 encoding
 	{
-		data:               hexDecode("d818456449455446"),
+		data:               mustHexDecode("d818456449455446"),
 		wantInterfaceValue: Tag{24, []byte{0x64, 0x49, 0x45, 0x54, 0x46}},
-		wantValues: []interface{}{
+		wantValues: []any{
 			[]byte{0x64, 0x49, 0x45, 0x54, 0x46},
 			[0]byte{},
 			[1]byte{0x64},
@@ -1611,7 +1612,7 @@ var unmarshalTests = []unmarshalTest{
 			[...]byte{0x64, 0x49, 0x45, 0x54, 0x46},
 			[6]byte{0x64, 0x49, 0x45, 0x54, 0x46, 0x00},
 			Tag{24, []byte{0x64, 0x49, 0x45, 0x54, 0x46}},
-			RawTag{24, hexDecode("456449455446")},
+			RawTag{24, mustHexDecode("456449455446")},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1633,12 +1634,12 @@ var unmarshalTests = []unmarshalTest{
 		},
 	}, // 24: encoded cborBytes data item
 	{
-		data:               hexDecode("d82076687474703a2f2f7777772e6578616d706c652e636f6d"),
+		data:               mustHexDecode("d82076687474703a2f2f7777772e6578616d706c652e636f6d"),
 		wantInterfaceValue: Tag{32, "http://www.example.com"},
-		wantValues: []interface{}{
+		wantValues: []any{
 			"http://www.example.com",
 			Tag{32, "http://www.example.com"},
-			RawTag{32, hexDecode("76687474703a2f2f7777772e6578616d706c652e636f6d")},
+			RawTag{32, mustHexDecode("76687474703a2f2f7777772e6578616d706c652e636f6d")},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1663,9 +1664,9 @@ var unmarshalTests = []unmarshalTest{
 
 	// primitives
 	{
-		data:               hexDecode("f4"),
+		data:               mustHexDecode("f4"),
 		wantInterfaceValue: false,
-		wantValues: []interface{}{
+		wantValues: []any{
 			false,
 			SimpleValue(20),
 		},
@@ -1692,9 +1693,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("f5"),
+		data:               mustHexDecode("f5"),
 		wantInterfaceValue: true,
-		wantValues: []interface{}{
+		wantValues: []any{
 			true,
 			SimpleValue(21),
 		},
@@ -1721,9 +1722,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("f6"),
+		data:               mustHexDecode("f6"),
 		wantInterfaceValue: nil,
-		wantValues: []interface{}{
+		wantValues: []any{
 			SimpleValue(22),
 			false,
 			uint(0),
@@ -1744,16 +1745,16 @@ var unmarshalTests = []unmarshalTest{
 			[]string(nil),
 			map[string]int(nil),
 			time.Time{},
-			bigIntOrPanic("0"),
+			mustBigInt("0"),
 			Tag{},
 			RawTag{},
 		},
 		wrongTypes: nil,
 	},
 	{
-		data:               hexDecode("f7"),
+		data:               mustHexDecode("f7"),
 		wantInterfaceValue: nil,
-		wantValues: []interface{}{
+		wantValues: []any{
 			SimpleValue(23),
 			false,
 			uint(0),
@@ -1774,16 +1775,16 @@ var unmarshalTests = []unmarshalTest{
 			[]string(nil),
 			map[string]int(nil),
 			time.Time{},
-			bigIntOrPanic("0"),
+			mustBigInt("0"),
 			Tag{},
 			RawTag{},
 		},
 		wrongTypes: nil,
 	},
 	{
-		data:               hexDecode("f0"),
+		data:               mustHexDecode("f0"),
 		wantInterfaceValue: SimpleValue(16),
-		wantValues: []interface{}{
+		wantValues: []any{
 			SimpleValue(16),
 			uint8(16),
 			uint16(16),
@@ -1797,7 +1798,7 @@ var unmarshalTests = []unmarshalTest{
 			int(16),
 			float32(16),
 			float64(16),
-			bigIntOrPanic("16"),
+			mustBigInt("16"),
 		},
 		wrongTypes: []reflect.Type{
 			typeByteSlice,
@@ -1817,13 +1818,13 @@ var unmarshalTests = []unmarshalTest{
 	// {
 	// data: hexDecode("f818"),
 	// wantInterfaceValue: uint64(24),
-	// wantValues: []interface{}{uint8(24), uint16(24), uint32(24), uint64(24), uint(24), int8(24), int16(24), int32(24), int64(24), int(24), float32(24), float64(24)},
+	// wantValues: []any{uint8(24), uint16(24), uint32(24), uint64(24), uint(24), int8(24), int16(24), int32(24), int64(24), int(24), float32(24), float64(24)},
 	// wrongTypes: []reflect.Type{typeByteSlice, typeString, typeBool, typeIntSlice, typeMapStringInt},
 	// },
 	{
-		data:               hexDecode("f820"),
+		data:               mustHexDecode("f820"),
 		wantInterfaceValue: SimpleValue(32),
-		wantValues: []interface{}{
+		wantValues: []any{
 			SimpleValue(32),
 			uint8(32),
 			uint16(32),
@@ -1837,7 +1838,7 @@ var unmarshalTests = []unmarshalTest{
 			int(32),
 			float32(32),
 			float64(32),
-			bigIntOrPanic("32"),
+			mustBigInt("32"),
 		},
 		wrongTypes: []reflect.Type{
 			typeByteSlice,
@@ -1852,9 +1853,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("f8ff"),
+		data:               mustHexDecode("f8ff"),
 		wantInterfaceValue: SimpleValue(255),
-		wantValues: []interface{}{
+		wantValues: []any{
 			SimpleValue(255),
 			uint8(255),
 			uint16(255),
@@ -1867,7 +1868,7 @@ var unmarshalTests = []unmarshalTest{
 			int(255),
 			float32(255),
 			float64(255),
-			bigIntOrPanic("255"),
+			mustBigInt("255"),
 		},
 		wrongTypes: []reflect.Type{
 			typeByteSlice,
@@ -1884,9 +1885,9 @@ var unmarshalTests = []unmarshalTest{
 
 	// More testcases not covered by https://tools.ietf.org/html/rfc7049#appendix-A.
 	{
-		data:               hexDecode("5fff"), // empty indefinite length byte string
+		data:               mustHexDecode("5fff"), // empty indefinite-length byte string
 		wantInterfaceValue: []byte{},
-		wantValues: []interface{}{
+		wantValues: []any{
 			[]byte{},
 			[0]byte{},
 			[1]byte{0x00},
@@ -1913,9 +1914,9 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("7fff"), // empty indefinite length text string
+		data:               mustHexDecode("7fff"), // empty indefinite-length text string
 		wantInterfaceValue: "",
-		wantValues:         []interface{}{""},
+		wantValues:         []any{""},
 		wrongTypes: []reflect.Type{
 			typeUint8,
 			typeUint16,
@@ -1939,10 +1940,10 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("bfff"), // empty indefinite length map
-		wantInterfaceValue: map[interface{}]interface{}{},
-		wantValues: []interface{}{
-			map[interface{}]interface{}{},
+		data:               mustHexDecode("bfff"), // empty indefinite-length map
+		wantInterfaceValue: map[any]any{},
+		wantValues: []any{
+			map[any]any{},
 			map[string]bool{},
 			map[string]int{},
 			map[int]string{},
@@ -1973,9 +1974,9 @@ var unmarshalTests = []unmarshalTest{
 
 	// More test data with tags
 	{
-		data:               hexDecode("c13a0177f2cf"), // 1969-03-21T20:04:00Z, tag 1 with negative integer as epoch time
+		data:               mustHexDecode("c13a0177f2cf"), // 1969-03-21T20:04:00Z, tag 1 with negative integer as epoch time
 		wantInterfaceValue: time.Date(1969, 3, 21, 20, 4, 0, 0, time.UTC),
-		wantValues: []interface{}{
+		wantValues: []any{
 			int32(-24638160),
 			int64(-24638160),
 			int32(-24638160),
@@ -1984,7 +1985,7 @@ var unmarshalTests = []unmarshalTest{
 			float64(-24638160),
 			time.Date(1969, 3, 21, 20, 4, 0, 0, time.UTC),
 			Tag{1, int64(-24638160)},
-			RawTag{1, hexDecode("3a0177f2cf")}, bigIntOrPanic("-24638160"),
+			RawTag{1, mustHexDecode("3a0177f2cf")}, mustBigInt("-24638160"),
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -2002,10 +2003,10 @@ var unmarshalTests = []unmarshalTest{
 		},
 	},
 	{
-		data:               hexDecode("d83dd183010203"), // 61(17([1, 2, 3])), nested tags 61 and 17
-		wantInterfaceValue: Tag{61, Tag{17, []interface{}{uint64(1), uint64(2), uint64(3)}}},
-		wantValues: []interface{}{
-			[]interface{}{uint64(1), uint64(2), uint64(3)},
+		data:               mustHexDecode("d83dd183010203"), // 61(17([1, 2, 3])), nested tags 61 and 17
+		wantInterfaceValue: Tag{61, Tag{17, []any{uint64(1), uint64(2), uint64(3)}}},
+		wantValues: []any{
+			[]any{uint64(1), uint64(2), uint64(3)},
 			[]byte{1, 2, 3},
 			[0]byte{},
 			[1]byte{1},
@@ -2016,8 +2017,8 @@ var unmarshalTests = []unmarshalTest{
 			[...]int{1, 2, 3},
 			[]float32{1, 2, 3},
 			[]float64{1, 2, 3},
-			Tag{61, Tag{17, []interface{}{uint64(1), uint64(2), uint64(3)}}},
-			RawTag{61, hexDecode("d183010203")},
+			Tag{61, Tag{17, []any{uint64(1), uint64(2), uint64(3)}}},
+			RawTag{61, mustHexDecode("d183010203")},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -2034,17 +2035,17 @@ var unmarshalTests = []unmarshalTest{
 			typeBool,
 			typeStringSlice,
 			typeMapStringInt,
-			reflect.TypeOf([3]string{}),
+			reflect.TypeFor[[3]string](),
 			typeByteString,
 			typeSimpleValue,
 		},
 	},
 }
 
-type unmarshalFloatTest struct {
+type unmarshalFloatTestCase struct {
 	data               []byte
-	wantInterfaceValue interface{}
-	wantValues         []interface{}
+	wantInterfaceValue any
+	wantValues         []any
 	equalityThreshold  float64 // Not used for +inf, -inf, and NaN.
 }
 
@@ -2070,214 +2071,214 @@ var unmarshalFloatWrongTypes = []reflect.Type{
 	typeSimpleValue,
 }
 
-// unmarshalFloatTests includes test values for float16, float32, and float64.
+// unmarshalFloatTestCases includes test values for float16, float32, and float64.
 // Note: the function for float16 to float32 conversion was tested with all
 // 65536 values, which is too many to include here.
-var unmarshalFloatTests = []unmarshalFloatTest{
+var unmarshalFloatTestCases = []unmarshalFloatTestCase{
 	// CBOR test data are from https://tools.ietf.org/html/rfc7049#appendix-A.
 
 	// float16
 	{
-		data:               hexDecode("f90000"),
+		data:               mustHexDecode("f90000"),
 		wantInterfaceValue: float64(0.0),
-		wantValues:         []interface{}{float32(0.0), float64(0.0)},
+		wantValues:         []any{float32(0.0), float64(0.0)},
 	},
 	{
-		data:               hexDecode("f98000"),
-		wantInterfaceValue: float64(-0.0),                               //nolint:staticcheck // we know -0.0 is 0.0 in Go
-		wantValues:         []interface{}{float32(-0.0), float64(-0.0)}, //nolint:staticcheck // we know -0.0 is 0.0 in Go
+		data:               mustHexDecode("f98000"),
+		wantInterfaceValue: math.Copysign(0, -1),
+		wantValues:         []any{float32(math.Copysign(0, -1)), math.Copysign(0, -1)},
 	},
 	{
-		data:               hexDecode("f93c00"),
+		data:               mustHexDecode("f93c00"),
 		wantInterfaceValue: float64(1.0),
-		wantValues:         []interface{}{float32(1.0), float64(1.0)},
+		wantValues:         []any{float32(1.0), float64(1.0)},
 	},
 	{
-		data:               hexDecode("f93e00"),
+		data:               mustHexDecode("f93e00"),
 		wantInterfaceValue: float64(1.5),
-		wantValues:         []interface{}{float32(1.5), float64(1.5)},
+		wantValues:         []any{float32(1.5), float64(1.5)},
 	},
 	{
-		data:               hexDecode("f97bff"),
+		data:               mustHexDecode("f97bff"),
 		wantInterfaceValue: float64(65504.0),
-		wantValues:         []interface{}{float32(65504.0), float64(65504.0)},
+		wantValues:         []any{float32(65504.0), float64(65504.0)},
 	},
 	{
-		data:               hexDecode("f90001"), // float16 subnormal value
+		data:               mustHexDecode("f90001"), // float16 subnormal value
 		wantInterfaceValue: float64(5.960464477539063e-08),
-		wantValues:         []interface{}{float32(5.960464477539063e-08), float64(5.960464477539063e-08)},
+		wantValues:         []any{float32(5.960464477539063e-08), float64(5.960464477539063e-08)},
 		equalityThreshold:  1e-16,
 	},
 	{
-		data:               hexDecode("f90400"),
+		data:               mustHexDecode("f90400"),
 		wantInterfaceValue: float64(6.103515625e-05),
-		wantValues:         []interface{}{float32(6.103515625e-05), float64(6.103515625e-05)},
+		wantValues:         []any{float32(6.103515625e-05), float64(6.103515625e-05)},
 		equalityThreshold:  1e-16,
 	},
 	{
-		data:               hexDecode("f9c400"),
+		data:               mustHexDecode("f9c400"),
 		wantInterfaceValue: float64(-4.0),
-		wantValues:         []interface{}{float32(-4.0), float64(-4.0)},
+		wantValues:         []any{float32(-4.0), float64(-4.0)},
 	},
 	{
-		data:               hexDecode("f97c00"),
+		data:               mustHexDecode("f97c00"),
 		wantInterfaceValue: math.Inf(1),
-		wantValues:         []interface{}{math.Float32frombits(0x7f800000), math.Inf(1)},
+		wantValues:         []any{math.Float32frombits(0x7f800000), math.Inf(1)},
 	},
 	{
-		data:               hexDecode("f97e00"),
+		data:               mustHexDecode("f97e00"),
 		wantInterfaceValue: math.NaN(),
-		wantValues:         []interface{}{math.Float32frombits(0x7fc00000), math.NaN()},
+		wantValues:         []any{math.Float32frombits(0x7fc00000), math.NaN()},
 	},
 	{
-		data:               hexDecode("f9fc00"),
+		data:               mustHexDecode("f9fc00"),
 		wantInterfaceValue: math.Inf(-1),
-		wantValues:         []interface{}{math.Float32frombits(0xff800000), math.Inf(-1)},
+		wantValues:         []any{math.Float32frombits(0xff800000), math.Inf(-1)},
 	},
 
 	// float32
 	{
-		data:               hexDecode("fa47c35000"),
+		data:               mustHexDecode("fa47c35000"),
 		wantInterfaceValue: float64(100000.0),
-		wantValues:         []interface{}{float32(100000.0), float64(100000.0)},
+		wantValues:         []any{float32(100000.0), float64(100000.0)},
 	},
 	{
-		data:               hexDecode("fa7f7fffff"),
+		data:               mustHexDecode("fa7f7fffff"),
 		wantInterfaceValue: float64(3.4028234663852886e+38),
-		wantValues:         []interface{}{float32(3.4028234663852886e+38), float64(3.4028234663852886e+38)},
+		wantValues:         []any{float32(3.4028234663852886e+38), float64(3.4028234663852886e+38)},
 		equalityThreshold:  1e-9,
 	},
 	{
-		data:               hexDecode("fa7f800000"),
+		data:               mustHexDecode("fa7f800000"),
 		wantInterfaceValue: math.Inf(1),
-		wantValues:         []interface{}{math.Float32frombits(0x7f800000), math.Inf(1)},
+		wantValues:         []any{math.Float32frombits(0x7f800000), math.Inf(1)},
 	},
 	{
-		data:               hexDecode("fa7fc00000"),
+		data:               mustHexDecode("fa7fc00000"),
 		wantInterfaceValue: math.NaN(),
-		wantValues:         []interface{}{math.Float32frombits(0x7fc00000), math.NaN()},
+		wantValues:         []any{math.Float32frombits(0x7fc00000), math.NaN()},
 	},
 	{
-		data:               hexDecode("faff800000"),
+		data:               mustHexDecode("faff800000"),
 		wantInterfaceValue: math.Inf(-1),
-		wantValues:         []interface{}{math.Float32frombits(0xff800000), math.Inf(-1)},
+		wantValues:         []any{math.Float32frombits(0xff800000), math.Inf(-1)},
 	},
 
 	// float64
 	{
-		data:               hexDecode("fb3ff199999999999a"),
+		data:               mustHexDecode("fb3ff199999999999a"),
 		wantInterfaceValue: float64(1.1),
-		wantValues:         []interface{}{float32(1.1), float64(1.1)},
+		wantValues:         []any{float32(1.1), float64(1.1)},
 	},
 	{
-		data:               hexDecode("fb7e37e43c8800759c"),
+		data:               mustHexDecode("fb7e37e43c8800759c"),
 		wantInterfaceValue: float64(1.0e+300),
-		wantValues:         []interface{}{float64(1.0e+300)},
+		wantValues:         []any{float64(1.0e+300)},
 		equalityThreshold:  1e-9,
 	},
 	{
-		data:               hexDecode("fbc010666666666666"),
+		data:               mustHexDecode("fbc010666666666666"),
 		wantInterfaceValue: float64(-4.1),
-		wantValues:         []interface{}{float32(-4.1), float64(-4.1)},
+		wantValues:         []any{float32(-4.1), float64(-4.1)},
 	},
 	{
-		data:               hexDecode("fb7ff0000000000000"),
+		data:               mustHexDecode("fb7ff0000000000000"),
 		wantInterfaceValue: math.Inf(1),
-		wantValues:         []interface{}{math.Float32frombits(0x7f800000), math.Inf(1)},
+		wantValues:         []any{math.Float32frombits(0x7f800000), math.Inf(1)},
 	},
 	{
-		data:               hexDecode("fb7ff8000000000000"),
+		data:               mustHexDecode("fb7ff8000000000000"),
 		wantInterfaceValue: math.NaN(),
-		wantValues:         []interface{}{math.Float32frombits(0x7fc00000), math.NaN()},
+		wantValues:         []any{math.Float32frombits(0x7fc00000), math.NaN()},
 	},
 	{
-		data:               hexDecode("fbfff0000000000000"),
+		data:               mustHexDecode("fbfff0000000000000"),
 		wantInterfaceValue: math.Inf(-1),
-		wantValues:         []interface{}{math.Float32frombits(0xff800000), math.Inf(-1)},
+		wantValues:         []any{math.Float32frombits(0xff800000), math.Inf(-1)},
 	},
 
 	// float16 test data from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
 	{
-		data:               hexDecode("f903ff"),
+		data:               mustHexDecode("f903ff"),
 		wantInterfaceValue: float64(0.000060976),
-		wantValues:         []interface{}{float32(0.000060976), float64(0.000060976)},
+		wantValues:         []any{float32(0.000060976), float64(0.000060976)},
 		equalityThreshold:  1e-9,
 	},
 	{
-		data:               hexDecode("f93bff"),
+		data:               mustHexDecode("f93bff"),
 		wantInterfaceValue: float64(0.999511719),
-		wantValues:         []interface{}{float32(0.999511719), float64(0.999511719)},
+		wantValues:         []any{float32(0.999511719), float64(0.999511719)},
 		equalityThreshold:  1e-9,
 	},
 	{
-		data:               hexDecode("f93c01"),
+		data:               mustHexDecode("f93c01"),
 		wantInterfaceValue: float64(1.000976563),
-		wantValues:         []interface{}{float32(1.000976563), float64(1.000976563)},
+		wantValues:         []any{float32(1.000976563), float64(1.000976563)},
 		equalityThreshold:  1e-9,
 	},
 	{
-		data:               hexDecode("f93555"),
+		data:               mustHexDecode("f93555"),
 		wantInterfaceValue: float64(0.333251953125),
-		wantValues:         []interface{}{float32(0.333251953125), float64(0.333251953125)},
+		wantValues:         []any{float32(0.333251953125), float64(0.333251953125)},
 		equalityThreshold:  1e-9,
 	},
 
 	// CBOR test data "canonNums" are from https://github.com/cbor-wg/cbor-test-vectors
 	{
-		data:               hexDecode("f9bd00"),
+		data:               mustHexDecode("f9bd00"),
 		wantInterfaceValue: float64(-1.25),
-		wantValues:         []interface{}{float32(-1.25), float64(-1.25)},
+		wantValues:         []any{float32(-1.25), float64(-1.25)},
 	},
 	{
-		data:               hexDecode("f93e00"),
+		data:               mustHexDecode("f93e00"),
 		wantInterfaceValue: float64(1.5),
-		wantValues:         []interface{}{float32(1.5), float64(1.5)},
+		wantValues:         []any{float32(1.5), float64(1.5)},
 	},
 	{
-		data:               hexDecode("fb4024333333333333"),
+		data:               mustHexDecode("fb4024333333333333"),
 		wantInterfaceValue: float64(10.1),
-		wantValues:         []interface{}{float32(10.1), float64(10.1)},
+		wantValues:         []any{float32(10.1), float64(10.1)},
 	},
 	{
-		data:               hexDecode("f90001"),
+		data:               mustHexDecode("f90001"),
 		wantInterfaceValue: float64(5.960464477539063e-8),
-		wantValues:         []interface{}{float32(5.960464477539063e-8), float64(5.960464477539063e-8)},
+		wantValues:         []any{float32(5.960464477539063e-8), float64(5.960464477539063e-8)},
 	},
 	{
-		data:               hexDecode("fa7f7fffff"),
+		data:               mustHexDecode("fa7f7fffff"),
 		wantInterfaceValue: float64(3.4028234663852886e+38),
-		wantValues:         []interface{}{float32(3.4028234663852886e+38), float64(3.4028234663852886e+38)},
+		wantValues:         []any{float32(3.4028234663852886e+38), float64(3.4028234663852886e+38)},
 	},
 	{
-		data:               hexDecode("f90400"),
+		data:               mustHexDecode("f90400"),
 		wantInterfaceValue: float64(0.00006103515625),
-		wantValues:         []interface{}{float32(0.00006103515625), float64(0.00006103515625)},
+		wantValues:         []any{float32(0.00006103515625), float64(0.00006103515625)},
 	},
 	{
-		data:               hexDecode("f933ff"),
+		data:               mustHexDecode("f933ff"),
 		wantInterfaceValue: float64(0.2498779296875),
-		wantValues:         []interface{}{float32(0.2498779296875), float64(0.2498779296875)},
+		wantValues:         []any{float32(0.2498779296875), float64(0.2498779296875)},
 	},
 	{
-		data:               hexDecode("fa33000000"),
+		data:               mustHexDecode("fa33000000"),
 		wantInterfaceValue: float64(2.9802322387695312e-8),
-		wantValues:         []interface{}{float32(2.9802322387695312e-8), float64(2.9802322387695312e-8)},
+		wantValues:         []any{float32(2.9802322387695312e-8), float64(2.9802322387695312e-8)},
 	},
 	{
-		data:               hexDecode("fa33333866"),
+		data:               mustHexDecode("fa33333866"),
 		wantInterfaceValue: float64(4.1727979294137185e-8),
-		wantValues:         []interface{}{float32(4.1727979294137185e-8), float64(4.1727979294137185e-8)},
+		wantValues:         []any{float32(4.1727979294137185e-8), float64(4.1727979294137185e-8)},
 	},
 	{
-		data:               hexDecode("fa37002000"),
+		data:               mustHexDecode("fa37002000"),
 		wantInterfaceValue: float64(0.000007636845111846924),
-		wantValues:         []interface{}{float32(0.000007636845111846924), float64(0.000007636845111846924)},
+		wantValues:         []any{float32(0.000007636845111846924), float64(0.000007636845111846924)},
 	},
 }
 
 const invalidUTF8ErrorMsg = "cbor: invalid UTF-8 string"
 
-func hexDecode(s string) []byte {
+func mustHexDecode(s string) []byte {
 	data, err := hex.DecodeString(s)
 	if err != nil {
 		panic(err)
@@ -2285,7 +2286,7 @@ func hexDecode(s string) []byte {
 	return data
 }
 
-func bigIntOrPanic(s string) big.Int {
+func mustBigInt(s string) big.Int {
 	bi, ok := new(big.Int).SetString(s, 10)
 	if !ok {
 		panic("failed to convert " + s + " to big.Int")
@@ -2294,8 +2295,8 @@ func bigIntOrPanic(s string) big.Int {
 }
 
 func TestUnmarshalToEmptyInterface(t *testing.T) {
-	for _, tc := range unmarshalTests {
-		var v interface{}
+	for _, tc := range unmarshalTestCases {
+		var v any
 		if err := Unmarshal(tc.data, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 			continue
@@ -2305,7 +2306,7 @@ func TestUnmarshalToEmptyInterface(t *testing.T) {
 }
 
 func TestUnmarshalToRawMessage(t *testing.T) {
-	for _, tc := range unmarshalTests {
+	for _, tc := range unmarshalTestCases {
 		testUnmarshalToRawMessage(t, tc.data)
 	}
 }
@@ -2356,16 +2357,16 @@ func testUnmarshalToRawMessage(t *testing.T, data []byte) {
 }
 
 func TestUnmarshalToCompatibleTypes(t *testing.T) {
-	for _, tc := range unmarshalTests {
+	for _, tc := range unmarshalTestCases {
 		for _, wantValue := range tc.wantValues {
-			testUnmarshalToCompatibleType(t, tc.data, wantValue, func(gotValue interface{}) {
+			testUnmarshalToCompatibleType(t, tc.data, wantValue, func(gotValue any) {
 				compareNonFloats(t, tc.data, gotValue, wantValue)
 			})
 		}
 	}
 }
 
-func testUnmarshalToCompatibleType(t *testing.T, data []byte, wantValue interface{}, compare func(gotValue interface{})) {
+func testUnmarshalToCompatibleType(t *testing.T, data []byte, wantValue any, compare func(gotValue any)) {
 	var rv reflect.Value
 
 	cborNil := isCBORNil(data)
@@ -2386,7 +2387,7 @@ func testUnmarshalToCompatibleType(t *testing.T, data []byte, wantValue interfac
 	//     var pv *wantType
 	//     Unmarshal(tc.data, &pv)
 
-	rv = reflect.New(reflect.PtrTo(wantType))
+	rv = reflect.New(reflect.PointerTo(wantType))
 	if err := Unmarshal(data, rv.Interface()); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		return
@@ -2405,7 +2406,7 @@ func testUnmarshalToCompatibleType(t *testing.T, data []byte, wantValue interfac
 	//     Unmarshal(tc.data, &pv)
 
 	irv := reflect.New(wantType)
-	rv = reflect.New(reflect.PtrTo(wantType))
+	rv = reflect.New(reflect.PointerTo(wantType))
 	rv.Elem().Set(irv)
 	if err := Unmarshal(data, rv.Interface()); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
@@ -2421,7 +2422,7 @@ func testUnmarshalToCompatibleType(t *testing.T, data []byte, wantValue interfac
 }
 
 func TestUnmarshalToIncompatibleTypes(t *testing.T) {
-	for _, tc := range unmarshalTests {
+	for _, tc := range unmarshalTestCases {
 		for _, wrongType := range tc.wrongTypes {
 			testUnmarshalToIncompatibleType(t, tc.data, wrongType)
 		}
@@ -2446,7 +2447,7 @@ func testUnmarshalToIncompatibleType(t *testing.T, data []byte, wrongType reflec
 	//     var pv *wrongType
 	//     Unmarshal(tc.data, &pv)
 
-	rv = reflect.New(reflect.PtrTo(wrongType))
+	rv = reflect.New(reflect.PointerTo(wrongType))
 	if err := Unmarshal(data, rv.Interface()); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
@@ -2459,7 +2460,7 @@ func testUnmarshalToIncompatibleType(t *testing.T, data []byte, wrongType reflec
 	//     Unmarshal(tc.data, &pv)
 
 	irv := reflect.New(wrongType)
-	rv = reflect.New(reflect.PtrTo(wrongType))
+	rv = reflect.New(reflect.PointerTo(wrongType))
 	rv.Elem().Set(irv)
 
 	if err := Unmarshal(data, rv.Interface()); err == nil {
@@ -2469,7 +2470,7 @@ func testUnmarshalToIncompatibleType(t *testing.T, data []byte, wrongType reflec
 	}
 }
 
-func compareNonFloats(t *testing.T, data []byte, got interface{}, want interface{}) {
+func compareNonFloats(t *testing.T, data []byte, got any, want any) {
 	switch tm := want.(type) {
 	case time.Time:
 		if vt, ok := got.(time.Time); !ok || !tm.Equal(vt) {
@@ -2484,8 +2485,8 @@ func compareNonFloats(t *testing.T, data []byte, got interface{}, want interface
 }
 
 func TestUnmarshalFloatToEmptyInterface(t *testing.T) {
-	for _, tc := range unmarshalFloatTests {
-		var v interface{}
+	for _, tc := range unmarshalFloatTestCases {
+		var v any
 		if err := Unmarshal(tc.data, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 			continue
@@ -2495,15 +2496,15 @@ func TestUnmarshalFloatToEmptyInterface(t *testing.T) {
 }
 
 func TestUnmarshalFloatToRawMessage(t *testing.T) {
-	for _, tc := range unmarshalFloatTests {
+	for _, tc := range unmarshalFloatTestCases {
 		testUnmarshalToRawMessage(t, tc.data)
 	}
 }
 
 func TestUnmarshalFloatToCompatibleTypes(t *testing.T) {
-	for _, tc := range unmarshalFloatTests {
+	for _, tc := range unmarshalFloatTestCases {
 		for _, wantValue := range tc.wantValues {
-			testUnmarshalToCompatibleType(t, tc.data, wantValue, func(gotValue interface{}) {
+			testUnmarshalToCompatibleType(t, tc.data, wantValue, func(gotValue any) {
 				compareFloats(t, tc.data, gotValue, wantValue, tc.equalityThreshold)
 			})
 		}
@@ -2511,14 +2512,14 @@ func TestUnmarshalFloatToCompatibleTypes(t *testing.T) {
 }
 
 func TestUnmarshalFloatToIncompatibleTypes(t *testing.T) {
-	for _, tc := range unmarshalFloatTests {
+	for _, tc := range unmarshalFloatTestCases {
 		for _, wrongType := range unmarshalFloatWrongTypes {
 			testUnmarshalToIncompatibleType(t, tc.data, wrongType)
 		}
 	}
 }
 
-func compareFloats(t *testing.T, data []byte, got interface{}, want interface{}, equalityThreshold float64) {
+func compareFloats(t *testing.T, data []byte, got any, want any, equalityThreshold float64) {
 	var gotFloat64, wantFloat64 float64
 
 	switch want := want.(type) {
@@ -2558,11 +2559,11 @@ func compareFloats(t *testing.T, data []byte, got interface{}, want interface{},
 }
 
 func TestNegIntOverflow(t *testing.T) {
-	data := hexDecode("3bffffffffffffffff") // -18446744073709551616
+	data := mustHexDecode("3bffffffffffffffff") // -18446744073709551616
 
-	// Decode CBOR neg int that overflows Go int64 to empty interface
-	var v1 interface{}
-	wantObj := bigIntOrPanic("-18446744073709551616")
+	// Decode CBOR neg int that overflows Go int64 to a value of type any.
+	var v1 any
+	wantObj := mustBigInt("-18446744073709551616")
 	if err := Unmarshal(data, &v1); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %+v", data, err)
 	} else if !reflect.DeepEqual(v1, wantObj) {
@@ -2589,8 +2590,8 @@ func TestNegIntOverflow(t *testing.T) {
 }
 
 func TestUnmarshalIntoPtrPrimitives(t *testing.T) {
-	cborDataInt := hexDecode("1818")                          // 24
-	cborDataString := hexDecode("7f657374726561646d696e67ff") // "streaming"
+	cborDataInt := mustHexDecode("1818")                          // 24
+	cborDataString := mustHexDecode("7f657374726561646d696e67ff") // "streaming"
 
 	const wantInt = 24
 	const wantString = "streaming"
@@ -2652,7 +2653,7 @@ func TestUnmarshalIntoPtrPrimitives(t *testing.T) {
 }
 
 func TestUnmarshalIntoPtrArrayPtrElem(t *testing.T) {
-	data := hexDecode("83010203") // []int{1, 2, 3}
+	data := mustHexDecode("83010203") // []int{1, 2, 3}
 
 	n1, n2, n3 := 1, 2, 3
 
@@ -2666,7 +2667,7 @@ func TestUnmarshalIntoPtrArrayPtrElem(t *testing.T) {
 
 	// Unmarshal CBOR array into a non-nil pointer.
 	if err := Unmarshal(data, &ppslc); err != nil {
-		t.Errorf("Unmarshal(0x%x, %s) returned error %v", data, reflect.TypeOf(ppslc), err)
+		t.Errorf("Unmarshal(0x%x, %s) returned error %v", data, reflect.TypeFor[**[]*int](), err)
 	} else if !reflect.DeepEqual(slc, wantArray) {
 		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", data, slc, slc, wantArray)
 	}
@@ -2679,7 +2680,7 @@ func TestUnmarshalIntoPtrArrayPtrElem(t *testing.T) {
 }
 
 func TestUnmarshalIntoPtrMapPtrElem(t *testing.T) {
-	data := hexDecode("a201020304") // {1: 2, 3: 4}
+	data := mustHexDecode("a201020304") // {1: 2, 3: 4}
 
 	n1, n2, n3, n4 := 1, 2, 3, 4
 
@@ -2693,7 +2694,7 @@ func TestUnmarshalIntoPtrMapPtrElem(t *testing.T) {
 
 	// Unmarshal CBOR map into a non-nil pointer.
 	if err := Unmarshal(data, &ppm); err != nil {
-		t.Errorf("Unmarshal(0x%x, %s) returned error %v", data, reflect.TypeOf(ppm), err)
+		t.Errorf("Unmarshal(0x%x, %s) returned error %v", data, reflect.TypeFor[**map[int]*int](), err)
 	} else if !reflect.DeepEqual(m, wantMap) {
 		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", data, m, m, wantMap)
 	}
@@ -2714,7 +2715,7 @@ func TestUnmarshalIntoPtrStructPtrElem(t *testing.T) {
 		E *string `cbor:"e"`
 	}
 
-	data := hexDecode("a56161614161626142616361436164614461656145") // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"}
+	data := mustHexDecode("a56161614161626142616361436164614461656145") // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"}
 
 	a, b, c, d, e := "A", "B", "C", "D", "E"
 	wantObj := s1{A: &a, B: &b, C: &c, D: &d, E: &e}
@@ -2727,7 +2728,7 @@ func TestUnmarshalIntoPtrStructPtrElem(t *testing.T) {
 
 	// Unmarshal CBOR map into a non-nil pointer.
 	if err := Unmarshal(data, &pps); err != nil {
-		t.Errorf("Unmarshal(0x%x, %s) returned error %v", data, reflect.TypeOf(pps), err)
+		t.Errorf("Unmarshal(0x%x, %s) returned error %v", data, reflect.TypeFor[**s1](), err)
 	} else if !reflect.DeepEqual(s, wantObj) {
 		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", data, s, s, wantObj)
 	}
@@ -2740,7 +2741,7 @@ func TestUnmarshalIntoPtrStructPtrElem(t *testing.T) {
 }
 
 func TestUnmarshalIntoArray(t *testing.T) {
-	data := hexDecode("83010203") // []int{1, 2, 3}
+	data := mustHexDecode("83010203") // []int{1, 2, 3}
 
 	// Unmarshal CBOR array into Go array.
 	var arr1 [3]int
@@ -2783,62 +2784,166 @@ func TestUnmarshalNil(t *testing.T) {
 		I int
 	}
 
-	data := [][]byte{hexDecode("f6"), hexDecode("f7")} // CBOR null and undefined values
+	data := [][]byte{mustHexDecode("f6"), mustHexDecode("f7")} // CBOR null and undefined values
 
 	testCases := []struct {
 		name      string
-		value     interface{}
-		wantValue interface{}
+		value     any
+		wantValue any
 	}{
-		// Unmarshalling CBOR null to the following types is a no-op.
-		{"bool", true, true},
-		{"int", int(-1), int(-1)},
-		{"int8", int8(-2), int8(-2)},
-		{"int16", int16(-3), int16(-3)},
-		{"int32", int32(-4), int32(-4)},
-		{"int64", int64(-5), int64(-5)},
-		{"uint", uint(1), uint(1)},
-		{"uint8", uint8(2), uint8(2)},
-		{"uint16", uint16(3), uint16(3)},
-		{"uint32", uint32(4), uint32(4)},
-		{"uint64", uint64(5), uint64(5)},
-		{"float32", float32(1.23), float32(1.23)},
-		{"float64", float64(4.56), float64(4.56)},
-		{"string", "hello", "hello"},
-		{"array", [3]int{1, 2, 3}, [3]int{1, 2, 3}},
+		// Unmarshaling CBOR null to the following types is a no-op.
+		{
+			name:      "bool",
+			value:     true,
+			wantValue: true,
+		},
+		{
+			name:      "int",
+			value:     int(-1),
+			wantValue: int(-1),
+		},
+		{
+			name:      "int8",
+			value:     int8(-2),
+			wantValue: int8(-2),
+		},
+		{
+			name:      "int16",
+			value:     int16(-3),
+			wantValue: int16(-3),
+		},
+		{
+			name:      "int32",
+			value:     int32(-4),
+			wantValue: int32(-4),
+		},
+		{
+			name:      "int64",
+			value:     int64(-5),
+			wantValue: int64(-5),
+		},
+		{
+			name:      "uint",
+			value:     uint(1),
+			wantValue: uint(1),
+		},
+		{
+			name:      "uint8",
+			value:     uint8(2),
+			wantValue: uint8(2),
+		},
+		{
+			name:      "uint16",
+			value:     uint16(3),
+			wantValue: uint16(3),
+		},
+		{
+			name:      "uint32",
+			value:     uint32(4),
+			wantValue: uint32(4),
+		},
+		{
+			name:      "uint64",
+			value:     uint64(5),
+			wantValue: uint64(5),
+		},
+		{
+			name:      "float32",
+			value:     float32(1.23),
+			wantValue: float32(1.23),
+		},
+		{
+			name:      "float64",
+			value:     float64(4.56),
+			wantValue: float64(4.56),
+		},
+		{
+			name:      "string",
+			value:     "hello",
+			wantValue: "hello",
+		},
+		{
+			name:      "array",
+			value:     [3]int{1, 2, 3},
+			wantValue: [3]int{1, 2, 3},
+		},
 
-		// Unmarshalling CBOR null to slice/map sets Go values to nil.
-		{"[]byte", []byte{1, 2, 3}, []byte(nil)},
-		{"slice", []string{"hello", "world"}, []string(nil)},
-		{"map", map[string]bool{"hello": true, "goodbye": false}, map[string]bool(nil)},
+		// Unmarshaling CBOR null to slice/map sets Go values to nil.
+		{
+			name:      "[]byte",
+			value:     []byte{1, 2, 3},
+			wantValue: []byte(nil),
+		},
+		{
+			name:      "slice",
+			value:     []string{"hello", "world"},
+			wantValue: []string(nil),
+		},
+		{
+			name:      "map",
+			value:     map[string]bool{"hello": true, "goodbye": false},
+			wantValue: map[string]bool(nil),
+		},
 
-		// Unmarshalling CBOR null to ByteString (string wrapper for []byte) resets ByteString to empty string.
-		{"cbor.ByteString", ByteString("\x01\x02\x03"), ByteString("")},
+		// Unmarshaling CBOR null to ByteString (string wrapper for []byte) resets ByteString to empty string.
+		{
+			name:      "cbor.ByteString",
+			value:     ByteString("\x01\x02\x03"),
+			wantValue: ByteString(""),
+		},
 
-		// Unmarshalling CBOR null to time.Time is a no-op.
-		{"time.Time", time.Date(2020, time.January, 2, 3, 4, 5, 6, time.UTC), time.Date(2020, time.January, 2, 3, 4, 5, 6, time.UTC)},
+		// Unmarshaling CBOR null to time.Time is a no-op.
+		{
+			name:      "time.Time",
+			value:     time.Date(2020, time.January, 2, 3, 4, 5, 6, time.UTC),
+			wantValue: time.Date(2020, time.January, 2, 3, 4, 5, 6, time.UTC),
+		},
 
-		// Unmarshalling CBOR null to big.Int is a no-op.
-		{"big.Int", bigIntOrPanic("123"), bigIntOrPanic("123")},
+		// Unmarshaling CBOR null to big.Int is a no-op.
+		{
+			name:      "big.Int",
+			value:     mustBigInt("123"),
+			wantValue: mustBigInt("123"),
+		},
 
-		// Unmarshalling CBOR null to user defined struct types is a no-op.
-		{"user defined struct", T{I: 123}, T{I: 123}},
+		// Unmarshaling CBOR null to user defined struct types is a no-op.
+		{
+			name:      "user defined struct",
+			value:     T{I: 123},
+			wantValue: T{I: 123},
+		},
 
-		// Unmarshalling CBOR null to cbor.Tag and cbor.RawTag is a no-op.
-		{"cbor.RawTag", RawTag{123, []byte{4, 5, 6}}, RawTag{123, []byte{4, 5, 6}}},
-		{"cbor.Tag", Tag{123, "hello world"}, Tag{123, "hello world"}},
+		// Unmarshaling CBOR null to cbor.Tag and cbor.RawTag is a no-op.
+		{
+			name:      "cbor.RawTag",
+			value:     RawTag{123, []byte{4, 5, 6}},
+			wantValue: RawTag{123, []byte{4, 5, 6}},
+		},
+		{
+			name:      "cbor.Tag",
+			value:     Tag{123, "hello world"},
+			wantValue: Tag{123, "hello world"},
+		},
 
-		// Unmarshalling to cbor.RawMessage sets cbor.RawMessage to raw CBOR bytes (0xf6 or 0xf7).
+		// Unmarshaling to cbor.RawMessage sets cbor.RawMessage to raw CBOR bytes (0xf6 or 0xf7).
 		// It's tested in TestUnmarshal().
 
-		// Unmarshalling to types implementing cbor.BinaryUnmarshaler is a no-op.
-		{"cbor.BinaryUnmarshaler", number(456), number(456)},
+		// Unmarshaling to types implementing cbor.BinaryUnmarshaler is a no-op.
+		{
+			name:      "cbor.BinaryUnmarshaler",
+			value:     number(456),
+			wantValue: number(456),
+		},
 
-		// When unmarshalling to types implementing cbor.Unmarshaler,
-		{"cbor.Unmarshaler", nilUnmarshaler("hello world"), nilUnmarshaler("null")},
+		// When unmarshaling to types implementing cbor.Unmarshaler,
+		{
+			name:      "cbor.Unmarshaler",
+			value:     nilUnmarshaler("hello world"),
+			wantValue: nilUnmarshaler("null"),
+		},
 	}
 
-	// Unmarshalling to values of specified Go types.
+	// Unmarshaling to values of specified Go types.
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, data := range data {
@@ -2855,20 +2960,32 @@ func TestUnmarshalNil(t *testing.T) {
 	}
 }
 
-var invalidUnmarshalTests = []struct {
+var invalidUnmarshalTestCases = []struct {
 	name         string
-	v            interface{}
+	v            any
 	wantErrorMsg string
 }{
-	{"unmarshal into nil interface{}", nil, "cbor: Unmarshal(nil)"},
-	{"unmarshal into non-pointer value", 5, "cbor: Unmarshal(non-pointer int)"},
-	{"unmarshal into nil pointer", (*int)(nil), "cbor: Unmarshal(nil *int)"},
+	{
+		name:         "unmarshal into nil",
+		v:            nil,
+		wantErrorMsg: "cbor: Unmarshal(nil)",
+	},
+	{
+		name:         "unmarshal into non-pointer value",
+		v:            5,
+		wantErrorMsg: "cbor: Unmarshal(non-pointer int)",
+	},
+	{
+		name:         "unmarshal into nil pointer",
+		v:            (*int)(nil),
+		wantErrorMsg: "cbor: Unmarshal(nil *int)",
+	},
 }
 
 func TestInvalidUnmarshal(t *testing.T) {
 	data := []byte{0x00}
 
-	for _, tc := range invalidUnmarshalTests {
+	for _, tc := range invalidUnmarshalTestCases {
 		t.Run(tc.name, func(t *testing.T) {
 			err := Unmarshal(data, tc.v)
 			if err == nil {
@@ -2882,126 +2999,527 @@ func TestInvalidUnmarshal(t *testing.T) {
 	}
 }
 
-var invalidCBORUnmarshalTests = []struct {
-	name                 string
-	data                 []byte
-	wantErrorMsg         string
-	errorMsgPartialMatch bool
+var invalidCBORUnmarshalTestCases = []struct {
+	name         string
+	data         []byte
+	wantErrorMsg string
 }{
-	{"Nil data", []byte(nil), "EOF", false},
-	{"Empty data", []byte{}, "EOF", false},
-	{"Tag number not followed by tag content", []byte{0xc0}, "unexpected EOF", false},
-	{"Definite length strings with tagged chunk", hexDecode("5fc64401020304ff"), "cbor: wrong element type tag for indefinite-length byte string", false},
-	{"Definite length strings with tagged chunk", hexDecode("7fc06161ff"), "cbor: wrong element type tag for indefinite-length UTF-8 text string", false},
-	{"Indefinite length strings with invalid head", hexDecode("7f61"), "unexpected EOF", false},
-	{"Invalid nested tag number", hexDecode("d864dc1a514b67b0"), "cbor: invalid additional information", true},
+	{
+		name:         "nil data",
+		data:         []byte(nil),
+		wantErrorMsg: "EOF",
+	},
+	{
+		name:         "empty data",
+		data:         []byte{},
+		wantErrorMsg: "EOF",
+	},
+	{
+		name:         "tag number not followed by tag content",
+		data:         []byte{0xc0},
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "indefinite-length byte string with tagged chunk",
+		data:         mustHexDecode("5fc64401020304ff"),
+		wantErrorMsg: "cbor: wrong element type tag for indefinite-length byte string",
+	},
+	{
+		name:         "indefinite-length text string with tagged chunk",
+		data:         mustHexDecode("7fc06161ff"),
+		wantErrorMsg: "cbor: wrong element type tag for indefinite-length UTF-8 text string",
+	},
+	{
+		name:         "indefinite-length strings with truncated text string",
+		data:         mustHexDecode("7f61"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "invalid nested tag number",
+		data:         mustHexDecode("d864dc1a514b67b0"),
+		wantErrorMsg: "cbor: invalid additional information 28 for type tag",
+	},
 	// Data from 7049bis G.1
 	// Premature end of the input
-	{"End of input in a head", hexDecode("18"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("19"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("1a"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("1b"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("1901"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("1a0102"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("1b01020304050607"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("38"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("58"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("78"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("98"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("9a01ff00"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("b8"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("d8"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("f8"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("f900"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("fa0000"), "unexpected EOF", false},
-	{"End of input in a head", hexDecode("fb000000"), "unexpected EOF", false},
-	{"Definite length strings with short data", hexDecode("41"), "unexpected EOF", false},
-	{"Definite length strings with short data", hexDecode("61"), "unexpected EOF", false},
-	{"Definite length strings with short data", hexDecode("5affffffff00"), "unexpected EOF", false},
-	{"Definite length strings with short data", hexDecode("5bffffffffffffffff010203"), "cbor: byte string length 18446744073709551615 is too large, causing integer overflow", false},
-	{"Definite length strings with short data", hexDecode("7affffffff00"), "unexpected EOF", false},
-	{"Definite length strings with short data", hexDecode("7b7fffffffffffffff010203"), "unexpected EOF", false},
-	{"Definite length maps and arrays not closed with enough items", hexDecode("81"), "unexpected EOF", false},
-	{"Definite length maps and arrays not closed with enough items", hexDecode("818181818181818181"), "unexpected EOF", false},
-	{"Definite length maps and arrays not closed with enough items", hexDecode("8200"), "unexpected EOF", false},
-	{"Definite length maps and arrays not closed with enough items", hexDecode("a1"), "unexpected EOF", false},
-	{"Definite length maps and arrays not closed with enough items", hexDecode("a20102"), "unexpected EOF", false},
-	{"Definite length maps and arrays not closed with enough items", hexDecode("a100"), "unexpected EOF", false},
-	{"Definite length maps and arrays not closed with enough items", hexDecode("a2000000"), "unexpected EOF", false},
-	{"Indefinite length strings not closed by a break stop code", hexDecode("5f4100"), "unexpected EOF", false},
-	{"Indefinite length strings not closed by a break stop code", hexDecode("7f6100"), "unexpected EOF", false},
-	{"Indefinite length maps and arrays not closed by a break stop code", hexDecode("9f"), "unexpected EOF", false},
-	{"Indefinite length maps and arrays not closed by a break stop code", hexDecode("9f0102"), "unexpected EOF", false},
-	{"Indefinite length maps and arrays not closed by a break stop code", hexDecode("bf"), "unexpected EOF", false},
-	{"Indefinite length maps and arrays not closed by a break stop code", hexDecode("bf01020102"), "unexpected EOF", false},
-	{"Indefinite length maps and arrays not closed by a break stop code", hexDecode("819f"), "unexpected EOF", false},
-	{"Indefinite length maps and arrays not closed by a break stop code", hexDecode("9f8000"), "unexpected EOF", false},
-	{"Indefinite length maps and arrays not closed by a break stop code", hexDecode("9f9f9f9f9fffffffff"), "unexpected EOF", false},
-	{"Indefinite length maps and arrays not closed by a break stop code", hexDecode("9f819f819f9fffffff"), "unexpected EOF", false},
+	{
+		name:         "end of input in a head",
+		data:         mustHexDecode("18"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "end of input in a head",
+		data:         mustHexDecode("19"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "end of input in a head",
+		data:         mustHexDecode("1a"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "end of input in a head",
+		data:         mustHexDecode("1b"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "end of input in a head",
+		data:         mustHexDecode("1901"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "end of input in a head",
+		data:         mustHexDecode("1a0102"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "end of input in a head",
+		data:         mustHexDecode("1b01020304050607"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "end of input in a head",
+		data:         mustHexDecode("38"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "end of input in a head",
+		data:         mustHexDecode("58"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "end of input in a head",
+		data:         mustHexDecode("78"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "end of input in a head",
+		data:         mustHexDecode("98"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "end of input in a head",
+		data:         mustHexDecode("9a01ff00"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "end of input in a head",
+		data:         mustHexDecode("b8"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "end of input in a head",
+		data:         mustHexDecode("d8"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "end of input in a head",
+		data:         mustHexDecode("f8"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "end of input in a head",
+		data:         mustHexDecode("f900"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "end of input in a head",
+		data:         mustHexDecode("fa0000"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "end of input in a head",
+		data:         mustHexDecode("fb000000"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "definite-length strings with short data",
+		data:         mustHexDecode("41"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "definite-length strings with short data",
+		data:         mustHexDecode("61"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "definite-length strings with short data",
+		data:         mustHexDecode("5affffffff00"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "definite-length strings with short data",
+		data:         mustHexDecode("5bffffffffffffffff010203"),
+		wantErrorMsg: "cbor: byte string length 18446744073709551615 is too large, causing integer overflow",
+	},
+	{
+		name:         "definite-length strings with short data",
+		data:         mustHexDecode("7affffffff00"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "definite-length strings with short data",
+		data:         mustHexDecode("7b7fffffffffffffff010203"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "definite-length maps and arrays not closed with enough items",
+		data:         mustHexDecode("81"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "definite-length maps and arrays not closed with enough items",
+		data:         mustHexDecode("818181818181818181"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "definite-length maps and arrays not closed with enough items",
+		data:         mustHexDecode("8200"),
+		wantErrorMsg: "unexpected EOF",
+	},
+
+	{
+		name:         "definite-length maps and arrays not closed with enough items",
+		data:         mustHexDecode("a1"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "definite-length maps and arrays not closed with enough items",
+		data:         mustHexDecode("a20102"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "definite-length maps and arrays not closed with enough items",
+		data:         mustHexDecode("a100"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "definite-length maps and arrays not closed with enough items",
+		data:         mustHexDecode("a2000000"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "indefinite-length strings not closed by a break stop code",
+		data:         mustHexDecode("5f4100"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "indefinite-length strings not closed by a break stop code",
+		data:         mustHexDecode("7f6100"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "indefinite-length maps and arrays not closed by a break stop code",
+		data:         mustHexDecode("9f"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "indefinite-length maps and arrays not closed by a break stop code",
+		data:         mustHexDecode("9f0102"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "indefinite-length maps and arrays not closed by a break stop code",
+		data:         mustHexDecode("bf"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "indefinite-length maps and arrays not closed by a break stop code",
+		data:         mustHexDecode("bf01020102"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "indefinite-length maps and arrays not closed by a break stop code",
+		data:         mustHexDecode("819f"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "indefinite-length maps and arrays not closed by a break stop code",
+		data:         mustHexDecode("9f8000"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "indefinite-length maps and arrays not closed by a break stop code",
+		data:         mustHexDecode("9f9f9f9f9fffffffff"),
+		wantErrorMsg: "unexpected EOF",
+	},
+	{
+		name:         "indefinite-length maps and arrays not closed by a break stop code",
+		data:         mustHexDecode("9f819f819f9fffffff"),
+		wantErrorMsg: "unexpected EOF",
+	},
 	// Five subkinds of well-formedness error kind 3 (syntax error)
-	{"Reserved additional information values", hexDecode("3e"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("5c"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("5d"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("5e"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("7c"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("7d"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("7e"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("9c"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("9d"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("9e"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("bc"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("bd"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("be"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("dc"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("dd"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("de"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("fc"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("fd"), "cbor: invalid additional information", true},
-	{"Reserved additional information values", hexDecode("fe"), "cbor: invalid additional information", true},
-	{"Reserved two-byte encodings of simple types", hexDecode("f800"), "cbor: invalid simple value 0 for type primitives", true},
-	{"Reserved two-byte encodings of simple types", hexDecode("f801"), "cbor: invalid simple value 1 for type primitives", true},
-	{"Reserved two-byte encodings of simple types", hexDecode("f818"), "cbor: invalid simple value 24 for type primitives", true},
-	{"Reserved two-byte encodings of simple types", hexDecode("f81f"), "cbor: invalid simple value 31 for type primitives", true},
-	{"Indefinite length string chunks not of the correct type", hexDecode("5f00ff"), "cbor: wrong element type positive integer for indefinite-length byte string", false},
-	{"Indefinite length string chunks not of the correct type", hexDecode("5f21ff"), "cbor: wrong element type negative integer for indefinite-length byte string", false},
-	{"Indefinite length string chunks not of the correct type", hexDecode("5f6100ff"), "cbor: wrong element type UTF-8 text string for indefinite-length byte string", false},
-	{"Indefinite length string chunks not of the correct type", hexDecode("5f80ff"), "cbor: wrong element type array for indefinite-length byte string", false},
-	{"Indefinite length string chunks not of the correct type", hexDecode("5fa0ff"), "cbor: wrong element type map for indefinite-length byte string", false},
-	{"Indefinite length string chunks not of the correct type", hexDecode("5fc000ff"), "cbor: wrong element type tag for indefinite-length byte string", false},
-	{"Indefinite length string chunks not of the correct type", hexDecode("5fe0ff"), "cbor: wrong element type primitives for indefinite-length byte string", false},
-	{"Indefinite length string chunks not of the correct type", hexDecode("7f4100ff"), "cbor: wrong element type byte string for indefinite-length UTF-8 text string", false},
-	{"Indefinite length string chunks not definite length", hexDecode("5f5f4100ffff"), "cbor: indefinite-length byte string chunk is not definite-length", false},
-	{"Indefinite length string chunks not definite length", hexDecode("7f7f6100ffff"), "cbor: indefinite-length UTF-8 text string chunk is not definite-length", false},
-	{"Break occurring on its own outside of an indefinite length item", hexDecode("ff"), "cbor: unexpected \"break\" code", true},
-	{"Break occurring in a definite length array or map or a tag", hexDecode("81ff"), "cbor: unexpected \"break\" code", true},
-	{"Break occurring in a definite length array or map or a tag", hexDecode("8200ff"), "cbor: unexpected \"break\" code", true},
-	{"Break occurring in a definite length array or map or a tag", hexDecode("a1ff"), "cbor: unexpected \"break\" code", true},
-	{"Break occurring in a definite length array or map or a tag", hexDecode("a1ff00"), "cbor: unexpected \"break\" code", true},
-	{"Break occurring in a definite length array or map or a tag", hexDecode("a100ff"), "cbor: unexpected \"break\" code", true},
-	{"Break occurring in a definite length array or map or a tag", hexDecode("a20000ff"), "cbor: unexpected \"break\" code", true},
-	{"Break occurring in a definite length array or map or a tag", hexDecode("9f81ff"), "cbor: unexpected \"break\" code", true},
-	{"Break occurring in a definite length array or map or a tag", hexDecode("9f829f819f9fffffffff"), "cbor: unexpected \"break\" code", true},
-	{"Break in indefinite length map would lead to odd number of items (break in a value position)", hexDecode("bf00ff"), "cbor: unexpected \"break\" code", true},
-	{"Break in indefinite length map would lead to odd number of items (break in a value position)", hexDecode("bf000000ff"), "cbor: unexpected \"break\" code", true},
-	{"Major type 0 with additional information 31", hexDecode("1f"), "cbor: invalid additional information 31 for type positive integer", true},
-	{"Major type 1 with additional information 31", hexDecode("3f"), "cbor: invalid additional information 31 for type negative integer", true},
-	{"Major type 6 with additional information 31", hexDecode("df"), "cbor: invalid additional information 31 for type tag", true},
+	{
+		name:         "reserved additional information values",
+		data:         mustHexDecode("3e"),
+		wantErrorMsg: "cbor: invalid additional information 30 for type negative integer",
+	},
+	{
+		name:         "reserved additional information values",
+		data:         mustHexDecode("5c"),
+		wantErrorMsg: "cbor: invalid additional information 28 for type byte string",
+	},
+	{
+		name:         "reserved additional information values",
+		data:         mustHexDecode("5d"),
+		wantErrorMsg: "cbor: invalid additional information 29 for type byte string",
+	},
+	{
+		name:         "reserved additional information values",
+		data:         mustHexDecode("5e"),
+		wantErrorMsg: "cbor: invalid additional information 30 for type byte string",
+	},
+	{
+		name:         "reserved additional information values",
+		data:         mustHexDecode("7c"),
+		wantErrorMsg: "cbor: invalid additional information 28 for type UTF-8 text string",
+	},
+	{
+		name:         "reserved additional information values",
+		data:         mustHexDecode("7d"),
+		wantErrorMsg: "cbor: invalid additional information 29 for type UTF-8 text string",
+	},
+	{
+		name:         "reserved additional information values",
+		data:         mustHexDecode("7e"),
+		wantErrorMsg: "cbor: invalid additional information 30 for type UTF-8 text string",
+	},
+	{
+		name:         "reserved additional information values",
+		data:         mustHexDecode("9c"),
+		wantErrorMsg: "cbor: invalid additional information 28 for type array",
+	},
+	{
+		name:         "reserved additional information values",
+		data:         mustHexDecode("9d"),
+		wantErrorMsg: "cbor: invalid additional information 29 for type array",
+	},
+	{
+		name:         "reserved additional information values",
+		data:         mustHexDecode("9e"),
+		wantErrorMsg: "cbor: invalid additional information 30 for type array",
+	},
+	{
+		name:         "reserved additional information values",
+		data:         mustHexDecode("bc"),
+		wantErrorMsg: "cbor: invalid additional information 28 for type map",
+	},
+	{
+		name:         "reserved additional information values",
+		data:         mustHexDecode("bd"),
+		wantErrorMsg: "cbor: invalid additional information 29 for type map",
+	},
+	{
+		name:         "reserved additional information values",
+		data:         mustHexDecode("be"),
+		wantErrorMsg: "cbor: invalid additional information 30 for type map",
+	},
+	{
+		name:         "reserved additional information values",
+		data:         mustHexDecode("dc"),
+		wantErrorMsg: "cbor: invalid additional information 28 for type tag",
+	},
+	{
+		name:         "reserved additional information values",
+		data:         mustHexDecode("dd"),
+		wantErrorMsg: "cbor: invalid additional information 29 for type tag",
+	},
+	{
+		name:         "reserved additional information values",
+		data:         mustHexDecode("de"),
+		wantErrorMsg: "cbor: invalid additional information 30 for type tag",
+	},
+	{
+		name:         "reserved additional information values",
+		data:         mustHexDecode("fc"),
+		wantErrorMsg: "cbor: invalid additional information 28 for type primitives",
+	},
+	{
+		name:         "reserved additional information values",
+		data:         mustHexDecode("fd"),
+		wantErrorMsg: "cbor: invalid additional information 29 for type primitives",
+	},
+	{
+		name:         "reserved additional information values",
+		data:         mustHexDecode("fe"),
+		wantErrorMsg: "cbor: invalid additional information 30 for type primitives",
+	},
+	{
+		name:         "reserved two-byte encodings of simple types",
+		data:         mustHexDecode("f800"),
+		wantErrorMsg: "cbor: invalid simple value 0 for type primitives",
+	},
+	{
+		name:         "reserved two-byte encodings of simple types",
+		data:         mustHexDecode("f801"),
+		wantErrorMsg: "cbor: invalid simple value 1 for type primitives",
+	},
+	{
+		name:         "reserved two-byte encodings of simple types",
+		data:         mustHexDecode("f818"),
+		wantErrorMsg: "cbor: invalid simple value 24 for type primitives",
+	},
+	{
+		name:         "reserved two-byte encodings of simple types",
+		data:         mustHexDecode("f81f"),
+		wantErrorMsg: "cbor: invalid simple value 31 for type primitives",
+	},
+	{
+		name:         "indefinite-length string chunks not of the correct type",
+		data:         mustHexDecode("5f00ff"),
+		wantErrorMsg: "cbor: wrong element type positive integer for indefinite-length byte string",
+	},
+	{
+		name:         "indefinite-length string chunks not of the correct type",
+		data:         mustHexDecode("5f21ff"),
+		wantErrorMsg: "cbor: wrong element type negative integer for indefinite-length byte string",
+	},
+	{
+		name:         "indefinite-length string chunks not of the correct type",
+		data:         mustHexDecode("5f6100ff"),
+		wantErrorMsg: "cbor: wrong element type UTF-8 text string for indefinite-length byte string",
+	},
+	{
+		name:         "indefinite-length string chunks not of the correct type",
+		data:         mustHexDecode("5f80ff"),
+		wantErrorMsg: "cbor: wrong element type array for indefinite-length byte string",
+	},
+	{
+		name:         "indefinite-length string chunks not of the correct type",
+		data:         mustHexDecode("5fa0ff"),
+		wantErrorMsg: "cbor: wrong element type map for indefinite-length byte string",
+	},
+	{
+		name:         "indefinite-length string chunks not of the correct type",
+		data:         mustHexDecode("5fc000ff"),
+		wantErrorMsg: "cbor: wrong element type tag for indefinite-length byte string",
+	},
+	{
+		name:         "indefinite-length string chunks not of the correct type",
+		data:         mustHexDecode("5fe0ff"),
+		wantErrorMsg: "cbor: wrong element type primitives for indefinite-length byte string",
+	},
+	{
+		name:         "indefinite-length string chunks not of the correct type",
+		data:         mustHexDecode("7f4100ff"),
+		wantErrorMsg: "cbor: wrong element type byte string for indefinite-length UTF-8 text string",
+	},
+	{
+		name:         "indefinite-length string chunks not definite length",
+		data:         mustHexDecode("5f5f4100ffff"),
+		wantErrorMsg: "cbor: indefinite-length byte string chunk is not definite-length",
+	},
+	{
+		name:         "indefinite-length string chunks not definite length",
+		data:         mustHexDecode("7f7f6100ffff"),
+		wantErrorMsg: "cbor: indefinite-length UTF-8 text string chunk is not definite-length",
+	},
+	{
+		name:         "break occurring on its own outside of an indefinite-length item",
+		data:         mustHexDecode("ff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "break occurring in a definite-length array or map or a tag",
+		data:         mustHexDecode("81ff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "break occurring in a definite-length array or map or a tag",
+		data:         mustHexDecode("8200ff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "break occurring in a definite-length array or map or a tag",
+		data:         mustHexDecode("a1ff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "break occurring in a definite-length array or map or a tag",
+		data:         mustHexDecode("a1ff00"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "break occurring in a definite-length array or map or a tag",
+		data:         mustHexDecode("a100ff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "break occurring in a definite-length array or map or a tag",
+		data:         mustHexDecode("a20000ff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "break occurring in a definite-length array or map or a tag",
+		data:         mustHexDecode("9f81ff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "break occurring in a definite-length array or map or a tag",
+		data:         mustHexDecode("9f829f819f9fffffffff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "break in indefinite-length map would lead to odd number of items (break in a value position)",
+		data:         mustHexDecode("bf00ff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "break in indefinite-length map would lead to odd number of items (break in a value position)",
+		data:         mustHexDecode("bf000000ff"),
+		wantErrorMsg: "cbor: unexpected \"break\" code",
+	},
+	{
+		name:         "major type 0 with additional information 31",
+		data:         mustHexDecode("1f"),
+		wantErrorMsg: "cbor: invalid additional information 31 for type positive integer",
+	},
+	{
+		name:         "major type 1 with additional information 31",
+		data:         mustHexDecode("3f"),
+		wantErrorMsg: "cbor: invalid additional information 31 for type negative integer",
+	},
+	{
+		name:         "major type 6 with additional information 31",
+		data:         mustHexDecode("df"),
+		wantErrorMsg: "cbor: invalid additional information 31 for type tag",
+	},
 	// Extraneous data
-	{"two ints", hexDecode("0001"), "cbor: 1 bytes of extraneous data starting at index 1", false},
-	{"two arrays", hexDecode("830102038104"), "cbor: 2 bytes of extraneous data starting at index 4", false},
-	{"int and partial array", hexDecode("00830102"), "cbor: 3 bytes of extraneous data starting at index 1", false},
+	{
+		name:         "two ints",
+		data:         mustHexDecode("0001"),
+		wantErrorMsg: "cbor: 1 bytes of extraneous data starting at index 1",
+	},
+	{
+		name:         "two arrays",
+		data:         mustHexDecode("830102038104"),
+		wantErrorMsg: "cbor: 2 bytes of extraneous data starting at index 4",
+	},
+	{
+		name:         "int and partial array",
+		data:         mustHexDecode("00830102"),
+		wantErrorMsg: "cbor: 3 bytes of extraneous data starting at index 1",
+	},
+	// Indefinite-length map
+	{
+		name:         "indefinite-length map with one key and no value",
+		data:         []byte{0xbf, 0x61, 'a', 0xff},
+		wantErrorMsg: `cbor: unexpected "break" code`,
+	},
+	{
+		name:         "indefinite-length map with two keys and one value",
+		data:         []byte{0xbf, 0x61, 'a', 0x01, 0x61, 'b', 0xff},
+		wantErrorMsg: `cbor: unexpected "break" code`,
+	},
 }
 
 func TestInvalidCBORUnmarshal(t *testing.T) {
-	for _, tc := range invalidCBORUnmarshalTests {
+	for _, tc := range invalidCBORUnmarshalTestCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var i interface{}
+			var i any
 			err := Unmarshal(tc.data, &i)
 			if err == nil {
 				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
-			} else if !tc.errorMsgPartialMatch && err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-			} else if tc.errorMsgPartialMatch && !strings.Contains(err.Error(), tc.wantErrorMsg) {
+			} else if err.Error() != tc.wantErrorMsg {
 				t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 			}
 		})
@@ -3022,37 +3540,37 @@ func TestValidUTF8String(t *testing.T) {
 		name    string
 		data    []byte
 		dm      DecMode
-		wantObj interface{}
+		wantObj any
 	}{
 		{
 			name:    "with UTF8RejectInvalid",
-			data:    hexDecode("6973747265616d696e67"),
+			data:    mustHexDecode("6973747265616d696e67"),
 			dm:      dmRejectInvalidUTF8,
 			wantObj: "streaming",
 		},
 		{
 			name:    "with UTF8DecodeInvalid",
-			data:    hexDecode("6973747265616d696e67"),
+			data:    mustHexDecode("6973747265616d696e67"),
 			dm:      dmDecodeInvalidUTF8,
 			wantObj: "streaming",
 		},
 		{
-			name:    "indef length with UTF8RejectInvalid",
-			data:    hexDecode("7f657374726561646d696e67ff"),
+			name:    "indefinite-length with UTF8RejectInvalid",
+			data:    mustHexDecode("7f657374726561646d696e67ff"),
 			dm:      dmRejectInvalidUTF8,
 			wantObj: "streaming",
 		},
 		{
-			name:    "indef length with UTF8DecodeInvalid",
-			data:    hexDecode("7f657374726561646d696e67ff"),
+			name:    "indefinite-length with UTF8DecodeInvalid",
+			data:    mustHexDecode("7f657374726561646d696e67ff"),
 			dm:      dmDecodeInvalidUTF8,
 			wantObj: "streaming",
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Decode to empty interface
-			var i interface{}
+			// Decode to a value of type any.
+			var i any
 			err = tc.dm.Unmarshal(tc.data, &i)
 			if err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
@@ -3088,43 +3606,67 @@ func TestInvalidUTF8String(t *testing.T) {
 		name         string
 		data         []byte
 		dm           DecMode
-		wantObj      interface{}
+		wantObj      any
 		wantErrorMsg string
 	}{
 		{
 			name:         "with UTF8RejectInvalid",
-			data:         hexDecode("61fe"),
+			data:         mustHexDecode("61fe"),
 			dm:           dmRejectInvalidUTF8,
 			wantErrorMsg: invalidUTF8ErrorMsg,
 		},
 		{
 			name:    "with UTF8DecodeInvalid",
-			data:    hexDecode("61fe"),
+			data:    mustHexDecode("61fe"),
 			dm:      dmDecodeInvalidUTF8,
 			wantObj: string([]byte{0xfe}),
 		},
 		{
-			name:         "indef length with UTF8RejectInvalid",
-			data:         hexDecode("7f62e6b061b4ff"),
+			name:         "indefinite-length with UTF8RejectInvalid",
+			data:         mustHexDecode("7f62e6b061b4ff"),
 			dm:           dmRejectInvalidUTF8,
 			wantErrorMsg: invalidUTF8ErrorMsg,
 		},
 		{
-			name:    "indef length with UTF8DecodeInvalid",
-			data:    hexDecode("7f62e6b061b4ff"),
+			name:    "indefinite-length with UTF8DecodeInvalid",
+			data:    mustHexDecode("7f62e6b061b4ff"),
 			dm:      dmDecodeInvalidUTF8,
 			wantObj: string([]byte{0xe6, 0xb0, 0xb4}),
+		},
+		{
+			name: "indefinite-length invalid UTF-8 in the second chunk with UTF8RejectInvalid",
+			data: []byte{
+				0x7f,
+				0x62, 'a', 'b', // valid UTF-8
+				0x62, 0x80, 0x81, // invalid UTF-8
+				0x62, 'c', 'd', // valid UTF-8
+				0xff,
+			},
+			dm:           dmRejectInvalidUTF8,
+			wantErrorMsg: invalidUTF8ErrorMsg,
+		},
+		{
+			name: "indefinite-length invalid UTF-8 in the second chunk with dmDecodeInvalidUTF8",
+			data: []byte{
+				0x7f,
+				0x62, 'a', 'b', // valid UTF-8
+				0x62, 0x80, 0x81, // invalid UTF-8
+				0x62, 'c', 'd', // valid UTF-8
+				0xff,
+			},
+			dm:      dmDecodeInvalidUTF8,
+			wantObj: string([]byte{'a', 'b', 0x80, 0x81, 'c', 'd'}),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Decode to empty interface
-			var v interface{}
+			// Decode to a value of type any.
+			var v any
 			err = tc.dm.Unmarshal(tc.data, &v)
 			if tc.wantErrorMsg != "" {
 				if err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return error", tc.data)
+					t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
 				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
 					t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 				}
@@ -3142,7 +3684,7 @@ func TestInvalidUTF8String(t *testing.T) {
 			err = tc.dm.Unmarshal(tc.data, &s)
 			if tc.wantErrorMsg != "" {
 				if err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return error", tc.data)
+					t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
 				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
 					t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 				}
@@ -3159,7 +3701,7 @@ func TestInvalidUTF8String(t *testing.T) {
 
 	// Test decoding of mixed invalid text string and valid text string
 	// with UTF8RejectInvalid option (default)
-	data := hexDecode("7f62e6b061b4ff7f657374726561646d696e67ff")
+	data := mustHexDecode("7f62e6b061b4ff7f657374726561646d696e67ff")
 	dec := NewDecoder(bytes.NewReader(data))
 	var s string
 	if err := dec.Decode(&s); err == nil {
@@ -3201,15 +3743,23 @@ func TestUnmarshalStruct(t *testing.T) {
 		unexportedField:   0,
 	}
 
-	tests := []struct {
+	testCases := []struct {
 		name string
 		data []byte
-		want interface{}
+		want any
 	}{
-		{"case-insensitive field name match", hexDecode("a868696e746669656c64187b6a666c6f61746669656c64fa47c3500069626f6f6c6669656c64f56b537472696e674669656c6464746573746f42797465537472696e674669656c64430103056a41727261794669656c64826568656c6c6f65776f726c64684d61704669656c64a2676d6f726e696e67f56961667465726e6f6f6ef4714e65737465645374727563744669656c64a261581903e861591a000f4240"), want},
-		{"exact field name match", hexDecode("a868496e744669656c64187b6a466c6f61744669656c64fa47c3500069426f6f6c4669656c64f56b537472696e674669656c6464746573746f42797465537472696e674669656c64430103056a41727261794669656c64826568656c6c6f65776f726c64684d61704669656c64a2676d6f726e696e67f56961667465726e6f6f6ef4714e65737465645374727563744669656c64a261581903e861591a000f4240"), want},
+		{
+			name: "case-insensitive field name match",
+			data: mustHexDecode("a868696e746669656c64187b6a666c6f61746669656c64fa47c3500069626f6f6c6669656c64f56b537472696e674669656c6464746573746f42797465537472696e674669656c64430103056a41727261794669656c64826568656c6c6f65776f726c64684d61704669656c64a2676d6f726e696e67f56961667465726e6f6f6ef4714e65737465645374727563744669656c64a261581903e861591a000f4240"),
+			want: want,
+		},
+		{
+			name: "exact field name match",
+			data: mustHexDecode("a868496e744669656c64187b6a466c6f61744669656c64fa47c3500069426f6f6c4669656c64f56b537472696e674669656c6464746573746f42797465537472696e674669656c64430103056a41727261794669656c64826568656c6c6f65776f726c64684d61704669656c64a2676d6f726e696e67f56961667465726e6f6f6ef4714e65737465645374727563744669656c64a261581903e861591a000f4240"),
+			want: want,
+		},
 	}
-	for _, tc := range tests {
+	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v outer
 			if err := Unmarshal(tc.data, &v); err != nil {
@@ -3245,7 +3795,7 @@ func TestUnmarshalStructError1(t *testing.T) {
 		unexportedField:   0,
 	}
 
-	data := hexDecode("a868496e744669656c64187b6a466c6f61744669656c64fa47c3500069426f6f6c4669656c64f56b537472696e674669656c6464746573746f42797465537472696e674669656c64430103056a41727261794669656c64826568656c6c6f65776f726c64684d61704669656c64a2676d6f726e696e67f56961667465726e6f6f6ef4714e65737465645374727563744669656c64a261581903e861591a000f4240")
+	data := mustHexDecode("a868496e744669656c64187b6a466c6f61744669656c64fa47c3500069426f6f6c4669656c64f56b537472696e674669656c6464746573746f42797465537472696e674669656c64430103056a41727261794669656c64826568656c6c6f65776f726c64684d61704669656c64a2676d6f726e696e67f56961667465726e6f6f6ef4714e65737465645374727563744669656c64a261581903e861591a000f4240")
 	wantCBORType := "UTF-8 text string"
 	wantGoType := "int"
 	wantStructFieldName := "cbor.outer2.ArrayField"
@@ -3289,7 +3839,7 @@ func TestUnmarshalStructError2(t *testing.T) {
 	}
 
 	// Unmarshal returns first error encountered, which is *UnmarshalTypeError (failed to unmarshal int into Go string)
-	data := hexDecode("a3fa47c35000026161614161fe6142") // {100000.0:2, "a":"A", 0xfe: B}
+	data := mustHexDecode("a3fa47c35000026161614161fe6142") // {100000.0:2, "a":"A", 0xfe: B}
 	wantCBORType := "primitives"
 	wantGoType := "string"
 	wantErrorMsg := "cannot unmarshal primitives into Go value of type string"
@@ -3317,7 +3867,7 @@ func TestUnmarshalStructError2(t *testing.T) {
 	}
 
 	// Unmarshal returns first error encountered, which is *cbor.SemanticError (invalid UTF8 string)
-	data = hexDecode("a361fe6142010261616141") // {0xfe: B, 1:2, "a":"A"}
+	data = mustHexDecode("a361fe6142010261616141") // {0xfe: B, 1:2, "a":"A"}
 	v = strc{}
 	if err := Unmarshal(data, &v); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
@@ -3333,7 +3883,7 @@ func TestUnmarshalStructError2(t *testing.T) {
 	}
 
 	// Unmarshal returns first error encountered, which is *cbor.SemanticError (invalid UTF8 string)
-	data = hexDecode("a3616261fe010261616141") // {"b": 0xfe, 1:2, "a":"A"}
+	data = mustHexDecode("a3616261fe010261616141") // {"b": 0xfe, 1:2, "a":"A"}
 	v = strc{}
 	if err := Unmarshal(data, &v); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
@@ -3352,7 +3902,7 @@ func TestUnmarshalStructError2(t *testing.T) {
 func TestUnmarshalPrefilledArray(t *testing.T) {
 	prefilledArr := []int{1, 2, 3, 4, 5}
 	want := []int{10, 11, 3, 4, 5}
-	data := hexDecode("820a0b") // []int{10, 11}
+	data := mustHexDecode("820a0b") // []int{10, 11}
 	if err := Unmarshal(data, &prefilledArr); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
@@ -3363,7 +3913,7 @@ func TestUnmarshalPrefilledArray(t *testing.T) {
 		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, prefilledArr, prefilledArr, want, want)
 	}
 
-	data = hexDecode("80") // empty array
+	data = mustHexDecode("80") // empty array
 	if err := Unmarshal(data, &prefilledArr); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
@@ -3375,7 +3925,7 @@ func TestUnmarshalPrefilledArray(t *testing.T) {
 func TestUnmarshalPrefilledMap(t *testing.T) {
 	prefilledMap := map[string]string{"key": "value", "a": "1"}
 	want := map[string]string{"key": "value", "a": "A", "b": "B", "c": "C", "d": "D", "e": "E"}
-	data := hexDecode("a56161614161626142616361436164614461656145") // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"}
+	data := mustHexDecode("a56161614161626142616361436164614461656145") // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"}
 	if err := Unmarshal(data, &prefilledMap); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
@@ -3385,7 +3935,7 @@ func TestUnmarshalPrefilledMap(t *testing.T) {
 
 	prefilledMap = map[string]string{"key": "value"}
 	want = map[string]string{"key": "value"}
-	data = hexDecode("a0") // map[string]string{}
+	data = mustHexDecode("a0") // map[string]string{}
 	if err := Unmarshal(data, &prefilledMap); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
@@ -3402,7 +3952,7 @@ func TestUnmarshalPrefilledStruct(t *testing.T) {
 	}
 	prefilledStruct := s{a: 100, B: []int{200, 300, 400, 500}, C: true}
 	want := s{a: 100, B: []int{2, 3}, C: true}
-	data := hexDecode("a26161016162820203") // map[string]interface{} {"a": 1, "b": []int{2, 3}}
+	data := mustHexDecode("a26161016162820203") // map[string]any {"a": 1, "b": []int{2, 3}}
 	if err := Unmarshal(data, &prefilledStruct); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
@@ -3441,12 +3991,12 @@ func TestLengthOverflowsInt(t *testing.T) {
 	// Data is generating by go-fuzz.
 	// string/slice/map length in uint64 cast to int causes integer overflow.
 	data := [][]byte{
-		hexDecode("bbcf30303030303030cfd697829782"),
-		hexDecode("5bcf30303030303030cfd697829782"),
+		mustHexDecode("bbcf30303030303030cfd697829782"),
+		mustHexDecode("5bcf30303030303030cfd697829782"),
 	}
 	wantErrorMsg := "is too large"
 	for _, data := range data {
-		var intf interface{}
+		var intf any
 		if err := Unmarshal(data, &intf); err == nil {
 			t.Errorf("Unmarshal(0x%x) didn't return an error, want error containing substring %q", data, wantErrorMsg)
 		} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -3461,25 +4011,57 @@ func TestMapKeyUnhashable(t *testing.T) {
 		data         []byte
 		wantErrorMsg string
 	}{
-		{"slice as map key", hexDecode("bf8030ff"), "cbor: invalid map key type: []interface {}"},                                                    // {[]: -17}
-		{"slice as map key", hexDecode("a1813030"), "cbor: invalid map key type: []interface {}"},                                                    // {[-17]: -17}
-		{"slice as map key", hexDecode("bfd1a388f730303030303030303030303030ff"), "cbor: invalid map key type: []interface {}"},                      // {17({[undefined, -17, -17, -17, -17, -17, -17, -17]: -17, -17: -17}): -17}}
-		{"map as map key", hexDecode("bf30a1a030ff"), "cbor: invalid map key type: map"},                                                             // {-17: {{}: -17}}, empty map as map key
-		{"map as map key", hexDecode("bfb0303030303030303030303030303030303030303030303030303030303030303030ff"), "cbor: invalid map key type: map"}, // {{-17: -17}: -17}, map as key
-		{"big.Int as map key", hexDecode("a13bbd3030303030303030"), "cbor: invalid map key type: big.Int"},                                           // {-13632449055575519281: -17}
-		{"tagged big.Int as map key", hexDecode("a1c24901000000000000000030"), "cbor: invalid map key type: big.Int"},                                // {18446744073709551616: -17}
-		{"tagged big.Int as map key", hexDecode("a1c34901000000000000000030"), "cbor: invalid map key type: big.Int"},                                // {-18446744073709551617: -17}
+		{
+			name:         "slice as map key",
+			data:         mustHexDecode("bf8030ff"),
+			wantErrorMsg: "cbor: invalid map key type: []interface {}",
+		}, // {[]: -17}
+		{
+			name:         "slice as map key",
+			data:         mustHexDecode("a1813030"),
+			wantErrorMsg: "cbor: invalid map key type: []interface {}",
+		}, // {[-17]: -17}
+		{
+			name:         "slice as map key",
+			data:         mustHexDecode("bfd1a388f730303030303030303030303030ff"),
+			wantErrorMsg: "cbor: invalid map key type: []interface {}",
+		}, // {17({[undefined, -17, -17, -17, -17, -17, -17, -17]: -17, -17: -17}): -17}}
+		{
+			name:         "map as map key",
+			data:         mustHexDecode("bf30a1a030ff"),
+			wantErrorMsg: "cbor: invalid map key type: map",
+		}, // {-17: {{}: -17}}, empty map as map key
+		{
+			name:         "map as map key",
+			data:         mustHexDecode("bfb0303030303030303030303030303030303030303030303030303030303030303030ff"),
+			wantErrorMsg: "cbor: invalid map key type: map",
+		}, // {{-17: -17}: -17}, map as key
+		{
+			name:         "big.Int as map key",
+			data:         mustHexDecode("a13bbd3030303030303030"),
+			wantErrorMsg: "cbor: invalid map key type: big.Int",
+		}, // {-13632449055575519281: -17}
+		{
+			name:         "tagged big.Int as map key",
+			data:         mustHexDecode("a1c24901000000000000000030"),
+			wantErrorMsg: "cbor: invalid map key type: big.Int",
+		}, // {18446744073709551616: -17}
+		{
+			name:         "tagged big.Int as map key",
+			data:         mustHexDecode("a1c34901000000000000000030"),
+			wantErrorMsg: "cbor: invalid map key type: big.Int",
+		}, // {-18446744073709551617: -17}
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v interface{}
+			var v any
 			if err := Unmarshal(tc.data, &v); err == nil {
 				t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, tc.wantErrorMsg)
 			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
 				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 			}
-			if _, ok := v.(map[interface{}]interface{}); ok {
-				var v map[interface{}]interface{}
+			if _, ok := v.(map[any]any); ok {
+				var v map[any]any
 				if err := Unmarshal(tc.data, &v); err == nil {
 					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, tc.wantErrorMsg)
 				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
@@ -3492,8 +4074,8 @@ func TestMapKeyUnhashable(t *testing.T) {
 
 func TestMapKeyNaN(t *testing.T) {
 	// Data is generating by go-fuzz.
-	data := hexDecode("b0303030303030303030303030303030303038303030faffff30303030303030303030303030") // {-17: -17, NaN: -17}
-	var intf interface{}
+	data := mustHexDecode("b0303030303030303030303030303030303038303030faffff30303030303030303030303030") // {-17: -17, NaN: -17}
+	var intf any
 	if err := Unmarshal(data, &intf); err != nil {
 		t.Fatalf("Unmarshal(0x%x) returned error %v", data, err)
 	}
@@ -3508,8 +4090,8 @@ func TestMapKeyNaN(t *testing.T) {
 
 func TestUnmarshalUndefinedElement(t *testing.T) {
 	// Data is generating by go-fuzz.
-	data := hexDecode("bfd1a388f730303030303030303030303030ff") // {17({[undefined, -17, -17, -17, -17, -17, -17, -17]: -17, -17: -17}): -17}
-	var intf interface{}
+	data := mustHexDecode("bfd1a388f730303030303030303030303030ff") // {17({[undefined, -17, -17, -17, -17, -17, -17, -17]: -17, -17: -17}): -17}
+	var intf any
 	wantErrorMsg := "invalid map key type"
 	if err := Unmarshal(data, &intf); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error, want error containing substring %q", data, wantErrorMsg)
@@ -3520,11 +4102,11 @@ func TestUnmarshalUndefinedElement(t *testing.T) {
 
 func TestMapKeyNil(t *testing.T) {
 	testData := [][]byte{
-		hexDecode("a1f630"), // {null: -17}
+		mustHexDecode("a1f630"), // {null: -17}
 	}
-	want := map[interface{}]interface{}{nil: int64(-17)}
+	want := map[any]any{nil: int64(-17)}
 	for _, data := range testData {
-		var intf interface{}
+		var intf any
 		if err := Unmarshal(data, &intf); err != nil {
 			t.Fatalf("Unmarshal(0x%x) returned error %v", data, err)
 		} else if !reflect.DeepEqual(intf, want) {
@@ -3534,7 +4116,7 @@ func TestMapKeyNil(t *testing.T) {
 			t.Errorf("Marshal(%v) returned error %v", intf, err)
 		}
 
-		var v map[interface{}]interface{}
+		var v map[any]any
 		if err := Unmarshal(data, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		} else if !reflect.DeepEqual(v, want) {
@@ -3558,57 +4140,57 @@ func TestDecodeTime(t *testing.T) {
 		// Decoding untagged CBOR null/defined to time.Time is no-op.  See TestUnmarshalNil.
 		{
 			name:            "null within unrecognized tag", // no-op in DecTagIgnored
-			cborRFC3339Time: hexDecode("dadeadbeeff6"),
-			cborUnixTime:    hexDecode("dadeadbeeff6"),
+			cborRFC3339Time: mustHexDecode("dadeadbeeff6"),
+			cborUnixTime:    mustHexDecode("dadeadbeeff6"),
 			wantTime:        unmodified,
 		},
 		{
 			name:            "undefined within unrecognized tag", // no-op in DecTagIgnored
-			cborRFC3339Time: hexDecode("dadeadbeeff7"),
-			cborUnixTime:    hexDecode("dadeadbeeff7"),
+			cborRFC3339Time: mustHexDecode("dadeadbeeff7"),
+			cborUnixTime:    mustHexDecode("dadeadbeeff7"),
 			wantTime:        unmodified,
 		},
 		{
 			name:            "NaN",
-			cborRFC3339Time: hexDecode("f97e00"),
-			cborUnixTime:    hexDecode("f97e00"),
+			cborRFC3339Time: mustHexDecode("f97e00"),
+			cborUnixTime:    mustHexDecode("f97e00"),
 			wantTime:        time.Time{},
 		},
 		{
 			name:            "positive infinity",
-			cborRFC3339Time: hexDecode("f97c00"),
-			cborUnixTime:    hexDecode("f97c00"),
+			cborRFC3339Time: mustHexDecode("f97c00"),
+			cborUnixTime:    mustHexDecode("f97c00"),
 			wantTime:        time.Time{},
 		},
 		{
 			name:            "negative infinity",
-			cborRFC3339Time: hexDecode("f9fc00"),
-			cborUnixTime:    hexDecode("f9fc00"),
+			cborRFC3339Time: mustHexDecode("f9fc00"),
+			cborUnixTime:    mustHexDecode("f9fc00"),
 			wantTime:        time.Time{},
 		},
 		{
 			name:            "time without fractional seconds", // positive integer
-			cborRFC3339Time: hexDecode("74323031332d30332d32315432303a30343a30305a"),
-			cborUnixTime:    hexDecode("1a514b67b0"),
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			cborRFC3339Time: mustHexDecode("74323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    mustHexDecode("1a514b67b0"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
 			name:            "time with fractional seconds", // float
-			cborRFC3339Time: hexDecode("7819313937302d30312d30315432313a34363a34302d30363a3030"),
-			cborUnixTime:    hexDecode("fa47c35000"),
-			wantTime:        parseTime(time.RFC3339Nano, "1970-01-01T21:46:40-06:00"),
+			cborRFC3339Time: mustHexDecode("7819313937302d30312d30315432313a34363a34302d30363a3030"),
+			cborUnixTime:    mustHexDecode("fa47c35000"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "1970-01-01T21:46:40-06:00"),
 		},
 		{
 			name:            "time with fractional seconds", // float
-			cborRFC3339Time: hexDecode("76323031332d30332d32315432303a30343a30302e355a"),
-			cborUnixTime:    hexDecode("fb41d452d9ec200000"),
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00.5Z"),
+			cborRFC3339Time: mustHexDecode("76323031332d30332d32315432303a30343a30302e355a"),
+			cborUnixTime:    mustHexDecode("fb41d452d9ec200000"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00.5Z"),
 		},
 		{
 			name:            "time before January 1, 1970 UTC without fractional seconds", // negative integer
-			cborRFC3339Time: hexDecode("74313936392d30332d32315432303a30343a30305a"),
-			cborUnixTime:    hexDecode("3a0177f2cf"),
-			wantTime:        parseTime(time.RFC3339Nano, "1969-03-21T20:04:00Z"),
+			cborRFC3339Time: mustHexDecode("74313936392d30332d32315432303a30343a30305a"),
+			cborUnixTime:    mustHexDecode("3a0177f2cf"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "1969-03-21T20:04:00Z"),
 		},
 	}
 	for _, tc := range testCases {
@@ -3638,21 +4220,21 @@ func TestDecodeTimeWithTag(t *testing.T) {
 	}{
 		{
 			name:            "time without fractional seconds", // positive integer
-			cborRFC3339Time: hexDecode("c074323031332d30332d32315432303a30343a30305a"),
-			cborUnixTime:    hexDecode("c11a514b67b0"),
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			cborRFC3339Time: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    mustHexDecode("c11a514b67b0"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
 			name:            "time with fractional seconds", // float
-			cborRFC3339Time: hexDecode("c076323031332d30332d32315432303a30343a30302e355a"),
-			cborUnixTime:    hexDecode("c1fb41d452d9ec200000"),
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00.5Z"),
+			cborRFC3339Time: mustHexDecode("c076323031332d30332d32315432303a30343a30302e355a"),
+			cborUnixTime:    mustHexDecode("c1fb41d452d9ec200000"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00.5Z"),
 		},
 		{
 			name:            "time before January 1, 1970 UTC without fractional seconds", // negative integer
-			cborRFC3339Time: hexDecode("c074313936392d30332d32315432303a30343a30305a"),
-			cborUnixTime:    hexDecode("c13a0177f2cf"),
-			wantTime:        parseTime(time.RFC3339Nano, "1969-03-21T20:04:00Z"),
+			cborRFC3339Time: mustHexDecode("c074313936392d30332d32315432303a30343a30305a"),
+			cborUnixTime:    mustHexDecode("c13a0177f2cf"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "1969-03-21T20:04:00Z"),
 		},
 	}
 	for _, tc := range testCases {
@@ -3670,7 +4252,7 @@ func TestDecodeTimeWithTag(t *testing.T) {
 				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborUnixTime, tm, tm, tc.wantTime, tc.wantTime)
 			}
 
-			var v interface{}
+			var v any
 			if err := Unmarshal(tc.cborRFC3339Time, &v); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborRFC3339Time, err)
 			} else if tm, ok := v.(time.Time); !ok || !tc.wantTime.Equal(tm) {
@@ -3695,41 +4277,41 @@ func TestDecodeTimeError(t *testing.T) {
 	}{
 		{
 			name:         "invalid RFC3339 time string",
-			data:         hexDecode("7f657374726561646d696e67ff"),
+			data:         mustHexDecode("7f657374726561646d696e67ff"),
 			wantErrorMsg: "cbor: cannot set streaming for time.Time",
 		},
 		{
 			name:         "byte string data cannot be decoded into time.Time",
-			data:         hexDecode("4f013030303030303030e03031ed3030"),
+			data:         mustHexDecode("4f013030303030303030e03031ed3030"),
 			wantErrorMsg: "cbor: cannot unmarshal byte string into Go value of type time.Time",
 		},
 		{
 			name:         "bool cannot be decoded into time.Time",
-			data:         hexDecode("f4"),
+			data:         mustHexDecode("f4"),
 			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type time.Time",
 		},
 		{
 			name:         "invalid UTF-8 string",
-			data:         hexDecode("7f62e6b061b4ff"),
+			data:         mustHexDecode("7f62e6b061b4ff"),
 			wantErrorMsg: "cbor: invalid UTF-8 string",
 		},
 		{
 			name:         "negative integer overflow",
-			data:         hexDecode("3bffffffffffffffff"),
+			data:         mustHexDecode("3bffffffffffffffff"),
 			wantErrorMsg: "cbor: cannot unmarshal negative integer into Go value of type time.Time",
 		},
 		{
 			name: "untagged byte string content cannot be decoded into time.Time with DefaultByteStringType string",
 			opts: DecOptions{
 				TimeTag:               DecTagOptional,
-				DefaultByteStringType: reflect.TypeOf(""),
+				DefaultByteStringType: reflect.TypeFor[string](),
 			},
-			data:         hexDecode("54323031332d30332d32315432303a30343a30305a"),
+			data:         mustHexDecode("54323031332d30332d32315432303a30343a30305a"),
 			wantErrorMsg: "cbor: cannot unmarshal byte string into Go value of type time.Time",
 		},
 		{
 			name:         "time tag is validated when enclosed in unrecognized tag",
-			data:         hexDecode("dadeadbeefc001"),
+			data:         mustHexDecode("dadeadbeefc001"),
 			wantErrorMsg: "cbor: tag number 0 must be followed by text string, got positive integer",
 		},
 	}
@@ -3750,7 +4332,7 @@ func TestDecodeTimeError(t *testing.T) {
 }
 
 func TestDecodeInvalidTagTime(t *testing.T) {
-	typeTimeSlice := reflect.TypeOf([]time.Time{})
+	typeTimeSlice := reflect.TypeFor[[]time.Time]()
 
 	testCases := []struct {
 		name          string
@@ -3759,56 +4341,68 @@ func TestDecodeInvalidTagTime(t *testing.T) {
 		wantErrorMsg  string
 	}{
 		{
-			name:          "Tag 0 with invalid RFC3339 time string",
-			data:          hexDecode("c07f657374726561646d696e67ff"),
+			name:          "tag 0 with invalid RFC3339 time string",
+			data:          mustHexDecode("c07f657374726561646d696e67ff"),
 			decodeToTypes: []reflect.Type{typeIntf, typeTime},
 			wantErrorMsg:  "cbor: cannot set streaming for time.Time",
 		},
 		{
-			name:          "Tag 0 with invalid UTF-8 string",
-			data:          hexDecode("c07f62e6b061b4ff"),
+			name:          "tag 0 with invalid UTF-8 string",
+			data:          mustHexDecode("c07f62e6b061b4ff"),
 			decodeToTypes: []reflect.Type{typeIntf, typeTime},
 			wantErrorMsg:  "cbor: invalid UTF-8 string",
 		},
 		{
-			name:          "Tag 0 with integer content",
-			data:          hexDecode("c01a514b67b0"),
+			name:          "tag 0 with integer content",
+			data:          mustHexDecode("c01a514b67b0"),
 			decodeToTypes: []reflect.Type{typeIntf, typeTime},
 			wantErrorMsg:  "cbor: tag number 0 must be followed by text string, got positive integer",
 		},
 		{
-			name:          "Tag 0 with byte string content",
-			data:          hexDecode("c04f013030303030303030e03031ed3030"),
+			name:          "tag 0 with byte string content",
+			data:          mustHexDecode("c04f013030303030303030e03031ed3030"),
 			decodeToTypes: []reflect.Type{typeIntf, typeTime},
 			wantErrorMsg:  "cbor: tag number 0 must be followed by text string, got byte string",
 		},
 		{
-			name:          "Tag 0 with integer content as array element",
-			data:          hexDecode("81c01a514b67b0"),
+			name:          "tag 0 with integer content as array element",
+			data:          mustHexDecode("81c01a514b67b0"),
 			decodeToTypes: []reflect.Type{typeIntf, typeTimeSlice},
 			wantErrorMsg:  "cbor: tag number 0 must be followed by text string, got positive integer",
 		},
 		{
-			name:          "Tag 1 with negative integer overflow",
-			data:          hexDecode("c13bffffffffffffffff"),
+			name:          "tag 1 with negative integer overflow",
+			data:          mustHexDecode("c13bffffffffffffffff"),
 			decodeToTypes: []reflect.Type{typeIntf, typeTime},
 			wantErrorMsg:  "cbor: cannot unmarshal negative integer into Go value of type time.Time (-18446744073709551616 overflows Go's int64)",
 		},
 		{
-			name:          "Tag 1 with string content",
-			data:          hexDecode("c174323031332d30332d32315432303a30343a30305a"),
+			name:          "tag 1 with positive float64 overflow",
+			data:          mustHexDecode("c1fb4415af1d78b58c40"), // 1(1e+20)
+			decodeToTypes: []reflect.Type{typeIntf, typeTime},
+			wantErrorMsg:  "overflows Go's int64",
+		},
+		{
+			name:          "tag 1 with negative float64 overflow",
+			data:          mustHexDecode("c1fbc415af1d78b58c40"), // 1(-1e+20)
+			decodeToTypes: []reflect.Type{typeIntf, typeTime},
+			wantErrorMsg:  "overflows Go's int64",
+		},
+		{
+			name:          "tag 1 with string content",
+			data:          mustHexDecode("c174323031332d30332d32315432303a30343a30305a"),
 			decodeToTypes: []reflect.Type{typeIntf, typeTime},
 			wantErrorMsg:  "cbor: tag number 1 must be followed by integer or floating-point number, got UTF-8 text string",
 		},
 		{
-			name:          "Tag 1 with simple value",
-			data:          hexDecode("d801f6"), // 1(null)
+			name:          "tag 1 with simple value",
+			data:          mustHexDecode("d801f6"), // 1(null)
 			decodeToTypes: []reflect.Type{typeIntf, typeTime},
 			wantErrorMsg:  "cbor: tag number 1 must be followed by integer or floating-point number, got primitive",
 		},
 		{
-			name:          "Tag 1 with string content as array element",
-			data:          hexDecode("81c174323031332d30332d32315432303a30343a30305a"),
+			name:          "tag 1 with string content as array element",
+			data:          mustHexDecode("81c174323031332d30332d32315432303a30343a30305a"),
 			decodeToTypes: []reflect.Type{typeIntf, typeTimeSlice},
 			wantErrorMsg:  "cbor: tag number 1 must be followed by integer or floating-point number, got UTF-8 text string",
 		},
@@ -3819,7 +4413,7 @@ func TestDecodeInvalidTagTime(t *testing.T) {
 			t.Run(tc.name+" decode to "+decodeToType.String(), func(t *testing.T) {
 				v := reflect.New(decodeToType)
 				if err := dm.Unmarshal(tc.data, v.Interface()); err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", tc.data, tc.wantErrorMsg)
+					t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.data, tc.wantErrorMsg)
 				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
 					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err, tc.wantErrorMsg)
 				}
@@ -3829,7 +4423,7 @@ func TestDecodeInvalidTagTime(t *testing.T) {
 }
 
 func TestDecodeTag0Error(t *testing.T) {
-	data := hexDecode("c01a514b67b0") // 0(1363896240)
+	data := mustHexDecode("c01a514b67b0") // 0(1363896240)
 	wantErrorMsg := "cbor: tag number 0 must be followed by text string, got positive integer"
 
 	timeTagIgnoredDM, _ := DecOptions{TimeTag: DecTagIgnored}.DecMode()
@@ -3847,10 +4441,10 @@ func TestDecodeTag0Error(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Decode to interface{}
-			var v interface{}
+			// Decode to a value of type any.
+			var v any
 			if err := tc.dm.Unmarshal(data, &v); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", data, wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", data, wantErrorMsg)
 			} else if !strings.Contains(err.Error(), wantErrorMsg) {
 				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err, wantErrorMsg)
 			}
@@ -3858,7 +4452,7 @@ func TestDecodeTag0Error(t *testing.T) {
 			// Decode to time.Time
 			var tm time.Time
 			if err := tc.dm.Unmarshal(data, &tm); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", data, wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", data, wantErrorMsg)
 			} else if !strings.Contains(err.Error(), wantErrorMsg) {
 				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err, wantErrorMsg)
 			}
@@ -3866,7 +4460,7 @@ func TestDecodeTag0Error(t *testing.T) {
 			// Decode to uint64
 			var ui uint64
 			if err := tc.dm.Unmarshal(data, &ui); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", data, wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", data, wantErrorMsg)
 			} else if !strings.Contains(err.Error(), wantErrorMsg) {
 				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err, wantErrorMsg)
 			}
@@ -3875,7 +4469,7 @@ func TestDecodeTag0Error(t *testing.T) {
 }
 
 func TestDecodeTag1Error(t *testing.T) {
-	data := hexDecode("c174323031332d30332d32315432303a30343a30305a") // 1("2013-03-21T20:04:00Z")
+	data := mustHexDecode("c174323031332d30332d32315432303a30343a30305a") // 1("2013-03-21T20:04:00Z")
 	wantErrorMsg := "cbor: tag number 1 must be followed by integer or floating-point number, got UTF-8 text string"
 
 	timeTagIgnoredDM, _ := DecOptions{TimeTag: DecTagIgnored}.DecMode()
@@ -3893,10 +4487,10 @@ func TestDecodeTag1Error(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Decode to interface{}
-			var v interface{}
+			// Decode to a value of type any.
+			var v any
 			if err := tc.dm.Unmarshal(data, &v); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", data, wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", data, wantErrorMsg)
 			} else if !strings.Contains(err.Error(), wantErrorMsg) {
 				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err, wantErrorMsg)
 			}
@@ -3904,7 +4498,7 @@ func TestDecodeTag1Error(t *testing.T) {
 			// Decode to time.Time
 			var tm time.Time
 			if err := tc.dm.Unmarshal(data, &tm); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", data, wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", data, wantErrorMsg)
 			} else if !strings.Contains(err.Error(), wantErrorMsg) {
 				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err, wantErrorMsg)
 			}
@@ -3912,7 +4506,7 @@ func TestDecodeTag1Error(t *testing.T) {
 			// Decode to string
 			var s string
 			if err := tc.dm.Unmarshal(data, &s); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", data, wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", data, wantErrorMsg)
 			} else if !strings.Contains(err.Error(), wantErrorMsg) {
 				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err, wantErrorMsg)
 			}
@@ -3928,35 +4522,35 @@ func TestDecodeTimeStreaming(t *testing.T) {
 		wantObj      time.Time
 	}{
 		{
-			data:         hexDecode("c07f62e6b061b4ff"),
+			data:         mustHexDecode("c07f62e6b061b4ff"),
 			wantErrorMsg: "cbor: invalid UTF-8 string",
 		},
 		{
-			data:    hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			data:    mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			wantObj: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
 		},
 		{
-			data:         hexDecode("c01a514b67b0"),
+			data:         mustHexDecode("c01a514b67b0"),
 			wantErrorMsg: "cbor: tag number 0 must be followed by text string, got positive integer",
 		},
 		{
-			data:    hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			data:    mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			wantObj: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
 		},
 		{
-			data:         hexDecode("c13bffffffffffffffff"),
+			data:         mustHexDecode("c13bffffffffffffffff"),
 			wantErrorMsg: "cbor: cannot unmarshal negative integer into Go value of type time.Time (-18446744073709551616 overflows Go's int64)",
 		},
 		{
-			data:    hexDecode("c11a514b67b0"),
+			data:    mustHexDecode("c11a514b67b0"),
 			wantObj: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
 		},
 		{
-			data:         hexDecode("c174323031332d30332d32315432303a30343a30305a"),
+			data:         mustHexDecode("c174323031332d30332d32315432303a30343a30305a"),
 			wantErrorMsg: "tag number 1 must be followed by integer or floating-point number, got UTF-8 text string",
 		},
 		{
-			data:    hexDecode("c11a514b67b0"),
+			data:    mustHexDecode("c11a514b67b0"),
 			wantObj: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
 		},
 	}
@@ -3968,11 +4562,11 @@ func TestDecodeTimeStreaming(t *testing.T) {
 	dm, _ := DecOptions{TimeTag: DecTagOptional}.DecMode()
 	dec := dm.NewDecoder(bytes.NewReader(data))
 	for _, tc := range testCases {
-		var v interface{}
+		var v any
 		err := dec.Decode(&v)
 		if tc.wantErrorMsg != "" {
 			if err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", tc.data, tc.wantErrorMsg)
+				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.data, tc.wantErrorMsg)
 			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
 				t.Errorf("Unmarshal(0x%x) returned error msg %q, want %q", tc.data, err, tc.wantErrorMsg)
 			}
@@ -4020,66 +4614,66 @@ func TestDecTimeTagOption(t *testing.T) {
 		// not-tagged time CBOR data
 		{
 			name:            "not-tagged data with DecTagIgnored option",
-			cborRFC3339Time: hexDecode("74323031332d30332d32315432303a30343a30305a"),
-			cborUnixTime:    hexDecode("1a514b67b0"),
+			cborRFC3339Time: mustHexDecode("74323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    mustHexDecode("1a514b67b0"),
 			decMode:         timeTagIgnoredDecMode,
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
 			name:            "not-tagged data with timeTagOptionalDecMode option",
-			cborRFC3339Time: hexDecode("74323031332d30332d32315432303a30343a30305a"),
-			cborUnixTime:    hexDecode("1a514b67b0"),
+			cborRFC3339Time: mustHexDecode("74323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    mustHexDecode("1a514b67b0"),
 			decMode:         timeTagOptionalDecMode,
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
 			name:            "not-tagged data with timeTagRequiredDecMode option",
-			cborRFC3339Time: hexDecode("74323031332d30332d32315432303a30343a30305a"),
-			cborUnixTime:    hexDecode("1a514b67b0"),
+			cborRFC3339Time: mustHexDecode("74323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    mustHexDecode("1a514b67b0"),
 			decMode:         timeTagRequiredDecMode,
 			wantErrorMsg:    "expect CBOR tag value",
 		},
 		// tagged time CBOR data
 		{
 			name:            "tagged data with timeTagIgnoredDecMode option",
-			cborRFC3339Time: hexDecode("c074323031332d30332d32315432303a30343a30305a"),
-			cborUnixTime:    hexDecode("c11a514b67b0"),
+			cborRFC3339Time: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    mustHexDecode("c11a514b67b0"),
 			decMode:         timeTagIgnoredDecMode,
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
 			name:            "tagged data with timeTagOptionalDecMode option",
-			cborRFC3339Time: hexDecode("c074323031332d30332d32315432303a30343a30305a"),
-			cborUnixTime:    hexDecode("c11a514b67b0"),
+			cborRFC3339Time: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    mustHexDecode("c11a514b67b0"),
 			decMode:         timeTagOptionalDecMode,
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
 			name:            "tagged data with timeTagRequiredDecMode option",
-			cborRFC3339Time: hexDecode("c074323031332d30332d32315432303a30343a30305a"),
-			cborUnixTime:    hexDecode("c11a514b67b0"),
+			cborRFC3339Time: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    mustHexDecode("c11a514b67b0"),
 			decMode:         timeTagRequiredDecMode,
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		// mis-tagged time CBOR data
 		{
 			name:            "mis-tagged data with timeTagIgnoredDecMode option",
-			cborRFC3339Time: hexDecode("c8c974323031332d30332d32315432303a30343a30305a"),
-			cborUnixTime:    hexDecode("c8c91a514b67b0"),
+			cborRFC3339Time: mustHexDecode("c8c974323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    mustHexDecode("c8c91a514b67b0"),
 			decMode:         timeTagIgnoredDecMode,
-			wantTime:        parseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
+			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
 			name:            "mis-tagged data with timeTagOptionalDecMode option",
-			cborRFC3339Time: hexDecode("c8c974323031332d30332d32315432303a30343a30305a"),
-			cborUnixTime:    hexDecode("c8c91a514b67b0"),
+			cborRFC3339Time: mustHexDecode("c8c974323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    mustHexDecode("c8c91a514b67b0"),
 			decMode:         timeTagOptionalDecMode,
 			wantErrorMsg:    "cbor: wrong tag number for time.Time, got 8, expect 0 or 1",
 		},
 		{
 			name:            "mis-tagged data with timeTagRequiredDecMode option",
-			cborRFC3339Time: hexDecode("c8c974323031332d30332d32315432303a30343a30305a"),
-			cborUnixTime:    hexDecode("c8c91a514b67b0"),
+			cborRFC3339Time: mustHexDecode("c8c974323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:    mustHexDecode("c8c91a514b67b0"),
 			decMode:         timeTagRequiredDecMode,
 			wantErrorMsg:    "cbor: wrong tag number for time.Time, got 8, expect 0 or 1",
 		},
@@ -4090,7 +4684,7 @@ func TestDecTimeTagOption(t *testing.T) {
 			err := tc.decMode.Unmarshal(tc.cborRFC3339Time, &tm)
 			if tc.wantErrorMsg != "" {
 				if err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return error", tc.cborRFC3339Time)
+					t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborRFC3339Time)
 				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
 					t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborRFC3339Time, err.Error(), tc.wantErrorMsg)
 				}
@@ -4104,7 +4698,7 @@ func TestDecTimeTagOption(t *testing.T) {
 			err = tc.decMode.Unmarshal(tc.cborUnixTime, &tm)
 			if tc.wantErrorMsg != "" {
 				if err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return error", tc.cborRFC3339Time)
+					t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborRFC3339Time)
 				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
 					t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborRFC3339Time, err.Error(), tc.wantErrorMsg)
 				}
@@ -4128,7 +4722,7 @@ func TestUnmarshalStructTag1(t *testing.T) {
 		B: "B",
 		C: "C",
 	}
-	data := hexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
+	data := mustHexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
 
 	var v strc
 	if err := Unmarshal(data, &v); err != nil {
@@ -4150,7 +4744,7 @@ func TestUnmarshalStructTag2(t *testing.T) {
 		B: "B",
 		C: "C",
 	}
-	data := hexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
+	data := mustHexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
 
 	var v strc
 	if err := Unmarshal(data, &v); err != nil {
@@ -4172,7 +4766,7 @@ func TestUnmarshalStructTag3(t *testing.T) {
 		B: "B",
 		C: "C",
 	}
-	data := hexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
+	data := mustHexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
 
 	var v strc
 	if err := Unmarshal(data, &v); err != nil {
@@ -4193,7 +4787,7 @@ func TestUnmarshalStructTag4(t *testing.T) {
 		A: "A",
 		B: "B",
 	}
-	data := hexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
+	data := mustHexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
 
 	var v strc
 	if err := Unmarshal(data, &v); err != nil {
@@ -4235,7 +4829,7 @@ func (s *stru) MarshalBinary() ([]byte, error) {
 	if s.a == "" && s.b == "" && s.c == "" {
 		return []byte{}, nil
 	}
-	return []byte(fmt.Sprintf("%s,%s,%s", s.a, s.b, s.c)), nil
+	return fmt.Appendf(nil, "%s,%s,%s", s.a, s.b, s.c), nil
 }
 
 func (s *stru) UnmarshalBinary(data []byte) (err error) {
@@ -4258,16 +4852,16 @@ func (n marshalBinaryError) MarshalBinary() (data []byte, err error) {
 }
 
 func TestBinaryMarshalerUnmarshaler(t *testing.T) {
-	testCases := []roundTripTest{
+	testCases := []roundTripTestCase{
 		{
 			name:         "primitive obj",
 			obj:          number(1234567890),
-			wantCborData: hexDecode("4800000000499602d2"),
+			wantCborData: mustHexDecode("4800000000499602d2"),
 		},
 		{
 			name:         "struct obj",
 			obj:          stru{a: "a", b: "b", c: "c"},
-			wantCborData: hexDecode("45612C622C63"),
+			wantCborData: mustHexDecode("45612C622C63"),
 		},
 	}
 	em, _ := EncOptions{}.EncMode()
@@ -4284,14 +4878,14 @@ func TestBinaryUnmarshalerError(t *testing.T) { //nolint:dupl
 	}{
 		{
 			name:         "primitive type",
-			typ:          reflect.TypeOf(number(0)),
-			data:         hexDecode("44499602d2"),
+			typ:          reflect.TypeFor[number](),
+			data:         mustHexDecode("44499602d2"),
 			wantErrorMsg: "number:UnmarshalBinary: invalid length",
 		},
 		{
 			name:         "struct type",
-			typ:          reflect.TypeOf(stru{}),
-			data:         hexDecode("47612C622C632C64"),
+			typ:          reflect.TypeFor[stru](),
+			data:         mustHexDecode("47612C622C632C64"),
 			wantErrorMsg: "stru:UnmarshalBinary: invalid element count",
 		},
 	}
@@ -4366,16 +4960,16 @@ func (n marshalCBORError) MarshalCBOR() (data []byte, err error) {
 }
 
 func TestMarshalerUnmarshaler(t *testing.T) {
-	testCases := []roundTripTest{
+	testCases := []roundTripTestCase{
 		{
 			name:         "primitive obj",
 			obj:          number2(1),
-			wantCborData: hexDecode("a1636e756d01"),
+			wantCborData: mustHexDecode("a1636e756d01"),
 		},
 		{
 			name:         "struct obj",
 			obj:          stru2{a: "a", b: "b", c: "c"},
-			wantCborData: hexDecode("83616161626163"),
+			wantCborData: mustHexDecode("83616161626163"),
 		},
 	}
 	em, _ := EncOptions{}.EncMode()
@@ -4392,14 +4986,14 @@ func TestUnmarshalerError(t *testing.T) { //nolint:dupl
 	}{
 		{
 			name:         "primitive type",
-			typ:          reflect.TypeOf(number2(0)),
-			data:         hexDecode("44499602d2"),
+			typ:          reflect.TypeFor[number2](),
+			data:         mustHexDecode("44499602d2"),
 			wantErrorMsg: "cbor: cannot unmarshal byte string into Go value of type map[string]uint64",
 		},
 		{
 			name:         "struct type",
-			typ:          reflect.TypeOf(stru2{}),
-			data:         hexDecode("47612C622C632C64"),
+			typ:          reflect.TypeFor[stru2](),
+			data:         mustHexDecode("47612C622C632C64"),
 			wantErrorMsg: "cbor: cannot unmarshal byte string into Go value of type []string",
 		},
 	}
@@ -4446,26 +5040,26 @@ func TestOutOfMem2(t *testing.T) {
 // Found at https://github.com/cose-wg/Examples/tree/master/RFC8152
 func TestCOSEExamples(t *testing.T) {
 	data := [][]byte{
-		hexDecode("D8608443A10101A1054C02D1F7E6F26C43D4868D87CE582464F84D913BA60A76070A9A48F26E97E863E2852948658F0811139868826E89218A75715B818440A101225818DBD43C4E9D719C27C6275C67D628D493F090593DB8218F11818344A1013818A220A401022001215820B2ADD44368EA6D641F9CA9AF308B4079AEB519F11E9B8A55A600B21233E86E6822F40458246D65726961646F632E6272616E64796275636B406275636B6C616E642E6578616D706C6540"),
-		hexDecode("D8628440A054546869732069732074686520636F6E74656E742E818343A10126A1044231315840E2AEAFD40D69D19DFE6E52077C5D7FF4E408282CBEFB5D06CBF414AF2E19D982AC45AC98B8544C908B4507DE1E90B717C3D34816FE926A2B98F53AFD2FA0F30A"),
-		hexDecode("D8628440A054546869732069732074686520636F6E74656E742E828343A10126A1044231315840E2AEAFD40D69D19DFE6E52077C5D7FF4E408282CBEFB5D06CBF414AF2E19D982AC45AC98B8544C908B4507DE1E90B717C3D34816FE926A2B98F53AFD2FA0F30A8344A1013823A104581E62696C626F2E62616767696E7340686F626269746F6E2E6578616D706C65588400A2D28A7C2BDB1587877420F65ADF7D0B9A06635DD1DE64BB62974C863F0B160DD2163734034E6AC003B01E8705524C5C4CA479A952F0247EE8CB0B4FB7397BA08D009E0C8BF482270CC5771AA143966E5A469A09F613488030C5B07EC6D722E3835ADB5B2D8C44E95FFB13877DD2582866883535DE3BB03D01753F83AB87BB4F7A0297"),
-		hexDecode("D8628440A1078343A10126A10442313158405AC05E289D5D0E1B0A7F048A5D2B643813DED50BC9E49220F4F7278F85F19D4A77D655C9D3B51E805A74B099E1E085AACD97FC29D72F887E8802BB6650CCEB2C54546869732069732074686520636F6E74656E742E818343A10126A1044231315840E2AEAFD40D69D19DFE6E52077C5D7FF4E408282CBEFB5D06CBF414AF2E19D982AC45AC98B8544C908B4507DE1E90B717C3D34816FE926A2B98F53AFD2FA0F30A"),
-		hexDecode("D8628456A2687265736572766564F40281687265736572766564A054546869732069732074686520636F6E74656E742E818343A10126A10442313158403FC54702AA56E1B2CB20284294C9106A63F91BAC658D69351210A031D8FC7C5FF3E4BE39445B1A3E83E1510D1ACA2F2E8A7C081C7645042B18ABA9D1FAD1BD9C"),
-		hexDecode("D28443A10126A10442313154546869732069732074686520636F6E74656E742E58408EB33E4CA31D1C465AB05AAC34CC6B23D58FEF5C083106C4D25A91AEF0B0117E2AF9A291AA32E14AB834DC56ED2A223444547E01F11D3B0916E5A4C345CACB36"),
-		hexDecode("D8608443A10101A1054CC9CF4DF2FE6C632BF788641358247ADBE2709CA818FB415F1E5DF66F4E1A51053BA6D65A1A0C52A357DA7A644B8070A151B0818344A1013818A220A40102200121582098F50A4FF6C05861C8860D13A638EA56C3F5AD7590BBFBF054E1C7B4D91D628022F50458246D65726961646F632E6272616E64796275636B406275636B6C616E642E6578616D706C6540"),
-		hexDecode("D8608443A1010AA1054D89F52F65A1C580933B5261A76C581C753548A19B1307084CA7B2056924ED95F2E3B17006DFE931B687B847818343A10129A2335061616262636364646565666667676868044A6F75722D73656372657440"),
-		hexDecode("D8608443A10101A2054CC9CF4DF2FE6C632BF7886413078344A1013823A104581E62696C626F2E62616767696E7340686F626269746F6E2E6578616D706C65588400929663C8789BB28177AE28467E66377DA12302D7F9594D2999AFA5DFA531294F8896F2B6CDF1740014F4C7F1A358E3A6CF57F4ED6FB02FCF8F7AA989F5DFD07F0700A3A7D8F3C604BA70FA9411BD10C2591B483E1D2C31DE003183E434D8FBA18F17A4C7E3DFA003AC1CF3D30D44D2533C4989D3AC38C38B71481CC3430C9D65E7DDFF58247ADBE2709CA818FB415F1E5DF66F4E1A51053BA6D65A1A0C52A357DA7A644B8070A151B0818344A1013818A220A40102200121582098F50A4FF6C05861C8860D13A638EA56C3F5AD7590BBFBF054E1C7B4D91D628022F50458246D65726961646F632E6272616E64796275636B406275636B6C616E642E6578616D706C6540"),
-		hexDecode("D8608443A10101A1054C02D1F7E6F26C43D4868D87CE582464F84D913BA60A76070A9A48F26E97E863E28529D8F5335E5F0165EEE976B4A5F6C6F09D818344A101381FA3225821706572656772696E2E746F6F6B407475636B626F726F7567682E6578616D706C650458246D65726961646F632E6272616E64796275636B406275636B6C616E642E6578616D706C6535420101581841E0D76F579DBD0D936A662D54D8582037DE2E366FDE1C62"),
-		hexDecode("D08343A1010AA1054D89F52F65A1C580933B5261A78C581C5974E1B99A3A4CC09A659AA2E9E7FFF161D38CE71CB45CE460FFB569"),
-		hexDecode("D08343A1010AA1064261A7581C252A8911D465C125B6764739700F0141ED09192DE139E053BD09ABCA"),
-		hexDecode("D8618543A1010FA054546869732069732074686520636F6E74656E742E489E1226BA1F81B848818340A20125044A6F75722D73656372657440"),
-		hexDecode("D8618543A10105A054546869732069732074686520636F6E74656E742E582081A03448ACD3D305376EAA11FB3FE416A955BE2CBE7EC96F012C994BC3F16A41818344A101381AA3225821706572656772696E2E746F6F6B407475636B626F726F7567682E6578616D706C650458246D65726961646F632E6272616E64796275636B406275636B6C616E642E6578616D706C653558404D8553E7E74F3C6A3A9DD3EF286A8195CBF8A23D19558CCFEC7D34B824F42D92BD06BD2C7F0271F0214E141FB779AE2856ABF585A58368B017E7F2A9E5CE4DB540"),
-		hexDecode("D8618543A1010EA054546869732069732074686520636F6E74656E742E4836F5AFAF0BAB5D43818340A2012404582430313863306165352D346439622D343731622D626664362D6565663331346263373033375818711AB0DC2FC4585DCE27EFFA6781C8093EBA906F227B6EB0"),
-		hexDecode("D8618543A10105A054546869732069732074686520636F6E74656E742E5820BF48235E809B5C42E995F2B7D5FA13620E7ED834E337F6AA43DF161E49E9323E828344A101381CA220A4010220032158420043B12669ACAC3FD27898FFBA0BCD2E6C366D53BC4DB71F909A759304ACFB5E18CDC7BA0B13FF8C7636271A6924B1AC63C02688075B55EF2D613574E7DC242F79C322F504581E62696C626F2E62616767696E7340686F626269746F6E2E6578616D706C655828339BC4F79984CDC6B3E6CE5F315A4C7D2B0AC466FCEA69E8C07DFBCA5BB1F661BC5F8E0DF9E3EFF58340A2012404582430313863306165352D346439622D343731622D626664362D65656633313462633730333758280B2C7CFCE04E98276342D6476A7723C090DFDD15F9A518E7736549E998370695E6D6A83B4AE507BB"),
-		hexDecode("D18443A1010FA054546869732069732074686520636F6E74656E742E48726043745027214F"),
+		mustHexDecode("D8608443A10101A1054C02D1F7E6F26C43D4868D87CE582464F84D913BA60A76070A9A48F26E97E863E2852948658F0811139868826E89218A75715B818440A101225818DBD43C4E9D719C27C6275C67D628D493F090593DB8218F11818344A1013818A220A401022001215820B2ADD44368EA6D641F9CA9AF308B4079AEB519F11E9B8A55A600B21233E86E6822F40458246D65726961646F632E6272616E64796275636B406275636B6C616E642E6578616D706C6540"),
+		mustHexDecode("D8628440A054546869732069732074686520636F6E74656E742E818343A10126A1044231315840E2AEAFD40D69D19DFE6E52077C5D7FF4E408282CBEFB5D06CBF414AF2E19D982AC45AC98B8544C908B4507DE1E90B717C3D34816FE926A2B98F53AFD2FA0F30A"),
+		mustHexDecode("D8628440A054546869732069732074686520636F6E74656E742E828343A10126A1044231315840E2AEAFD40D69D19DFE6E52077C5D7FF4E408282CBEFB5D06CBF414AF2E19D982AC45AC98B8544C908B4507DE1E90B717C3D34816FE926A2B98F53AFD2FA0F30A8344A1013823A104581E62696C626F2E62616767696E7340686F626269746F6E2E6578616D706C65588400A2D28A7C2BDB1587877420F65ADF7D0B9A06635DD1DE64BB62974C863F0B160DD2163734034E6AC003B01E8705524C5C4CA479A952F0247EE8CB0B4FB7397BA08D009E0C8BF482270CC5771AA143966E5A469A09F613488030C5B07EC6D722E3835ADB5B2D8C44E95FFB13877DD2582866883535DE3BB03D01753F83AB87BB4F7A0297"),
+		mustHexDecode("D8628440A1078343A10126A10442313158405AC05E289D5D0E1B0A7F048A5D2B643813DED50BC9E49220F4F7278F85F19D4A77D655C9D3B51E805A74B099E1E085AACD97FC29D72F887E8802BB6650CCEB2C54546869732069732074686520636F6E74656E742E818343A10126A1044231315840E2AEAFD40D69D19DFE6E52077C5D7FF4E408282CBEFB5D06CBF414AF2E19D982AC45AC98B8544C908B4507DE1E90B717C3D34816FE926A2B98F53AFD2FA0F30A"),
+		mustHexDecode("D8628456A2687265736572766564F40281687265736572766564A054546869732069732074686520636F6E74656E742E818343A10126A10442313158403FC54702AA56E1B2CB20284294C9106A63F91BAC658D69351210A031D8FC7C5FF3E4BE39445B1A3E83E1510D1ACA2F2E8A7C081C7645042B18ABA9D1FAD1BD9C"),
+		mustHexDecode("D28443A10126A10442313154546869732069732074686520636F6E74656E742E58408EB33E4CA31D1C465AB05AAC34CC6B23D58FEF5C083106C4D25A91AEF0B0117E2AF9A291AA32E14AB834DC56ED2A223444547E01F11D3B0916E5A4C345CACB36"),
+		mustHexDecode("D8608443A10101A1054CC9CF4DF2FE6C632BF788641358247ADBE2709CA818FB415F1E5DF66F4E1A51053BA6D65A1A0C52A357DA7A644B8070A151B0818344A1013818A220A40102200121582098F50A4FF6C05861C8860D13A638EA56C3F5AD7590BBFBF054E1C7B4D91D628022F50458246D65726961646F632E6272616E64796275636B406275636B6C616E642E6578616D706C6540"),
+		mustHexDecode("D8608443A1010AA1054D89F52F65A1C580933B5261A76C581C753548A19B1307084CA7B2056924ED95F2E3B17006DFE931B687B847818343A10129A2335061616262636364646565666667676868044A6F75722D73656372657440"),
+		mustHexDecode("D8608443A10101A2054CC9CF4DF2FE6C632BF7886413078344A1013823A104581E62696C626F2E62616767696E7340686F626269746F6E2E6578616D706C65588400929663C8789BB28177AE28467E66377DA12302D7F9594D2999AFA5DFA531294F8896F2B6CDF1740014F4C7F1A358E3A6CF57F4ED6FB02FCF8F7AA989F5DFD07F0700A3A7D8F3C604BA70FA9411BD10C2591B483E1D2C31DE003183E434D8FBA18F17A4C7E3DFA003AC1CF3D30D44D2533C4989D3AC38C38B71481CC3430C9D65E7DDFF58247ADBE2709CA818FB415F1E5DF66F4E1A51053BA6D65A1A0C52A357DA7A644B8070A151B0818344A1013818A220A40102200121582098F50A4FF6C05861C8860D13A638EA56C3F5AD7590BBFBF054E1C7B4D91D628022F50458246D65726961646F632E6272616E64796275636B406275636B6C616E642E6578616D706C6540"),
+		mustHexDecode("D8608443A10101A1054C02D1F7E6F26C43D4868D87CE582464F84D913BA60A76070A9A48F26E97E863E28529D8F5335E5F0165EEE976B4A5F6C6F09D818344A101381FA3225821706572656772696E2E746F6F6B407475636B626F726F7567682E6578616D706C650458246D65726961646F632E6272616E64796275636B406275636B6C616E642E6578616D706C6535420101581841E0D76F579DBD0D936A662D54D8582037DE2E366FDE1C62"),
+		mustHexDecode("D08343A1010AA1054D89F52F65A1C580933B5261A78C581C5974E1B99A3A4CC09A659AA2E9E7FFF161D38CE71CB45CE460FFB569"),
+		mustHexDecode("D08343A1010AA1064261A7581C252A8911D465C125B6764739700F0141ED09192DE139E053BD09ABCA"),
+		mustHexDecode("D8618543A1010FA054546869732069732074686520636F6E74656E742E489E1226BA1F81B848818340A20125044A6F75722D73656372657440"),
+		mustHexDecode("D8618543A10105A054546869732069732074686520636F6E74656E742E582081A03448ACD3D305376EAA11FB3FE416A955BE2CBE7EC96F012C994BC3F16A41818344A101381AA3225821706572656772696E2E746F6F6B407475636B626F726F7567682E6578616D706C650458246D65726961646F632E6272616E64796275636B406275636B6C616E642E6578616D706C653558404D8553E7E74F3C6A3A9DD3EF286A8195CBF8A23D19558CCFEC7D34B824F42D92BD06BD2C7F0271F0214E141FB779AE2856ABF585A58368B017E7F2A9E5CE4DB540"),
+		mustHexDecode("D8618543A1010EA054546869732069732074686520636F6E74656E742E4836F5AFAF0BAB5D43818340A2012404582430313863306165352D346439622D343731622D626664362D6565663331346263373033375818711AB0DC2FC4585DCE27EFFA6781C8093EBA906F227B6EB0"),
+		mustHexDecode("D8618543A10105A054546869732069732074686520636F6E74656E742E5820BF48235E809B5C42E995F2B7D5FA13620E7ED834E337F6AA43DF161E49E9323E828344A101381CA220A4010220032158420043B12669ACAC3FD27898FFBA0BCD2E6C366D53BC4DB71F909A759304ACFB5E18CDC7BA0B13FF8C7636271A6924B1AC63C02688075B55EF2D613574E7DC242F79C322F504581E62696C626F2E62616767696E7340686F626269746F6E2E6578616D706C655828339BC4F79984CDC6B3E6CE5F315A4C7D2B0AC466FCEA69E8C07DFBCA5BB1F661BC5F8E0DF9E3EFF58340A2012404582430313863306165352D346439622D343731622D626664362D65656633313462633730333758280B2C7CFCE04E98276342D6476A7723C090DFDD15F9A518E7736549E998370695E6D6A83B4AE507BB"),
+		mustHexDecode("D18443A1010FA054546869732069732074686520636F6E74656E742E48726043745027214F"),
 	}
 	for _, d := range data {
-		var v interface{}
+		var v any
 		if err := Unmarshal(d, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", d, err)
 		}
@@ -4476,7 +5070,7 @@ func TestUnmarshalStructKeyAsIntError(t *testing.T) {
 	type T1 struct {
 		F1 int `cbor:"1,keyasint"`
 	}
-	data := hexDecode("a13bffffffffffffffff01") // {1: -18446744073709551616}
+	data := mustHexDecode("a13bffffffffffffffff01") // {1: -18446744073709551616}
 	var v T1
 	if err := Unmarshal(data, &v); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
@@ -4498,8 +5092,14 @@ func TestUnmarshalArrayToStruct(t *testing.T) {
 		name string
 		data []byte
 	}{
-		{"definite length array", hexDecode("83010203")},
-		{"indefinite length array", hexDecode("9f010203ff")},
+		{
+			name: "definite-length array",
+			data: mustHexDecode("83010203"),
+		},
+		{
+			name: "indefinite-length array",
+			data: mustHexDecode("9f010203ff"),
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -4517,7 +5117,7 @@ func TestUnmarshalArrayToStructNoToArrayOptionError(t *testing.T) {
 		B int
 		C int
 	}
-	data := hexDecode("8301020383010203")
+	data := mustHexDecode("8301020383010203")
 	var v1 T
 	wantT := T{}
 	dec := NewDecoder(bytes.NewReader(data))
@@ -4552,13 +5152,34 @@ func TestUnmarshalNonArrayDataToStructToArray(t *testing.T) {
 		name string
 		data []byte
 	}{
-		{"CBOR positive int", hexDecode("00")},                        // 0
-		{"CBOR negative int", hexDecode("20")},                        // -1
-		{"CBOR byte string", hexDecode("4401020304")},                 // h`01020304`
-		{"CBOR text string", hexDecode("7f657374726561646d696e67ff")}, // streaming
-		{"CBOR map", hexDecode("a3614101614202614303")},               // {"A": 1, "B": 2, "C": 3}
-		{"CBOR bool", hexDecode("f5")},                                // true
-		{"CBOR float", hexDecode("fa7f7fffff")},                       // 3.4028234663852886e+38
+		{
+			name: "CBOR positive int",
+			data: mustHexDecode("00"),
+		}, // 0
+		{
+			name: "CBOR negative int",
+			data: mustHexDecode("20"),
+		}, // -1
+		{
+			name: "CBOR byte string",
+			data: mustHexDecode("4401020304"),
+		}, // h`01020304`
+		{
+			name: "CBOR text string",
+			data: mustHexDecode("7f657374726561646d696e67ff"),
+		}, // streaming
+		{
+			name: "CBOR map",
+			data: mustHexDecode("a3614101614202614303"),
+		}, // {"A": 1, "B": 2, "C": 3}
+		{
+			name: "CBOR bool",
+			data: mustHexDecode("f5"),
+		}, // true
+		{
+			name: "CBOR float",
+			data: mustHexDecode("fa7f7fffff"),
+		}, // 3.4028234663852886e+38
 	}
 	wantT := T{}
 	wantErrorMsg := "cannot unmarshal"
@@ -4585,7 +5206,7 @@ func TestUnmarshalArrayToStructWrongSizeError(t *testing.T) {
 		A int
 		B int
 	}
-	data := hexDecode("8301020383010203")
+	data := mustHexDecode("8301020383010203")
 	var v1 T
 	wantT := T{}
 	dec := NewDecoder(bytes.NewReader(data))
@@ -4620,12 +5241,22 @@ func TestUnmarshalArrayToStructWrongFieldTypeError(t *testing.T) {
 		name         string
 		data         []byte
 		wantErrorMsg string
-		wantV        interface{}
+		wantV        any
 	}{
 		// [1, 2, 3]
-		{"wrong field type", hexDecode("83010203"), "cannot unmarshal", T{A: 1, C: 3}},
+		{
+			name:         "wrong field type",
+			data:         mustHexDecode("83010203"),
+			wantErrorMsg: "cannot unmarshal",
+			wantV:        T{A: 1, C: 3},
+		},
 		// [1, 0xfe, 3]
-		{"invalid UTF-8 string", hexDecode("830161fe03"), invalidUTF8ErrorMsg, T{A: 1, C: 3}},
+		{
+			name:         "invalid UTF-8 string",
+			data:         mustHexDecode("830161fe03"),
+			wantErrorMsg: invalidUTF8ErrorMsg,
+			wantV:        T{A: 1, C: 3},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -4645,11 +5276,11 @@ func TestUnmarshalArrayToStructWrongFieldTypeError(t *testing.T) {
 func TestUnmarshalArrayToStructCannotSetEmbeddedPointerError(t *testing.T) {
 	type (
 		s1 struct {
-			x int //nolint:unused,structcheck
+			x int //nolint:unused
 			X int
 		}
 		S2 struct {
-			y int //nolint:unused,structcheck
+			y int //nolint:unused
 			Y int
 		}
 		S struct {
@@ -4676,11 +5307,11 @@ func TestUnmarshalArrayToStructCannotSetEmbeddedPointerError(t *testing.T) {
 func TestUnmarshalIntoSliceError(t *testing.T) {
 	data := []byte{0x83, 0x61, 0x61, 0x61, 0xfe, 0x61, 0x62} // ["a", 0xfe, "b"]
 	wantErrorMsg := invalidUTF8ErrorMsg
-	var want interface{}
+	var want any
 
-	// Unmarshal CBOR array into Go empty interface.
-	var v1 interface{}
-	want = []interface{}{"a", interface{}(nil), "b"}
+	// Unmarshal CBOR array into a value of type any.
+	var v1 any
+	want = []any{"a", any(nil), "b"}
 	if err := Unmarshal(data, &v1); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
 	} else if err.Error() != wantErrorMsg {
@@ -4733,12 +5364,12 @@ func TestUnmarshalIntoMapError(t *testing.T) {
 		{0xa3, 0x61, 0x61, 0x61, 0x41, 0x61, 0x63, 0x61, 0xfe, 0x61, 0x62, 0x61, 0x42}, // {"a":"A", "c": 0xfe, "b":"B"}
 	}
 	wantErrorMsg := invalidUTF8ErrorMsg
-	var want interface{}
+	var want any
 
 	for _, data := range data {
-		// Unmarshal CBOR map into Go empty interface.
-		var v1 interface{}
-		want = map[interface{}]interface{}{"a": "A", "b": "B"}
+		// Unmarshal CBOR map into a value of type any.
+		var v1 any
+		want = map[any]any{"a": "A", "b": "B"}
 		if err := Unmarshal(data, &v1); err == nil {
 			t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
 		} else if err.Error() != wantErrorMsg {
@@ -4748,9 +5379,9 @@ func TestUnmarshalIntoMapError(t *testing.T) {
 			t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v1, want)
 		}
 
-		// Unmarshal CBOR map into Go map[interface{}]interface{}.
-		var v2 map[interface{}]interface{}
-		want = map[interface{}]interface{}{"a": "A", "b": "B"}
+		// Unmarshal CBOR map into Go map[any]any.
+		var v2 map[any]any
+		want = map[any]any{"a": "A", "b": "B"}
 		if err := Unmarshal(data, &v2); err == nil {
 			t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
 		} else if err.Error() != wantErrorMsg {
@@ -4803,9 +5434,9 @@ func TestStructToArrayError(t *testing.T) {
 		wantErrorMsg string
 	}{
 		// [-17, [-17, -17], -17]
-		{hexDecode("9f3082303030ff"), "cbor: cannot unmarshal negative integer into Go struct field cbor.nestedCWT.Protected of type []uint8"},
+		{mustHexDecode("9f3082303030ff"), "cbor: cannot unmarshal negative integer into Go struct field cbor.nestedCWT.Protected of type []uint8"},
 		// [[], [], ["\x930000", -17]]
-		{hexDecode("9f9fff9fff9f65933030303030ffff"), "cbor: cannot unmarshal array into Go struct field cbor.nestedCWT.Unprotected of type cbor.coseHeader (cannot decode CBOR array to struct without toarray option)"},
+		{mustHexDecode("9f9fff9fff9f65933030303030ffff"), "cbor: cannot unmarshal array into Go struct field cbor.nestedCWT.Unprotected of type cbor.coseHeader (cannot decode CBOR array to struct without toarray option)"},
 	} {
 		var v nestedCWT
 		if err := Unmarshal(tc.data, &v); err == nil {
@@ -4826,7 +5457,7 @@ func TestStructKeyAsIntError(t *testing.T) {
 		Iat float64 `cbor:"6,keyasint"`
 		Cti []byte  `cbor:"7,keyasint"`
 	}
-	data := hexDecode("bf0783e662f03030ff") // {7: [simple(6), "\xF00", -17]}
+	data := mustHexDecode("bf0783e662f03030ff") // {7: [simple(6), "\xF00", -17]}
 	wantErrorMsg := invalidUTF8ErrorMsg
 	wantV := claims{Cti: []byte{6, 0, 0}}
 	var v claims
@@ -4841,10 +5472,10 @@ func TestStructKeyAsIntError(t *testing.T) {
 }
 
 func TestUnmarshalToNotNilInterface(t *testing.T) {
-	data := hexDecode("83010203") // []uint64{1, 2, 3}
-	s := "hello"                  //nolint:goconst
-	var v interface{} = s         // Unmarshal() sees v as type interface{} and sets CBOR data as default Go type.  s is unmodified.  Same behavior as encoding/json.
-	wantV := []interface{}{uint64(1), uint64(2), uint64(3)}
+	data := mustHexDecode("83010203") // []uint64{1, 2, 3}
+	s := "hello"                      //nolint:goconst
+	var v any = s                     // Unmarshal() sees v as a value of type any and sets CBOR data as default Go type.  s is unmodified.  Same behavior as encoding/json.
+	wantV := []any{uint64(1), uint64(2), uint64(3)}
 	if err := Unmarshal(data, &v); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	} else if !reflect.DeepEqual(v, wantV) {
@@ -4861,35 +5492,37 @@ func TestDecOptions(t *testing.T) {
 	}
 
 	opts1 := DecOptions{
-		DupMapKey:                DupMapKeyEnforcedAPF,
-		TimeTag:                  DecTagRequired,
-		MaxNestedLevels:          100,
-		MaxArrayElements:         102,
-		MaxMapPairs:              101,
-		IndefLength:              IndefLengthForbidden,
-		TagsMd:                   TagsForbidden,
-		IntDec:                   IntDecConvertSigned,
-		MapKeyByteString:         MapKeyByteStringForbidden,
-		ExtraReturnErrors:        ExtraDecErrorUnknownField,
-		DefaultMapType:           reflect.TypeOf(map[string]interface{}(nil)),
-		UTF8:                     UTF8DecodeInvalid,
-		FieldNameMatching:        FieldNameMatchingCaseSensitive,
-		BigIntDec:                BigIntDecodePointer,
-		DefaultByteStringType:    reflect.TypeOf(""),
-		ByteStringToString:       ByteStringToStringAllowed,
-		FieldNameByteString:      FieldNameByteStringAllowed,
-		UnrecognizedTagToAny:     UnrecognizedTagContentToAny,
-		TimeTagToAny:             TimeTagToRFC3339,
-		SimpleValues:             simpleValues,
-		NaN:                      NaNDecodeForbidden,
-		Inf:                      InfDecodeForbidden,
-		ByteStringToTime:         ByteStringToTimeAllowed,
-		ByteStringExpectedFormat: ByteStringExpectedBase64URL,
-		BignumTag:                BignumTagForbidden,
-		BinaryUnmarshaler:        BinaryUnmarshalerNone,
+		DupMapKey:                 DupMapKeyEnforcedAPF,
+		TimeTag:                   DecTagRequired,
+		MaxNestedLevels:           100,
+		MaxArrayElements:          102,
+		MaxMapPairs:               101,
+		IndefLength:               IndefLengthForbidden,
+		TagsMd:                    TagsForbidden,
+		IntDec:                    IntDecConvertSigned,
+		MapKeyByteString:          MapKeyByteStringForbidden,
+		ExtraReturnErrors:         ExtraDecErrorUnknownField,
+		DefaultMapType:            reflect.TypeFor[map[string]any](),
+		UTF8:                      UTF8DecodeInvalid,
+		FieldNameMatching:         FieldNameMatchingCaseSensitive,
+		BigIntDec:                 BigIntDecodePointer,
+		DefaultByteStringType:     reflect.TypeFor[string](),
+		ByteStringToString:        ByteStringToStringAllowed,
+		FieldNameByteString:       FieldNameByteStringAllowed,
+		UnrecognizedTagToAny:      UnrecognizedTagContentToAny,
+		TimeTagToAny:              TimeTagToRFC3339,
+		SimpleValues:              simpleValues,
+		NaN:                       NaNDecodeForbidden,
+		Inf:                       InfDecodeForbidden,
+		ByteStringToTime:          ByteStringToTimeAllowed,
+		ByteStringExpectedFormat:  ByteStringExpectedBase64URL,
+		BignumTag:                 BignumTagForbidden,
+		BinaryUnmarshaler:         BinaryUnmarshalerNone,
+		TextUnmarshaler:           TextUnmarshalerTextString,
+		JSONUnmarshalerTranscoder: stubTranscoder{},
 	}
 	ov := reflect.ValueOf(opts1)
-	for i := 0; i < ov.NumField(); i++ {
+	for i := range ov.NumField() {
 		fv := ov.Field(i)
 		if fv.IsZero() {
 			t.Errorf("options field %q is unset or set to the zero value for its type", ov.Type().Field(i).Name)
@@ -4906,13 +5539,13 @@ func TestDecOptions(t *testing.T) {
 	}
 }
 
-type roundTripTest struct {
+type roundTripTestCase struct {
 	name         string
-	obj          interface{}
+	obj          any
 	wantCborData []byte
 }
 
-func testRoundTrip(t *testing.T, testCases []roundTripTest, em EncMode, dm DecMode) {
+func testRoundTrip(t *testing.T, testCases []roundTripTestCase, em EncMode, dm DecMode) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			b, err := em.Marshal(tc.obj)
@@ -5175,23 +5808,32 @@ func TestUnmarshalStructKeyAsIntNumError(t *testing.T) {
 	type T2 struct {
 		F1 int `cbor:"-18446744073709551616,keyasint"`
 	}
+	type T3 struct {
+		F1 int `cbor:"99999999999999999999,keyasint"`
+	}
 	testCases := []struct {
 		name         string
 		data         []byte
-		obj          interface{}
+		obj          any
 		wantErrorMsg string
 	}{
 		{
 			name:         "string as key",
-			data:         hexDecode("a1616101"),
+			data:         mustHexDecode("a1616101"),
 			obj:          T1{},
 			wantErrorMsg: "cbor: failed to parse field name \"a\" to int",
 		},
 		{
-			name:         "out of range int as key",
-			data:         hexDecode("a13bffffffffffffffff01"),
+			name:         "int key < math.MinInt",
+			data:         mustHexDecode("a13bffffffffffffffff01"),
 			obj:          T2{},
 			wantErrorMsg: "cbor: failed to parse field name \"-18446744073709551616\" to int",
+		},
+		{
+			name:         "int key > math.MaxInt",
+			data:         mustHexDecode("a10001"),
+			obj:          T3{},
+			wantErrorMsg: "cbor: failed to parse field name \"99999999999999999999\" to int",
 		},
 	}
 	for _, tc := range testCases {
@@ -5211,17 +5853,17 @@ func TestUnmarshalEmptyMapWithDupMapKeyOpt(t *testing.T) {
 	testCases := []struct {
 		name  string
 		data  []byte
-		wantV interface{}
+		wantV any
 	}{
 		{
 			name:  "empty map",
-			data:  hexDecode("a0"),
-			wantV: map[interface{}]interface{}{},
+			data:  mustHexDecode("a0"),
+			wantV: map[any]any{},
 		},
 		{
 			name:  "indefinite empty map",
-			data:  hexDecode("bfff"),
-			wantV: map[interface{}]interface{}{},
+			data:  mustHexDecode("bfff"),
+			wantV: map[any]any{},
 		},
 	}
 
@@ -5232,7 +5874,7 @@ func TestUnmarshalEmptyMapWithDupMapKeyOpt(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v interface{}
+			var v any
 			if err := dm.Unmarshal(tc.data, &v); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 			}
@@ -5244,11 +5886,11 @@ func TestUnmarshalEmptyMapWithDupMapKeyOpt(t *testing.T) {
 }
 
 func TestUnmarshalDupMapKeyToEmptyInterface(t *testing.T) {
-	data := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+	data := mustHexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	// Duplicate key overwrites previous value (default).
-	wantV := map[interface{}]interface{}{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
-	var v interface{}
+	wantV := map[any]any{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
+	var v any
 	if err := Unmarshal(data, &v); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
@@ -5257,10 +5899,10 @@ func TestUnmarshalDupMapKeyToEmptyInterface(t *testing.T) {
 	}
 
 	// Duplicate key triggers error.
-	wantV = map[interface{}]interface{}{"a": nil, "b": "B", "c": "C"}
+	wantV = map[any]any{"a": nil, "b": "B", "c": "C"}
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
-	var v2 interface{}
+	var v2 any
 	if err := dm.Unmarshal(data, &v2); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*DupMapKeyError); !ok {
@@ -5274,18 +5916,18 @@ func TestUnmarshalDupMapKeyToEmptyInterface(t *testing.T) {
 }
 
 func TestStreamDupMapKeyToEmptyInterface(t *testing.T) {
-	data := hexDecode("a6616161416162614261636143616161466164614461656145") // map with duplicate key "c": {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+	data := mustHexDecode("a6616161416162614261636143616161466164614461656145") // map with duplicate key "c": {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	var b []byte
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
-	wantV := map[interface{}]interface{}{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
+	wantV := map[any]any{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
 	dec := NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
-		var v1 interface{}
+	for range 3 {
+		var v1 any
 		if err := dec.Decode(&v1); err != nil {
 			t.Errorf("Decode() returned error %v", err)
 		}
@@ -5293,18 +5935,18 @@ func TestStreamDupMapKeyToEmptyInterface(t *testing.T) {
 			t.Errorf("Decode() = %v (%T), want %v (%T)", v1, v1, wantV, wantV)
 		}
 	}
-	var v interface{}
+	var v any
 	if err := dec.Decode(&v); err != io.EOF {
 		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
 	}
 
 	// Duplicate key triggers error.
-	wantV = map[interface{}]interface{}{"a": nil, "b": "B", "c": "C"}
+	wantV = map[any]any{"a": nil, "b": "B", "c": "C"}
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
-		var v2 interface{}
+	for range 3 {
+		var v2 any
 		if err := dec.Decode(&v2); err == nil {
 			t.Errorf("Decode() didn't return an error")
 		} else if _, ok := err.(*DupMapKeyError); !ok {
@@ -5322,7 +5964,7 @@ func TestStreamDupMapKeyToEmptyInterface(t *testing.T) {
 }
 
 func TestUnmarshalDupMapKeyToEmptyMap(t *testing.T) {
-	data := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+	data := mustHexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	// Duplicate key overwrites previous value (default).
 	wantM := map[string]string{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
@@ -5352,17 +5994,17 @@ func TestUnmarshalDupMapKeyToEmptyMap(t *testing.T) {
 }
 
 func TestStreamDupMapKeyToEmptyMap(t *testing.T) {
-	data := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+	data := mustHexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	var b []byte
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
 	wantM := map[string]string{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
 	dec := NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var m1 map[string]string
 		if err := dec.Decode(&m1); err != nil {
 			t.Errorf("Decode() returned error %v", err)
@@ -5371,7 +6013,7 @@ func TestStreamDupMapKeyToEmptyMap(t *testing.T) {
 			t.Errorf("Decode() = %v (%T), want %v (%T)", m1, m1, wantM, wantM)
 		}
 	}
-	var v interface{}
+	var v any
 	if err := dec.Decode(&v); err != io.EOF {
 		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
 	}
@@ -5381,7 +6023,7 @@ func TestStreamDupMapKeyToEmptyMap(t *testing.T) {
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var m2 map[string]string
 		if err := dec.Decode(&m2); err == nil {
 			t.Errorf("Decode() didn't return an error")
@@ -5400,7 +6042,7 @@ func TestStreamDupMapKeyToEmptyMap(t *testing.T) {
 }
 
 func TestUnmarshalDupMapKeyToNotEmptyMap(t *testing.T) {
-	data := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+	data := mustHexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	// Duplicate key overwrites previous value (default).
 	m := map[string]string{"a": "Z", "b": "Z", "c": "Z", "d": "Z", "e": "Z", "f": "Z"}
@@ -5430,17 +6072,17 @@ func TestUnmarshalDupMapKeyToNotEmptyMap(t *testing.T) {
 }
 
 func TestStreamDupMapKeyToNotEmptyMap(t *testing.T) {
-	data := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+	data := mustHexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	var b []byte
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
 	wantM := map[string]string{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E", "f": "Z"}
 	dec := NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		m1 := map[string]string{"a": "Z", "b": "Z", "c": "Z", "d": "Z", "e": "Z", "f": "Z"}
 		if err := dec.Decode(&m1); err != nil {
 			t.Errorf("Decode() returned error %v", err)
@@ -5449,7 +6091,7 @@ func TestStreamDupMapKeyToNotEmptyMap(t *testing.T) {
 			t.Errorf("Decode() = %v (%T), want %v (%T)", m1, m1, wantM, wantM)
 		}
 	}
-	var v interface{}
+	var v any
 	if err := dec.Decode(&v); err != io.EOF {
 		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
 	}
@@ -5459,7 +6101,7 @@ func TestStreamDupMapKeyToNotEmptyMap(t *testing.T) {
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		m2 := map[string]string{"a": "Z", "b": "Z", "c": "Z", "d": "Z", "e": "Z", "f": "Z"}
 		if err := dec.Decode(&m2); err == nil {
 			t.Errorf("Decode() didn't return an error")
@@ -5497,44 +6139,44 @@ func TestUnmarshalDupMapKeyToStruct(t *testing.T) {
 	}{
 		{
 			name: "duplicate key does not overwrite previous value",
-			data: hexDecode("a6616161416162614261636143616161466164614461656145"), // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+			data: mustHexDecode("a6616161416162614261636143616161466164614461656145"), // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 			want: s{A: "A", B: "B", C: "C", D: "D", E: "E"},
 		},
 		{
 			name:    "duplicate key triggers error",
 			opts:    DecOptions{DupMapKey: DupMapKeyEnforcedAPF},
-			data:    hexDecode("a6616161416162614261636143616161466164614461656145"), // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+			data:    mustHexDecode("a6616161416162614261636143616161466164614461656145"), // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 			want:    s{A: "A", B: "B", C: "C"},
 			wantErr: &DupMapKeyError{Key: "a", Index: 3},
 		},
 		{
 			name:    "duplicate keys of comparable but disallowed cbor types skips remaining entries and returns error",
 			opts:    DecOptions{DupMapKey: DupMapKeyEnforcedAPF},
-			data:    hexDecode("a7616161416162614261636143d903e70100d903e701016164614461656145"), // {"a": "A", "b": "B", "c": "C", 999(1): 0, 999(1): 1, "d": "D", "e": "E"}
+			data:    mustHexDecode("a7616161416162614261636143d903e70100d903e701016164614461656145"), // {"a": "A", "b": "B", "c": "C", 999(1): 0, 999(1): 1, "d": "D", "e": "E"}
 			want:    s{A: "A", B: "B", C: "C"},
 			wantErr: &DupMapKeyError{Key: Tag{Number: 999, Content: uint64(1)}, Index: 4},
 		},
 		{
 			name: "mixed-case duplicate key does not overwrite previous value",
-			data: hexDecode("a6616161416162614261636143614161466164614461656145"), // {"a": "A", "b": "B", "c": "C", "A": "F", "d": "D", "e": "E"}
+			data: mustHexDecode("a6616161416162614261636143614161466164614461656145"), // {"a": "A", "b": "B", "c": "C", "A": "F", "d": "D", "e": "E"}
 			want: s{A: "A", B: "B", C: "C", D: "D", E: "E"},
 		},
 		{
 			name:    "mixed-case duplicate key triggers error",
 			opts:    DecOptions{DupMapKey: DupMapKeyEnforcedAPF},
-			data:    hexDecode("a6616161416162614261636143614161466164614461656145"), // {"a": "A", "b": "B", "c": "C", "A": "F", "d": "D", "e": "E"}
+			data:    mustHexDecode("a6616161416162614261636143614161466164614461656145"), // {"a": "A", "b": "B", "c": "C", "A": "F", "d": "D", "e": "E"}
 			want:    s{A: "A", B: "B", C: "C"},
 			wantErr: &DupMapKeyError{Key: "A", Index: 3},
 		},
 		{
 			name: "keyasint duplicate key does not overwrite previous value",
-			data: hexDecode("a36131616901614961616141"), // {"1": "i", 1: "I", "a": "A"}
+			data: mustHexDecode("a301616901614961616141"), // {1: "i", 1: "I", "a": "A"}
 			want: s{I: "i", A: "A"},
 		},
 		{
 			name:    "keyasint duplicate key triggers error",
 			opts:    DecOptions{DupMapKey: DupMapKeyEnforcedAPF},
-			data:    hexDecode("a36131616901614961616141"), // {"1": "i", 1: "I", "a": "A"}
+			data:    mustHexDecode("a301616901614961616141"), // {1: "i", 1: "I", "a": "A"}
 			want:    s{I: "i"},
 			wantErr: &DupMapKeyError{Key: int64(1), Index: 1},
 		},
@@ -5571,17 +6213,17 @@ func TestStreamDupMapKeyToStruct(t *testing.T) {
 		D string `cbor:"d"`
 		E string `cbor:"e"`
 	}
-	data := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+	data := mustHexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	var b []byte
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
 	wantS := s{A: "A", B: "B", C: "C", D: "D", E: "E"}
 	dec := NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s1 s
 		if err := dec.Decode(&s1); err != nil {
 			t.Errorf("Decode() returned error %v", err)
@@ -5590,7 +6232,7 @@ func TestStreamDupMapKeyToStruct(t *testing.T) {
 			t.Errorf("Decode() = %v (%T), want %v (%T)", s1, s1, wantS, wantS)
 		}
 	}
-	var v interface{}
+	var v any
 	if err := dec.Decode(&v); err != io.EOF {
 		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
 	}
@@ -5600,7 +6242,7 @@ func TestStreamDupMapKeyToStruct(t *testing.T) {
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s2 s
 		if err := dec.Decode(&s2); err == nil {
 			t.Errorf("Decode() didn't return an error")
@@ -5625,7 +6267,7 @@ func TestUnmarshalDupMapKeyToStructKeyAsInt(t *testing.T) {
 		B int `cbor:"3,keyasint"`
 		C int `cbor:"5,keyasint"`
 	}
-	data := hexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
+	data := mustHexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
 
 	// Duplicate key doesn't overwrite previous value (default).
 	wantS := s{A: 2, B: 4, C: 6}
@@ -5639,11 +6281,11 @@ func TestUnmarshalDupMapKeyToStructKeyAsInt(t *testing.T) {
 
 	// Duplicate key triggers error.
 	wantS = s{A: 2, B: 4}
-	wantErrorMsg := "cbor: found duplicate map key \"1\" at map element index 2"
+	wantErrorMsg := "cbor: found duplicate map key 1 at map element index 2"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
 	} else if _, ok := err.(*DupMapKeyError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -5660,17 +6302,17 @@ func TestStreamDupMapKeyToStructKeyAsInt(t *testing.T) {
 		B int `cbor:"3,keyasint"`
 		C int `cbor:"5,keyasint"`
 	}
-	data := hexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
+	data := mustHexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
 
 	var b []byte
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
 	wantS := s{A: 2, B: 4, C: 6}
 	dec := NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s1 s
 		if err := dec.Decode(&s1); err != nil {
 			t.Errorf("Decode() returned error %v", err)
@@ -5679,17 +6321,17 @@ func TestStreamDupMapKeyToStructKeyAsInt(t *testing.T) {
 			t.Errorf("Decode() = %v (%T), want %v (%T)", s1, s1, wantS, wantS)
 		}
 	}
-	var v interface{}
+	var v any
 	if err := dec.Decode(&v); err != io.EOF {
 		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
 	}
 
 	// Duplicate key triggers error.
 	wantS = s{A: 2, B: 4}
-	wantErrorMsg := "cbor: found duplicate map key \"1\" at map element index 2"
+	wantErrorMsg := "cbor: found duplicate map key 1 at map element index 2"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s2 s
 		if err := dec.Decode(&s2); err == nil {
 			t.Errorf("Decode() didn't return an error")
@@ -5714,7 +6356,7 @@ func TestUnmarshalDupMapKeyToStructNoMatchingField(t *testing.T) {
 		D string `cbor:"d"`
 		E string `cbor:"e"`
 	}
-	data := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+	data := mustHexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	wantS := s{B: "B", C: "C", D: "D", E: "E"}
 	var s1 s
@@ -5731,7 +6373,7 @@ func TestUnmarshalDupMapKeyToStructNoMatchingField(t *testing.T) {
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
 	} else if _, ok := err.(*DupMapKeyError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -5749,17 +6391,17 @@ func TestStreamDupMapKeyToStructNoMatchingField(t *testing.T) {
 		D string `cbor:"d"`
 		E string `cbor:"e"`
 	}
-	data := hexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+	data := mustHexDecode("a6616161416162614261636143616161466164614461656145") // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
 
 	var b []byte
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
 	wantS := s{B: "B", C: "C", D: "D", E: "E"}
 	dec := NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s1 s
 		if err := dec.Decode(&s1); err != nil {
 			t.Errorf("Decode() returned error %v", err)
@@ -5768,7 +6410,7 @@ func TestStreamDupMapKeyToStructNoMatchingField(t *testing.T) {
 			t.Errorf("Decode() = %v (%T), want %v (%T)", s1, s1, wantS, wantS)
 		}
 	}
-	var v interface{}
+	var v any
 	if err := dec.Decode(&v); err != io.EOF {
 		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
 	}
@@ -5778,7 +6420,7 @@ func TestStreamDupMapKeyToStructNoMatchingField(t *testing.T) {
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s2 s
 		if err := dec.Decode(&s2); err == nil {
 			t.Errorf("Decode() didn't return an error")
@@ -5801,7 +6443,7 @@ func TestUnmarshalDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
 		B int `cbor:"3,keyasint"`
 		C int `cbor:"5,keyasint"`
 	}
-	data := hexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
+	data := mustHexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
 
 	wantS := s{B: 4, C: 6}
 	var s1 s
@@ -5814,11 +6456,11 @@ func TestUnmarshalDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
 
 	// Duplicate key triggers error even though map key "a" doesn't have a corresponding struct field.
 	wantS = s{B: 4}
-	wantErrorMsg := "cbor: found duplicate map key \"1\" at map element index 2"
+	wantErrorMsg := "cbor: found duplicate map key 1 at map element index 2"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
 	} else if _, ok := err.(*DupMapKeyError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -5834,17 +6476,17 @@ func TestStreamDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
 		B int `cbor:"3,keyasint"`
 		C int `cbor:"5,keyasint"`
 	}
-	data := hexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
+	data := mustHexDecode("a40102030401030506") // {1:2, 3:4, 1:3, 5:6}
 
 	var b []byte
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		b = append(b, data...)
 	}
 
 	// Duplicate key overwrites previous value (default).
 	wantS := s{B: 4, C: 6}
 	dec := NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s1 s
 		if err := dec.Decode(&s1); err != nil {
 			t.Errorf("Decode() returned error %v", err)
@@ -5853,17 +6495,17 @@ func TestStreamDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
 			t.Errorf("Decode() = %v (%T), want %v (%T)", s1, s1, wantS, wantS)
 		}
 	}
-	var v interface{}
+	var v any
 	if err := dec.Decode(&v); err != io.EOF {
 		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
 	}
 
 	// Duplicate key triggers error.
 	wantS = s{B: 4}
-	wantErrorMsg := "cbor: found duplicate map key \"1\" at map element index 2"
+	wantErrorMsg := "cbor: found duplicate map key 1 at map element index 2"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s2 s
 		if err := dec.Decode(&s2); err == nil {
 			t.Errorf("Decode() didn't return an error")
@@ -5889,7 +6531,7 @@ func TestUnmarshalDupMapKeyToStructWrongType(t *testing.T) {
 		D string `cbor:"d"`
 		E string `cbor:"e"`
 	}
-	data := hexDecode("a861616141fa47c35000026162614261636143fa47c3500003616161466164614461656145") // {"a": "A", 100000.0:2, "b": "B", "c": "C", 100000.0:3, "a": "F", "d": "D", "e": "E"}
+	data := mustHexDecode("a861616141fa47c35000026162614261636143fa47c3500003616161466164614461656145") // {"a": "A", 100000.0:2, "b": "B", "c": "C", 100000.0:3, "a": "F", "d": "D", "e": "E"}
 
 	var s1 s
 	wantS := s{A: "A", B: "B", C: "C", D: "D", E: "E"}
@@ -5906,11 +6548,11 @@ func TestUnmarshalDupMapKeyToStructWrongType(t *testing.T) {
 	}
 
 	wantS = s{A: "A", B: "B", C: "C"}
-	wantErrorMsg = "cbor: found duplicate map key \"100000\" at map element index 4"
+	wantErrorMsg = "cbor: found duplicate map key 100000 at map element index 4"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
 	} else if _, ok := err.(*DupMapKeyError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -5929,17 +6571,17 @@ func TestStreamDupMapKeyToStructWrongType(t *testing.T) {
 		D string `cbor:"d"`
 		E string `cbor:"e"`
 	}
-	data := hexDecode("a861616141fa47c35000026162614261636143fa47c3500003616161466164614461656145") // {"a": "A", 100000.0:2, "b": "B", "c": "C", 100000.0:3, "a": "F", "d": "D", "e": "E"}
+	data := mustHexDecode("a861616141fa47c35000026162614261636143fa47c3500003616161466164614461656145") // {"a": "A", 100000.0:2, "b": "B", "c": "C", 100000.0:3, "a": "F", "d": "D", "e": "E"}
 
 	var b []byte
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		b = append(b, data...)
 	}
 
 	wantS := s{A: "A", B: "B", C: "C", D: "D", E: "E"}
 	wantErrorMsg := "cbor: cannot unmarshal"
 	dec := NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s1 s
 		if err := dec.Decode(&s1); err == nil {
 			t.Errorf("Unmarshal(0x%x) didn't return an error", data)
@@ -5952,17 +6594,17 @@ func TestStreamDupMapKeyToStructWrongType(t *testing.T) {
 			t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
 		}
 	}
-	var v interface{}
+	var v any
 	if err := dec.Decode(&v); err != io.EOF {
 		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
 	}
 
 	// Duplicate key triggers error.
 	wantS = s{A: "A", B: "B", C: "C"}
-	wantErrorMsg = "cbor: found duplicate map key \"100000\" at map element index 4"
+	wantErrorMsg = "cbor: found duplicate map key 100000 at map element index 4"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var s2 s
 		if err := dec.Decode(&s2); err == nil {
 			t.Errorf("Decode() didn't return an error")
@@ -5988,7 +6630,7 @@ func TestUnmarshalDupMapKeyToStructStringParseError(t *testing.T) {
 		D string `cbor:"d"`
 		E string `cbor:"e"`
 	}
-	data := hexDecode("a661fe6141616261426163614361fe61466164614461656145") // {"\xFE": "A", "b": "B", "c": "C", "\xFE": "F", "d": "D", "e": "E"}
+	data := mustHexDecode("a661fe6141616261426163614361fe61466164614461656145") // {"\xFE": "A", "b": "B", "c": "C", "\xFE": "F", "d": "D", "e": "E"}
 	wantS := s{A: "", B: "B", C: "C", D: "D", E: "E"}
 	wantErrorMsg := "cbor: invalid UTF-8 string"
 
@@ -6009,7 +6651,7 @@ func TestUnmarshalDupMapKeyToStructStringParseError(t *testing.T) {
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
 	} else if _, ok := err.(*SemanticError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*SemanticError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -6026,7 +6668,7 @@ func TestUnmarshalDupMapKeyToStructIntParseError(t *testing.T) {
 		B int `cbor:"3,keyasint"`
 		C int `cbor:"5,keyasint"`
 	}
-	data := hexDecode("a43bffffffffffffffff0203043bffffffffffffffff030506") // {-18446744073709551616:2, 3:4, -18446744073709551616:3, 5:6}
+	data := mustHexDecode("a43bffffffffffffffff0203043bffffffffffffffff030506") // {-18446744073709551616:2, 3:4, -18446744073709551616:3, 5:6}
 
 	// Duplicate key doesn't overwrite previous value (default).
 	wantS := s{B: 4, C: 6}
@@ -6047,7 +6689,7 @@ func TestUnmarshalDupMapKeyToStructIntParseError(t *testing.T) {
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -6066,7 +6708,7 @@ func TestUnmarshalDupMapKeyToStructWrongTypeParseError(t *testing.T) {
 		D string `cbor:"d"`
 		E string `cbor:"e"`
 	}
-	data := hexDecode("a68161fe614161626142616361438161fe61466164614461656145") // {["\xFE"]: "A", "b": "B", "c": "C", ["\xFE"]: "F", "d": "D", "e": "E"}
+	data := mustHexDecode("a68161fe614161626142616361438161fe61466164614461656145") // {["\xFE"]: "A", "b": "B", "c": "C", ["\xFE"]: "F", "d": "D", "e": "E"}
 
 	// Duplicate key doesn't overwrite previous value (default).
 	wantS := s{A: "", B: "B", C: "C", D: "D", E: "E"}
@@ -6087,7 +6729,7 @@ func TestUnmarshalDupMapKeyToStructWrongTypeParseError(t *testing.T) {
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -6106,7 +6748,7 @@ func TestUnmarshalDupMapKeyToStructWrongTypeUnhashableError(t *testing.T) {
 		D string `cbor:"d"`
 		E string `cbor:"e"`
 	}
-	data := hexDecode("a6810061416162614261636143810061466164614461656145") // {[0]: "A", "b": "B", "c": "C", [0]: "F", "d": "D", "e": "E"}
+	data := mustHexDecode("a6810061416162614261636143810061466164614461656145") // {[0]: "A", "b": "B", "c": "C", [0]: "F", "d": "D", "e": "E"}
 	wantS := s{A: "", B: "B", C: "C", D: "D", E: "E"}
 
 	// Duplicate key doesn't overwrite previous value (default).
@@ -6127,7 +6769,7 @@ func TestUnmarshalDupMapKeyToStructWrongTypeUnhashableError(t *testing.T) {
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -6146,7 +6788,7 @@ func TestUnmarshalDupMapKeyToStructTagTypeError(t *testing.T) {
 		D string `cbor:"d"`
 		E string `cbor:"e"`
 	}
-	data := hexDecode("a6c24901000000000000000061416162614261636143c24901000000000000000061466164614461656145") // {bignum(18446744073709551616): "A", "b": "B", "c": "C", bignum(18446744073709551616): "F", "d": "D", "e": "E"}
+	data := mustHexDecode("a6c24901000000000000000061416162614261636143c24901000000000000000061466164614461656145") // {bignum(18446744073709551616): "A", "b": "B", "c": "C", bignum(18446744073709551616): "F", "d": "D", "e": "E"}
 	wantS := s{A: "", B: "B", C: "C", D: "D", E: "E"}
 
 	// Duplicate key doesn't overwrite previous value (default).
@@ -6167,7 +6809,7 @@ func TestUnmarshalDupMapKeyToStructTagTypeError(t *testing.T) {
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
 	if err := dm.Unmarshal(data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeOf(s2))
+		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
@@ -6182,21 +6824,21 @@ func TestIndefiniteLengthArrayToArray(t *testing.T) {
 	testCases := []struct {
 		name  string
 		data  []byte
-		wantV interface{}
+		wantV any
 	}{
 		{
 			name:  "CBOR empty array to Go 5 elem array",
-			data:  hexDecode("9fff"),
+			data:  mustHexDecode("9fff"),
 			wantV: [5]byte{},
 		},
 		{
 			name:  "CBOR 3 elem array to Go 5 elem array",
-			data:  hexDecode("9f010203ff"),
+			data:  mustHexDecode("9f010203ff"),
 			wantV: [5]byte{1, 2, 3, 0, 0},
 		},
 		{
 			name:  "CBOR 10 elem array to Go 5 elem array",
-			data:  hexDecode("9f0102030405060708090aff"),
+			data:  mustHexDecode("9f0102030405060708090aff"),
 			wantV: [5]byte{1, 2, 3, 4, 5},
 		},
 	}
@@ -6224,20 +6866,20 @@ func TestExceedMaxArrayElements(t *testing.T) {
 		{
 			name:         "array",
 			opts:         DecOptions{MaxArrayElements: 16},
-			data:         hexDecode("910101010101010101010101010101010101"),
+			data:         mustHexDecode("910101010101010101010101010101010101"),
 			wantErrorMsg: "cbor: exceeded max number of elements 16 for CBOR array",
 		},
 		{
-			name:         "indefinite length array",
+			name:         "indefinite-length array",
 			opts:         DecOptions{MaxArrayElements: 16},
-			data:         hexDecode("9f0101010101010101010101010101010101ff"),
+			data:         mustHexDecode("9f0101010101010101010101010101010101ff"),
 			wantErrorMsg: "cbor: exceeded max number of elements 16 for CBOR array",
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, _ := tc.opts.DecMode()
-			var v interface{}
+			var v any
 			if err := dm.Unmarshal(tc.data, &v); err == nil {
 				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
 			} else if err.Error() != tc.wantErrorMsg {
@@ -6255,22 +6897,22 @@ func TestExceedMaxMapPairs(t *testing.T) {
 		wantErrorMsg string
 	}{
 		{
-			name:         "array",
+			name:         "map",
 			opts:         DecOptions{MaxMapPairs: 16},
-			data:         hexDecode("b101010101010101010101010101010101010101010101010101010101010101010101"),
+			data:         mustHexDecode("b101010101010101010101010101010101010101010101010101010101010101010101"),
 			wantErrorMsg: "cbor: exceeded max number of key-value pairs 16 for CBOR map",
 		},
 		{
-			name:         "indefinite length array",
+			name:         "indefinite-length map",
 			opts:         DecOptions{MaxMapPairs: 16},
-			data:         hexDecode("bf01010101010101010101010101010101010101010101010101010101010101010101ff"),
+			data:         mustHexDecode("bf01010101010101010101010101010101010101010101010101010101010101010101ff"),
 			wantErrorMsg: "cbor: exceeded max number of key-value pairs 16 for CBOR map",
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, _ := tc.opts.DecMode()
-			var v interface{}
+			var v any
 			if err := dm.Unmarshal(tc.data, &v); err == nil {
 				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
 			} else if err.Error() != tc.wantErrorMsg {
@@ -6290,32 +6932,32 @@ func TestDecIndefiniteLengthOption(t *testing.T) {
 		{
 			name:         "byte string",
 			opts:         DecOptions{IndefLength: IndefLengthForbidden},
-			data:         hexDecode("5fff"),
+			data:         mustHexDecode("5fff"),
 			wantErrorMsg: "cbor: indefinite-length byte string isn't allowed",
 		},
 		{
 			name:         "text string",
 			opts:         DecOptions{IndefLength: IndefLengthForbidden},
-			data:         hexDecode("7fff"),
+			data:         mustHexDecode("7fff"),
 			wantErrorMsg: "cbor: indefinite-length UTF-8 text string isn't allowed",
 		},
 		{
 			name:         "array",
 			opts:         DecOptions{IndefLength: IndefLengthForbidden},
-			data:         hexDecode("9fff"),
+			data:         mustHexDecode("9fff"),
 			wantErrorMsg: "cbor: indefinite-length array isn't allowed",
 		},
 		{
-			name:         "indefinite length array",
+			name:         "indefinite-length array",
 			opts:         DecOptions{IndefLength: IndefLengthForbidden},
-			data:         hexDecode("bfff"),
+			data:         mustHexDecode("bfff"),
 			wantErrorMsg: "cbor: indefinite-length map isn't allowed",
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Default option allows indefinite length items
-			var v interface{}
+			// Default option allows indefinite-length items
+			var v any
 			if err := Unmarshal(tc.data, &v); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned an error %v", tc.data, err)
 			}
@@ -6331,11 +6973,11 @@ func TestDecIndefiniteLengthOption(t *testing.T) {
 }
 
 func TestDecTagsMdOption(t *testing.T) {
-	data := hexDecode("c074323031332d30332d32315432303a30343a30305a")
+	data := mustHexDecode("c074323031332d30332d32315432303a30343a30305a")
 	wantErrorMsg := "cbor: CBOR tag isn't allowed"
 
 	// Default option allows CBOR tags
-	var v interface{}
+	var v any
 	if err := Unmarshal(data, &v); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned an error %v", data, err)
 	}
@@ -6405,32 +7047,32 @@ func TestIntDecConvertNone(t *testing.T) {
 	testCases := []struct {
 		name    string
 		data    []byte
-		wantObj interface{}
+		wantObj any
 	}{
 		{
 			name:    "CBOR pos int",
-			data:    hexDecode("1a000f4240"),
+			data:    mustHexDecode("1a000f4240"),
 			wantObj: uint64(1000000),
 		},
 		{
 			name:    "CBOR pos int overflows int64",
-			data:    hexDecode("1b8000000000000000"), // math.MaxInt64+1
+			data:    mustHexDecode("1b8000000000000000"), // math.MaxInt64+1
 			wantObj: uint64(math.MaxInt64 + 1),
 		},
 		{
 			name:    "CBOR neg int",
-			data:    hexDecode("3903e7"),
+			data:    mustHexDecode("3903e7"),
 			wantObj: int64(-1000),
 		},
 		{
 			name:    "CBOR neg int overflows int64",
-			data:    hexDecode("3b8000000000000000"), // math.MinInt64-1
+			data:    mustHexDecode("3b8000000000000000"), // math.MinInt64-1
 			wantObj: new(big.Int).Sub(big.NewInt(math.MinInt64), big.NewInt(1)),
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v interface{}
+			var v any
 			err := dm.Unmarshal(tc.data, &v)
 			if err == nil {
 				if !reflect.DeepEqual(v, tc.wantObj) {
@@ -6455,33 +7097,33 @@ func TestIntDecConvertSigned(t *testing.T) {
 	testCases := []struct {
 		name         string
 		data         []byte
-		wantObj      interface{}
+		wantObj      any
 		wantErrorMsg string
 	}{
 		{
 			name:    "CBOR pos int",
-			data:    hexDecode("1a000f4240"),
+			data:    mustHexDecode("1a000f4240"),
 			wantObj: int64(1000000),
 		},
 		{
 			name:         "CBOR pos int overflows int64",
-			data:         hexDecode("1b8000000000000000"), // math.MaxInt64+1
+			data:         mustHexDecode("1b8000000000000000"), // math.MaxInt64+1
 			wantErrorMsg: "9223372036854775808 overflows Go's int64",
 		},
 		{
 			name:    "CBOR neg int",
-			data:    hexDecode("3903e7"),
+			data:    mustHexDecode("3903e7"),
 			wantObj: int64(-1000),
 		},
 		{
 			name:    "CBOR neg int overflows int64",
-			data:    hexDecode("3b8000000000000000"), // math.MinInt64-1
+			data:    mustHexDecode("3b8000000000000000"), // math.MinInt64-1
 			wantObj: new(big.Int).Sub(big.NewInt(math.MinInt64), big.NewInt(1)),
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v interface{}
+			var v any
 			err := dm.Unmarshal(tc.data, &v)
 			if err == nil {
 				if tc.wantErrorMsg != "" {
@@ -6512,32 +7154,32 @@ func TestIntDecConvertSignedOrBigInt(t *testing.T) {
 	testCases := []struct {
 		name    string
 		data    []byte
-		wantObj interface{}
+		wantObj any
 	}{
 		{
 			name:    "CBOR pos int",
-			data:    hexDecode("1a000f4240"),
+			data:    mustHexDecode("1a000f4240"),
 			wantObj: int64(1000000),
 		},
 		{
 			name:    "CBOR pos int overflows int64",
-			data:    hexDecode("1b8000000000000000"),
+			data:    mustHexDecode("1b8000000000000000"),
 			wantObj: new(big.Int).Add(big.NewInt(math.MaxInt64), big.NewInt(1)),
 		},
 		{
 			name:    "CBOR neg int",
-			data:    hexDecode("3903e7"),
+			data:    mustHexDecode("3903e7"),
 			wantObj: int64(-1000),
 		},
 		{
 			name:    "CBOR neg int overflows int64",
-			data:    hexDecode("3b8000000000000000"),
+			data:    mustHexDecode("3b8000000000000000"),
 			wantObj: new(big.Int).Sub(big.NewInt(math.MinInt64), big.NewInt(1)),
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v interface{}
+			var v any
 			err := dm.Unmarshal(tc.data, &v)
 			if err == nil {
 				if !reflect.DeepEqual(v, tc.wantObj) {
@@ -6562,33 +7204,33 @@ func TestIntDecConvertSignedOrError(t *testing.T) {
 	testCases := []struct {
 		name         string
 		data         []byte
-		wantObj      interface{}
+		wantObj      any
 		wantErrorMsg string
 	}{
 		{
 			name:    "CBOR pos int",
-			data:    hexDecode("1a000f4240"),
+			data:    mustHexDecode("1a000f4240"),
 			wantObj: int64(1000000),
 		},
 		{
 			name:         "CBOR pos int overflows int64",
-			data:         hexDecode("1b8000000000000000"), // math.MaxInt64+1
+			data:         mustHexDecode("1b8000000000000000"), // math.MaxInt64+1
 			wantErrorMsg: "9223372036854775808 overflows Go's int64",
 		},
 		{
 			name:    "CBOR neg int",
-			data:    hexDecode("3903e7"),
+			data:    mustHexDecode("3903e7"),
 			wantObj: int64(-1000),
 		},
 		{
 			name:         "CBOR neg int overflows int64",
-			data:         hexDecode("3b8000000000000000"), // math.MinInt64-1
+			data:         mustHexDecode("3b8000000000000000"), // math.MinInt64-1
 			wantErrorMsg: "-9223372036854775809 overflows Go's int64",
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v interface{}
+			var v any
 			err := dm.Unmarshal(tc.data, &v)
 			if err == nil {
 				if tc.wantErrorMsg != "" {
@@ -6649,48 +7291,48 @@ func TestMapKeyByteString(t *testing.T) {
 	testCases := []struct {
 		name         string
 		data         []byte
-		wantObj      interface{}
+		wantObj      any
 		wantErrorMsg string
 		dm           DecMode
 	}{
 		{
 			name:         "byte string map key with MapKeyByteStringForbidden",
-			data:         hexDecode("a143abcdef187b"),
+			data:         mustHexDecode("a143abcdef187b"),
 			wantErrorMsg: "cbor: invalid map key type: []uint8",
 			dm:           bsForbiddenMode,
 		},
 		{
 			name:         "tagged byte string map key with MapKeyByteStringForbidden",
-			data:         hexDecode("a1d86443abcdef187b"),
+			data:         mustHexDecode("a1d86443abcdef187b"),
 			wantErrorMsg: "cbor: invalid map key type: cbor.Tag",
 			dm:           bsForbiddenMode,
 		},
 		{
 			name:         "nested tagged byte string map key with MapKeyByteStringForbidden",
-			data:         hexDecode("a1d865d86443abcdef187b"),
+			data:         mustHexDecode("a1d865d86443abcdef187b"),
 			wantErrorMsg: "cbor: invalid map key type: cbor.Tag",
 			dm:           bsForbiddenMode,
 		},
 		{
 			name: "byte string map key with MapKeyByteStringAllowed",
-			data: hexDecode("a143abcdef187b"),
-			wantObj: map[interface{}]interface{}{
+			data: mustHexDecode("a143abcdef187b"),
+			wantObj: map[any]any{
 				ByteString("\xab\xcd\xef"): uint64(123),
 			},
 			dm: bsAllowedMode,
 		},
 		{
 			name: "tagged byte string map key with MapKeyByteStringAllowed",
-			data: hexDecode("a1d86443abcdef187b"),
-			wantObj: map[interface{}]interface{}{
+			data: mustHexDecode("a1d86443abcdef187b"),
+			wantObj: map[any]any{
 				Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}: uint64(123),
 			},
 			dm: bsAllowedMode,
 		},
 		{
 			name: "nested tagged byte string map key with MapKeyByteStringAllowed",
-			data: hexDecode("a1d865d86443abcdef187b"),
-			wantObj: map[interface{}]interface{}{
+			data: mustHexDecode("a1d865d86443abcdef187b"),
+			wantObj: map[any]any{
 				Tag{Number: 101, Content: Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}}: uint64(123),
 			},
 			dm: bsAllowedMode,
@@ -6744,48 +7386,48 @@ func TestExtraErrorCondUnknownField(t *testing.T) {
 		name         string
 		data         []byte
 		dm           DecMode
-		wantObj      interface{}
+		wantObj      any
 		wantErrorMsg string
 	}{
 		{
 			name:    "field by field match",
-			data:    hexDecode("a3614161616142616261436163"), // map[string]string{"A": "a", "B": "b", "C": "c"}
+			data:    mustHexDecode("a3614161616142616261436163"), // map[string]string{"A": "a", "B": "b", "C": "c"}
 			dm:      dm,
 			wantObj: s{A: "a", B: "b", C: "c"},
 		},
 		{
 			name:    "field by field match with ExtraDecErrorUnknownField",
-			data:    hexDecode("a3614161616142616261436163"), // map[string]string{"A": "a", "B": "b", "C": "c"}
+			data:    mustHexDecode("a3614161616142616261436163"), // map[string]string{"A": "a", "B": "b", "C": "c"}
 			dm:      dmUnknownFieldError,
 			wantObj: s{A: "a", B: "b", C: "c"},
 		},
 		{
 			name:    "CBOR map less field",
-			data:    hexDecode("a26141616161426162"), // map[string]string{"A": "a", "B": "b"}
+			data:    mustHexDecode("a26141616161426162"), // map[string]string{"A": "a", "B": "b"}
 			dm:      dm,
 			wantObj: s{A: "a", B: "b", C: ""},
 		},
 		{
 			name:    "CBOR map less field with ExtraDecErrorUnknownField",
-			data:    hexDecode("a26141616161426162"), // map[string]string{"A": "a", "B": "b"}
+			data:    mustHexDecode("a26141616161426162"), // map[string]string{"A": "a", "B": "b"}
 			dm:      dmUnknownFieldError,
 			wantObj: s{A: "a", B: "b", C: ""},
 		},
 		{
 			name:    "duplicate map keys matching known field with ExtraDecErrorUnknownField",
-			data:    hexDecode("a26141616161416141"), // map[string]string{"A": "a", "A": "A"}
+			data:    mustHexDecode("a26141616161416141"), // map[string]string{"A": "a", "A": "A"}
 			dm:      dmUnknownFieldError,
 			wantObj: s{A: "a"},
 		},
 		{
 			name:    "CBOR map unknown field",
-			data:    hexDecode("a461416161614261626143616361446164"), // map[string]string{"A": "a", "B": "b", "C": "c", "D": "d"}
+			data:    mustHexDecode("a461416161614261626143616361446164"), // map[string]string{"A": "a", "B": "b", "C": "c", "D": "d"}
 			dm:      dm,
 			wantObj: s{A: "a", B: "b", C: "c"},
 		},
 		{
 			name:         "CBOR map unknown field with ExtraDecErrorUnknownField",
-			data:         hexDecode("a461416161614261626143616361446164"), // map[string]string{"A": "a", "B": "b", "C": "c", "D": "d"}
+			data:         mustHexDecode("a461416161614261626143616361446164"), // map[string]string{"A": "a", "B": "b", "C": "c", "D": "d"}
 			dm:           dmUnknownFieldError,
 			wantErrorMsg: "cbor: found unknown field at map element index 3",
 		},
@@ -6846,7 +7488,7 @@ func TestStreamExtraErrorCondUnknownField(t *testing.T) {
 		C string
 	}
 
-	data := hexDecode("a461416161614461646142616261436163a3614161616142616261436163") // map[string]string{"A": "a", "D": "d", "B": "b", "C": "c"}, map[string]string{"A": "a", "B": "b", "C": "c"}
+	data := mustHexDecode("a461416161614461646142616261436163a3614161616142616261436163") // map[string]string{"A": "a", "D": "d", "B": "b", "C": "c"}, map[string]string{"A": "a", "B": "b", "C": "c"}
 	wantErrorMsg := "cbor: found unknown field at map element index 1"
 	wantObj := s{A: "a", B: "b", C: "c"}
 
@@ -6873,17 +7515,17 @@ func TestStreamExtraErrorCondUnknownField(t *testing.T) {
 // TestUnmarshalTagNum55799 is identical to TestUnmarshal,
 // except that CBOR test data is prefixed with tag number 55799 (0xd9d9f7).
 func TestUnmarshalTagNum55799(t *testing.T) {
-	tagNum55799 := hexDecode("d9d9f7")
+	tagNum55799 := mustHexDecode("d9d9f7")
 
-	for _, tc := range unmarshalTests {
+	for _, tc := range unmarshalTestCases {
 		// Prefix tag number 55799 to CBOR test data
 		data := make([]byte, len(tc.data)+6)
 		copy(data, tagNum55799)
 		copy(data[3:], tagNum55799)
 		copy(data[6:], tc.data)
 
-		// Test unmarshalling CBOR into empty interface.
-		var v interface{}
+		// Test unmarshaling CBOR into a value of type any.
+		var v any
 		if err := Unmarshal(data, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		} else {
@@ -6896,7 +7538,7 @@ func TestUnmarshalTagNum55799(t *testing.T) {
 			}
 		}
 
-		// Test unmarshalling CBOR into RawMessage.
+		// Test unmarshaling CBOR into RawMessage.
 		var r RawMessage
 		if err := Unmarshal(data, &r); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
@@ -6904,7 +7546,7 @@ func TestUnmarshalTagNum55799(t *testing.T) {
 			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", data, r, tc.data)
 		}
 
-		// Test unmarshalling CBOR into compatible data types.
+		// Test unmarshaling CBOR into compatible data types.
 		for _, value := range tc.wantValues {
 			v := reflect.New(reflect.TypeOf(value))
 			vPtr := v.Interface()
@@ -6921,7 +7563,7 @@ func TestUnmarshalTagNum55799(t *testing.T) {
 			}
 		}
 
-		// Test unmarshalling CBOR into incompatible data types.
+		// Test unmarshaling CBOR into incompatible data types.
 		for _, typ := range tc.wrongTypes {
 			v := reflect.New(typ)
 			vPtr := v.Interface()
@@ -6939,23 +7581,23 @@ func TestUnmarshalTagNum55799(t *testing.T) {
 // TestUnmarshalFloatWithTagNum55799 is identical to TestUnmarshalFloat,
 // except that CBOR test data is prefixed with tag number 55799 (0xd9d9f7).
 func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
-	tagNum55799 := hexDecode("d9d9f7")
+	tagNum55799 := mustHexDecode("d9d9f7")
 
-	for _, tc := range unmarshalFloatTests {
+	for _, tc := range unmarshalFloatTestCases {
 		// Prefix tag number 55799 to CBOR test data
 		data := make([]byte, len(tc.data)+3)
 		copy(data, tagNum55799)
 		copy(data[3:], tc.data)
 
-		// Test unmarshalling CBOR into empty interface.
-		var v interface{}
+		// Test unmarshaling CBOR into a value of type any.
+		var v any
 		if err := Unmarshal(tc.data, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 		} else {
 			compareFloats(t, tc.data, v, tc.wantInterfaceValue, tc.equalityThreshold)
 		}
 
-		// Test unmarshalling CBOR into RawMessage.
+		// Test unmarshaling CBOR into RawMessage.
 		var r RawMessage
 		if err := Unmarshal(tc.data, &r); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
@@ -6963,7 +7605,7 @@ func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
 			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", tc.data, r, tc.data)
 		}
 
-		// Test unmarshalling CBOR into compatible data types.
+		// Test unmarshaling CBOR into compatible data types.
 		for _, value := range tc.wantValues {
 			v := reflect.New(reflect.TypeOf(value))
 			vPtr := v.Interface()
@@ -6974,7 +7616,7 @@ func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
 			}
 		}
 
-		// Test unmarshalling CBOR into incompatible data types.
+		// Test unmarshaling CBOR into incompatible data types.
 		for _, typ := range unmarshalFloatWrongTypes {
 			v := reflect.New(typ)
 			vPtr := v.Interface()
@@ -6993,29 +7635,29 @@ func TestUnmarshalTagNum55799AsElement(t *testing.T) {
 	testCases := []struct {
 		name                string
 		data                []byte
-		emptyInterfaceValue interface{}
-		values              []interface{}
+		emptyInterfaceValue any
+		values              []any
 		wrongTypes          []reflect.Type
 	}{
 		{
-			"array",
-			hexDecode("d9d9f783d9d9f701d9d9f702d9d9f703"), // 55799([55799(1), 55799(2), 55799(3)])
-			[]interface{}{uint64(1), uint64(2), uint64(3)},
-			[]interface{}{[]interface{}{uint64(1), uint64(2), uint64(3)}, []byte{1, 2, 3}, []int{1, 2, 3}, []uint{1, 2, 3}, [0]int{}, [1]int{1}, [3]int{1, 2, 3}, [5]int{1, 2, 3, 0, 0}, []float32{1, 2, 3}, []float64{1, 2, 3}},
-			[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeOf([3]string{}), typeTag, typeRawTag},
+			name:                "array",
+			data:                mustHexDecode("d9d9f783d9d9f701d9d9f702d9d9f703"), // 55799([55799(1), 55799(2), 55799(3)])
+			emptyInterfaceValue: []any{uint64(1), uint64(2), uint64(3)},
+			values:              []any{[]any{uint64(1), uint64(2), uint64(3)}, []byte{1, 2, 3}, []int{1, 2, 3}, []uint{1, 2, 3}, [0]int{}, [1]int{1}, [3]int{1, 2, 3}, [5]int{1, 2, 3, 0, 0}, []float32{1, 2, 3}, []float64{1, 2, 3}},
+			wrongTypes:          []reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeString, typeBool, typeStringSlice, typeMapStringInt, reflect.TypeFor[[3]string](), typeTag, typeRawTag},
 		},
 		{
-			"map",
-			hexDecode("d9d9f7a2d9d9f701d9d9f702d9d9f703d9d9f704"), // 55799({55799(1): 55799(2), 55799(3): 55799(4)})
-			map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)},
-			[]interface{}{map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)}, map[uint]int{1: 2, 3: 4}, map[int]uint{1: 2, 3: 4}},
-			[]reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeByteArray, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
+			name:                "map",
+			data:                mustHexDecode("d9d9f7a2d9d9f701d9d9f702d9d9f703d9d9f704"), // 55799({55799(1): 55799(2), 55799(3): 55799(4)})
+			emptyInterfaceValue: map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)},
+			values:              []any{map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)}, map[uint]int{1: 2, 3: 4}, map[int]uint{1: 2, 3: 4}},
+			wrongTypes:          []reflect.Type{typeUint8, typeUint16, typeUint32, typeUint64, typeInt8, typeInt16, typeInt32, typeInt64, typeFloat32, typeFloat64, typeByteSlice, typeByteArray, typeString, typeBool, typeIntSlice, typeMapStringInt, typeTag, typeRawTag},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Test unmarshalling CBOR into empty interface.
-			var v interface{}
+			// Test unmarshaling CBOR into a value of type any.
+			var v any
 			if err := Unmarshal(tc.data, &v); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
 			} else {
@@ -7028,7 +7670,7 @@ func TestUnmarshalTagNum55799AsElement(t *testing.T) {
 				}
 			}
 
-			// Test unmarshalling CBOR into compatible data types.
+			// Test unmarshaling CBOR into compatible data types.
 			for _, value := range tc.values {
 				v := reflect.New(reflect.TypeOf(value))
 				vPtr := v.Interface()
@@ -7045,7 +7687,7 @@ func TestUnmarshalTagNum55799AsElement(t *testing.T) {
 				}
 			}
 
-			// Test unmarshalling CBOR into incompatible data types.
+			// Test unmarshaling CBOR into incompatible data types.
 			for _, typ := range tc.wrongTypes {
 				v := reflect.New(typ)
 				vPtr := v.Interface()
@@ -7062,7 +7704,7 @@ func TestUnmarshalTagNum55799AsElement(t *testing.T) {
 }
 
 func TestUnmarshalTagNum55799ToBinaryUnmarshaler(t *testing.T) {
-	data := hexDecode("d9d9f74800000000499602d2") // 55799(h'00000000499602D2')
+	data := mustHexDecode("d9d9f74800000000499602d2") // 55799(h'00000000499602D2')
 	wantObj := number(1234567890)
 
 	var v number
@@ -7074,7 +7716,7 @@ func TestUnmarshalTagNum55799ToBinaryUnmarshaler(t *testing.T) {
 }
 
 func TestUnmarshalTagNum55799ToUnmarshaler(t *testing.T) {
-	data := hexDecode("d9d9f7d864a1636e756d01") // 55799(100({"num": 1}))
+	data := mustHexDecode("d9d9f7d864a1636e756d01") // 55799(100({"num": 1}))
 	wantObj := number3(1)
 
 	var v number3
@@ -7087,7 +7729,7 @@ func TestUnmarshalTagNum55799ToUnmarshaler(t *testing.T) {
 
 func TestUnmarshalTagNum55799ToRegisteredGoType(t *testing.T) {
 	type myInt int
-	typ := reflect.TypeOf(myInt(0))
+	typ := reflect.TypeFor[myInt]()
 
 	tags := NewTagSet()
 	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 125); err != nil {
@@ -7096,7 +7738,7 @@ func TestUnmarshalTagNum55799ToRegisteredGoType(t *testing.T) {
 
 	dm, _ := DecOptions{}.DecModeWithTags(tags)
 
-	data := hexDecode("d9d9f7d87d01") // 55799(125(1))
+	data := mustHexDecode("d9d9f7d87d01") // 55799(125(1))
 	wantObj := myInt(1)
 
 	var v myInt
@@ -7110,10 +7752,10 @@ func TestUnmarshalTagNum55799ToRegisteredGoType(t *testing.T) {
 // TODO: wait for clarification from 7049bis https://github.com/cbor-wg/CBORbis/issues/183
 // Nested tag number 55799 may be stripeed as well depending on 7049bis clarification.
 func TestUnmarshalNestedTagNum55799ToEmptyInterface(t *testing.T) {
-	data := hexDecode("d864d9d9f701") // 100(55799(1))
+	data := mustHexDecode("d864d9d9f701") // 100(55799(1))
 	wantObj := Tag{100, Tag{55799, uint64(1)}}
 
-	var v interface{}
+	var v any
 	if err := Unmarshal(data, &v); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	} else if !reflect.DeepEqual(v, wantObj) {
@@ -7122,7 +7764,7 @@ func TestUnmarshalNestedTagNum55799ToEmptyInterface(t *testing.T) {
 }
 
 func TestUnmarshalNestedTagNum55799ToValue(t *testing.T) {
-	data := hexDecode("d864d9d9f701") // 100(55799(1))
+	data := mustHexDecode("d864d9d9f701") // 100(55799(1))
 	wantObj := 1
 
 	var v int
@@ -7134,7 +7776,7 @@ func TestUnmarshalNestedTagNum55799ToValue(t *testing.T) {
 }
 
 func TestUnmarshalNestedTagNum55799ToTag(t *testing.T) {
-	data := hexDecode("d864d9d9f701") // 100(55799(1))
+	data := mustHexDecode("d864d9d9f701") // 100(55799(1))
 	wantObj := Tag{100, Tag{55799, uint64(1)}}
 
 	var v Tag
@@ -7146,19 +7788,19 @@ func TestUnmarshalNestedTagNum55799ToTag(t *testing.T) {
 }
 
 func TestUnmarshalNestedTagNum55799ToTime(t *testing.T) {
-	data := hexDecode("c0d9d9f774323031332d30332d32315432303a30343a30305a") // 0(55799("2013-03-21T20:04:00Z"))
+	data := mustHexDecode("c0d9d9f774323031332d30332d32315432303a30343a30305a") // 0(55799("2013-03-21T20:04:00Z"))
 	wantErrorMsg := "tag number 0 must be followed by text string, got tag"
 
 	var v time.Time
 	if err := Unmarshal(data, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return error", data)
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
 		t.Errorf("Unmarshal(0x%x) returned error %s, want %s", data, err.Error(), wantErrorMsg)
 	}
 }
 
 func TestUnmarshalNestedTagNum55799ToBinaryUnmarshaler(t *testing.T) {
-	data := hexDecode("d864d9d9f74800000000499602d2") // 100(55799(h'00000000499602D2'))
+	data := mustHexDecode("d864d9d9f74800000000499602d2") // 100(55799(h'00000000499602D2'))
 	wantObj := number(1234567890)
 
 	var v number
@@ -7170,12 +7812,12 @@ func TestUnmarshalNestedTagNum55799ToBinaryUnmarshaler(t *testing.T) {
 }
 
 func TestUnmarshalNestedTagNum55799ToUnmarshaler(t *testing.T) {
-	data := hexDecode("d864d9d9f7a1636e756d01") // 100(55799({"num": 1}))
+	data := mustHexDecode("d864d9d9f7a1636e756d01") // 100(55799({"num": 1}))
 	wantErrorMsg := "wrong tag content type"
 
 	var v number3
 	if err := Unmarshal(data, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return error", data)
+		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
 		t.Errorf("Unmarshal(0x%x) returned error %s, want %s", data, err.Error(), wantErrorMsg)
 	}
@@ -7183,7 +7825,7 @@ func TestUnmarshalNestedTagNum55799ToUnmarshaler(t *testing.T) {
 
 func TestUnmarshalNestedTagNum55799ToRegisteredGoType(t *testing.T) {
 	type myInt int
-	typ := reflect.TypeOf(myInt(0))
+	typ := reflect.TypeFor[myInt]()
 
 	tags := NewTagSet()
 	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 125); err != nil {
@@ -7192,23 +7834,23 @@ func TestUnmarshalNestedTagNum55799ToRegisteredGoType(t *testing.T) {
 
 	dm, _ := DecOptions{}.DecModeWithTags(tags)
 
-	data := hexDecode("d87dd9d9f701") // 125(55799(1))
+	data := mustHexDecode("d87dd9d9f701") // 125(55799(1))
 	wantErrorMsg := "cbor: wrong tag number for cbor.myInt, got [125 55799], expected [125]"
 
 	var v myInt
 	if err := dm.Unmarshal(data, &v); err == nil {
-		t.Errorf("Unmarshal() didn't return error")
+		t.Errorf("Unmarshal() didn't return an error")
 	} else if !strings.Contains(err.Error(), wantErrorMsg) {
 		t.Errorf("Unmarshal(0x%x) returned error %s, want %s", data, err.Error(), wantErrorMsg)
 	}
 }
 
 func TestUnmarshalPosIntToBigInt(t *testing.T) {
-	data := hexDecode("1bffffffffffffffff") // 18446744073709551615
+	data := mustHexDecode("1bffffffffffffffff") // 18446744073709551615
 	wantEmptyInterfaceValue := uint64(18446744073709551615)
-	wantBigIntValue := bigIntOrPanic("18446744073709551615")
+	wantBigIntValue := mustBigInt("18446744073709551615")
 
-	var v1 interface{}
+	var v1 any
 	if err := Unmarshal(data, &v1); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %+v", data, err)
 	} else if !reflect.DeepEqual(v1, wantEmptyInterfaceValue) {
@@ -7227,25 +7869,25 @@ func TestUnmarshalNegIntToBigInt(t *testing.T) {
 	testCases := []struct {
 		name                    string
 		data                    []byte
-		wantEmptyInterfaceValue interface{}
+		wantEmptyInterfaceValue any
 		wantBigIntValue         big.Int
 	}{
 		{
 			name:                    "fit Go int64",
-			data:                    hexDecode("3b7fffffffffffffff"), // -9223372036854775808
+			data:                    mustHexDecode("3b7fffffffffffffff"), // -9223372036854775808
 			wantEmptyInterfaceValue: int64(-9223372036854775808),
-			wantBigIntValue:         bigIntOrPanic("-9223372036854775808"),
+			wantBigIntValue:         mustBigInt("-9223372036854775808"),
 		},
 		{
 			name:                    "overflow Go int64",
-			data:                    hexDecode("3b8000000000000000"), // -9223372036854775809
-			wantEmptyInterfaceValue: bigIntOrPanic("-9223372036854775809"),
-			wantBigIntValue:         bigIntOrPanic("-9223372036854775809"),
+			data:                    mustHexDecode("3b8000000000000000"), // -9223372036854775809
+			wantEmptyInterfaceValue: mustBigInt("-9223372036854775809"),
+			wantBigIntValue:         mustBigInt("-9223372036854775809"),
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v1 interface{}
+			var v1 any
 			if err := Unmarshal(tc.data, &v1); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %+v", tc.data, err)
 			} else if !reflect.DeepEqual(v1, tc.wantEmptyInterfaceValue) {
@@ -7266,63 +7908,63 @@ func TestUnmarshalTag2(t *testing.T) {
 	testCases := []struct {
 		name                    string
 		data                    []byte
-		wantEmptyInterfaceValue interface{}
-		wantValues              []interface{}
+		wantEmptyInterfaceValue any
+		wantValues              []any
 	}{
 		{
 			name:                    "fit Go int64",
-			data:                    hexDecode("c2430f4240"), // 2(1000000)
-			wantEmptyInterfaceValue: bigIntOrPanic("1000000"),
-			wantValues: []interface{}{
+			data:                    mustHexDecode("c2430f4240"), // 2(1000000)
+			wantEmptyInterfaceValue: mustBigInt("1000000"),
+			wantValues: []any{
 				int64(1000000),
 				uint64(1000000),
 				float32(1000000),
 				float64(1000000),
-				bigIntOrPanic("1000000"),
+				mustBigInt("1000000"),
 			},
 		},
 		{
 			name:                    "fit Go uint64",
-			data:                    hexDecode("c248ffffffffffffffff"), // 2(18446744073709551615)
-			wantEmptyInterfaceValue: bigIntOrPanic("18446744073709551615"),
-			wantValues: []interface{}{
+			data:                    mustHexDecode("c248ffffffffffffffff"), // 2(18446744073709551615)
+			wantEmptyInterfaceValue: mustBigInt("18446744073709551615"),
+			wantValues: []any{
 				uint64(18446744073709551615),
 				float32(18446744073709551615),
 				float64(18446744073709551615),
-				bigIntOrPanic("18446744073709551615"),
+				mustBigInt("18446744073709551615"),
 			},
 		},
 		{
 			name:                    "fit Go uint64 with leading zeros",
-			data:                    hexDecode("c24900ffffffffffffffff"), // 2(18446744073709551615)
-			wantEmptyInterfaceValue: bigIntOrPanic("18446744073709551615"),
-			wantValues: []interface{}{
+			data:                    mustHexDecode("c24900ffffffffffffffff"), // 2(18446744073709551615)
+			wantEmptyInterfaceValue: mustBigInt("18446744073709551615"),
+			wantValues: []any{
 				uint64(18446744073709551615),
 				float32(18446744073709551615),
 				float64(18446744073709551615),
-				bigIntOrPanic("18446744073709551615"),
+				mustBigInt("18446744073709551615"),
 			},
 		},
 		{
 			name:                    "overflow Go uint64",
-			data:                    hexDecode("c249010000000000000000"), // 2(18446744073709551616)
-			wantEmptyInterfaceValue: bigIntOrPanic("18446744073709551616"),
-			wantValues: []interface{}{
-				bigIntOrPanic("18446744073709551616"),
+			data:                    mustHexDecode("c249010000000000000000"), // 2(18446744073709551616)
+			wantEmptyInterfaceValue: mustBigInt("18446744073709551616"),
+			wantValues: []any{
+				mustBigInt("18446744073709551616"),
 			},
 		},
 		{
 			name:                    "overflow Go uint64 with leading zeros",
-			data:                    hexDecode("c24b0000010000000000000000"), // 2(18446744073709551616)
-			wantEmptyInterfaceValue: bigIntOrPanic("18446744073709551616"),
-			wantValues: []interface{}{
-				bigIntOrPanic("18446744073709551616"),
+			data:                    mustHexDecode("c24b0000010000000000000000"), // 2(18446744073709551616)
+			wantEmptyInterfaceValue: mustBigInt("18446744073709551616"),
+			wantValues: []any{
+				mustBigInt("18446744073709551616"),
 			},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v1 interface{}
+			var v1 any
 			if err := Unmarshal(tc.data, &v1); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %+v", tc.data, err)
 			} else if !reflect.DeepEqual(v1, tc.wantEmptyInterfaceValue) {
@@ -7345,51 +7987,51 @@ func TestUnmarshalTag3(t *testing.T) {
 	testCases := []struct {
 		name                    string
 		data                    []byte
-		wantEmptyInterfaceValue interface{}
-		wantValues              []interface{}
+		wantEmptyInterfaceValue any
+		wantValues              []any
 	}{
 		{
 			name:                    "fit Go int64",
-			data:                    hexDecode("c3487fffffffffffffff"), // 3(-9223372036854775808)
-			wantEmptyInterfaceValue: bigIntOrPanic("-9223372036854775808"),
-			wantValues: []interface{}{
+			data:                    mustHexDecode("c3487fffffffffffffff"), // 3(-9223372036854775808)
+			wantEmptyInterfaceValue: mustBigInt("-9223372036854775808"),
+			wantValues: []any{
 				int64(-9223372036854775808),
 				float32(-9223372036854775808),
 				float64(-9223372036854775808),
-				bigIntOrPanic("-9223372036854775808"),
+				mustBigInt("-9223372036854775808"),
 			},
 		},
 		{
 			name:                    "fit Go int64 with leading zeros",
-			data:                    hexDecode("c349007fffffffffffffff"), // 3(-9223372036854775808)
-			wantEmptyInterfaceValue: bigIntOrPanic("-9223372036854775808"),
-			wantValues: []interface{}{
+			data:                    mustHexDecode("c349007fffffffffffffff"), // 3(-9223372036854775808)
+			wantEmptyInterfaceValue: mustBigInt("-9223372036854775808"),
+			wantValues: []any{
 				int64(-9223372036854775808),
 				float32(-9223372036854775808),
 				float64(-9223372036854775808),
-				bigIntOrPanic("-9223372036854775808"),
+				mustBigInt("-9223372036854775808"),
 			},
 		},
 		{
 			name:                    "overflow Go int64",
-			data:                    hexDecode("c349010000000000000000"), // 3(-18446744073709551617)
-			wantEmptyInterfaceValue: bigIntOrPanic("-18446744073709551617"),
-			wantValues: []interface{}{
-				bigIntOrPanic("-18446744073709551617"),
+			data:                    mustHexDecode("c349010000000000000000"), // 3(-18446744073709551617)
+			wantEmptyInterfaceValue: mustBigInt("-18446744073709551617"),
+			wantValues: []any{
+				mustBigInt("-18446744073709551617"),
 			},
 		},
 		{
 			name:                    "overflow Go int64 with leading zeros",
-			data:                    hexDecode("c34b0000010000000000000000"), // 3(-18446744073709551617)
-			wantEmptyInterfaceValue: bigIntOrPanic("-18446744073709551617"),
-			wantValues: []interface{}{
-				bigIntOrPanic("-18446744073709551617"),
+			data:                    mustHexDecode("c34b0000010000000000000000"), // 3(-18446744073709551617)
+			wantEmptyInterfaceValue: mustBigInt("-18446744073709551617"),
+			wantValues: []any{
+				mustBigInt("-18446744073709551617"),
 			},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v1 interface{}
+			var v1 any
 			if err := Unmarshal(tc.data, &v1); err != nil {
 				t.Errorf("Unmarshal(0x%x) returned error %+v", tc.data, err)
 			} else if !reflect.DeepEqual(v1, tc.wantEmptyInterfaceValue) {
@@ -7409,7 +8051,7 @@ func TestUnmarshalTag3(t *testing.T) {
 }
 
 func TestUnmarshalInvalidTagBignum(t *testing.T) {
-	typeBigIntSlice := reflect.TypeOf([]big.Int{})
+	typeBigIntSlice := reflect.TypeFor[[]big.Int]()
 
 	testCases := []struct {
 		name          string
@@ -7418,20 +8060,20 @@ func TestUnmarshalInvalidTagBignum(t *testing.T) {
 		wantErrorMsg  string
 	}{
 		{
-			name:          "Tag 2 with string",
-			data:          hexDecode("c27f657374726561646d696e67ff"),
+			name:          "tag 2 with string",
+			data:          mustHexDecode("c27f657374726561646d696e67ff"),
 			decodeToTypes: []reflect.Type{typeIntf, typeBigInt},
 			wantErrorMsg:  "cbor: tag number 2 or 3 must be followed by byte string, got UTF-8 text string",
 		},
 		{
-			name:          "Tag 3 with string",
-			data:          hexDecode("c37f657374726561646d696e67ff"),
+			name:          "tag 3 with string",
+			data:          mustHexDecode("c37f657374726561646d696e67ff"),
 			decodeToTypes: []reflect.Type{typeIntf, typeBigInt},
 			wantErrorMsg:  "cbor: tag number 2 or 3 must be followed by byte string, got UTF-8 text string",
 		},
 		{
-			name:          "Tag 3 with negavtive int",
-			data:          hexDecode("81C330"), // [3(-17)]
+			name:          "tag 3 with negative integer",
+			data:          mustHexDecode("81C330"), // [3(-17)]
 			decodeToTypes: []reflect.Type{typeIntf, typeBigIntSlice},
 			wantErrorMsg:  "cbor: tag number 2 or 3 must be followed by byte string, got negative integer",
 		},
@@ -7441,7 +8083,7 @@ func TestUnmarshalInvalidTagBignum(t *testing.T) {
 			t.Run(tc.name+" decode to "+decodeToType.String(), func(t *testing.T) {
 				v := reflect.New(decodeToType)
 				if err := Unmarshal(tc.data, v.Interface()); err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return error, want error msg %q", tc.data, tc.wantErrorMsg)
+					t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.data, tc.wantErrorMsg)
 				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
 					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err, tc.wantErrorMsg)
 				}
@@ -7469,7 +8111,7 @@ func (f *IntFoo) Foo() string {
 type ByteFoo []byte
 
 func (f *ByteFoo) Foo() string {
-	return fmt.Sprint(*f)
+	return string(*f)
 }
 
 type StringFoo string
@@ -7522,7 +8164,7 @@ func TestUnmarshalToInterface(t *testing.T) {
 	}{
 		{
 			name: "uint",
-			data: hexDecode("a2016c736f6d65206d65737361676502187b"), // {1: "some message", 2: 123}
+			data: mustHexDecode("a2016c736f6d65206d65737361676502187b"), // {1: "some message", 2: 123}
 			v: &TestExample{
 				Message: "some message",
 				Foo:     &uintFoo123,
@@ -7531,7 +8173,7 @@ func TestUnmarshalToInterface(t *testing.T) {
 		},
 		{
 			name: "int",
-			data: hexDecode("a2016c736f6d65206d6573736167650220"), // {1: "some message", 2: -1}
+			data: mustHexDecode("a2016c736f6d65206d6573736167650220"), // {1: "some message", 2: -1}
 			v: &TestExample{
 				Message: "some message",
 				Foo:     &intFooNeg1,
@@ -7540,7 +8182,7 @@ func TestUnmarshalToInterface(t *testing.T) {
 		},
 		{
 			name: "bytes",
-			data: hexDecode("a2016c736f6d65206d6573736167650243010203"), // {1: "some message", 2: [1,2,3]}
+			data: mustHexDecode("a2016c736f6d65206d6573736167650243010203"), // {1: "some message", 2: [1,2,3]}
 			v: &TestExample{
 				Message: "some message",
 				Foo:     &byteFoo123,
@@ -7549,7 +8191,7 @@ func TestUnmarshalToInterface(t *testing.T) {
 		},
 		{
 			name: "string",
-			data: hexDecode("a2016c736f6d65206d6573736167650263313233"), // {1: "some message", 2: "123"}
+			data: mustHexDecode("a2016c736f6d65206d6573736167650263313233"), // {1: "some message", 2: "123"}
 			v: &TestExample{
 				Message: "some message",
 				Foo:     &stringFoo123,
@@ -7558,7 +8200,7 @@ func TestUnmarshalToInterface(t *testing.T) {
 		},
 		{
 			name: "array",
-			data: hexDecode("a2016c736f6d65206d6573736167650283010203"), // {1: "some message", 2: []int{1,2,3}}
+			data: mustHexDecode("a2016c736f6d65206d6573736167650283010203"), // {1: "some message", 2: []int{1,2,3}}
 			v: &TestExample{
 				Message: "some message",
 				Foo:     &arrayFoo123,
@@ -7567,7 +8209,7 @@ func TestUnmarshalToInterface(t *testing.T) {
 		},
 		{
 			name: "map",
-			data: hexDecode("a2016c736f6d65206d65737361676502a3010102020303"), // {1: "some message", 2: map[int]int{1:1,2:2,3:3}}
+			data: mustHexDecode("a2016c736f6d65206d65737361676502a3010102020303"), // {1: "some message", 2: map[int]int{1:1,2:2,3:3}}
 			v: &TestExample{
 				Message: "some message",
 				Foo:     &mapFoo123,
@@ -7576,7 +8218,7 @@ func TestUnmarshalToInterface(t *testing.T) {
 		},
 		{
 			name: "struct",
-			data: hexDecode("a2016c736f6d65206d65737361676502a1011901c8"), // {1: "some message", 2: {1: 456}}
+			data: mustHexDecode("a2016c736f6d65206d65737361676502a1011901c8"), // {1: "some message", 2: {1: 456}}
 			v: &TestExample{
 				Message: "some message",
 				Foo:     &StructFoo{Value: 456},
@@ -7595,7 +8237,7 @@ func TestUnmarshalToInterface(t *testing.T) {
 				t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.v, data, tc.data)
 			}
 
-			// Unmarshal to empty interface
+			// Unmarshal to a value of type TestExample with uninitialized Foo interface.
 			var einterface TestExample
 			if err = Unmarshal(data, &einterface); err == nil {
 				t.Errorf("Unmarshal(0x%x) didn't return an error, want error (*UnmarshalTypeError)", data)
@@ -7631,7 +8273,7 @@ func TestUnmarshalTaggedDataToInterface(t *testing.T) {
 	var tags = NewTagSet()
 	err := tags.Add(
 		TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired},
-		reflect.TypeOf(&Bar{}),
+		reflect.TypeFor[*Bar](),
 		4,
 	)
 	if err != nil {
@@ -7642,7 +8284,7 @@ func TestUnmarshalTaggedDataToInterface(t *testing.T) {
 		Foos: []Foo{&Bar{1}},
 	}
 
-	want := hexDecode("a164466f6f7381c4a1614901") // {"Foos": [4({"I": 1})]}
+	want := mustHexDecode("a164466f6f7381c4a1614901") // {"Foos": [4({"I": 1})]}
 
 	em, _ := EncOptions{}.EncModeWithTags(tags)
 	data, err := em.Marshal(v)
@@ -7654,7 +8296,7 @@ func TestUnmarshalTaggedDataToInterface(t *testing.T) {
 
 	dm, _ := DecOptions{}.DecModeWithTags(tags)
 
-	// Unmarshal to empty interface
+	// Unmarshal to wrong type.
 	var v1 Bar
 	if err = dm.Unmarshal(data, &v1); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error, want error (*UnmarshalTypeError)", data)
@@ -7701,11 +8343,11 @@ type A2 struct {
 func TestUnmarshalRegisteredTagToConcreteType(t *testing.T) {
 	var err error
 	tags := NewTagSet()
-	err = tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeOf(C{}), 279)
+	err = tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeFor[C](), 279)
 	if err != nil {
 		t.Error(err)
 	}
-	err = tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeOf(D{}), 280)
+	err = tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeFor[D](), 280)
 	if err != nil {
 		t.Error(err)
 	}
@@ -7722,8 +8364,8 @@ func TestUnmarshalRegisteredTagToConcreteType(t *testing.T) {
 	testCases := []struct {
 		name           string
 		data           []byte
-		unmarshalToObj interface{}
-		wantValue      interface{}
+		unmarshalToObj any
+		wantValue      any
 	}{
 		{
 			name:           "concrete type",
@@ -7754,17 +8396,17 @@ func TestDecModeInvalidDefaultMapType(t *testing.T) {
 	}{
 		{
 			name:         "byte slice",
-			opts:         DecOptions{DefaultMapType: reflect.TypeOf([]byte(nil))},
+			opts:         DecOptions{DefaultMapType: reflect.TypeFor[[]byte]()},
 			wantErrorMsg: "cbor: invalid DefaultMapType []uint8",
 		},
 		{
 			name:         "int slice",
-			opts:         DecOptions{DefaultMapType: reflect.TypeOf([]int(nil))},
+			opts:         DecOptions{DefaultMapType: reflect.TypeFor[[]int]()},
 			wantErrorMsg: "cbor: invalid DefaultMapType []int",
 		},
 		{
 			name:         "string",
-			opts:         DecOptions{DefaultMapType: reflect.TypeOf("")},
+			opts:         DecOptions{DefaultMapType: reflect.TypeFor[string]()},
 			wantErrorMsg: "cbor: invalid DefaultMapType string",
 		},
 		{
@@ -7787,114 +8429,114 @@ func TestDecModeInvalidDefaultMapType(t *testing.T) {
 
 func TestUnmarshalToDefaultMapType(t *testing.T) {
 
-	cborDataMapIntInt := hexDecode("a201020304")                                             // {1: 2, 3: 4}
-	cborDataMapStringInt := hexDecode("a2616101616202")                                      // {"a": 1, "b": 2}
-	cborDataArrayOfMapStringint := hexDecode("82a2616101616202a2616303616404")               // [{"a": 1, "b": 2}, {"c": 3, "d": 4}]
-	cborDataNestedMap := hexDecode("a268496e744669656c6401684d61704669656c64a2616101616202") // {"IntField": 1, "MapField": {"a": 1, "b": 2}}
+	cborDataMapIntInt := mustHexDecode("a201020304")                                             // {1: 2, 3: 4}
+	cborDataMapStringInt := mustHexDecode("a2616101616202")                                      // {"a": 1, "b": 2}
+	cborDataArrayOfMapStringint := mustHexDecode("82a2616101616202a2616303616404")               // [{"a": 1, "b": 2}, {"c": 3, "d": 4}]
+	cborDataNestedMap := mustHexDecode("a268496e744669656c6401684d61704669656c64a2616101616202") // {"IntField": 1, "MapField": {"a": 1, "b": 2}}
 
 	decOptionsDefault := DecOptions{}
-	decOptionsMapIntfIntfType := DecOptions{DefaultMapType: reflect.TypeOf(map[interface{}]interface{}(nil))}
-	decOptionsMapStringIntType := DecOptions{DefaultMapType: reflect.TypeOf(map[string]int(nil))}
-	decOptionsMapStringIntfType := DecOptions{DefaultMapType: reflect.TypeOf(map[string]interface{}(nil))}
+	decOptionsMapIntfIntfType := DecOptions{DefaultMapType: reflect.TypeFor[map[any]any]()}
+	decOptionsMapStringIntType := DecOptions{DefaultMapType: reflect.TypeFor[map[string]int]()}
+	decOptionsMapStringIntfType := DecOptions{DefaultMapType: reflect.TypeFor[map[string]any]()}
 
 	testCases := []struct {
 		name         string
 		opts         DecOptions
 		data         []byte
-		wantValue    interface{}
+		wantValue    any
 		wantErrorMsg string
 	}{
-		// Decode CBOR map to map[interface{}]interface{} using default options
+		// Decode CBOR map to map[any]any using default options
 		{
-			name:      "decode CBOR map[int]int to Go map[interface{}]interface{} (default)",
+			name:      "decode CBOR map[int]int to Go map[any]any (default)",
 			opts:      decOptionsDefault,
 			data:      cborDataMapIntInt,
-			wantValue: map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)},
+			wantValue: map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)},
 		},
 		{
-			name:      "decode CBOR map[string]int to Go map[interface{}]interface{} (default)",
+			name:      "decode CBOR map[string]int to Go map[any]any (default)",
 			opts:      decOptionsDefault,
 			data:      cborDataMapStringInt,
-			wantValue: map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
+			wantValue: map[any]any{"a": uint64(1), "b": uint64(2)},
 		},
 		{
-			name: "decode CBOR array of map[string]int to Go []map[interface{}]interface{} (default)",
+			name: "decode CBOR array of map[string]int to Go []map[any]any (default)",
 			opts: decOptionsDefault,
 			data: cborDataArrayOfMapStringint,
-			wantValue: []interface{}{
-				map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
-				map[interface{}]interface{}{"c": uint64(3), "d": uint64(4)},
+			wantValue: []any{
+				map[any]any{"a": uint64(1), "b": uint64(2)},
+				map[any]any{"c": uint64(3), "d": uint64(4)},
 			},
 		},
 		{
-			name: "decode CBOR nested map to Go map[interface{}]interface{} (default)",
+			name: "decode CBOR nested map to Go map[any]any (default)",
 			opts: decOptionsDefault,
 			data: cborDataNestedMap,
-			wantValue: map[interface{}]interface{}{
+			wantValue: map[any]any{
 				"IntField": uint64(1),
-				"MapField": map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
+				"MapField": map[any]any{"a": uint64(1), "b": uint64(2)},
 			},
 		},
-		// Decode CBOR map to map[interface{}]interface{} using default map type option
+		// Decode CBOR map to map[any]any using default map type option
 		{
-			name:      "decode CBOR map[int]int to Go map[interface{}]interface{}",
+			name:      "decode CBOR map[int]int to Go map[any]any",
 			opts:      decOptionsMapIntfIntfType,
 			data:      cborDataMapIntInt,
-			wantValue: map[interface{}]interface{}{uint64(1): uint64(2), uint64(3): uint64(4)},
+			wantValue: map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)},
 		},
 		{
-			name:      "decode CBOR map[string]int to Go map[interface{}]interface{}",
+			name:      "decode CBOR map[string]int to Go map[any]any",
 			opts:      decOptionsMapIntfIntfType,
 			data:      cborDataMapStringInt,
-			wantValue: map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
+			wantValue: map[any]any{"a": uint64(1), "b": uint64(2)},
 		},
 		{
-			name: "decode CBOR array of map[string]int to Go []map[interface{}]interface{}",
+			name: "decode CBOR array of map[string]int to Go []map[any]any",
 			opts: decOptionsMapIntfIntfType,
 			data: cborDataArrayOfMapStringint,
-			wantValue: []interface{}{
-				map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
-				map[interface{}]interface{}{"c": uint64(3), "d": uint64(4)},
+			wantValue: []any{
+				map[any]any{"a": uint64(1), "b": uint64(2)},
+				map[any]any{"c": uint64(3), "d": uint64(4)},
 			},
 		},
 		{
-			name: "decode CBOR nested map to Go map[interface{}]interface{}",
+			name: "decode CBOR nested map to Go map[any]any",
 			opts: decOptionsMapIntfIntfType,
 			data: cborDataNestedMap,
-			wantValue: map[interface{}]interface{}{
+			wantValue: map[any]any{
 				"IntField": uint64(1),
-				"MapField": map[interface{}]interface{}{"a": uint64(1), "b": uint64(2)},
+				"MapField": map[any]any{"a": uint64(1), "b": uint64(2)},
 			},
 		},
-		// Decode CBOR map to map[string]interface{} using default map type option
+		// Decode CBOR map to map[string]any using default map type option
 		{
-			name:         "decode CBOR map[int]int to Go map[string]interface{}",
+			name:         "decode CBOR map[int]int to Go map[string]any",
 			opts:         decOptionsMapStringIntfType,
 			data:         cborDataMapIntInt,
 			wantErrorMsg: "cbor: cannot unmarshal positive integer into Go value of type string",
 		},
 		{
-			name:      "decode CBOR map[string]int to Go map[string]interface{}",
+			name:      "decode CBOR map[string]int to Go map[string]any",
 			opts:      decOptionsMapStringIntfType,
 			data:      cborDataMapStringInt,
-			wantValue: map[string]interface{}{"a": uint64(1), "b": uint64(2)},
+			wantValue: map[string]any{"a": uint64(1), "b": uint64(2)},
 		},
 		{
-			name: "decode CBOR array of map[string]int to Go []map[string]interface{}",
+			name: "decode CBOR array of map[string]int to Go []map[string]any",
 			opts: decOptionsMapStringIntfType,
 			data: cborDataArrayOfMapStringint,
-			wantValue: []interface{}{
-				map[string]interface{}{"a": uint64(1), "b": uint64(2)},
-				map[string]interface{}{"c": uint64(3), "d": uint64(4)},
+			wantValue: []any{
+				map[string]any{"a": uint64(1), "b": uint64(2)},
+				map[string]any{"c": uint64(3), "d": uint64(4)},
 			},
 		},
 		{
-			name: "decode CBOR nested map to Go map[string]interface{}",
+			name: "decode CBOR nested map to Go map[string]any",
 			opts: decOptionsMapStringIntfType,
 			data: cborDataNestedMap,
-			wantValue: map[string]interface{}{
+			wantValue: map[string]any{
 				"IntField": uint64(1),
-				"MapField": map[string]interface{}{"a": uint64(1), "b": uint64(2)},
+				"MapField": map[string]any{"a": uint64(1), "b": uint64(2)},
 			},
 		},
 		// Decode CBOR map to map[string]int using default map type option
@@ -7914,7 +8556,7 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 			name: "decode CBOR array of map[string]int to Go []map[string]int",
 			opts: decOptionsMapStringIntType,
 			data: cborDataArrayOfMapStringint,
-			wantValue: []interface{}{
+			wantValue: []any{
 				map[string]int{"a": 1, "b": 2},
 				map[string]int{"c": 3, "d": 4},
 			},
@@ -7931,11 +8573,11 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			decMode, _ := tc.opts.DecMode()
 
-			var v interface{}
+			var v any
 			err := decMode.Unmarshal(tc.data, &v)
 			if err != nil {
 				if tc.wantErrorMsg == "" {
-					t.Errorf("Unmarshal(0x%x) to empty interface returned error %v", tc.data, err)
+					t.Errorf("Unmarshal(0x%x) to type any returned error %v", tc.data, err)
 				} else if tc.wantErrorMsg != err.Error() {
 					t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 				}
@@ -7951,8 +8593,8 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 }
 
 func TestUnmarshalFirstNoTrailing(t *testing.T) {
-	for _, tc := range unmarshalTests {
-		var v interface{}
+	for _, tc := range unmarshalTestCases {
+		var v any
 		if rest, err := UnmarshalFirst(tc.data, &v); err != nil {
 			t.Errorf("UnmarshalFirst(0x%x) returned error %v", tc.data, err)
 		} else {
@@ -7973,12 +8615,12 @@ func TestUnmarshalFirstNoTrailing(t *testing.T) {
 
 func TestUnmarshalfirstTrailing(t *testing.T) {
 	// Random trailing data
-	trailingData := hexDecode("4a6b0f4718c73f391091ea1c")
-	for _, tc := range unmarshalTests {
+	trailingData := mustHexDecode("4a6b0f4718c73f391091ea1c")
+	for _, tc := range unmarshalTestCases {
 		data := make([]byte, 0, len(tc.data)+len(trailingData))
 		data = append(data, tc.data...)
 		data = append(data, trailingData...)
-		var v interface{}
+		var v any
 		if rest, err := UnmarshalFirst(data, &v); err != nil {
 			t.Errorf("UnmarshalFirst(0x%x) returned error %v", data, err)
 		} else {
@@ -7999,8 +8641,8 @@ func TestUnmarshalfirstTrailing(t *testing.T) {
 
 func TestUnmarshalFirstInvalidItem(t *testing.T) {
 	// UnmarshalFirst should not return "rest" if the item was not well-formed
-	invalidCBOR := hexDecode("83FF20030102")
-	var v interface{}
+	invalidCBOR := mustHexDecode("83FF20030102")
+	var v any
 	rest, err := UnmarshalFirst(invalidCBOR, &v)
 	if rest != nil || err == nil {
 		t.Errorf("UnmarshalFirst(0x%x) = (%x, %v), want (nil, err)", invalidCBOR, rest, err)
@@ -8050,41 +8692,41 @@ func TestDecodeFieldNameMatching(t *testing.T) {
 	}{
 		{
 			name:      "case-insensitive match",
-			data:      hexDecode("a1614101"), // {"A": 1}
+			data:      mustHexDecode("a1614101"), // {"A": 1}
 			wantValue: s{LowerA: 1},
 		},
 		{
 			name:      "ignore case-insensitive match",
 			opts:      DecOptions{FieldNameMatching: FieldNameMatchingCaseSensitive},
-			data:      hexDecode("a1614101"), // {"A": 1}
+			data:      mustHexDecode("a1614101"), // {"A": 1}
 			wantValue: s{},
 		},
 		{
 			name:      "exact match before case-insensitive match",
-			data:      hexDecode("a2616101614102"), // {"a": 1, "A": 2}
+			data:      mustHexDecode("a2616101614102"), // {"a": 1, "A": 2}
 			wantValue: s{LowerA: 1},
 		},
 		{
 			name:      "case-insensitive match before exact match",
-			data:      hexDecode("a2614101616102"), // {"A": 1, "a": 2}
+			data:      mustHexDecode("a2614101616102"), // {"A": 1, "a": 2}
 			wantValue: s{LowerA: 1},
 		},
 		{
 			name:      "ignore case-insensitive match before exact match",
 			opts:      DecOptions{FieldNameMatching: FieldNameMatchingCaseSensitive},
-			data:      hexDecode("a2614101616102"), // {"A": 1, "a": 2}
+			data:      mustHexDecode("a2614101616102"), // {"A": 1, "a": 2}
 			wantValue: s{LowerA: 2},
 		},
 		{
 			name:      "earliest exact match wins",
 			opts:      DecOptions{FieldNameMatching: FieldNameMatchingCaseSensitive},
-			data:      hexDecode("a2616101616102"), // {"a": 1, "a": 2} (invalid)
+			data:      mustHexDecode("a2616101616102"), // {"a": 1, "a": 2} (invalid)
 			wantValue: s{LowerA: 1},
 		},
 		{
 			// the field tags themselves are case-insensitive matches for each other
 			name:      "duplicate key does not fall back to case-insensitive match",
-			data:      hexDecode("a2614201614202"), // {"B": 1, "B": 2} (invalid)
+			data:      mustHexDecode("a2614201614202"), // {"B": 1, "B": 2} (invalid)
 			wantValue: s{UpperB: 1},
 		},
 	}
@@ -8138,20 +8780,20 @@ func TestDecodeBignumToEmptyInterface(t *testing.T) {
 	decOptionsDecodeToBigIntValue := DecOptions{BigIntDec: BigIntDecodeValue}
 	decOptionsDecodeToBigIntPointer := DecOptions{BigIntDec: BigIntDecodePointer}
 
-	cborDataPositiveBignum := hexDecode("c249010000000000000000") // positive bignum: 18446744073709551616
+	cborDataPositiveBignum := mustHexDecode("c249010000000000000000") // positive bignum: 18446744073709551616
 	pbn, _ := new(big.Int).SetString("18446744073709551616", 10)
 
-	cborDataNegativeBignum := hexDecode("c349010000000000000000") // negative bignum: -18446744073709551617
+	cborDataNegativeBignum := mustHexDecode("c349010000000000000000") // negative bignum: -18446744073709551617
 	nbn, _ := new(big.Int).SetString("-18446744073709551617", 10)
 
-	cborDataLargeNegativeInt := hexDecode("3bffffffffffffffff") // -18446744073709551616
+	cborDataLargeNegativeInt := mustHexDecode("3bffffffffffffffff") // -18446744073709551616
 	ni, _ := new(big.Int).SetString("-18446744073709551616", 10)
 
 	testCases := []struct {
 		name      string
 		opts      DecOptions
 		data      []byte
-		wantValue interface{}
+		wantValue any
 	}{
 		{
 			name:      "decode positive bignum to big.Int",
@@ -8195,10 +8837,10 @@ func TestDecodeBignumToEmptyInterface(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			decMode, _ := tc.opts.DecMode()
 
-			var v interface{}
+			var v any
 			err := decMode.Unmarshal(tc.data, &v)
 			if err != nil {
-				t.Errorf("Unmarshal(0x%x) to empty interface returned error %v", tc.data, err)
+				t.Errorf("Unmarshal(0x%x) to type any returned error %v", tc.data, err)
 			} else { //nolint:gocritic // ignore elseif
 				if !reflect.DeepEqual(v, tc.wantValue) {
 					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.wantValue, tc.wantValue)
@@ -8216,22 +8858,22 @@ func TestDecModeInvalidDefaultByteStringType(t *testing.T) {
 	}{
 		{
 			name:         "neither slice nor string",
-			opts:         DecOptions{DefaultByteStringType: reflect.TypeOf(int(42))},
+			opts:         DecOptions{DefaultByteStringType: reflect.TypeFor[int]()},
 			wantErrorMsg: "cbor: invalid DefaultByteStringType: int is not of kind string or []uint8",
 		},
 		{
 			name:         "slice of non-byte",
-			opts:         DecOptions{DefaultByteStringType: reflect.TypeOf([]int{})},
+			opts:         DecOptions{DefaultByteStringType: reflect.TypeFor[[]int]()},
 			wantErrorMsg: "cbor: invalid DefaultByteStringType: []int is not of kind string or []uint8",
 		},
 		{
 			name:         "pointer to byte array",
-			opts:         DecOptions{DefaultByteStringType: reflect.TypeOf(&[42]byte{})},
+			opts:         DecOptions{DefaultByteStringType: reflect.TypeFor[*[42]byte]()},
 			wantErrorMsg: "cbor: invalid DefaultByteStringType: *[42]uint8 is not of kind string or []uint8",
 		},
 		{
 			name:         "byte array",
-			opts:         DecOptions{DefaultByteStringType: reflect.TypeOf([42]byte{})},
+			opts:         DecOptions{DefaultByteStringType: reflect.TypeFor[[42]byte]()},
 			wantErrorMsg: "cbor: invalid DefaultByteStringType: [42]uint8 is not of kind string or []uint8",
 		},
 	} {
@@ -8252,37 +8894,37 @@ func TestUnmarshalDefaultByteStringType(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		opts DecOptions
-		in   []byte
-		want interface{}
+		data []byte
+		want any
 	}{
 		{
 			name: "default to []byte",
 			opts: DecOptions{},
-			in:   hexDecode("43414243"),
+			data: mustHexDecode("43414243"),
 			want: []byte("ABC"),
 		},
 		{
 			name: "explicitly []byte",
-			opts: DecOptions{DefaultByteStringType: reflect.TypeOf([]byte(nil))},
-			in:   hexDecode("43414243"),
+			opts: DecOptions{DefaultByteStringType: reflect.TypeFor[[]byte]()},
+			data: mustHexDecode("43414243"),
 			want: []byte("ABC"),
 		},
 		{
 			name: "string",
-			opts: DecOptions{DefaultByteStringType: reflect.TypeOf("")},
-			in:   hexDecode("43414243"),
+			opts: DecOptions{DefaultByteStringType: reflect.TypeFor[string]()},
+			data: mustHexDecode("43414243"),
 			want: "ABC",
 		},
 		{
 			name: "ByteString",
-			opts: DecOptions{DefaultByteStringType: reflect.TypeOf(ByteString(""))},
-			in:   hexDecode("43414243"),
+			opts: DecOptions{DefaultByteStringType: reflect.TypeFor[ByteString]()},
+			data: mustHexDecode("43414243"),
 			want: ByteString("ABC"),
 		},
 		{
 			name: "named []byte type",
-			opts: DecOptions{DefaultByteStringType: reflect.TypeOf(namedByteSliceType(nil))},
-			in:   hexDecode("43414243"),
+			opts: DecOptions{DefaultByteStringType: reflect.TypeFor[namedByteSliceType]()},
+			data: mustHexDecode("43414243"),
 			want: namedByteSliceType("ABC"),
 		},
 	} {
@@ -8292,8 +8934,8 @@ func TestUnmarshalDefaultByteStringType(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			var got interface{}
-			if err := dm.Unmarshal(tc.in, &got); err != nil {
+			var got any
+			if err := dm.Unmarshal(tc.data, &got); err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
 
@@ -8340,7 +8982,7 @@ func TestUnmarshalByteStringToString(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = derror.Unmarshal(hexDecode("43414243"), &s); err == nil {
+	if err = derror.Unmarshal(mustHexDecode("43414243"), &s); err == nil {
 		t.Error("expected non-nil error from Unmarshal")
 	}
 
@@ -8353,7 +8995,7 @@ func TestUnmarshalByteStringToString(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = dallow.Unmarshal(hexDecode("43414243"), &s); err != nil {
+	if err = dallow.Unmarshal(mustHexDecode("43414243"), &s); err != nil {
 		t.Errorf("expected nil error from Unmarshal, got: %v", err)
 	}
 
@@ -8402,7 +9044,7 @@ func TestUnmarshalFieldNameByteString(t *testing.T) {
 		F int64 `json:"f"`
 	}
 
-	err = allowed.Unmarshal(hexDecode("a1414601"), &s) // {h'46': 1}
+	err = allowed.Unmarshal(mustHexDecode("a1414601"), &s) // {h'46': 1}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -8419,7 +9061,7 @@ func TestUnmarshalFieldNameByteString(t *testing.T) {
 	}
 
 	const wantMsg = "cbor: cannot unmarshal byte string into Go value of type string (map key is of type byte string and cannot be used to match struct field name)"
-	if err := forbidden.Unmarshal(hexDecode("a1414601"), &s); err == nil {
+	if err := forbidden.Unmarshal(mustHexDecode("a1414601"), &s); err == nil {
 		t.Errorf("expected non-nil error")
 	} else if gotMsg := err.Error(); gotMsg != wantMsg {
 		t.Errorf("expected error %q, got %q", wantMsg, gotMsg)
@@ -8458,19 +9100,19 @@ func TestUnmarshalWithUnrecognizedTagToAnyMode(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		opts DecOptions
-		in   []byte
-		want interface{}
+		data []byte
+		want any
 	}{
 		{
 			name: "default to value of type Tag",
 			opts: DecOptions{},
-			in:   hexDecode("d8ff00"),
+			data: mustHexDecode("d8ff00"),
 			want: Tag{Number: uint64(255), Content: uint64(0)},
 		},
 		{
 			name: "Tag's content",
 			opts: DecOptions{UnrecognizedTagToAny: UnrecognizedTagContentToAny},
-			in:   hexDecode("d8ff00"),
+			data: mustHexDecode("d8ff00"),
 			want: uint64(0),
 		},
 	} {
@@ -8480,8 +9122,8 @@ func TestUnmarshalWithUnrecognizedTagToAnyMode(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			var got interface{}
-			if err := dm.Unmarshal(tc.in, &got); err != nil {
+			var got any
+			if err := dm.Unmarshal(tc.data, &got); err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
 
@@ -8496,56 +9138,56 @@ func TestUnmarshalWithUnrecognizedTagToAnyModeForSupportedTags(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		opts DecOptions
-		in   []byte
-		want interface{}
+		data []byte
+		want any
 	}{
 		{
 			name: "Unmarshal with tag number 0 when UnrecognizedTagContentToAny option is not set",
 			opts: DecOptions{},
-			in:   hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			data: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			want: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
 		},
 		{
 			name: "Unmarshal with tag number 0 when UnrecognizedTagContentToAny option is set",
 			opts: DecOptions{UnrecognizedTagToAny: UnrecognizedTagContentToAny},
-			in:   hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			data: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			want: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
 		},
 		{
 			name: "Unmarshal with tag number 1 when UnrecognizedTagContentToAny option is not set",
 			opts: DecOptions{},
-			in:   hexDecode("c11a514b67b0"),
+			data: mustHexDecode("c11a514b67b0"),
 			want: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
 		},
 		{
 			name: "Unmarshal with tag number 1 when UnrecognizedTagContentToAny option is set",
 			opts: DecOptions{UnrecognizedTagToAny: UnrecognizedTagContentToAny},
-			in:   hexDecode("c11a514b67b0"),
+			data: mustHexDecode("c11a514b67b0"),
 			want: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
 		},
 		{
 			name: "Unmarshal with tag number 2 when UnrecognizedTagContentToAny option is not set",
 			opts: DecOptions{},
-			in:   hexDecode("c249010000000000000000"),
-			want: bigIntOrPanic("18446744073709551616"),
+			data: mustHexDecode("c249010000000000000000"),
+			want: mustBigInt("18446744073709551616"),
 		},
 		{
 			name: "Unmarshal with tag number 2 when UnrecognizedTagContentToAny option is set",
 			opts: DecOptions{UnrecognizedTagToAny: UnrecognizedTagContentToAny},
-			in:   hexDecode("c249010000000000000000"),
-			want: bigIntOrPanic("18446744073709551616"),
+			data: mustHexDecode("c249010000000000000000"),
+			want: mustBigInt("18446744073709551616"),
 		},
 		{
 			name: "Unmarshal with tag number 3 when UnrecognizedTagContentToAny option is not set",
 			opts: DecOptions{},
-			in:   hexDecode("c349010000000000000000"),
-			want: bigIntOrPanic("-18446744073709551617"),
+			data: mustHexDecode("c349010000000000000000"),
+			want: mustBigInt("-18446744073709551617"),
 		},
 		{
 			name: "Unmarshal with tag number 3 when UnrecognizedTagContentToAny option is set",
 			opts: DecOptions{UnrecognizedTagToAny: UnrecognizedTagContentToAny},
-			in:   hexDecode("c349010000000000000000"),
-			want: bigIntOrPanic("-18446744073709551617"),
+			data: mustHexDecode("c349010000000000000000"),
+			want: mustBigInt("-18446744073709551617"),
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -8554,12 +9196,12 @@ func TestUnmarshalWithUnrecognizedTagToAnyModeForSupportedTags(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			var got interface{}
-			if err := dm.Unmarshal(tc.in, &got); err != nil {
+			var got any
+			if err := dm.Unmarshal(tc.data, &got); err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
 
-			compareNonFloats(t, tc.in, got, tc.want)
+			compareNonFloats(t, tc.data, got, tc.want)
 
 		})
 	}
@@ -8568,7 +9210,7 @@ func TestUnmarshalWithUnrecognizedTagToAnyModeForSupportedTags(t *testing.T) {
 func TestUnmarshalWithUnrecognizedTagToAnyModeForSharedTag(t *testing.T) {
 
 	type myInt int
-	typ := reflect.TypeOf(myInt(0))
+	typ := reflect.TypeFor[myInt]()
 
 	tags := NewTagSet()
 	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 125); err != nil {
@@ -8578,19 +9220,19 @@ func TestUnmarshalWithUnrecognizedTagToAnyModeForSharedTag(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		opts DecOptions
-		in   []byte
-		want interface{}
+		data []byte
+		want any
 	}{
 		{
 			name: "Unmarshal with a shared tag when UnrecognizedTagContentToAny option is not set",
 			opts: DecOptions{},
-			in:   hexDecode("d9d9f7d87d01"), // 55799(125(1))
+			data: mustHexDecode("d9d9f7d87d01"), // 55799(125(1))
 			want: myInt(1),
 		},
 		{
 			name: "Unmarshal with a shared tag when UnrecognizedTagContentToAny option is set",
 			opts: DecOptions{UnrecognizedTagToAny: UnrecognizedTagContentToAny},
-			in:   hexDecode("d9d9f7d87d01"), // 55799(125(1))
+			data: mustHexDecode("d9d9f7d87d01"), // 55799(125(1))
 			want: myInt(1),
 		},
 	} {
@@ -8600,13 +9242,13 @@ func TestUnmarshalWithUnrecognizedTagToAnyModeForSharedTag(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			var got interface{}
+			var got any
 
-			if err := dm.Unmarshal(tc.in, &got); err != nil {
+			if err := dm.Unmarshal(tc.data, &got); err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
 
-			compareNonFloats(t, tc.in, got, tc.want)
+			compareNonFloats(t, tc.data, got, tc.want)
 
 		})
 	}
@@ -8661,15 +9303,15 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 	for _, tc := range []struct {
 		name          string
 		fns           []func(*SimpleValueRegistry) error
-		in            []byte
+		data          []byte
 		into          reflect.Type
-		want          interface{}
+		want          any
 		assertOnError func(t *testing.T, e error)
 	}{
 		{
-			name:          "default false into interface{}",
+			name:          "default false into any",
 			fns:           nil,
-			in:            []byte{0xf4},
+			data:          []byte{0xf4},
 			into:          typeIntf,
 			want:          false,
 			assertOnError: assertNilError,
@@ -8677,15 +9319,15 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 		{
 			name:          "default false into bool",
 			fns:           nil,
-			in:            []byte{0xf4},
+			data:          []byte{0xf4},
 			into:          typeBool,
 			want:          false,
 			assertOnError: assertNilError,
 		},
 		{
-			name:          "default true into interface{}",
+			name:          "default true into any",
 			fns:           nil,
-			in:            []byte{0xf5},
+			data:          []byte{0xf5},
 			into:          typeIntf,
 			want:          true,
 			assertOnError: assertNilError,
@@ -8693,31 +9335,31 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 		{
 			name:          "default true into bool",
 			fns:           nil,
-			in:            []byte{0xf5},
+			data:          []byte{0xf5},
 			into:          typeBool,
 			want:          true,
 			assertOnError: assertNilError,
 		},
 		{
-			name:          "default null into interface{}",
+			name:          "default null into any",
 			fns:           nil,
-			in:            []byte{0xf6},
+			data:          []byte{0xf6},
 			into:          typeIntf,
 			want:          nil,
 			assertOnError: assertNilError,
 		},
 		{
-			name:          "default undefined into interface{}",
+			name:          "default undefined into any",
 			fns:           nil,
-			in:            []byte{0xf7},
+			data:          []byte{0xf7},
 			into:          typeIntf,
 			want:          nil,
 			assertOnError: assertNilError,
 		},
 		{
-			name: "reject undefined into interface{}",
+			name: "reject undefined into any",
 			fns:  []func(*SimpleValueRegistry) error{WithRejectedSimpleValue(23)},
-			in:   []byte{0xf7},
+			data: []byte{0xf7},
 			into: typeIntf,
 			want: nil,
 			assertOnError: assertExactError(&UnacceptableDataItemError{
@@ -8728,7 +9370,7 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 		{
 			name: "reject true into bool",
 			fns:  []func(*SimpleValueRegistry) error{WithRejectedSimpleValue(21)},
-			in:   []byte{0xf5},
+			data: []byte{0xf5},
 			into: typeBool,
 			want: false,
 			assertOnError: assertExactError(&UnacceptableDataItemError{
@@ -8739,7 +9381,7 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 		{
 			name:          "default unrecognized into uint64",
 			fns:           nil,
-			in:            []byte{0xf8, 0xc8},
+			data:          []byte{0xf8, 0xc8},
 			into:          typeUint64,
 			want:          uint64(200),
 			assertOnError: assertNilError,
@@ -8757,7 +9399,7 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 			}
 
 			dst := reflect.New(tc.into)
-			err = decMode.Unmarshal(tc.in, dst.Interface())
+			err = decMode.Unmarshal(tc.data, dst.Interface())
 			tc.assertOnError(t, err)
 
 			if got := dst.Elem().Interface(); !reflect.DeepEqual(tc.want, got) {
@@ -8801,71 +9443,71 @@ func TestDecModeInvalidTimeTagToAnyMode(t *testing.T) {
 
 func TestDecModeTimeTagToAny(t *testing.T) {
 	for _, tc := range []struct {
-		name           string
-		opts           DecOptions
-		in             []byte
-		want           interface{}
-		wantErrMessage string
+		name         string
+		opts         DecOptions
+		data         []byte
+		want         any
+		wantErrorMsg string
 	}{
 		{
 			name: "Unmarshal tag 0 data to time.Time when TimeTagToAny is not set",
 			opts: DecOptions{},
-			in:   hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			data: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			want: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
 		},
 		{
 			name: "Unmarshal tag 1 data to time.Time when TimeTagToAny is not set",
 			opts: DecOptions{},
-			in:   hexDecode("c11a514b67b0"),
+			data: mustHexDecode("c11a514b67b0"),
 			want: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
 		},
 		{
 			name: "Unmarshal tag 0 data to RFC3339 string when TimeTagToAny is set",
 			opts: DecOptions{TimeTagToAny: TimeTagToRFC3339},
-			in:   hexDecode("c074323031332d30332d32315432303a30343a30305a"),
+			data: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			want: "2013-03-21T20:04:00Z",
 		},
 		{
 			name: "Unmarshal tag 1 data to RFC3339 string when TimeTagToAny is set",
 			opts: DecOptions{TimeTagToAny: TimeTagToRFC3339},
-			in:   hexDecode("c11a514b67b0"),
+			data: mustHexDecode("c11a514b67b0"),
 			want: "2013-03-21T20:04:00Z",
 		},
 		{
 			name: "Unmarshal tag 0 data to RFC3339Nano string when TimeTagToAny is set",
 			opts: DecOptions{TimeTagToAny: TimeTagToRFC3339Nano},
-			in:   hexDecode("c076323031332d30332d32315432303a30343a30302e355a"),
+			data: mustHexDecode("c076323031332d30332d32315432303a30343a30302e355a"),
 			want: "2013-03-21T20:04:00.5Z",
 		},
 		{
 			name: "Unmarshal tag 1 data to RFC3339Nano string when TimeTagToAny is set",
 			opts: DecOptions{TimeTagToAny: TimeTagToRFC3339Nano},
-			in:   hexDecode("c1fb41d452d9ec200000"),
+			data: mustHexDecode("c1fb41d452d9ec200000"),
 			want: "2013-03-21T20:04:00.5Z",
 		},
 		{
-			name:           "error under TimeTagToRFC3339 when tag 0 contains an invalid RFC3339 timestamp",
-			opts:           DecOptions{TimeTagToAny: TimeTagToRFC3339},
-			in:             hexDecode("c07731303030302D30332D32315432303A30343A30302E355A"), // 0("10000-03-21T20:04:00.5Z")
-			wantErrMessage: `cbor: cannot set 10000-03-21T20:04:00.5Z for time.Time: parsing time "10000-03-21T20:04:00.5Z" as "2006-01-02T15:04:05Z07:00": cannot parse "0-03-21T20:04:00.5Z" as "-"`,
+			name:         "error under TimeTagToRFC3339 when tag 0 contains an invalid RFC3339 timestamp",
+			opts:         DecOptions{TimeTagToAny: TimeTagToRFC3339},
+			data:         mustHexDecode("c07731303030302D30332D32315432303A30343A30302E355A"), // 0("10000-03-21T20:04:00.5Z")
+			wantErrorMsg: `cbor: cannot set 10000-03-21T20:04:00.5Z for time.Time: parsing time "10000-03-21T20:04:00.5Z" as "2006-01-02T15:04:05Z07:00": cannot parse "0-03-21T20:04:00.5Z" as "-"`,
 		},
 		{
-			name:           "error under TimeTagToRFC3339Nano when tag 0 contains an invalid RFC3339 timestamp",
-			opts:           DecOptions{TimeTagToAny: TimeTagToRFC3339Nano},
-			in:             hexDecode("c07731303030302D30332D32315432303A30343A30302E355A"), // 0("10000-03-21T20:04:00.5Z")
-			wantErrMessage: `cbor: cannot set 10000-03-21T20:04:00.5Z for time.Time: parsing time "10000-03-21T20:04:00.5Z" as "2006-01-02T15:04:05Z07:00": cannot parse "0-03-21T20:04:00.5Z" as "-"`,
+			name:         "error under TimeTagToRFC3339Nano when tag 0 contains an invalid RFC3339 timestamp",
+			opts:         DecOptions{TimeTagToAny: TimeTagToRFC3339Nano},
+			data:         mustHexDecode("c07731303030302D30332D32315432303A30343A30302E355A"), // 0("10000-03-21T20:04:00.5Z")
+			wantErrorMsg: `cbor: cannot set 10000-03-21T20:04:00.5Z for time.Time: parsing time "10000-03-21T20:04:00.5Z" as "2006-01-02T15:04:05Z07:00": cannot parse "0-03-21T20:04:00.5Z" as "-"`,
 		},
 		{
-			name:           "error under TimeTagToRFC3339 when tag 1 represents a time that can't be represented by valid RFC3339",
-			opts:           DecOptions{TimeTagToAny: TimeTagToRFC3339},
-			in:             hexDecode("c11b0000003afff44181"), // 1(253402300801)
-			wantErrMessage: "cbor: decoded time cannot be represented in RFC3339 format: Time.MarshalText: year outside of range [0,9999]",
+			name:         "error under TimeTagToRFC3339 when tag 1 represents a time that can't be represented by valid RFC3339",
+			opts:         DecOptions{TimeTagToAny: TimeTagToRFC3339},
+			data:         mustHexDecode("c11b0000003afff44181"), // 1(253402300801)
+			wantErrorMsg: "cbor: decoded time cannot be represented in RFC3339 format: Time.MarshalText: year outside of range [0,9999]",
 		},
 		{
-			name:           "error under TimeTagToRFC3339Nano when tag 1 represents a time that can't be represented by valid RFC3339",
-			opts:           DecOptions{TimeTagToAny: TimeTagToRFC3339Nano},
-			in:             hexDecode("c11b0000003afff44181"), // 1(253402300801)
-			wantErrMessage: "cbor: decoded time cannot be represented in RFC3339 format with sub-second precision: Time.MarshalText: year outside of range [0,9999]",
+			name:         "error under TimeTagToRFC3339Nano when tag 1 represents a time that can't be represented by valid RFC3339",
+			opts:         DecOptions{TimeTagToAny: TimeTagToRFC3339Nano},
+			data:         mustHexDecode("c11b0000003afff44181"), // 1(253402300801)
+			wantErrorMsg: "cbor: decoded time cannot be represented in RFC3339 format with sub-second precision: Time.MarshalText: year outside of range [0,9999]",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -8874,18 +9516,18 @@ func TestDecModeTimeTagToAny(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			var got interface{}
-			if err := dm.Unmarshal(tc.in, &got); err != nil {
-				if tc.wantErrMessage == "" {
+			var got any
+			if err := dm.Unmarshal(tc.data, &got); err != nil {
+				if tc.wantErrorMsg == "" {
 					t.Fatalf("unexpected error: %v", err)
-				} else if gotErrMessage := err.Error(); tc.wantErrMessage != gotErrMessage {
-					t.Fatalf("want error %q, got %q", tc.wantErrMessage, gotErrMessage)
+				} else if gotErrMessage := err.Error(); tc.wantErrorMsg != gotErrMessage {
+					t.Fatalf("want error %q, got %q", tc.wantErrorMsg, gotErrMessage)
 				}
-			} else if tc.wantErrMessage != "" {
-				t.Fatalf("got nil error, want %q", tc.wantErrMessage)
+			} else if tc.wantErrorMsg != "" {
+				t.Fatalf("got nil error, want %q", tc.wantErrorMsg)
 			}
 
-			compareNonFloats(t, tc.in, got, tc.want)
+			compareNonFloats(t, tc.data, got, tc.want)
 
 		})
 	}
@@ -8923,168 +9565,168 @@ func TestNaNDecMode(t *testing.T) {
 	for _, tc := range []struct {
 		opt    NaNMode
 		src    []byte
-		dst    interface{}
+		dst    any
 		reject bool
 	}{
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("197e00"),
-			dst:    new(interface{}),
+			src:    mustHexDecode("197e00"),
+			dst:    new(any),
 			reject: false,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("1a7fc00000"),
-			dst:    new(interface{}),
+			src:    mustHexDecode("1a7fc00000"),
+			dst:    new(any),
 			reject: false,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("1b7ff8000000000000"),
-			dst:    new(interface{}),
+			src:    mustHexDecode("1b7ff8000000000000"),
+			dst:    new(any),
 			reject: false,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("f90000"), // 0.0
-			dst:    new(interface{}),
+			src:    mustHexDecode("f90000"), // 0.0
+			dst:    new(any),
 			reject: false,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("f90000"), // 0.0
+			src:    mustHexDecode("f90000"), // 0.0
 			dst:    new(float32),
 			reject: false,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("f90000"), // 0.0
+			src:    mustHexDecode("f90000"), // 0.0
 			dst:    new(float64),
 			reject: false,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("f90000"), // 0.0
+			src:    mustHexDecode("f90000"), // 0.0
 			dst:    new(time.Time),
 			reject: false,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("fa47c35000"), // 100000.0
-			dst:    new(interface{}),
+			src:    mustHexDecode("fa47c35000"), // 100000.0
+			dst:    new(any),
 			reject: false,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("fa47c35000"), // 100000.0
+			src:    mustHexDecode("fa47c35000"), // 100000.0
 			dst:    new(float32),
 			reject: false,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("fa47c35000"), // 100000.0
+			src:    mustHexDecode("fa47c35000"), // 100000.0
 			dst:    new(float64),
 			reject: false,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("fa47c35000"), // 100000.0
+			src:    mustHexDecode("fa47c35000"), // 100000.0
 			dst:    new(time.Time),
 			reject: false,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("fb3ff199999999999a"), // 1.1
-			dst:    new(interface{}),
+			src:    mustHexDecode("fb3ff199999999999a"), // 1.1
+			dst:    new(any),
 			reject: false,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("fb3ff199999999999a"), // 1.1
+			src:    mustHexDecode("fb3ff199999999999a"), // 1.1
 			dst:    new(float32),
 			reject: false,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("fb3ff199999999999a"), // 1.1
+			src:    mustHexDecode("fb3ff199999999999a"), // 1.1
 			dst:    new(float64),
 			reject: false,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("fb3ff199999999999a"), // 1.1
+			src:    mustHexDecode("fb3ff199999999999a"), // 1.1
 			dst:    new(time.Time),
 			reject: false,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("f97e00"),
-			dst:    new(interface{}),
+			src:    mustHexDecode("f97e00"),
+			dst:    new(any),
 			reject: true,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("f97e00"),
+			src:    mustHexDecode("f97e00"),
 			dst:    new(float32),
 			reject: true,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("f97e00"),
+			src:    mustHexDecode("f97e00"),
 			dst:    new(float64),
 			reject: true,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("f97e00"),
+			src:    mustHexDecode("f97e00"),
 			dst:    new(time.Time),
 			reject: true,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("fa7fc00000"),
-			dst:    new(interface{}),
+			src:    mustHexDecode("fa7fc00000"),
+			dst:    new(any),
 			reject: true,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("fa7fc00000"),
+			src:    mustHexDecode("fa7fc00000"),
 			dst:    new(float32),
 			reject: true,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("fa7fc00000"),
+			src:    mustHexDecode("fa7fc00000"),
 			dst:    new(float64),
 			reject: true,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("fa7fc00000"),
+			src:    mustHexDecode("fa7fc00000"),
 			dst:    new(time.Time),
 			reject: true,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("fb7ff8000000000000"),
-			dst:    new(interface{}),
+			src:    mustHexDecode("fb7ff8000000000000"),
+			dst:    new(any),
 			reject: true,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("fb7ff8000000000000"),
+			src:    mustHexDecode("fb7ff8000000000000"),
 			dst:    new(float32),
 			reject: true,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("fb7ff8000000000000"),
+			src:    mustHexDecode("fb7ff8000000000000"),
 			dst:    new(float64),
 			reject: true,
 		},
 		{
 			opt:    NaNDecodeForbidden,
-			src:    hexDecode("fb7ff8000000000000"),
+			src:    mustHexDecode("fb7ff8000000000000"),
 			dst:    new(time.Time),
 			reject: true,
 		},
@@ -9101,7 +9743,7 @@ func TestNaNDecMode(t *testing.T) {
 			if got := dm.Unmarshal(tc.src, tc.dst); got != nil {
 				if tc.reject {
 					if !reflect.DeepEqual(want, got) {
-						t.Errorf("want error: %v, got error: %v", want, got)
+						t.Errorf("Unmarshal() returned error %v, want %v", got, want)
 					}
 				} else {
 					t.Errorf("unexpected error: %v", got)
@@ -9145,240 +9787,240 @@ func TestInfDecMode(t *testing.T) {
 	for _, tc := range []struct {
 		opt    InfMode
 		src    []byte
-		dst    interface{}
+		dst    any
 		reject bool
 	}{
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("197c00"),
-			dst:    new(interface{}),
+			src:    mustHexDecode("197c00"),
+			dst:    new(any),
 			reject: false,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("1a7f800000"), // Infinity
-			dst:    new(interface{}),
+			src:    mustHexDecode("1a7f800000"), // Infinity
+			dst:    new(any),
 			reject: false,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("1b7ff0000000000000"), // Infinity
-			dst:    new(interface{}),
+			src:    mustHexDecode("1b7ff0000000000000"), // Infinity
+			dst:    new(any),
 			reject: false,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("f90000"), // 0.0
-			dst:    new(interface{}),
+			src:    mustHexDecode("f90000"), // 0.0
+			dst:    new(any),
 			reject: false,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("f90000"), // 0.0
+			src:    mustHexDecode("f90000"), // 0.0
 			dst:    new(float32),
 			reject: false,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("f90000"), // 0.0
+			src:    mustHexDecode("f90000"), // 0.0
 			dst:    new(float64),
 			reject: false,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("f90000"), // 0.0
+			src:    mustHexDecode("f90000"), // 0.0
 			dst:    new(time.Time),
 			reject: false,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fa47c35000"), // 100000.0
-			dst:    new(interface{}),
+			src:    mustHexDecode("fa47c35000"), // 100000.0
+			dst:    new(any),
 			reject: false,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fa47c35000"), // 100000.0
+			src:    mustHexDecode("fa47c35000"), // 100000.0
 			dst:    new(float32),
 			reject: false,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fa47c35000"), // 100000.0
+			src:    mustHexDecode("fa47c35000"), // 100000.0
 			dst:    new(float64),
 			reject: false,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fa47c35000"), // 100000.0
+			src:    mustHexDecode("fa47c35000"), // 100000.0
 			dst:    new(time.Time),
 			reject: false,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fb3ff199999999999a"), // 1.1
-			dst:    new(interface{}),
+			src:    mustHexDecode("fb3ff199999999999a"), // 1.1
+			dst:    new(any),
 			reject: false,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fb3ff199999999999a"), // 1.1
+			src:    mustHexDecode("fb3ff199999999999a"), // 1.1
 			dst:    new(float32),
 			reject: false,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fb3ff199999999999a"), // 1.1
+			src:    mustHexDecode("fb3ff199999999999a"), // 1.1
 			dst:    new(float64),
 			reject: false,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fb3ff199999999999a"), // 1.1
+			src:    mustHexDecode("fb3ff199999999999a"), // 1.1
 			dst:    new(time.Time),
 			reject: false,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("f97c00"), // Infinity
-			dst:    new(interface{}),
+			src:    mustHexDecode("f97c00"), // Infinity
+			dst:    new(any),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("f97c00"), // Infinity
+			src:    mustHexDecode("f97c00"), // Infinity
 			dst:    new(float32),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("f97c00"), // Infinity
+			src:    mustHexDecode("f97c00"), // Infinity
 			dst:    new(float64),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("f97c00"), // Infinity
+			src:    mustHexDecode("f97c00"), // Infinity
 			dst:    new(time.Time),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("f9fc00"), // -Infinity
-			dst:    new(interface{}),
+			src:    mustHexDecode("f9fc00"), // -Infinity
+			dst:    new(any),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("f9fc00"), // -Infinity
+			src:    mustHexDecode("f9fc00"), // -Infinity
 			dst:    new(float32),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("f9fc00"), // -Infinity
+			src:    mustHexDecode("f9fc00"), // -Infinity
 			dst:    new(float64),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("f9fc00"), // -Infinity
+			src:    mustHexDecode("f9fc00"), // -Infinity
 			dst:    new(time.Time),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fa7f800000"), // Infinity
-			dst:    new(interface{}),
+			src:    mustHexDecode("fa7f800000"), // Infinity
+			dst:    new(any),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fa7f800000"), // Infinity
+			src:    mustHexDecode("fa7f800000"), // Infinity
 			dst:    new(float32),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fa7f800000"), // Infinity
+			src:    mustHexDecode("fa7f800000"), // Infinity
 			dst:    new(float64),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fa7f800000"), // Infinity
+			src:    mustHexDecode("fa7f800000"), // Infinity
 			dst:    new(time.Time),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("faff800000"), // -Infinity
-			dst:    new(interface{}),
+			src:    mustHexDecode("faff800000"), // -Infinity
+			dst:    new(any),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("faff800000"), // -Infinity
+			src:    mustHexDecode("faff800000"), // -Infinity
 			dst:    new(float32),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("faff800000"), // -Infinity
+			src:    mustHexDecode("faff800000"), // -Infinity
 			dst:    new(float64),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("faff800000"), // -Infinity
+			src:    mustHexDecode("faff800000"), // -Infinity
 			dst:    new(time.Time),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fb7ff0000000000000"), // Infinity
-			dst:    new(interface{}),
+			src:    mustHexDecode("fb7ff0000000000000"), // Infinity
+			dst:    new(any),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fb7ff0000000000000"), // Infinity
+			src:    mustHexDecode("fb7ff0000000000000"), // Infinity
 			dst:    new(float32),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fb7ff0000000000000"), // Infinity
+			src:    mustHexDecode("fb7ff0000000000000"), // Infinity
 			dst:    new(float64),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fb7ff0000000000000"), // Infinity
+			src:    mustHexDecode("fb7ff0000000000000"), // Infinity
 			dst:    new(time.Time),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fbfff0000000000000"), // -Infinity
-			dst:    new(interface{}),
+			src:    mustHexDecode("fbfff0000000000000"), // -Infinity
+			dst:    new(any),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fbfff0000000000000"), // -Infinity
+			src:    mustHexDecode("fbfff0000000000000"), // -Infinity
 			dst:    new(float32),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fbfff0000000000000"), // -Infinity
+			src:    mustHexDecode("fbfff0000000000000"), // -Infinity
 			dst:    new(float64),
 			reject: true,
 		},
 		{
 			opt:    InfDecodeForbidden,
-			src:    hexDecode("fbfff0000000000000"), // -Infinity
+			src:    mustHexDecode("fbfff0000000000000"), // -Infinity
 			dst:    new(time.Time),
 			reject: true,
 		},
@@ -9395,7 +10037,7 @@ func TestInfDecMode(t *testing.T) {
 			if got := dm.Unmarshal(tc.src, tc.dst); got != nil {
 				if tc.reject {
 					if !reflect.DeepEqual(want, got) {
-						t.Errorf("want error: %v, got error: %v", want, got)
+						t.Errorf("Unmarshal() returned error %v, want %v", got, want)
 					}
 				} else {
 					t.Errorf("unexpected error: %v", got)
@@ -9439,38 +10081,38 @@ func TestDecModeByteStringToTime(t *testing.T) {
 	for _, tc := range []struct {
 		name         string
 		opts         DecOptions
-		in           []byte
+		data         []byte
 		want         time.Time
 		wantErrorMsg string
 	}{
 		{
 			name:         "Unmarshal byte string to time.Time when ByteStringToTime is not set",
 			opts:         DecOptions{},
-			in:           hexDecode("54323031332D30332D32315432303A30343A30305A"), // '2013-03-21T20:04:00Z'
+			data:         mustHexDecode("54323031332D30332D32315432303A30343A30305A"), // '2013-03-21T20:04:00Z'
 			wantErrorMsg: "cbor: cannot unmarshal byte string into Go value of type time.Time",
 		},
 		{
 			name: "Unmarshal byte string to time.Time when ByteStringToTime is set to ByteStringToTimeAllowed",
 			opts: DecOptions{ByteStringToTime: ByteStringToTimeAllowed},
-			in:   hexDecode("54323031332D30332D32315432303A30343A30305A"), // '2013-03-21T20:04:00Z'
+			data: mustHexDecode("54323031332D30332D32315432303A30343A30305A"), // '2013-03-21T20:04:00Z'
 			want: time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC),
 		},
 		{
 			name: "Unmarshal byte string to time.Time with nano when ByteStringToTime is set to ByteStringToTimeAllowed",
 			opts: DecOptions{ByteStringToTime: ByteStringToTimeAllowed},
-			in:   hexDecode("56323031332D30332D32315432303A30343A30302E355A"), // '2013-03-21T20:04:00.5Z'
+			data: mustHexDecode("56323031332D30332D32315432303A30343A30302E355A"), // '2013-03-21T20:04:00.5Z'
 			want: time.Date(2013, 3, 21, 20, 4, 0, 500000000, time.UTC),
 		},
 		{
 			name:         "Unmarshal a byte string that is not a valid RFC3339 timestamp to time.Time when ByteStringToTime is set to ByteStringToTimeAllowed",
 			opts:         DecOptions{ByteStringToTime: ByteStringToTimeAllowed},
-			in:           hexDecode("4B696E76616C696454657874"), // 'invalidText'
+			data:         mustHexDecode("4B696E76616C696454657874"), // 'invalidText'
 			wantErrorMsg: `cbor: cannot set "invalidText" for time.Time: parsing time "invalidText" as "2006-01-02T15:04:05Z07:00": cannot parse "invalidText" as "2006"`,
 		},
 		{
 			name:         "Unmarshal a byte string that is not a valid utf8 sequence to time.Time when ByteStringToTime is set to ByteStringToTimeAllowed",
 			opts:         DecOptions{ByteStringToTime: ByteStringToTimeAllowed},
-			in:           hexDecode("54323031338030332D32315432303A30343A30305A"), // "2013\x8003-21T20:04:00Z" -- the first hyphen of a valid RFC3339 string is replaced by a continuation byte
+			data:         mustHexDecode("54323031338030332D32315432303A30343A30305A"), // "2013\x8003-21T20:04:00Z" -- the first hyphen of a valid RFC3339 string is replaced by a continuation byte
 			wantErrorMsg: `cbor: cannot set "2013\x8003-21T20:04:00Z" for time.Time: parsing time "2013\x8003-21T20:04:00Z" as "2006-01-02T15:04:05Z07:00": cannot parse "\x8003-21T20:04:00Z" as "-"`,
 		},
 	} {
@@ -9481,12 +10123,12 @@ func TestDecModeByteStringToTime(t *testing.T) {
 			}
 
 			var got time.Time
-			if err := dm.Unmarshal(tc.in, &got); err != nil {
+			if err := dm.Unmarshal(tc.data, &got); err != nil {
 				if tc.wantErrorMsg != err.Error() {
 					t.Errorf("unexpected error: got %v want %v", err, tc.wantErrorMsg)
 				}
 			} else {
-				compareNonFloats(t, tc.in, got, tc.want)
+				compareNonFloats(t, tc.data, got, tc.want)
 			}
 		})
 	}
@@ -9524,82 +10166,82 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 	type empty struct{}
 
 	for _, tc := range []struct {
-		name    string
-		opts    DecOptions
-		tags    func(TagSet) error
-		wantErr string
+		name         string
+		opts         DecOptions
+		tags         func(TagSet) error
+		wantErrorMsg string
 	}{
 		{
 			name: "base64url encoding tag ignored by default",
 			opts: DecOptions{},
 			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 21)
+				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 21)
 			},
-			wantErr: "",
+			wantErrorMsg: "",
 		},
 		{
 			name: "base64url encoding tag conflicts in ByteStringToStringAllowedWithExpectedLaterEncoding mode",
 			opts: DecOptions{ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding},
 			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 21)
+				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 21)
 			},
-			wantErr: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 21 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
+			wantErrorMsg: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 21 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
 		{
 			name: "base64url encoding tag conflicts with non-default ByteSliceExpectedEncoding option",
 			opts: DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
 			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 21)
+				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 21)
 			},
-			wantErr: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 21 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
+			wantErrorMsg: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 21 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
 		{
 			name: "base64 encoding tag ignored by default",
 			opts: DecOptions{},
 			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 22)
+				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 22)
 			},
-			wantErr: "",
+			wantErrorMsg: "",
 		},
 		{
 			name: "base64 encoding tag conflicts in ByteStringToStringAllowedWithExpectedLaterEncoding mode",
 			opts: DecOptions{ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding},
 			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 22)
+				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 22)
 			},
-			wantErr: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 22 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
+			wantErrorMsg: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 22 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
 		{
 			name: "base64 encoding tag conflicts with non-default ByteSliceExpectedEncoding option",
 			opts: DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
 			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 22)
+				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 22)
 			},
-			wantErr: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 22 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
+			wantErrorMsg: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 22 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
 		{
 			name: "base16 encoding tag ignored by default",
 			opts: DecOptions{},
 			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 23)
+				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 23)
 			},
-			wantErr: "",
+			wantErrorMsg: "",
 		},
 		{
 			name: "base16 encoding tag conflicts in ByteStringToStringAllowedWithExpectedLaterEncoding mode",
 			opts: DecOptions{ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding},
 			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 23)
+				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 23)
 			},
-			wantErr: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 23 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
+			wantErrorMsg: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 23 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
 		{
 			name: "base16 encoding tag conflicts with non-default ByteSliceExpectedEncoding option",
 			opts: DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
 			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeOf(empty{}), 23)
+				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 23)
 			},
-			wantErr: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 23 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
+			wantErrorMsg: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 23 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -9609,24 +10251,24 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 			}
 
 			if _, err := tc.opts.DecModeWithTags(tags); err == nil {
-				if tc.wantErr != "" {
-					t.Errorf("got nil error from DecModeWithTags, want %q", tc.wantErr)
+				if tc.wantErrorMsg != "" {
+					t.Errorf("got nil error from DecModeWithTags, want %q", tc.wantErrorMsg)
 				}
-			} else if got := err.Error(); got != tc.wantErr {
-				if tc.wantErr != "" {
-					t.Errorf("unexpected error from DecModeWithTags, got %q want %q", got, tc.wantErr)
+			} else if got := err.Error(); got != tc.wantErrorMsg {
+				if tc.wantErrorMsg != "" {
+					t.Errorf("unexpected error from DecModeWithTags, got %q want %q", got, tc.wantErrorMsg)
 				} else {
 					t.Errorf("want nil error from DecModeWithTags, got %q", got)
 				}
 			}
 
 			if _, err := tc.opts.DecModeWithSharedTags(tags); err == nil {
-				if tc.wantErr != "" {
-					t.Errorf("got nil error from DecModeWithSharedTags, want %q", tc.wantErr)
+				if tc.wantErrorMsg != "" {
+					t.Errorf("got nil error from DecModeWithSharedTags, want %q", tc.wantErrorMsg)
 				}
-			} else if got := err.Error(); got != tc.wantErr {
-				if tc.wantErr != "" {
-					t.Errorf("unexpected error from DecModeWithSharedTags, got %q want %q", got, tc.wantErr)
+			} else if got := err.Error(); got != tc.wantErrorMsg {
+				if tc.wantErrorMsg != "" {
+					t.Errorf("unexpected error from DecModeWithSharedTags, got %q want %q", got, tc.wantErrorMsg)
 				} else {
 					t.Errorf("want nil error from DecModeWithSharedTags, got %q", got)
 				}
@@ -9637,53 +10279,53 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 
 func TestUnmarshalByteStringTextConversionError(t *testing.T) {
 	for _, tc := range []struct {
-		name    string
-		opts    DecOptions
-		dstType reflect.Type
-		in      []byte
-		wantErr string
+		name         string
+		opts         DecOptions
+		dstType      reflect.Type
+		data         []byte
+		wantErrorMsg string
 	}{
 		{
-			name:    "reject untagged byte string containing invalid base64url",
-			opts:    DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase64URL},
-			dstType: reflect.TypeOf([]byte{}),
-			in:      []byte{0x41, 0x00},
-			wantErr: "cbor: failed to decode base64url from byte string: illegal base64 data at input byte 0",
+			name:         "reject untagged byte string containing invalid base64url",
+			opts:         DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase64URL},
+			dstType:      reflect.TypeFor[[]byte](),
+			data:         []byte{0x41, 0x00},
+			wantErrorMsg: "cbor: failed to decode base64url from byte string: illegal base64 data at input byte 0",
 		},
 		{
-			name:    "reject untagged byte string containing invalid base64url",
-			opts:    DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase64},
-			dstType: reflect.TypeOf([]byte{}),
-			in:      []byte{0x41, 0x00},
-			wantErr: "cbor: failed to decode base64 from byte string: illegal base64 data at input byte 0",
+			name:         "reject untagged byte string containing invalid base64url",
+			opts:         DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase64},
+			dstType:      reflect.TypeFor[[]byte](),
+			data:         []byte{0x41, 0x00},
+			wantErrorMsg: "cbor: failed to decode base64 from byte string: illegal base64 data at input byte 0",
 		},
 		{
-			name:    "reject untagged byte string containing invalid base16",
-			opts:    DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
-			dstType: reflect.TypeOf([]byte{}),
-			in:      []byte{0x41, 0x00},
-			wantErr: "cbor: failed to decode hex from byte string: encoding/hex: invalid byte: U+0000",
+			name:         "reject untagged byte string containing invalid base16",
+			opts:         DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
+			dstType:      reflect.TypeFor[[]byte](),
+			data:         []byte{0x41, 0x00},
+			wantErrorMsg: "cbor: failed to decode hex from byte string: encoding/hex: invalid byte: U+0000",
 		},
 		{
-			name:    "accept tagged byte string containing invalid base64url",
-			opts:    DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase64URL},
-			dstType: reflect.TypeOf([]byte{}),
-			in:      []byte{0xd5, 0x41, 0x00},
-			wantErr: "",
+			name:         "accept tagged byte string containing invalid base64url",
+			opts:         DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase64URL},
+			dstType:      reflect.TypeFor[[]byte](),
+			data:         []byte{0xd5, 0x41, 0x00},
+			wantErrorMsg: "",
 		},
 		{
-			name:    "accept tagged byte string containing invalid base64url",
-			opts:    DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase64},
-			dstType: reflect.TypeOf([]byte{}),
-			in:      []byte{0xd5, 0x41, 0x00},
-			wantErr: "",
+			name:         "accept tagged byte string containing invalid base64url",
+			opts:         DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase64},
+			dstType:      reflect.TypeFor[[]byte](),
+			data:         []byte{0xd5, 0x41, 0x00},
+			wantErrorMsg: "",
 		},
 		{
-			name:    "accept tagged byte string containing invalid base16",
-			opts:    DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
-			dstType: reflect.TypeOf([]byte{}),
-			in:      []byte{0xd5, 0x41, 0x00},
-			wantErr: "",
+			name:         "accept tagged byte string containing invalid base16",
+			opts:         DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
+			dstType:      reflect.TypeFor[[]byte](),
+			data:         []byte{0xd5, 0x41, 0x00},
+			wantErrorMsg: "",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -9692,15 +10334,15 @@ func TestUnmarshalByteStringTextConversionError(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if err := dm.Unmarshal(tc.in, reflect.New(tc.dstType).Interface()); err == nil {
-				if tc.wantErr != "" {
-					t.Errorf("got nil error, want %q", tc.wantErr)
+			if err := dm.Unmarshal(tc.data, reflect.New(tc.dstType).Interface()); err == nil {
+				if tc.wantErrorMsg != "" {
+					t.Errorf("got nil error, want %q", tc.wantErrorMsg)
 				}
-			} else if got := err.Error(); got != tc.wantErr {
-				if tc.wantErr == "" {
+			} else if got := err.Error(); got != tc.wantErrorMsg {
+				if tc.wantErrorMsg == "" {
 					t.Errorf("expected nil error, got %q", got)
 				} else {
-					t.Errorf("unexpected error, got %q want %q", got, tc.wantErr)
+					t.Errorf("unexpected error, got %q want %q", got, tc.wantErrorMsg)
 				}
 			}
 		})
@@ -9712,16 +10354,16 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 		name    string
 		opts    DecOptions
 		dstType reflect.Type
-		in      []byte
-		want    interface{}
+		data    []byte
+		want    any
 	}{
 		{
 			name: "untagged into string",
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
 			},
-			dstType: reflect.TypeOf(""),
-			in:      []byte{0x41, 0xff}, // h'ff'
+			dstType: reflect.TypeFor[string](),
+			data:    []byte{0x41, 0xff}, // h'ff'
 			want:    "\xff",
 		},
 		{
@@ -9729,8 +10371,8 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
 			},
-			dstType: reflect.TypeOf(""),
-			in:      []byte{0xd5, 0x41, 0xff}, // 21(h'ff')
+			dstType: reflect.TypeFor[string](),
+			data:    []byte{0xd5, 0x41, 0xff}, // 21(h'ff')
 			want:    "_w",
 		},
 		{
@@ -9738,8 +10380,8 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
 			},
-			dstType: reflect.TypeOf(""),
-			in:      []byte{0xd5, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 21(55799(h'ff'))
+			dstType: reflect.TypeFor[string](),
+			data:    []byte{0xd5, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 21(55799(h'ff'))
 			want:    "_w",
 		},
 		{
@@ -9747,8 +10389,8 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowed,
 			},
-			dstType: reflect.TypeOf(""),
-			in:      []byte{0xd5, 0x41, 0xff}, // 21(h'ff')
+			dstType: reflect.TypeFor[string](),
+			data:    []byte{0xd5, 0x41, 0xff}, // 21(h'ff')
 			want:    "\xff",
 		},
 		{
@@ -9756,8 +10398,8 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringExpectedFormat: ByteStringExpectedBase64URL,
 			},
-			dstType: reflect.TypeOf([]byte{}),
-			in:      []byte{0xd5, 0x41, 0xff}, // 21(h'ff')
+			dstType: reflect.TypeFor[[]byte](),
+			data:    []byte{0xd5, 0x41, 0xff}, // 21(h'ff')
 			want:    []byte{0xff},
 		},
 		{
@@ -9765,8 +10407,8 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringExpectedFormat: ByteStringExpectedBase64URL,
 			},
-			dstType: reflect.TypeOf([]byte{}),
-			in:      []byte{0xd5, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 21(55799(h'ff'))
+			dstType: reflect.TypeFor[[]byte](),
+			data:    []byte{0xd5, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 21(55799(h'ff'))
 			want:    []byte{0xff},
 		},
 		{
@@ -9774,8 +10416,8 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringExpectedFormat: ByteStringExpectedBase64URL,
 			},
-			dstType: reflect.TypeOf([]byte{}),
-			in:      []byte{0x42, '_', 'w'}, // '_w'
+			dstType: reflect.TypeFor[[]byte](),
+			data:    []byte{0x42, '_', 'w'}, // '_w'
 			want:    []byte{0xff},
 		},
 		{
@@ -9783,8 +10425,8 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
 			},
-			dstType: reflect.TypeOf(""),
-			in:      []byte{0xd6, 0x41, 0xff}, // 22(h'ff')
+			dstType: reflect.TypeFor[string](),
+			data:    []byte{0xd6, 0x41, 0xff}, // 22(h'ff')
 			want:    "/w==",
 		},
 		{
@@ -9792,8 +10434,8 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
 			},
-			dstType: reflect.TypeOf(""),
-			in:      []byte{0xd6, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 22(55799(h'ff'))
+			dstType: reflect.TypeFor[string](),
+			data:    []byte{0xd6, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 22(55799(h'ff'))
 			want:    "/w==",
 		},
 		{
@@ -9801,8 +10443,8 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowed,
 			},
-			dstType: reflect.TypeOf(""),
-			in:      []byte{0xd6, 0x41, 0xff}, // 22(h'ff')
+			dstType: reflect.TypeFor[string](),
+			data:    []byte{0xd6, 0x41, 0xff}, // 22(h'ff')
 			want:    "\xff",
 		},
 		{
@@ -9810,8 +10452,8 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringExpectedFormat: ByteStringExpectedBase64,
 			},
-			dstType: reflect.TypeOf([]byte{}),
-			in:      []byte{0xd6, 0x41, 0xff}, // 22(h'ff')
+			dstType: reflect.TypeFor[[]byte](),
+			data:    []byte{0xd6, 0x41, 0xff}, // 22(h'ff')
 			want:    []byte{0xff},
 		},
 		{
@@ -9819,8 +10461,8 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringExpectedFormat: ByteStringExpectedBase64,
 			},
-			dstType: reflect.TypeOf([]byte{}),
-			in:      []byte{0xd6, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 22(55799(h'ff'))
+			dstType: reflect.TypeFor[[]byte](),
+			data:    []byte{0xd6, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 22(55799(h'ff'))
 			want:    []byte{0xff},
 		},
 		{
@@ -9828,8 +10470,8 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringExpectedFormat: ByteStringExpectedBase64,
 			},
-			dstType: reflect.TypeOf([]byte{}),
-			in:      []byte{0x44, '/', 'w', '=', '='}, // '/w=='
+			dstType: reflect.TypeFor[[]byte](),
+			data:    []byte{0x44, '/', 'w', '=', '='}, // '/w=='
 			want:    []byte{0xff},
 		},
 		{
@@ -9837,8 +10479,8 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
 			},
-			dstType: reflect.TypeOf(""),
-			in:      []byte{0xd7, 0x41, 0xff}, // 23(h'ff')
+			dstType: reflect.TypeFor[string](),
+			data:    []byte{0xd7, 0x41, 0xff}, // 23(h'ff')
 			want:    "ff",
 		},
 		{
@@ -9846,8 +10488,8 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
 			},
-			dstType: reflect.TypeOf(""),
-			in:      []byte{0xd7, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 23(55799(h'ff'))
+			dstType: reflect.TypeFor[string](),
+			data:    []byte{0xd7, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 23(55799(h'ff'))
 			want:    "ff",
 		},
 		{
@@ -9855,8 +10497,8 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringToString: ByteStringToStringAllowed,
 			},
-			dstType: reflect.TypeOf(""),
-			in:      []byte{0xd7, 0x41, 0xff}, // 23(h'ff')
+			dstType: reflect.TypeFor[string](),
+			data:    []byte{0xd7, 0x41, 0xff}, // 23(h'ff')
 			want:    "\xff",
 		},
 		{
@@ -9864,8 +10506,8 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringExpectedFormat: ByteStringExpectedBase16,
 			},
-			dstType: reflect.TypeOf([]byte{}),
-			in:      []byte{0xd7, 0x41, 0xff}, // 23(h'ff')
+			dstType: reflect.TypeFor[[]byte](),
+			data:    []byte{0xd7, 0x41, 0xff}, // 23(h'ff')
 			want:    []byte{0xff},
 		},
 		{
@@ -9873,8 +10515,8 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringExpectedFormat: ByteStringExpectedBase16,
 			},
-			dstType: reflect.TypeOf([]byte{}),
-			in:      []byte{0xd7, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 23(55799(h'ff'))
+			dstType: reflect.TypeFor[[]byte](),
+			data:    []byte{0xd7, 0xd9, 0xd9, 0xf7, 0x41, 0xff}, // 23(55799(h'ff'))
 			want:    []byte{0xff},
 		},
 		{
@@ -9882,9 +10524,27 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			opts: DecOptions{
 				ByteStringExpectedFormat: ByteStringExpectedBase16,
 			},
-			dstType: reflect.TypeOf([]byte{}),
-			in:      []byte{0x42, 'f', 'f'},
+			dstType: reflect.TypeFor[[]byte](),
+			data:    []byte{0x42, 'f', 'f'},
 			want:    []byte{0xff},
+		},
+		{
+			name: "tag 21 wrapping tag 22",
+			opts: DecOptions{
+				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
+			},
+			dstType: reflect.TypeFor[string](),
+			data:    []byte{0xd5, 0xd6, 0x42, 0x01, 0x02}, // 21(22(h'0102'))
+			want:    "AQI=",                               // base64 of [0x01, 0x02] with padding
+		},
+		{
+			name: "tag 22 wrapping tag 21",
+			opts: DecOptions{
+				ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding,
+			},
+			dstType: reflect.TypeFor[string](),
+			data:    []byte{0xd6, 0xd5, 0x42, 0x01, 0x02}, // 22(21(h'0102'))
+			want:    "AQI",                                // base64 of [0x01, 0x02] without padding
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -9894,7 +10554,7 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			}
 
 			dstVal := reflect.New(tc.dstType)
-			if err := dm.Unmarshal(tc.in, dstVal.Interface()); err != nil {
+			if err := dm.Unmarshal(tc.data, dstVal.Interface()); err != nil {
 				t.Fatal(err)
 			}
 
@@ -9944,25 +10604,25 @@ func TestBinaryUnmarshalerMode(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		opts DecOptions
-		in   []byte
-		want interface{}
+		data []byte
+		want any
 	}{
 		{
 			name: "UnmarshalBinary is called by default",
 			opts: DecOptions{},
-			in:   []byte("\x45hello"), // 'hello'
+			data: []byte("\x45hello"), // 'hello'
 			want: testBinaryUnmarshaler("UnmarshalBinary"),
 		},
 		{
 			name: "UnmarshalBinary is called with BinaryUnmarshalerByteString",
 			opts: DecOptions{BinaryUnmarshaler: BinaryUnmarshalerByteString},
-			in:   []byte("\x45hello"), // 'hello'
+			data: []byte("\x45hello"), // 'hello'
 			want: testBinaryUnmarshaler("UnmarshalBinary"),
 		},
 		{
 			name: "default byte slice unmarshaling behavior is used with BinaryUnmarshalerNone",
 			opts: DecOptions{BinaryUnmarshaler: BinaryUnmarshalerNone},
-			in:   []byte("\x45hello"), // 'hello'
+			data: []byte("\x45hello"), // 'hello'
 			want: testBinaryUnmarshaler("hello"),
 		},
 	} {
@@ -9973,7 +10633,7 @@ func TestBinaryUnmarshalerMode(t *testing.T) {
 			}
 
 			gotrv := reflect.New(reflect.TypeOf(tc.want))
-			if err := dm.Unmarshal(tc.in, gotrv.Interface()); err != nil {
+			if err := dm.Unmarshal(tc.data, gotrv.Interface()); err != nil {
 				t.Fatal(err)
 			}
 
@@ -10015,32 +10675,32 @@ func TestDecModeInvalidBignumTag(t *testing.T) {
 
 func TestBignumTagMode(t *testing.T) {
 	for _, tc := range []struct {
-		name           string
-		opt            DecOptions
-		input          []byte
-		wantErrMessage string // if "" then expect nil error
+		name         string
+		opt          DecOptions
+		input        []byte
+		wantErrorMsg string // if "" then expect nil error
 	}{
 		{
 			name:  "default options decode unsigned bignum without error",
 			opt:   DecOptions{},
-			input: hexDecode("c240"), // 2(0) i.e. unsigned bignum 0
+			input: mustHexDecode("c240"), // 2(0) i.e. unsigned bignum 0
 		},
 		{
 			name:  "default options decode negative bignum without error",
 			opt:   DecOptions{},
-			input: hexDecode("c340"), // 3(0) i.e. negative bignum -1
+			input: mustHexDecode("c340"), // 3(0) i.e. negative bignum -1
 		},
 		{
-			name:           "BignumTagForbidden returns UnacceptableDataItemError on unsigned bignum",
-			opt:            DecOptions{BignumTag: BignumTagForbidden},
-			input:          hexDecode("c240"), // 2(0) i.e. unsigned bignum 0
-			wantErrMessage: "cbor: data item of cbor type tag is not accepted by protocol: bignum",
+			name:         "BignumTagForbidden returns UnacceptableDataItemError on unsigned bignum",
+			opt:          DecOptions{BignumTag: BignumTagForbidden},
+			input:        mustHexDecode("c240"), // 2(0) i.e. unsigned bignum 0
+			wantErrorMsg: "cbor: data item of cbor type tag is not accepted by protocol: bignum",
 		},
 		{
-			name:           "BignumTagForbidden returns UnacceptableDataItemError on negative bignum",
-			opt:            DecOptions{BignumTag: BignumTagForbidden},
-			input:          hexDecode("c340"), // 3(0) i.e. negative bignum -1
-			wantErrMessage: "cbor: data item of cbor type tag is not accepted by protocol: bignum",
+			name:         "BignumTagForbidden returns UnacceptableDataItemError on negative bignum",
+			opt:          DecOptions{BignumTag: BignumTagForbidden},
+			input:        mustHexDecode("c340"), // 3(0) i.e. negative bignum -1
+			wantErrorMsg: "cbor: data item of cbor type tag is not accepted by protocol: bignum",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -10061,18 +10721,439 @@ func TestBignumTagMode(t *testing.T) {
 					dstv := reflect.New(dstType)
 					err = dm.Unmarshal(tc.input, dstv.Interface())
 					if err != nil {
-						if tc.wantErrMessage == "" {
+						if tc.wantErrorMsg == "" {
 							t.Errorf("want nil error, got: %v", err)
-						} else if gotErrMessage := err.Error(); gotErrMessage != tc.wantErrMessage {
-							t.Errorf("want error: %q, got error: %q", tc.wantErrMessage, gotErrMessage)
+						} else if gotErrMessage := err.Error(); gotErrMessage != tc.wantErrorMsg {
+							t.Errorf("Unmarshal() returned error %q, want %q", gotErrMessage, tc.wantErrorMsg)
 						}
 					} else {
-						if tc.wantErrMessage != "" {
-							t.Errorf("got nil error, want: %s", tc.wantErrMessage)
+						if tc.wantErrorMsg != "" {
+							t.Errorf("got nil error, want: %s", tc.wantErrorMsg)
 						}
 					}
 				})
 			}
 		})
+	}
+}
+
+func TestDecModeInvalidTextUnmarshaler(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{TextUnmarshaler: -1},
+			wantErrorMsg: "cbor: invalid TextUnmarshaler -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{TextUnmarshaler: 101},
+			wantErrorMsg: "cbor: invalid TextUnmarshaler 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+type testTextUnmarshaler string
+
+func (tu *testTextUnmarshaler) UnmarshalText(_ []byte) error {
+	*tu = "UnmarshalText"
+	return nil
+}
+
+func TestTextUnmarshalerMode(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		opts DecOptions
+		data []byte
+		want any
+	}{
+		{
+			name: "UnmarshalText is not called by default",
+			opts: DecOptions{},
+			data: []byte("\x65hello"), // "hello"
+			want: testTextUnmarshaler("hello"),
+		},
+		{
+			name: "UnmarshalText is called with TextUnmarshalerTextString",
+			opts: DecOptions{TextUnmarshaler: TextUnmarshalerTextString},
+			data: []byte("\x65hello"), // "hello"
+			want: testTextUnmarshaler("UnmarshalText"),
+		},
+		{
+			name: "default text string unmarshaling behavior is used with TextUnmarshalerNone",
+			opts: DecOptions{TextUnmarshaler: TextUnmarshalerNone},
+			data: []byte("\x65hello"), // "hello"
+			want: testTextUnmarshaler("hello"),
+		},
+		{
+			name: "UnmarshalText is called for byte string with TextUnmarshalerTextString and ByteStringToStringAllowed",
+			opts: DecOptions{
+				TextUnmarshaler:    TextUnmarshalerTextString,
+				ByteStringToString: ByteStringToStringAllowed,
+			},
+			data: []byte("\x45hello"), // 'hello'
+			want: testTextUnmarshaler("UnmarshalText"),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, err := tc.opts.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			gotrv := reflect.New(reflect.TypeOf(tc.want))
+			if err := dm.Unmarshal(tc.data, gotrv.Interface()); err != nil {
+				t.Fatal(err)
+			}
+
+			got := gotrv.Elem().Interface()
+			if !reflect.DeepEqual(tc.want, got) {
+				t.Errorf("want: %v, got: %v", tc.want, got)
+			}
+		})
+	}
+}
+
+type errorTextUnmarshaler struct{}
+
+func (u *errorTextUnmarshaler) UnmarshalText([]byte) error {
+	return errors.New("test")
+}
+
+func TestTextUnmarshalerModeError(t *testing.T) {
+	dec, err := DecOptions{TextUnmarshaler: TextUnmarshalerTextString}.DecMode()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = dec.Unmarshal([]byte{0x61, 'a'}, new(errorTextUnmarshaler))
+	if err == nil {
+		t.Fatal("expected non-nil error")
+	}
+
+	if got, want := err.Error(), "cbor: cannot unmarshal text for *cbor.errorTextUnmarshaler: test"; got != want {
+		t.Errorf("want: %q, got: %q", want, got)
+	}
+}
+
+func TestJSONUnmarshalerTranscoder(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		data []byte
+
+		transcodeInput  []byte
+		transcodeOutput []byte
+		transcodeError  error
+
+		want         any
+		wantErrorMsg string
+	}{
+		{
+			name: "successful transcode",
+			data: []byte{0xf5},
+
+			transcodeInput:  []byte{0xf5},
+			transcodeOutput: []byte("true"),
+
+			want: json.RawMessage("true"),
+		},
+		{
+			name: "transcode returns non-nil error",
+			data: []byte{0xf5},
+
+			transcodeInput: []byte{0xf5},
+			transcodeError: errors.New("test"),
+
+			want: json.RawMessage("true"),
+			wantErrorMsg: TranscodeError{
+				err:          errors.New("test"),
+				rtype:        reflect.TypeFor[*json.RawMessage](),
+				sourceFormat: "cbor",
+				targetFormat: "json",
+			}.Error(),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dec, err := DecOptions{
+				JSONUnmarshalerTranscoder: transcodeFunc(func(w io.Writer, r io.Reader) error {
+					source, err := io.ReadAll(r)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if got := string(source); got != string(tc.transcodeInput) {
+						t.Errorf("transcoder got input %q, want %q", got, string(tc.transcodeInput))
+					}
+
+					if tc.transcodeError != nil {
+						return tc.transcodeError
+					}
+
+					_, err = w.Write(tc.transcodeOutput)
+					return err
+
+				}),
+			}.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			gotrv := reflect.New(reflect.TypeOf(tc.want))
+			err = dec.Unmarshal(tc.data, gotrv.Interface())
+			if tc.wantErrorMsg != "" {
+				if err == nil {
+					t.Errorf("Unmarshal(0x%x) didn't return an error, want error %q", tc.data, tc.wantErrorMsg)
+				} else if gotErrorMsg := err.Error(); gotErrorMsg != tc.wantErrorMsg {
+					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, gotErrorMsg, tc.wantErrorMsg)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unmarshal(0x%x) returned non-nil error %v", tc.data, err)
+				} else if got := gotrv.Elem().Interface(); !reflect.DeepEqual(tc.want, got) {
+					t.Errorf("Unmarshal(0x%x): %v, want %v", tc.data, got, tc.want)
+				}
+			}
+
+		})
+	}
+}
+
+// TestKeyAsIntTextKeyDoesNotMatchKeyAsIntField verifies that a CBOR text string
+// key does not match a struct field with the keyasint tag option, even if the
+// text content is the string representation of the integer key.
+func TestKeyAsIntTextKeyDoesNotMatchKeyAsIntField(t *testing.T) {
+	type s struct {
+		ID int `cbor:"1,keyasint"`
+	}
+
+	testCases := []struct {
+		name    string
+		opts    DecOptions
+		data    []byte
+		want    any
+		wantErr *UnknownFieldError
+	}{
+		{
+			name: "default options",
+			opts: defaultDecMode.DecOptions(),
+			data: mustHexDecode("a1613101"), // {"1": 1}
+			want: s{},
+		},
+		{
+			name:    "unknown field error options",
+			opts:    DecOptions{ExtraReturnErrors: ExtraDecErrorUnknownField},
+			data:    mustHexDecode("a1613101"), // {"1": 1}
+			want:    s{},
+			wantErr: &UnknownFieldError{Index: 0},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, err := tc.opts.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var v s
+			err = dm.Unmarshal(tc.data, &v)
+			if err != nil {
+				if !reflect.DeepEqual(err, tc.wantErr) {
+					t.Errorf("got error: %v, wanted: %v", err, tc.wantErr)
+				}
+			} else {
+				if tc.wantErr != nil {
+					t.Errorf("got nil error, wanted: %v", tc.wantErr)
+				}
+			}
+
+			if !reflect.DeepEqual(v, tc.want) {
+				t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", tc.data, v, v, tc.want, tc.want)
+			}
+		})
+	}
+}
+
+// TestKeyAsIntNormalizedDuplicateFields verifies that struct fields with
+// keyasint tag values that are identical after integer normalization (e.g., "01"
+// and "1") are eliminated during field deduplication, matching the behavior of
+// two string-keyed fields with the same name.
+func TestKeyAsIntNormalizedDuplicateFields(t *testing.T) {
+	type s struct {
+		ID  int `cbor:"01,keyasint"`
+		ID2 int `cbor:"1,keyasint"`
+		ID3 int `cbor:"+1,keyasint"`
+	}
+
+	testCases := []struct {
+		name    string
+		opts    DecOptions
+		data    []byte
+		want    any
+		wantErr *UnknownFieldError
+	}{
+		{
+			name: "default options",
+			opts: defaultDecMode.DecOptions(),
+			data: mustHexDecode("a10101"), // {1: 1}
+			want: s{},
+		},
+		{
+			name:    "unknown field error options",
+			opts:    DecOptions{ExtraReturnErrors: ExtraDecErrorUnknownField},
+			data:    mustHexDecode("a10101"), // {1: 1}
+			want:    s{},
+			wantErr: &UnknownFieldError{Index: 0},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, err := tc.opts.DecMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var v s
+			err = dm.Unmarshal(tc.data, &v)
+			if err != nil {
+				if !reflect.DeepEqual(err, tc.wantErr) {
+					t.Errorf("got error: %v, wanted: %v", err, tc.wantErr)
+				}
+			} else {
+				if tc.wantErr != nil {
+					t.Errorf("got nil error, wanted: %v", tc.wantErr)
+				}
+			}
+
+			if !reflect.DeepEqual(v, tc.want) {
+				t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", tc.data, v, v, tc.want, tc.want)
+			}
+		})
+	}
+
+	v := s{ID: 1, ID2: 2, ID3: 3}
+	want := mustHexDecode("a0")
+
+	b, err := Marshal(v)
+	if err != nil {
+		t.Errorf("Marshal() returned an error %v", err)
+	}
+	if !bytes.Equal(b, want) {
+		t.Errorf("Marshal() returned 0x%x, want 0x%x", b, want)
+	}
+}
+
+// TestKeyAsIntAndStringFieldsWithSameName verifies that a struct with both a
+// keyasint field and a string-keyed field with the same tag name (e.g.
+// cbor:"1,keyasint" and cbor:"1") can decode CBOR maps with integer and text
+// keys independently.
+func TestKeyAsIntAndStringFieldsWithSameName(t *testing.T) {
+	type s struct {
+		ID        int `cbor:"1,keyasint"`
+		AnotherID int `cbor:"1"`
+	}
+
+	data := mustHexDecode("a20101613102") // {1: 1, "1": 2}
+	want := s{
+		ID:        1,
+		AnotherID: 2,
+	}
+
+	var v s
+	err := Unmarshal(data, &v)
+	if err != nil {
+		t.Errorf("Unmarshal returned unexpected error: %v", err)
+	}
+	if !reflect.DeepEqual(v, want) {
+		t.Errorf("Unmarshal(0x%x) returned %+v, want %+v", data, v, want)
+	}
+
+	// Roundtrip
+	b, err := Marshal(want)
+	if err != nil {
+		t.Errorf("Marshal returned unexpected error: %v", err)
+	}
+	if !bytes.Equal(b, data) {
+		t.Errorf("Marshal(%+v) returned 0x%x, want 0x%x", want, b, data)
+	}
+}
+
+// TestMapKeyOverflowStructKeyAsInt verifies that a CBOR integer map
+// key that is outside the range of math.MinInt64 and math.MaxInt64
+// is rejected with an UnmarshalTypeError.
+func TestMapKeyOverflowStructKeyAsInt(t *testing.T) {
+	type s struct {
+		ID int `cbor:"-1,keyasint"`
+	}
+
+	testCases := []struct {
+		name    string
+		data    []byte
+		wantErr *UnmarshalTypeError
+	}{
+		{
+			name: "map key < math.MinInt64",
+			data: mustHexDecode("a13bffffffffffffffff01"), // {-18446744073709551616: 1}
+			wantErr: &UnmarshalTypeError{
+				CBORType: cborTypeNegativeInt.String(),
+				GoType:   "int64",
+				errorMsg: "-1-18446744073709551615 overflows Go's int64",
+			},
+		},
+		{
+			name: "map key > math.MaxInt64",
+			data: mustHexDecode("a11bffffffffffffffff01"), // {18446744073709551615: 1}
+			wantErr: &UnmarshalTypeError{
+				CBORType: cborTypePositiveInt.String(),
+				GoType:   "int64",
+				errorMsg: "18446744073709551615 overflows Go's int64",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var v s
+			err := Unmarshal(tc.data, &v)
+			if err != nil {
+				if !reflect.DeepEqual(err, tc.wantErr) {
+					t.Errorf("got error: %v, wanted: %v", err, tc.wantErr)
+				}
+			} else {
+				if tc.wantErr != nil {
+					t.Errorf("got nil error, wanted: %v", tc.wantErr)
+				}
+			}
+		})
+	}
+}
+
+func TestByteStringExpectedFormatErrorUnwrap(t *testing.T) {
+	innerErr := errors.New("test error")
+	err := newByteStringExpectedFormatError(ByteStringExpectedBase64URL, innerErr)
+	if unwrapped := err.Unwrap(); unwrapped != innerErr {
+		t.Errorf("Unwrap() = %v, want %v", unwrapped, innerErr)
+	}
+}
+
+func TestByteStringExpectedFormatErrorDefaultCase(t *testing.T) {
+	innerErr := errors.New("test error")
+	err := &ByteStringExpectedFormatError{expectedFormatOption: 99, err: innerErr}
+	got := err.Error()
+	want := "cbor: failed to decode byte string in expected format 99: test error"
+	if got != want {
+		t.Errorf("Error() = %q, want %q", got, want)
 	}
 }

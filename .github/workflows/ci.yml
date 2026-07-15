@@ -11,11 +11,16 @@ on:
   pull_request:
   push:
     branches:
+      - 'main'
       - 'master'
-      - 'release*'
-      - 'feature/stream-mode'
-    tags:
-      - 'v*'  
+      - 'release**'   # Match both 'release-v2.3.4' and 'release/*'.
+      - 'feature/**'
+      - 'v**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   # Test on various OS with default Go version. 
   tests:
@@ -26,16 +31,16 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
-        go-version: [1.17, 1.18, 1.19, '1.20', 1.21, 1.22, 1.23]
+        go-version: [1.24, 1.25, 1.26]
     steps:
     - name: Install Go
-      uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+      uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
       with:
         go-version: ${{ matrix.go-version }}
         check-latest: true
         
     - name: Checkout code
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         fetch-depth: 1
 

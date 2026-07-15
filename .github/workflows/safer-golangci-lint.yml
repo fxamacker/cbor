@@ -16,13 +16,17 @@ on:
     branches: [main, master]
 
 env:
-  GO_VERSION: '1.22'
-  GOLINTERS_VERSION: 1.56.2
+  GO_VERSION: '1.25'
+  GOLINTERS_VERSION: 2.10.1
   GOLINTERS_ARCH: linux-amd64
-  GOLINTERS_TGZ_DGST: e1c313fb5fc85a33890fdee5dbb1777d1f5829c84d655a47a55688f3aad5e501
+  GOLINTERS_TGZ_DGST: dfa775874cf0561b404a02a8f4481fc69b28091da95aa697259820d429b09c99
   GOLINTERS_TIMEOUT: 15m
   OPENSSL_DGST_CMD: openssl dgst -sha256 -r
   CURL_CMD: curl --proto =https --tlsv1.2 --location --silent --show-error --fail
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   main:
@@ -32,12 +36,12 @@ jobs:
       contents: read
     steps:
       - name: Checkout source
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 1
 
       - name: Setup Go
-        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
