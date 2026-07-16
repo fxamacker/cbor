@@ -234,26 +234,25 @@ __Install__: `go get github.com/fxamacker/cbor/v2` and `import "github.com/fxama
 
 > [!TIP]  
 >
-> Tinygo users can try beta/experimental branch [feature/cbor-tinygo-beta](https://github.com/fxamacker/cbor/tree/feature/cbor-tinygo-beta).
+> TinyGo users can try beta/experimental branch [feature/cbor-tinygo-beta](https://github.com/fxamacker/cbor/tree/feature/cbor-tinygo-beta).
 >
-> <details><summary> 🔎&nbsp; More about tinygo feature branch</summary>
+> <details><summary> 🔎&nbsp; More about TinyGo feature branch</summary>
 >
-> ### Tinygo
+> ### TinyGo
 >
-> Branch [feature/cbor-tinygo-beta](https://github.com/fxamacker/cbor/tree/feature/cbor-tinygo-beta) is based on fxamacker/cbor v2.7.0 and it can be compiled using tinygo v0.33 (also compiles with golang/go).
+> :warning: The `feature/cbor-tinygo-beta` branch is not currently fuzz tested.
 >
-> It passes unit tests (with both go1.22 and tinygo v0.33) and is considered beta/experimental for tinygo.
+> Branch [feature/cbor-tinygo-beta](https://github.com/fxamacker/cbor/tree/feature/cbor-tinygo-beta) tracks fxamacker/cbor master branch and it is updated periodically.  It can be compiled with both tinygo-org/tinygo (0.42.0-dev-801bd484 or newer) and golang/go compilers.
 >
-> :warning: The `feature/cbor-tinygo-beta` branch does not get fuzz tested yet.
+> This branch requires TinyGo 0.42.0-dev-801bd484 (or newer) because TinyGo v0.41.1 does not include a required fix ([tinygo-org/tinygo#5508](https://github.com/tinygo-org/tinygo/pull/5508)).
 >
-> Changes in this feature branch only affect tinygo compiled software.  Summary of changes:
-> - default `DecOptions.MaxNestedLevels` is reduced to 16 (was 32).  User can specify higher limit but 24+ crashes tests when compiled with tinygo v0.33.
-> - disabled decoding CBOR tag data to Go interface because tinygo v0.33 is missing needed feature.
-> - encoding error message can be different when encoding function type.
+> This branch passes unit tests (with both TinyGo and Go compilers) and it is considered experimental.
 >
-> Related tinygo issues:
-> - https://github.com/tinygo-org/tinygo/issues/4277
-> - https://github.com/tinygo-org/tinygo/issues/4458
+> Changes in this feature branch only affect TinyGo compiled software.  Summary of changes:
+> - Default `DecOptions.MaxNestedLevels` is reduced to 16 (was 32).  User can specify a higher limit when running with a larger stack.
+> - Encoding error message can be different when encoding function type.  For details, see [tinygo-org/tinygo#4458](https://github.com/tinygo-org/tinygo/issues/4458).
+>
+> NOTE: An older version of this branch [tinygo-beta/v2.7.0-tinygo0.33](https://github.com/fxamacker/cbor/tree/tinygo-beta/v2.7.0-tinygo0.33) (based on fxamacker/cbor v2.7.0) can be used with TinyGo v0.33.  It disables decoding CBOR tag data to Go interface values due to [tinygo-org/tinygo#4277](https://github.com/tinygo-org/tinygo/issues/4277).
 >
 > </details>
 
