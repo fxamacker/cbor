@@ -4,8 +4,15 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
-      
+      interval: "weekly"
+      day: "friday"
+      time: "12:00"
+      timezone: "UTC"
+    groups:
+      codeql:
+        patterns:
+          - "github/codeql-action*"
+
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
