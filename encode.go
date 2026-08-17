@@ -1021,13 +1021,18 @@ func (em *encMode) EncOptions() EncOptions {
 
 func (em *encMode) unexport() {}
 
-func (em *encMode) encTagBytes(t reflect.Type) []byte {
+func (em *encMode) encTagBytes(dst []byte, v reflect.Value) []byte {
 	if em.tags != nil {
-		if tagItem := em.tags.getTagItemFromType(t); tagItem != nil {
-			return tagItem.cborTagNum
-		}
+		return em.encTagBytesSlow(dst, v)
 	}
-	return nil
+	return dst
+}
+
+func (em *encMode) encTagBytesSlow(dst []byte, v reflect.Value) []byte {
+	if tagItem := em.tags.getTagItemFromType(v.Type()); tagItem != nil {
+		return append(dst, tagItem.cborTagNum...)
+	}
+	return dst
 }
 
 // Marshal returns the CBOR encoding of v using em encoding mode.
@@ -1114,9 +1119,7 @@ func encode(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 }
 
 func encodeBool(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
-	if b := em.encTagBytes(v.Type()); b != nil {
-		dst = append(dst, b...)
-	}
+	dst = em.encTagBytes(dst, v)
 	if v.Bool() {
 		dst = append(dst, cborTrue...)
 	} else {
@@ -1126,9 +1129,7 @@ func encodeBool(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 }
 
 func encodeInt(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
-	if b := em.encTagBytes(v.Type()); b != nil {
-		dst = append(dst, b...)
-	}
+	dst = em.encTagBytes(dst, v)
 	i := v.Int()
 	if i >= 0 {
 		dst = encodeHead(dst, byte(cborTypePositiveInt), uint64(i))
@@ -1140,17 +1141,13 @@ func encodeInt(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 }
 
 func encodeUint(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
-	if b := em.encTagBytes(v.Type()); b != nil {
-		dst = append(dst, b...)
-	}
+	dst = em.encTagBytes(dst, v)
 	dst = encodeHead(dst, byte(cborTypePositiveInt), v.Uint())
 	return dst, nil
 }
 
 func encodeFloat(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
-	if b := em.encTagBytes(v.Type()); b != nil {
-		dst = append(dst, b...)
-	}
+	dst = em.encTagBytes(dst, v)
 	f64 := v.Float()
 	if math.IsNaN(f64) {
 		return encodeNaN(dst, em, v)
@@ -1298,9 +1295,7 @@ func encodeByteString(dst []byte, em *encMode, v reflect.Value) ([]byte, error) 
 	if vk == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8 && em.byteSliceLaterEncodingTag != 0 {
 		dst = encodeHead(dst, byte(cborTypeTag), em.byteSliceLaterEncodingTag)
 	}
-	if b := em.encTagBytes(v.Type()); b != nil {
-		dst = append(dst, b...)
-	}
+	dst = em.encTagBytes(dst, v)
 	slen := v.Len()
 	if slen == 0 {
 		dst = append(dst, byte(cborTypeByteString))
@@ -1319,9 +1314,7 @@ func encodeByteString(dst []byte, em *encMode, v reflect.Value) ([]byte, error) 
 }
 
 func encodeString(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
-	if b := em.encTagBytes(v.Type()); b != nil {
-		dst = append(dst, b...)
-	}
+	dst = em.encTagBytes(dst, v)
 	s := v.String()
 	dst = encodeHead(dst, byte(em.stringMajorType), uint64(len(s)))
 	dst = append(dst, s...)
@@ -1340,9 +1333,7 @@ func (ae arrayEncodeFunc) encode(dst []byte, em *encMode, v reflect.Value) ([]by
 		dst = append(dst, cborNil...)
 		return dst, nil
 	}
-	if b := em.encTagBytes(v.Type()); b != nil {
-		dst = append(dst, b...)
-	}
+	dst = em.encTagBytes(dst, v)
 	alen := v.Len()
 	if alen == 0 {
 		dst = append(dst, byte(cborTypeArray))
@@ -1372,9 +1363,7 @@ func (me mapEncodeFunc) encode(dst []byte, em *encMode, v reflect.Value) ([]byte
 		dst = append(dst, cborNil...)
 		return dst, nil
 	}
-	if b := em.encTagBytes(v.Type()); b != nil {
-		dst = append(dst, b...)
-	}
+	dst = em.encTagBytes(dst, v)
 	mlen := v.Len()
 	if mlen == 0 {
 		dst = append(dst, byte(cborTypeMap))
@@ -1475,9 +1464,7 @@ func encodeStructToArray(dst []byte, em *encMode, v reflect.Value) (_ []byte, er
 			" with `toindefarray` when ToIndefArrayStructTag is not ToIndefArrayStructTagAllowed")
 	}
 
-	if b := em.encTagBytes(v.Type()); b != nil {
-		dst = append(dst, b...)
-	}
+	dst = em.encTagBytes(dst, v)
 
 	flds := structType.fields
 
@@ -1527,9 +1514,7 @@ func encodeStruct(dst []byte, em *encMode, v reflect.Value) (_ []byte, err error
 		start = rand.Intn(len(flds)) //nolint:gosec // Don't need a CSPRNG for deck cutting.
 	}
 
-	if b := em.encTagBytes(v.Type()); b != nil {
-		dst = append(dst, b...)
-	}
+	dst = em.encTagBytes(dst, v)
 
 	// Encode head with struct field count.
 	// Head is rewritten later if actual encoded field count is different from struct field count.
@@ -1732,9 +1717,7 @@ func (bme binaryMarshalerEncoder) encode(dst []byte, em *encMode, v reflect.Valu
 	if err != nil {
 		return dst, err
 	}
-	if b := em.encTagBytes(vt); b != nil {
-		dst = append(dst, b...)
-	}
+	dst = em.encTagBytes(dst, v)
 	dst = encodeHead(dst, byte(cborTypeByteString), uint64(len(data)))
 	dst = append(dst, data...)
 	return dst, nil
@@ -1779,9 +1762,7 @@ func (tme textMarshalerEncoder) encode(dst []byte, em *encMode, v reflect.Value)
 	if err != nil {
 		return dst, fmt.Errorf("cbor: cannot marshal text for %s: %w", vt, err)
 	}
-	if b := em.encTagBytes(vt); b != nil {
-		dst = append(dst, b...)
-	}
+	dst = em.encTagBytes(dst, v)
 
 	dst = encodeHead(dst, byte(cborTypeTextString), uint64(len(data)))
 	dst = append(dst, data...)
@@ -1851,9 +1832,8 @@ func (jme jsonMarshalerEncoder) encode(dst []byte, em *encMode, v reflect.Value)
 	e := getTranscodeBuffer()
 	defer putTranscodeBuffer(e)
 
-	if b := em.encTagBytes(vt); b != nil {
-		e.Write(b)
-	}
+	encodedTag := em.encTagBytes(e.AvailableBuffer(), v)
+	e.Write(encodedTag)
 
 	err = em.jsonMarshalerTranscoder.Transcode(e, bytes.NewReader(json))
 	if err != nil {
