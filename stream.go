@@ -200,23 +200,24 @@ func (enc *Encoder) Encode(v any) error {
 		}
 	}
 
-	buf := getEncodeBuffer()
+	bp := getEncodeBuffer()
 
-	err := encode(buf, enc.em, reflect.ValueOf(v))
+	b, err := encode(*bp, enc.em, reflect.ValueOf(v))
+	*bp = b[:0]
 
 	// Validate the encoded chunk against the indefinite-length data item using a byte-based check.
 	// This reliably detects chunks from cbor.Marshaler, registered tags, StringToByteString, etc.,
 	// which may produce a chunk inconsistent with the parent's major type.
 	// Applies only to indefinite-length byte/text string parents (RFC 8949 Section 3.2.3).
 	if err == nil && len(enc.indefs) > 0 {
-		err = validateIndefiniteLengthChunkByData(enc.indefs[len(enc.indefs)-1].typ, buf.Bytes(), v)
+		err = validateIndefiniteLengthChunkByData(enc.indefs[len(enc.indefs)-1].typ, b, v)
 	}
 
 	if err == nil {
-		_, err = enc.w.Write(buf.Bytes())
+		_, err = enc.w.Write(b)
 	}
 
-	putEncodeBuffer(buf)
+	putEncodeBuffer(bp)
 
 	if err != nil {
 		return err

@@ -1906,8 +1906,8 @@ func (d *decoder) parseToJSONUnmarshaler(v reflect.Value) error {
 	if u, ok := v.Interface().(jsonUnmarshaler); ok {
 		start := d.off
 		d.skip()
-		e := getEncodeBuffer()
-		defer putEncodeBuffer(e)
+		e := getTranscodeBuffer()
+		defer putTranscodeBuffer(e)
 		if err := d.dm.jsonUnmarshalerTranscoder.Transcode(e, bytes.NewReader(d.data[start:d.off])); err != nil {
 			return &TranscodeError{err: err, rtype: v.Type(), sourceFormat: "cbor", targetFormat: "json"}
 		}
