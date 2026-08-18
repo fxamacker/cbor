@@ -81,7 +81,7 @@ func (sv *SimpleValue) unmarshalCBOR(data []byte) error {
 
 	d := decoder{data: data, dm: defaultDecMode}
 
-	typ, ai, val := d.getHead()
+	typ, ai, val := d.readHead()
 
 	if typ != cborTypePrimitives {
 		return &UnmarshalTypeError{CBORType: typ.String(), GoType: "SimpleValue"}

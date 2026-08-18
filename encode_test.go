@@ -7191,9 +7191,9 @@ func TestEncodedHeadLength(t *testing.T) {
 				if got != tc.wantLength {
 					t.Errorf("encodedHeadLength(%d) = %d, want %d", n, got, tc.wantLength)
 				}
-				b := encodeHead(nil, byte(cborTypePositiveInt), n)
+				b := appendHead(nil, byte(cborTypePositiveInt), n)
 				if len(b) != tc.wantLength {
-					t.Errorf("encodeHead(%d) encoded %d bytes, want %d bytes", n, len(b), tc.wantLength)
+					t.Errorf("appendHead(%d) encoded %d bytes, want %d bytes", n, len(b), tc.wantLength)
 				}
 			}
 		})

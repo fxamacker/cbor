@@ -1422,7 +1422,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				off := d.off
 				var tagNums []uint64
 				for d.nextCBORType() == cborTypeTag {
-					_, _, tagNum := d.getHead()
+					_, _, tagNum := d.readHead()
 					tagNums = append(tagNums, tagNum)
 				}
 				d.off = off
@@ -1456,7 +1456,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 	// Strip self-described CBOR tag number.
 	for d.nextCBORType() == cborTypeTag {
 		off := d.off
-		_, _, tagNum := d.getHead()
+		_, _, tagNum := d.readHead()
 		if tagNum != tagNumSelfDescribedCBOR {
 			d.off = off
 			break
@@ -1466,7 +1466,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 	// Check validity of supported built-in tags.
 	off := d.off
 	for d.nextCBORType() == cborTypeTag {
-		_, _, tagNum := d.getHead()
+		_, _, tagNum := d.readHead()
 		if err := validBuiltinTag(tagNum, d.data[d.off]); err != nil {
 			d.skip()
 			return err
@@ -1538,11 +1538,11 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 
 	switch t {
 	case cborTypePositiveInt:
-		_, _, val := d.getHead()
+		_, _, val := d.readHead()
 		return fillPositiveInt(t, val, v)
 
 	case cborTypeNegativeInt:
-		_, _, val := d.getHead()
+		_, _, val := d.readHead()
 		if val > math.MaxInt64 {
 			// CBOR negative integer overflows int64, use big.Int to store value.
 			bi := new(big.Int)
@@ -1594,7 +1594,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		return fillTextString(t, b, v, tInfo, d.dm.textUnmarshaler)
 
 	case cborTypePrimitives:
-		_, ai, val := d.getHead()
+		_, ai, val := d.readHead()
 		switch ai {
 		case additionalInformationAsFloat16:
 			f := float64(float16.Frombits(uint16(val)).Float32()) //nolint:gosec
@@ -1631,7 +1631,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		}
 
 	case cborTypeTag:
-		_, _, tagNum := d.getHead()
+		_, _, tagNum := d.readHead()
 		switch tagNum {
 		case tagNumUnsignedBignum:
 			// Bignum (tag 2) can be decoded to uint, int, float, slice, array, or big.Int.
@@ -1728,7 +1728,7 @@ func (d *decoder) parseToTag(v reflect.Value) error {
 	}
 
 	// Unmarshal tag number
-	_, _, num := d.getHead()
+	_, _, num := d.readHead()
 
 	// Unmarshal tag content
 	content, err := d.parse(false)
@@ -1748,7 +1748,7 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 		if d.dm.timeTag == DecTagIgnored {
 			// Skip all enclosing tags
 			for t == cborTypeTag {
-				d.getHead()
+				d.readHead()
 				t = d.nextCBORType()
 			}
 			if d.nextCBORNil() {
@@ -1757,7 +1757,7 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 			}
 		} else {
 			// Read tag number
-			_, _, tagNum := d.getHead()
+			_, _, tagNum := d.readHead()
 			if tagNum != 0 && tagNum != 1 {
 				d.skip()                                                                                                                            // skip tag content
 				return time.Time{}, false, errors.New("cbor: wrong tag number for time.Time, got " + strconv.Itoa(int(tagNum)) + ", expect 0 or 1") //nolint:gosec
@@ -1799,7 +1799,7 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 		return t, true, nil
 
 	case cborTypePositiveInt:
-		_, _, val := d.getHead()
+		_, _, val := d.readHead()
 		if val > math.MaxInt64 {
 			return time.Time{}, false, &UnmarshalTypeError{
 				CBORType: t.String(),
@@ -1810,7 +1810,7 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 		return time.Unix(int64(val), 0), true, nil
 
 	case cborTypeNegativeInt:
-		_, _, val := d.getHead()
+		_, _, val := d.readHead()
 		if val > math.MaxInt64 {
 			if val == math.MaxUint64 {
 				// Maximum absolute value representable by negative integer is 2^64,
@@ -1830,7 +1830,7 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 		return time.Unix(int64(-1)^int64(val), 0), true, nil
 
 	case cborTypePrimitives:
-		_, ai, val := d.getHead()
+		_, ai, val := d.readHead()
 		var f float64
 		switch ai {
 		case additionalInformationAsFloat16:
@@ -1939,7 +1939,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyc
 	if skipSelfDescribedTag {
 		for d.nextCBORType() == cborTypeTag {
 			off := d.off
-			_, _, tagNum := d.getHead()
+			_, _, tagNum := d.readHead()
 			if tagNum != tagNumSelfDescribedCBOR {
 				d.off = off
 				break
@@ -1950,7 +1950,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyc
 	// Check validity of supported built-in tags.
 	off := d.off
 	for d.nextCBORType() == cborTypeTag {
-		_, _, tagNum := d.getHead()
+		_, _, tagNum := d.readHead()
 		if err := validBuiltinTag(tagNum, d.data[d.off]); err != nil {
 			d.skip()
 			return nil, err
@@ -1961,7 +1961,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyc
 	t := d.nextCBORType()
 	switch t {
 	case cborTypePositiveInt:
-		_, _, val := d.getHead()
+		_, _, val := d.readHead()
 
 		switch d.dm.intDec {
 		case IntDecConvertNone:
@@ -1994,7 +1994,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyc
 		}
 
 	case cborTypeNegativeInt:
-		_, _, val := d.getHead()
+		_, _, val := d.readHead()
 
 		if val > math.MaxInt64 {
 			// CBOR negative integer value overflows Go int64, use big.Int instead.
@@ -2072,7 +2072,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyc
 
 	case cborTypeTag:
 		tagOff := d.off
-		_, _, tagNum := d.getHead()
+		_, _, tagNum := d.readHead()
 		contentOff := d.off
 
 		switch tagNum {
@@ -2150,7 +2150,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyc
 			// Parse to specified type if tag number is registered.
 			tagNums := []uint64{tagNum}
 			for d.nextCBORType() == cborTypeTag {
-				_, _, num := d.getHead()
+				_, _, num := d.readHead()
 				tagNums = append(tagNums, num)
 			}
 			registeredType := d.dm.tags.getTypeFromTagNum(tagNums)
@@ -2176,7 +2176,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyc
 		return Tag{tagNum, content}, nil
 
 	case cborTypePrimitives:
-		_, ai, val := d.getHead()
+		_, ai, val := d.readHead()
 		if ai <= 24 && d.dm.simpleValues.rejected[SimpleValue(val)] { //nolint:gosec
 			return nil, &UnacceptableDataItemError{
 				CBORType: t.String(),
@@ -2248,7 +2248,7 @@ func (d *decoder) parseWithExpectedLaterEncodingTag(tagNum uint64) (any, error) 
 // and only if the slice is backed by a copy of the input. Callers are
 // responsible for making a copy if necessary.
 func (d *decoder) parseByteString() ([]byte, bool) {
-	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	_, _, val, indefiniteLength := d.readHeadWithIndefiniteLengthFlag()
 	if !indefiniteLength {
 		b := d.data[d.off : d.off+int(val)] //nolint:gosec
 		d.off += int(val)                   //nolint:gosec
@@ -2257,7 +2257,7 @@ func (d *decoder) parseByteString() ([]byte, bool) {
 	// Process indefinite-length string chunks.
 	b := []byte{}
 	for !d.foundBreak() {
-		_, _, val = d.getHead()
+		_, _, val = d.readHead()
 		b = append(b, d.data[d.off:d.off+int(val)]...) //nolint:gosec
 		d.off += int(val)                              //nolint:gosec
 	}
@@ -2365,7 +2365,7 @@ func (d *decoder) tryParseSmallTextString() ([]byte, bool) {
 // to prevent creating an extra copy of string.  Caller should wrap returned
 // byte slice as string when needed.
 func (d *decoder) parseTextString() ([]byte, error) {
-	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	_, _, val, indefiniteLength := d.readHeadWithIndefiniteLengthFlag()
 	if !indefiniteLength {
 		b := d.data[d.off : d.off+int(val)] //nolint:gosec
 		d.off += int(val)                   //nolint:gosec
@@ -2377,7 +2377,7 @@ func (d *decoder) parseTextString() ([]byte, error) {
 	// Process indefinite-length string chunks.
 	b := []byte{}
 	for !d.foundBreak() {
-		_, _, val = d.getHead()
+		_, _, val = d.readHead()
 		x := d.data[d.off : d.off+int(val)] //nolint:gosec
 		d.off += int(val)                   //nolint:gosec
 		if d.dm.utf8 == UTF8RejectInvalid && !utf8.Valid(x) {
@@ -2392,11 +2392,11 @@ func (d *decoder) parseTextString() ([]byte, error) {
 }
 
 func (d *decoder) parseArray() ([]any, error) {
-	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	_, _, val, indefiniteLength := d.readHeadWithIndefiniteLengthFlag()
 	hasSize := !indefiniteLength
 	count := int(val) //nolint:gosec
 	if !hasSize {
-		count = d.numOfItemsUntilBreak() // peek ahead to get array size to preallocate slice for better performance
+		count = d.countItemsUntilBreak() // peek ahead to get array size to preallocate slice for better performance
 	}
 	v := make([]any, count)
 	var e any
@@ -2414,11 +2414,11 @@ func (d *decoder) parseArray() ([]any, error) {
 }
 
 func (d *decoder) parseArrayToSlice(v reflect.Value, tInfo *typeInfo) error {
-	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	_, _, val, indefiniteLength := d.readHeadWithIndefiniteLengthFlag()
 	hasSize := !indefiniteLength
 	count := int(val) //nolint:gosec
 	if !hasSize {
-		count = d.numOfItemsUntilBreak() // peek ahead to get array size to preallocate slice for better performance
+		count = d.countItemsUntilBreak() // peek ahead to get array size to preallocate slice for better performance
 	}
 	if v.IsNil() || v.Cap() < count || count == 0 {
 		v.Set(reflect.MakeSlice(tInfo.nonPtrType, count, count))
@@ -2436,7 +2436,7 @@ func (d *decoder) parseArrayToSlice(v reflect.Value, tInfo *typeInfo) error {
 }
 
 func (d *decoder) parseArrayToArray(v reflect.Value, tInfo *typeInfo) error {
-	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	_, _, val, indefiniteLength := d.readHeadWithIndefiniteLengthFlag()
 	hasSize := !indefiniteLength
 	count := int(val) //nolint:gosec
 	gi := 0
@@ -2465,7 +2465,7 @@ func (d *decoder) parseArrayToArray(v reflect.Value, tInfo *typeInfo) error {
 }
 
 func (d *decoder) parseMap() (any, error) {
-	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	_, _, val, indefiniteLength := d.readHeadWithIndefiniteLengthFlag()
 	hasSize := !indefiniteLength
 	count := int(val) //nolint:gosec
 	m := make(map[any]any)
@@ -2530,7 +2530,7 @@ func (d *decoder) parseMap() (any, error) {
 }
 
 func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
-	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	_, _, val, indefiniteLength := d.readHeadWithIndefiniteLengthFlag()
 	hasSize := !indefiniteLength
 	count := int(val) //nolint:gosec
 	if v.IsNil() {
@@ -2662,11 +2662,11 @@ func (d *decoder) parseArrayToStruct(v reflect.Value, tInfo *typeInfo) error {
 	}
 
 	start := d.off
-	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	_, _, val, indefiniteLength := d.readHeadWithIndefiniteLengthFlag()
 	hasSize := !indefiniteLength
 	count := int(val) //nolint:gosec
 	if !hasSize {
-		count = d.numOfItemsUntilBreak() // peek ahead to get array size
+		count = d.countItemsUntilBreak() // peek ahead to get array size
 	}
 	if count != len(structType.fields) {
 		d.off = start
@@ -2796,7 +2796,7 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 	}
 
 	// Get CBOR map size
-	_, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	_, _, val, indefiniteLength := d.readHeadWithIndefiniteLengthFlag()
 	hasSize := !indefiniteLength
 	count := int(val) //nolint:gosec
 
@@ -2871,7 +2871,7 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 			}
 
 			// No matching struct field found.
-			if unmatchedErr := handleUnmatchedMapKey(d, string(keyBytes), i, count, hasSize, &unmatchedMapKeys); unmatchedErr != nil {
+			if unmatchedErr := handleUnmatchedMapEntry(d, string(keyBytes), i, count, hasSize, &unmatchedMapKeys); unmatchedErr != nil {
 				return unmatchedErr
 			}
 
@@ -2879,7 +2879,7 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 			var nameAsInt int64
 
 			if t == cborTypePositiveInt {
-				_, _, val := d.getHead()
+				_, _, val := d.readHead()
 				if val > math.MaxInt64 {
 					if err == nil {
 						err = &UnmarshalTypeError{
@@ -2893,7 +2893,7 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 				}
 				nameAsInt = int64(val) //nolint:gosec
 			} else {
-				_, _, val := d.getHead()
+				_, _, val := d.readHead()
 				if val > math.MaxInt64 {
 					if err == nil {
 						err = &UnmarshalTypeError{
@@ -2927,7 +2927,7 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 			}
 
 			// No matching struct field found.
-			if unmatchedErr := handleUnmatchedMapKey(d, nameAsInt, i, count, hasSize, &unmatchedMapKeys); unmatchedErr != nil {
+			if unmatchedErr := handleUnmatchedMapEntry(d, nameAsInt, i, count, hasSize, &unmatchedMapKeys); unmatchedErr != nil {
 				return unmatchedErr
 			}
 
@@ -2960,7 +2960,7 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 				d.skip() // skip key
 			}
 
-			if unmatchedErr := handleUnmatchedMapKey(d, otherKey, i, count, hasSize, &unmatchedMapKeys); unmatchedErr != nil {
+			if unmatchedErr := handleUnmatchedMapEntry(d, otherKey, i, count, hasSize, &unmatchedMapKeys); unmatchedErr != nil {
 				return unmatchedErr
 			}
 		}
@@ -2975,7 +2975,7 @@ func (d *decoder) validRegisteredTagNums(registeredTag *tagItem) error {
 	// Scan until next cbor data is tag content.
 	tagNums := make([]uint64, 0, 1)
 	for d.nextCBORType() == cborTypeTag {
-		_, _, val := d.getHead()
+		_, _, val := d.readHead()
 		tagNums = append(tagNums, val)
 	}
 
@@ -2995,7 +2995,7 @@ func (d *decoder) getRegisteredTagItem(vt reflect.Type) *tagItem {
 // skip moves data offset to the next item.  skip assumes data is well-formed,
 // and does not perform bounds checking.
 func (d *decoder) skip() {
-	t, _, val, indefiniteLength := d.getHeadWithIndefiniteLengthFlag()
+	t, _, val, indefiniteLength := d.readHeadWithIndefiniteLengthFlag()
 
 	if indefiniteLength {
 		switch t {
@@ -3029,19 +3029,19 @@ func (d *decoder) skip() {
 	}
 }
 
-func (d *decoder) getHeadWithIndefiniteLengthFlag() (
+func (d *decoder) readHeadWithIndefiniteLengthFlag() (
 	t cborType,
 	ai byte,
 	val uint64,
 	indefiniteLength bool,
 ) {
-	t, ai, val = d.getHead()
+	t, ai, val = d.readHead()
 	indefiniteLength = additionalInformation(ai).isIndefiniteLength()
 	return
 }
 
-// getHead assumes data is well-formed, and does not perform bounds checking.
-func (d *decoder) getHead() (t cborType, ai byte, val uint64) {
+// readHead assumes data is well-formed, and does not perform bounds checking.
+func (d *decoder) readHead() (t cborType, ai byte, val uint64) {
 	t, ai = parseInitialByte(d.data[d.off])
 	val = uint64(ai)
 	d.off++
@@ -3079,7 +3079,7 @@ func (d *decoder) getHead() (t cborType, ai byte, val uint64) {
 	return
 }
 
-func (d *decoder) numOfItemsUntilBreak() int {
+func (d *decoder) countItemsUntilBreak() int {
 	savedOff := d.off
 	i := 0
 	for !d.foundBreak() {

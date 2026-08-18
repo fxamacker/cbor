@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-// field holds shared struct field metadata returned by getFields().
+// field holds shared struct field metadata returned by collectFields().
 type field struct {
 	name      string
 	nameAsInt int64 // used to match field name with CBOR int
@@ -88,8 +88,8 @@ func (x *nameLevelAndTagFieldSorter) Less(i, j int) bool {
 	return i < j // Field i and j have the same name, depth, and tagged status. Nothing else matters.
 }
 
-// getFields returns visible fields of struct type t following visibility rules for JSON encoding.
-func getFields(t reflect.Type) (flds fields, structOptions string) {
+// collectFields returns visible fields of struct type t following visibility rules for JSON encoding.
+func collectFields(t reflect.Type) (flds fields, structOptions string) {
 	// Get special field "_" tag options
 	if f, ok := t.FieldByName("_"); ok {
 		tag := f.Tag.Get("cbor")
