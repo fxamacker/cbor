@@ -11213,3 +11213,128 @@ func TestByteStringExpectedFormatErrorDefaultCase(t *testing.T) {
 		t.Errorf("Error() = %q, want %q", got, want)
 	}
 }
+
+func TestParseToTimeConsumeDataOnError(t *testing.T) {
+	elementTestCases := []struct {
+		name string
+		b    []byte
+	}{
+		{name: "byte string", b: mustHexDecode("4101")},                           // h'01'
+		{name: "indefinite-length byte string", b: mustHexDecode("5f4101ff")},     // (_ h'01')
+		{name: "array", b: mustHexDecode("8101")},                                 // [1]
+		{name: "indefinite-length array", b: mustHexDecode("9f01ff")},             // [_ 1]
+		{name: "map", b: mustHexDecode("a1616101")},                               // {"a": 1}
+		{name: "indefinite-length map", b: mustHexDecode("bf616101ff")},           // {_ "a": 1}
+		{name: "unregistered tag with map content", b: mustHexDecode("d903e8a0")}, // 1000({})
+	}
+
+	type structWithTime struct {
+		Time time.Time `cbor:"d"`
+		Z    int       `cbor:"z"`
+	}
+
+	for _, element := range elementTestCases {
+		// Definite-length map: {"d": <value>, "z": 7}
+		def := append([]byte{0xa2, 0x61, 'd'}, element.b...)
+		def = append(def, 0x61, 'z', 0x07)
+
+		// Indefinite-length map: {_ "d": <value>, "z": 7}
+		indef := append([]byte{0xbf, 0x61, 'd'}, element.b...)
+		indef = append(indef, 0x61, 'z', 0x07, 0xff)
+
+		for _, container := range []struct {
+			name string
+			data []byte
+		}{
+			{name: "definite-length map", data: def},
+			{name: "indefinite-length map", data: indef},
+		} {
+			t.Run(container.name+"/"+element.name, func(t *testing.T) {
+				data := container.data
+
+				var v structWithTime
+				err := Unmarshal(data, &v)
+
+				var typeError *UnmarshalTypeError
+				if !errors.As(err, &typeError) {
+					t.Errorf("Unmarshal(0x%x) error = %v (%T), want *cbor.UnmarshalTypeError", data, err, err)
+				}
+				if v.Z != 7 {
+					t.Errorf("Unmarshal(0x%x) Z = %d, want 7", data, v.Z)
+				}
+			})
+		}
+	}
+
+	type structWithTimeToArray struct {
+		_    struct{} `cbor:",toarray"`
+		Time time.Time
+		Z    int
+	}
+
+	for _, element := range elementTestCases {
+		// Definite-length array: [<value>, 7]
+		def := append([]byte{0x82}, element.b...)
+		def = append(def, 0x07)
+
+		// Indefinite-length array : [_ <value>, 7]
+		indef := append([]byte{0x9f}, element.b...)
+		indef = append(indef, 0x07, 0xff)
+
+		for _, container := range []struct {
+			name string
+			data []byte
+		}{
+			{name: "definite-length array", data: def},
+			{name: "indefinite-length array", data: indef},
+		} {
+			t.Run(container.name+"/"+element.name, func(t *testing.T) {
+				data := container.data
+
+				var v structWithTimeToArray
+				err := Unmarshal(data, &v)
+
+				var typeError *UnmarshalTypeError
+				if !errors.As(err, &typeError) {
+					t.Errorf("Unmarshal(0x%x) error = %v (%T), want *cbor.UnmarshalTypeError", data, err, err)
+				}
+				if v.Z != 7 {
+					t.Errorf("Unmarshal(0x%x) Z = %d, want 7", data, v.Z)
+				}
+			})
+		}
+	}
+}
+
+func TestStreamDecodeToTimeAndInt(t *testing.T) {
+	testCases := []struct {
+		name string
+		data []byte
+	}{
+		{name: "byte string + int", data: mustHexDecode("410107")}, // h'01', 7
+		{name: "array + int", data: mustHexDecode("810107")},       // [1], 7
+		{name: "map + int", data: mustHexDecode("a161610107")},     // {"a": 1}, 7
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dec := NewDecoder(bytes.NewReader(tc.data))
+
+			var tm time.Time
+			err := dec.Decode(&tm)
+
+			var typeError *UnmarshalTypeError
+			if !errors.As(err, &typeError) {
+				t.Errorf("Decode(0x%x) first item error = %v (%T), want *cbor.UnmarshalTypeError", tc.data, err, err)
+			}
+
+			var v int
+			if err := dec.Decode(&v); err != nil {
+				t.Errorf("Decode(0x%x) second item error = %v, want nil", tc.data, err)
+			}
+			if v != 7 {
+				t.Errorf("Decode(0x%x) second item = %d, want 7", tc.data, v)
+			}
+		})
+	}
+}
