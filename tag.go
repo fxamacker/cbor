@@ -83,14 +83,12 @@ func (t *RawTag) unmarshalCBOR(data []byte) error {
 func (t RawTag) MarshalCBOR() ([]byte, error) {
 	if t.Number == 0 && len(t.Content) == 0 {
 		// Marshal uninitialized cbor.RawTag
-		b := make([]byte, len(cborNil))
-		copy(b, cborNil)
-		return b, nil
+		return []byte{cborNil}, nil
 	}
 
 	content := t.Content
 	if len(content) == 0 {
-		content = cborNil
+		content = []byte{cborNil}
 	}
 
 	buf := make([]byte, 0, encodedHeadLength(t.Number)+len(content))

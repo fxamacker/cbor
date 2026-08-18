@@ -1106,7 +1106,7 @@ type isZeroFunc func(v reflect.Value) (zero bool, err error)
 func encode(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 	if !v.IsValid() {
 		// v is zero value
-		dst = append(dst, cborNil...)
+		dst = append(dst, cborNil)
 		return dst, nil
 	}
 	vt := v.Type()
@@ -1121,9 +1121,9 @@ func encode(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 func encodeBool(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 	dst = em.encTagBytes(dst, v)
 	if v.Bool() {
-		dst = append(dst, cborTrue...)
+		dst = append(dst, cborTrue)
 	} else {
-		dst = append(dst, cborFalse...)
+		dst = append(dst, cborFalse)
 	}
 	return dst, nil
 }
@@ -1289,7 +1289,7 @@ func encodeFloat64(dst []byte, f64 float64) ([]byte, error) {
 func encodeByteString(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 	vk := v.Kind()
 	if vk == reflect.Slice && v.IsNil() && em.nilContainers == NilContainerAsNull {
-		dst = append(dst, cborNil...)
+		dst = append(dst, cborNil)
 		return dst, nil
 	}
 	if vk == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8 && em.byteSliceLaterEncodingTag != 0 {
@@ -1330,7 +1330,7 @@ func (ae arrayEncodeFunc) encode(dst []byte, em *encMode, v reflect.Value) ([]by
 		return encodeByteString(dst, em, v)
 	}
 	if v.Kind() == reflect.Slice && v.IsNil() && em.nilContainers == NilContainerAsNull {
-		dst = append(dst, cborNil...)
+		dst = append(dst, cborNil)
 		return dst, nil
 	}
 	dst = em.encTagBytes(dst, v)
@@ -1360,7 +1360,7 @@ type mapEncodeFunc struct {
 
 func (me mapEncodeFunc) encode(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 	if v.IsNil() && em.nilContainers == NilContainerAsNull {
-		dst = append(dst, cborNil...)
+		dst = append(dst, cborNil)
 		return dst, nil
 	}
 	dst = em.encTagBytes(dst, v)
@@ -1483,7 +1483,7 @@ func encodeStructToArray(dst []byte, em *encMode, v reflect.Value) (_ []byte, er
 			// Get embedded field value.  No error is expected.
 			fv, _ = getFieldValue(v, f.idx, func(reflect.Value) (reflect.Value, error) {
 				// Write CBOR nil for null pointer to embedded struct
-				dst = append(dst, cborNil...)
+				dst = append(dst, cborNil)
 				return reflect.Value{}, nil
 			})
 			if !fv.IsValid() {
@@ -1605,7 +1605,7 @@ func encodeStruct(dst []byte, em *encMode, v reflect.Value) (_ []byte, err error
 
 func encodeIntf(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 	if v.IsNil() {
-		dst = append(dst, cborNil...)
+		dst = append(dst, cborNil)
 		return dst, nil
 	}
 	return encode(dst, em, v.Elem())
@@ -1614,7 +1614,7 @@ func encodeIntf(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 func encodeTime(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 	t := v.Interface().(time.Time)
 	if t.IsZero() {
-		dst = append(dst, cborNil...) // Even if tag is required, encode as CBOR null.
+		dst = append(dst, cborNil) // Even if tag is required, encode as CBOR null.
 		return dst, nil
 	}
 	if em.timeTag == EncTagRequired {
@@ -1897,7 +1897,7 @@ func encodeTag(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 
 	if t.Number == 0 && t.Content == nil {
 		// Marshal uninitialized cbor.Tag
-		dst = append(dst, cborNil...)
+		dst = append(dst, cborNil)
 		return dst, nil
 	}
 
@@ -2117,7 +2117,7 @@ func getEncodeIndirectValueFunc(t reflect.Type) encodeFunc {
 			v = v.Elem()
 		}
 		if v.Kind() == reflect.Pointer && v.IsNil() {
-			dst = append(dst, cborNil...)
+			dst = append(dst, cborNil)
 			return dst, nil
 		}
 		return f(dst, em, v)

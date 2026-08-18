@@ -1241,7 +1241,7 @@ func TestMarshalUninitializedTag(t *testing.T) {
 	if err != nil {
 		t.Errorf("Marshal(%v) returned error %v", v, err)
 	}
-	if !bytes.Equal(b, cborNil) {
+	if !bytes.Equal(b, []byte{cborNil}) {
 		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, cborNil)
 	}
 }
@@ -1252,7 +1252,7 @@ func TestMarshalUninitializedRawTag(t *testing.T) {
 	if err != nil {
 		t.Errorf("Marshal(%v) returned error %v", v, err)
 	}
-	if !bytes.Equal(b, cborNil) {
+	if !bytes.Equal(b, []byte{cborNil}) {
 		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, cborNil)
 	}
 }
