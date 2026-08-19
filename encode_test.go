@@ -2192,7 +2192,7 @@ func TestIsZero(t *testing.T) {
 	}{
 		{
 			name: "nil",
-			t:    reflect.TypeOf(nil),
+			t:    nil,
 			v:    reflect.ValueOf(nil),
 			want: true,
 		},
@@ -3977,7 +3977,7 @@ func TestInvalidSort(t *testing.T) {
 	}
 }
 
-func TestTypeAlias(t *testing.T) { //nolint:dupl,unconvert
+func TestTypeAlias(t *testing.T) {
 	type myBool = bool
 	type myUint = uint
 	type myUint8 = uint8

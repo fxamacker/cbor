@@ -311,12 +311,12 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 			}
 			nameAsInt := f.nameAsInt
 			if nameAsInt >= 0 {
-				ef.cborName = make([]byte, 0, encodedHeadLength(uint64(nameAsInt)))                 //nolint:gosec
-				ef.cborName = appendHead(ef.cborName, byte(cborTypePositiveInt), uint64(nameAsInt)) //nolint:gosec
+				ef.cborName = make([]byte, 0, encodedHeadLength(uint64(nameAsInt)))
+				ef.cborName = appendHead(ef.cborName, byte(cborTypePositiveInt), uint64(nameAsInt))
 			} else {
 				n := nameAsInt*(-1) - 1
-				ef.cborName = make([]byte, 0, encodedHeadLength(uint64(n)))                 //nolint:gosec
-				ef.cborName = appendHead(ef.cborName, byte(cborTypeNegativeInt), uint64(n)) //nolint:gosec
+				ef.cborName = make([]byte, 0, encodedHeadLength(uint64(n)))
+				ef.cborName = appendHead(ef.cborName, byte(cborTypeNegativeInt), uint64(n))
 			}
 
 			hasKeyAsInt = true

@@ -282,7 +282,7 @@ func newInadmissibleTagContentTypeError(
 }
 
 func newInadmissibleTagContentTypeErrorf(s string) *InadmissibleTagContentTypeError {
-	return &InadmissibleTagContentTypeError{s: "cbor: " + s} //nolint:goconst // ignore "cbor"
+	return &InadmissibleTagContentTypeError{s: "cbor: " + s}
 }
 
 func (e *InadmissibleTagContentTypeError) Error() string {
@@ -1055,7 +1055,7 @@ func (opts DecOptions) decMode() (*decMode, error) { //nolint:gocritic // ignore
 	}
 
 	if !opts.ExtraReturnErrors.valid() {
-		return nil, errors.New("cbor: invalid ExtraReturnErrors " + strconv.Itoa(int(opts.ExtraReturnErrors))) //nolint:gosec
+		return nil, errors.New("cbor: invalid ExtraReturnErrors " + strconv.Itoa(int(opts.ExtraReturnErrors)))
 	}
 
 	if opts.DefaultMapType != nil && opts.DefaultMapType.Kind() != reflect.Map {
@@ -2891,7 +2891,7 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 					d.skip() // skip value
 					continue
 				}
-				nameAsInt = int64(val) //nolint:gosec
+				nameAsInt = int64(val)
 			} else {
 				_, _, val := d.readHead()
 				if val > math.MaxInt64 {
@@ -2905,7 +2905,7 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 					d.skip() // skip value
 					continue
 				}
-				nameAsInt = int64(-1) ^ int64(val) //nolint:gosec
+				nameAsInt = int64(-1) ^ int64(val)
 			}
 
 			// Find field by integer key
