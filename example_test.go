@@ -569,3 +569,28 @@ func Example_webAuthn() {
 	}
 	fmt.Printf("%+v", v)
 }
+
+func ExampleRawMessage_Type() {
+	// A CBOR stream can hold data items of different major types.  RawMessage.Type
+	// reports the outer kind of a raw value so it can be routed without a full decode.
+	encoded := []string{
+		"83010203",           // [1, 2, 3]
+		"6568656c6c6f",       // "hello"
+		"a1636b657963766c61", // {"key": "vla"}
+		"f6",                 // null
+	}
+	for _, s := range encoded {
+		data, _ := hex.DecodeString(s)
+		t, err := cbor.RawMessage(data).Type()
+		if err != nil {
+			fmt.Println("error:", err)
+			continue
+		}
+		fmt.Println(t)
+	}
+	// Output:
+	// array
+	// UTF-8 text string
+	// map
+	// primitives
+}

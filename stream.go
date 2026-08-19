@@ -377,3 +377,18 @@ func (m *RawMessage) UnmarshalCBOR(data []byte) error {
 	*m = append((*m)[0:0], data...)
 	return nil
 }
+
+// Type returns the CBOR major type of the encoded data item in m, as defined
+// in RFC 8949 Section 3.1.  It provides a cheap way to branch on the outer kind
+// of a raw value without fully decoding it, similar to inspecting the first byte
+// of a json.RawMessage.
+//
+// Only the initial byte is examined; Type does not verify that m holds a
+// well-formed CBOR data item.  Use Wellformed if you need that guarantee.
+// Type returns an error if m is empty.
+func (m RawMessage) Type() (Type, error) {
+	if len(m) == 0 {
+		return 0, errors.New("cbor.RawMessage: Type called on empty message")
+	}
+	return Type(getType(m[0])), nil
+}
