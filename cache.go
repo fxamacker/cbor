@@ -269,9 +269,6 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 
 	encFlds := make(encodingFields, len(flds))
 
-	e := getEncodeBuffer()
-	defer putEncodeBuffer(e)
-
 	for i, f := range flds {
 		encFlds[i] = &encodingField{field: *f}
 		ef := encFlds[i]
@@ -299,22 +296,19 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 			}
 			nameAsInt := f.nameAsInt
 			if nameAsInt >= 0 {
-				encodeHead(e, byte(cborTypePositiveInt), uint64(nameAsInt)) //nolint:gosec
+				ef.cborName = make([]byte, 0, encodedHeadLength(uint64(nameAsInt)))                 //nolint:gosec
+				ef.cborName = encodeHead(ef.cborName, byte(cborTypePositiveInt), uint64(nameAsInt)) //nolint:gosec
 			} else {
 				n := nameAsInt*(-1) - 1
-				encodeHead(e, byte(cborTypeNegativeInt), uint64(n)) //nolint:gosec
+				ef.cborName = make([]byte, 0, encodedHeadLength(uint64(n)))                 //nolint:gosec
+				ef.cborName = encodeHead(ef.cborName, byte(cborTypeNegativeInt), uint64(n)) //nolint:gosec
 			}
-			ef.cborName = make([]byte, e.Len())
-			copy(ef.cborName, e.Bytes())
-			e.Reset()
 
 			hasKeyAsInt = true
 		} else {
-			encodeHead(e, byte(cborTypeTextString), uint64(len(f.name)))
-			ef.cborName = make([]byte, e.Len()+len(f.name))
-			n := copy(ef.cborName, e.Bytes())
-			copy(ef.cborName[n:], f.name)
-			e.Reset()
+			ef.cborName = make([]byte, 0, encodedHeadLength(uint64(len(f.name)))+len(f.name))
+			ef.cborName = encodeHead(ef.cborName, byte(cborTypeTextString), uint64(len(f.name)))
+			ef.cborName = append(ef.cborName, f.name...)
 
 			// If cborName contains a text string, then cborNameByteString contains a
 			// string that has the byte string major type but is otherwise identical to

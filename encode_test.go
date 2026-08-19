@@ -7152,3 +7152,50 @@ func mustParseTime(layout string, value string) time.Time {
 	}
 	return tm
 }
+
+func TestEncodedHeadLength(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		args       []uint64
+		wantLength int
+	}{
+		{
+			name:       "arg <= 23",
+			args:       []uint64{0, 1, 22, 23},
+			wantLength: 1,
+		},
+		{
+			name:       "23 < arg <= math.MaxUint8",
+			args:       []uint64{24, 25, math.MaxUint8 - 1, math.MaxUint8},
+			wantLength: 2,
+		},
+		{
+			name:       "math.MaxUint8 < arg <= math.MaxUint16",
+			args:       []uint64{math.MaxUint8 + 1, math.MaxUint8 + 2, math.MaxUint16 - 1, math.MaxUint16},
+			wantLength: 3,
+		},
+		{
+			name:       "math.MaxUint16 < arg <= math.MaxUint32",
+			args:       []uint64{math.MaxUint16 + 1, math.MaxUint16 + 2, math.MaxUint32 - 1, math.MaxUint32},
+			wantLength: 5,
+		},
+		{
+			name:       "math.MaxUint32 < arg <= math.MaxUint64",
+			args:       []uint64{math.MaxUint32 + 1, math.MaxUint32 + 2, math.MaxUint64 - 1, math.MaxUint64},
+			wantLength: 9,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, n := range tc.args {
+				got := encodedHeadLength(n)
+				if got != tc.wantLength {
+					t.Errorf("encodedHeadLength(%d) = %d, want %d", n, got, tc.wantLength)
+				}
+				b := encodeHead(nil, byte(cborTypePositiveInt), n)
+				if len(b) != tc.wantLength {
+					t.Errorf("encodeHead(%d) encoded %d bytes, want %d bytes", n, len(b), tc.wantLength)
+				}
+			}
+		})
+	}
+}
