@@ -1667,10 +1667,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 			// If conversion for interoperability with text encodings is not configured,
 			// treat tags 21-23 as unregistered tags.
 			if d.dm.byteStringToString == ByteStringToStringAllowedWithExpectedLaterEncoding || d.dm.byteStringExpectedFormat != ByteStringExpectedFormatNone {
-				d.expectedLaterEncodingTags = append(d.expectedLaterEncodingTags, tagNum)
-				defer func() {
-					d.expectedLaterEncodingTags = d.expectedLaterEncodingTags[:len(d.expectedLaterEncodingTags)-1]
-				}()
+				return d.parseToValueWithExpectedLaterEncodingTag(v, tInfo, tagNum)
 			}
 		}
 
@@ -2118,11 +2115,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyc
 			// treat tags 21-23 as unregistered tags.
 			if d.dm.byteStringToString == ByteStringToStringAllowedWithExpectedLaterEncoding ||
 				d.dm.byteStringExpectedFormat != ByteStringExpectedFormatNone {
-				d.expectedLaterEncodingTags = append(d.expectedLaterEncodingTags, tagNum)
-				defer func() {
-					d.expectedLaterEncodingTags = d.expectedLaterEncodingTags[:len(d.expectedLaterEncodingTags)-1]
-				}()
-				return d.parse(false)
+				return d.parseWithExpectedLaterEncodingTag(tagNum)
 			}
 		}
 
@@ -2205,6 +2198,22 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyc
 	}
 
 	return nil, nil
+}
+
+func (d *decoder) parseToValueWithExpectedLaterEncodingTag(v reflect.Value, tInfo *typeInfo, tagNum uint64) error {
+	d.expectedLaterEncodingTags = append(d.expectedLaterEncodingTags, tagNum)
+	defer func() {
+		d.expectedLaterEncodingTags = d.expectedLaterEncodingTags[:len(d.expectedLaterEncodingTags)-1]
+	}()
+	return d.parseToValue(v, tInfo)
+}
+
+func (d *decoder) parseWithExpectedLaterEncodingTag(tagNum uint64) (any, error) {
+	d.expectedLaterEncodingTags = append(d.expectedLaterEncodingTags, tagNum)
+	defer func() {
+		d.expectedLaterEncodingTags = d.expectedLaterEncodingTags[:len(d.expectedLaterEncodingTags)-1]
+	}()
+	return d.parse(false)
 }
 
 // parseByteString parses a CBOR encoded byte string. The returned byte slice
