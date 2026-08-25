@@ -1565,11 +1565,17 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 
 	case cborTypeByteString:
 		b, copied := d.parseByteString()
-		b, converted, err := d.applyByteStringTextConversion(b, v.Type())
-		if err != nil {
-			return err
+
+		if d.dm.byteStringToString == ByteStringToStringAllowedWithExpectedLaterEncoding ||
+			d.dm.byteStringExpectedFormat != ByteStringExpectedFormatNone {
+			cb, converted, err := d.applyByteStringTextConversion(b, v.Type())
+			if err != nil {
+				return err
+			}
+			b = cb
+			copied = copied || converted
 		}
-		copied = copied || converted
+
 		return fillByteString(t, b, !copied, v, tInfo, d.dm.byteStringToString, d.dm.binaryUnmarshaler, d.dm.textUnmarshaler)
 
 	case cborTypeTextString:
@@ -2007,11 +2013,16 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyc
 		if effectiveByteStringType == nil {
 			effectiveByteStringType = typeByteSlice
 		}
-		b, converted, err := d.applyByteStringTextConversion(b, effectiveByteStringType)
-		if err != nil {
-			return nil, err
+
+		if d.dm.byteStringToString == ByteStringToStringAllowedWithExpectedLaterEncoding ||
+			d.dm.byteStringExpectedFormat != ByteStringExpectedFormatNone {
+			cb, converted, err := d.applyByteStringTextConversion(b, effectiveByteStringType)
+			if err != nil {
+				return nil, err
+			}
+			b = cb
+			copied = copied || converted
 		}
-		copied = copied || converted
 
 		switch effectiveByteStringType {
 		case typeByteSlice:
