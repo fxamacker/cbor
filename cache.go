@@ -42,13 +42,15 @@ const (
 )
 
 type typeInfo struct {
-	elemTypeInfo *typeInfo
-	keyTypeInfo  *typeInfo
-	typ          reflect.Type
-	kind         reflect.Kind
-	nonPtrType   reflect.Type
-	nonPtrKind   reflect.Kind
-	spclType     specialType
+	elemTypeInfo                *typeInfo
+	keyTypeInfo                 *typeInfo
+	typ                         reflect.Type
+	kind                        reflect.Kind
+	nonPtrType                  reflect.Type
+	nonPtrKind                  reflect.Kind
+	spclType                    specialType
+	implementsBinaryUnmarshaler bool
+	implementsTextUnmarshaler   bool
 }
 
 func newTypeInfo(t reflect.Type) *typeInfo {
@@ -80,6 +82,9 @@ func newTypeInfo(t reflect.Type) *typeInfo {
 	} else if reflect.PointerTo(t).Implements(typeJSONUnmarshaler) {
 		tInfo.spclType = specialTypeJSONUnmarshalerIface
 	}
+
+	tInfo.implementsBinaryUnmarshaler = reflect.PointerTo(t).Implements(typeBinaryUnmarshaler)
+	tInfo.implementsTextUnmarshaler = reflect.PointerTo(t).Implements(typeTextUnmarshaler)
 
 	switch k {
 	case reflect.Array, reflect.Slice:
