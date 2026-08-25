@@ -3216,7 +3216,7 @@ func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, tInfo 
 			return nil
 		}
 	}
-	if v.Kind() == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8 {
+	if v.Kind() == reflect.Slice && tInfo.elemIsUint8 {
 		src := val
 		if shared {
 			// SetBytes shares the underlying bytes of the source slice.
@@ -3226,7 +3226,7 @@ func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, tInfo 
 		v.SetBytes(src)
 		return nil
 	}
-	if v.Kind() == reflect.Array && v.Type().Elem().Kind() == reflect.Uint8 {
+	if v.Kind() == reflect.Array && tInfo.elemIsUint8 {
 		vLen := v.Len()
 		i := 0
 		for ; i < vLen && i < len(val); i++ {
