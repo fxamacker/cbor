@@ -3522,6 +3522,19 @@ func TestInvalidCBORUnmarshal(t *testing.T) {
 			} else if err.Error() != tc.wantErrorMsg {
 				t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 			}
+
+			// Test wellformedHead and tryWellformedSmallHead
+			d := &decoder{data: tc.data, dm: defaultDecMode}
+			sct, sai, sval, ok := d.tryWellformedSmallHead()
+			if ok {
+				d = &decoder{data: tc.data, dm: defaultDecMode}
+				ct, ai, val, err := d.wellformedHead()
+				if err != nil {
+					t.Errorf("wellformedHead(0x%x) error %q, want nil", tc.data, err.Error())
+				} else if sct != ct || sai != ai || sval != val {
+					t.Errorf("wellformedHead(0x%x) returned (%s, %d, %d), want (%s, %d, %d)", tc.data, ct, ai, val, sct, sai, sval)
+				}
+			}
 		})
 	}
 }
