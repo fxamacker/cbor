@@ -100,14 +100,19 @@ func (d *decoder) wellformed(allowExtraData bool, checkBuiltinTags bool) error {
 
 // wellformedInternal checks data's well-formedness and returns max depth and error.
 func (d *decoder) wellformedInternal(depth int, checkBuiltinTags bool) (int, error) { //nolint:gocyclo
-	t, _, val, indefiniteLength, err := d.wellformedHeadWithIndefiniteLengthFlag()
-	if err != nil {
-		return 0, err
+	var err error
+
+	t, ai, val, ok := d.tryWellformedSmallHead()
+	if !ok {
+		t, ai, val, err = d.wellformedHead()
+		if err != nil {
+			return 0, err
+		}
 	}
 
 	switch t {
 	case cborTypeByteString, cborTypeTextString:
-		if indefiniteLength {
+		if additionalInformation(ai).isIndefiniteLength() {
 			if d.dm.indefLength == IndefLengthForbidden {
 				return 0, &IndefiniteLengthError{t}
 			}
@@ -129,7 +134,7 @@ func (d *decoder) wellformedInternal(depth int, checkBuiltinTags bool) (int, err
 			return 0, &MaxNestedLevelError{d.dm.maxNestedLevels}
 		}
 
-		if indefiniteLength {
+		if additionalInformation(ai).isIndefiniteLength() {
 			if d.dm.indefLength == IndefLengthForbidden {
 				return 0, &IndefiniteLengthError{t}
 			}
@@ -197,8 +202,12 @@ func (d *decoder) wellformedInternal(depth int, checkBuiltinTags bool) (int, err
 			if getType(d.data[d.off]) != cborTypeTag {
 				break
 			}
-			if _, _, tagNum, err = d.wellformedHead(); err != nil {
-				return 0, err
+			var okTag bool
+			_, _, tagNum, okTag = d.tryWellformedSmallHead()
+			if !okTag {
+				if _, _, tagNum, err = d.wellformedHead(); err != nil {
+					return 0, err
+				}
 			}
 			depth++
 			if depth > d.dm.maxNestedLevels {
@@ -275,19 +284,17 @@ func (d *decoder) wellformedIndefiniteArrayOrMap(t cborType, depth int, checkBui
 	return maxDepth, nil
 }
 
-func (d *decoder) wellformedHeadWithIndefiniteLengthFlag() (
-	t cborType,
-	ai byte,
-	val uint64,
-	indefiniteLength bool,
-	err error,
-) {
-	t, ai, val, err = d.wellformedHead()
-	if err != nil {
-		return
+func (d *decoder) tryWellformedSmallHead() (t cborType, ai byte, val uint64, ok bool) {
+	// NOTE: this function is written to be inlinable.
+	if len(d.data) > d.off {
+		t, ai = parseInitialByte(d.data[d.off])
+		if ai <= maxAdditionalInformationWithoutArgument {
+			d.off++
+			return t, ai, uint64(ai), true
+		}
 	}
-	indefiniteLength = additionalInformation(ai).isIndefiniteLength()
-	return
+
+	return 0, 0, 0, false
 }
 
 func (d *decoder) wellformedHead() (t cborType, ai byte, val uint64, err error) {
