@@ -1579,9 +1579,13 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		return fillByteString(t, b, !copied, v, tInfo, d.dm.byteStringToString, d.dm.binaryUnmarshaler, d.dm.textUnmarshaler)
 
 	case cborTypeTextString:
-		b, err := d.parseTextString()
-		if err != nil {
-			return err
+		b, isSmallText := d.tryParseSmallTextString()
+		if !isSmallText {
+			var err error
+			b, err = d.parseTextString()
+			if err != nil {
+				return err
+			}
 		}
 		return fillTextString(t, b, v, tInfo, d.dm.textUnmarshaler)
 
@@ -1776,9 +1780,13 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 		return time.Time{}, false, &UnmarshalTypeError{CBORType: t.String(), GoType: typeTime.String()}
 
 	case cborTypeTextString:
-		s, err := d.parseTextString()
-		if err != nil {
-			return time.Time{}, false, err
+		s, isSmallText := d.tryParseSmallTextString()
+		if !isSmallText {
+			var err error
+			s, err = d.parseTextString()
+			if err != nil {
+				return time.Time{}, false, err
+			}
 		}
 		t, err := time.Parse(time.RFC3339, string(s))
 		if err != nil {
@@ -2048,9 +2056,13 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyc
 		}
 
 	case cborTypeTextString:
-		b, err := d.parseTextString()
-		if err != nil {
-			return nil, err
+		b, isSmallText := d.tryParseSmallTextString()
+		if !isSmallText {
+			var err error
+			b, err = d.parseTextString()
+			if err != nil {
+				return nil, err
+			}
 		}
 		return string(b), nil
 
@@ -2324,6 +2336,25 @@ func (d *decoder) applyByteStringTextConversion(
 	}
 
 	return src, false, nil
+}
+
+func (d *decoder) tryParseSmallTextString() ([]byte, bool) {
+	// NOTE: this function is written to be inlinable.
+	ai := d.data[d.off] & additionalInformationMask
+	if ai > maxAdditionalInformationWithoutArgument {
+		return nil, false
+	}
+
+	b := d.data[d.off+1 : d.off+1+int(ai)]
+	if d.dm.utf8 == UTF8RejectInvalid {
+		for i := range b {
+			if b[i] >= utf8.RuneSelf {
+				return nil, false
+			}
+		}
+	}
+	d.off += 1 + int(ai)
+	return b, true
 }
 
 // parseTextString parses CBOR encoded text string.  It returns a byte slice
@@ -2787,14 +2818,18 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 		case cborTypeTextString, cborTypeByteString:
 			var keyBytes []byte
 			if t == cborTypeTextString {
-				var parseErr error
-				keyBytes, parseErr = d.parseTextString()
-				if parseErr != nil {
-					if err == nil {
-						err = parseErr
+				var isSmallText bool
+				keyBytes, isSmallText = d.tryParseSmallTextString()
+				if !isSmallText {
+					var parseErr error
+					keyBytes, parseErr = d.parseTextString()
+					if parseErr != nil {
+						if err == nil {
+							err = parseErr
+						}
+						d.skip() // Skip value
+						continue
 					}
-					d.skip() // Skip value
-					continue
 				}
 			} else { // cborTypeByteString
 				keyBytes, _ = d.parseByteString()
