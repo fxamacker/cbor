@@ -1565,19 +1565,25 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 
 	case cborTypeByteString:
 		b, copied := d.parseByteString()
-		b, converted, err := d.applyByteStringTextConversion(b, v.Type())
-		if err != nil {
-			return err
+
+		if d.dm.byteStringToString == ByteStringToStringAllowedWithExpectedLaterEncoding ||
+			d.dm.byteStringExpectedFormat != ByteStringExpectedFormatNone {
+			cb, converted, err := d.applyByteStringTextConversion(b, v.Type())
+			if err != nil {
+				return err
+			}
+			b = cb
+			copied = copied || converted
 		}
-		copied = copied || converted
-		return fillByteString(t, b, !copied, v, d.dm.byteStringToString, d.dm.binaryUnmarshaler, d.dm.textUnmarshaler)
+
+		return fillByteString(t, b, !copied, v, tInfo, d.dm.byteStringToString, d.dm.binaryUnmarshaler, d.dm.textUnmarshaler)
 
 	case cborTypeTextString:
 		b, err := d.parseTextString()
 		if err != nil {
 			return err
 		}
-		return fillTextString(t, b, v, d.dm.textUnmarshaler)
+		return fillTextString(t, b, v, tInfo, d.dm.textUnmarshaler)
 
 	case cborTypePrimitives:
 		_, ai, val := d.getHead()
@@ -1629,7 +1635,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				return nil
 			}
 			if tInfo.nonPtrKind == reflect.Slice || tInfo.nonPtrKind == reflect.Array {
-				return fillByteString(t, b, !copied, v, ByteStringToStringForbidden, d.dm.binaryUnmarshaler, d.dm.textUnmarshaler)
+				return fillByteString(t, b, !copied, v, tInfo, ByteStringToStringForbidden, d.dm.binaryUnmarshaler, d.dm.textUnmarshaler)
 			}
 			if bi.IsUint64() {
 				return fillPositiveInt(t, bi.Uint64(), v)
@@ -1652,7 +1658,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				return nil
 			}
 			if tInfo.nonPtrKind == reflect.Slice || tInfo.nonPtrKind == reflect.Array {
-				return fillByteString(t, b, !copied, v, ByteStringToStringForbidden, d.dm.binaryUnmarshaler, d.dm.textUnmarshaler)
+				return fillByteString(t, b, !copied, v, tInfo, ByteStringToStringForbidden, d.dm.binaryUnmarshaler, d.dm.textUnmarshaler)
 			}
 			if bi.IsInt64() {
 				return fillNegativeInt(t, bi.Int64(), v)
@@ -2007,11 +2013,16 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyc
 		if effectiveByteStringType == nil {
 			effectiveByteStringType = typeByteSlice
 		}
-		b, converted, err := d.applyByteStringTextConversion(b, effectiveByteStringType)
-		if err != nil {
-			return nil, err
+
+		if d.dm.byteStringToString == ByteStringToStringAllowedWithExpectedLaterEncoding ||
+			d.dm.byteStringExpectedFormat != ByteStringExpectedFormatNone {
+			cb, converted, err := d.applyByteStringTextConversion(b, effectiveByteStringType)
+			if err != nil {
+				return nil, err
+			}
+			b = cb
+			copied = copied || converted
 		}
-		copied = copied || converted
 
 		switch effectiveByteStringType {
 		case typeByteSlice:
@@ -3171,8 +3182,8 @@ func fillFloat(t cborType, val float64, v reflect.Value) error {
 	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
 }
 
-func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, bsts ByteStringToStringMode, bum BinaryUnmarshalerMode, tum TextUnmarshalerMode) error {
-	if bum == BinaryUnmarshalerByteString && reflect.PointerTo(v.Type()).Implements(typeBinaryUnmarshaler) {
+func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, tInfo *typeInfo, bsts ByteStringToStringMode, bum BinaryUnmarshalerMode, tum TextUnmarshalerMode) error {
+	if bum == BinaryUnmarshalerByteString && tInfo.implementsBinaryUnmarshaler {
 		if v.CanAddr() {
 			v = v.Addr()
 			if u, ok := v.Interface().(encoding.BinaryUnmarshaler); ok {
@@ -3185,7 +3196,7 @@ func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, bsts B
 		return errors.New("cbor: cannot set new value for " + v.Type().String())
 	}
 	if bsts != ByteStringToStringForbidden {
-		if tum == TextUnmarshalerTextString && reflect.PointerTo(v.Type()).Implements(typeTextUnmarshaler) {
+		if tum == TextUnmarshalerTextString && tInfo.implementsTextUnmarshaler {
 			if v.CanAddr() {
 				v = v.Addr()
 				if u, ok := v.Interface().(encoding.TextUnmarshaler); ok {
@@ -3205,7 +3216,7 @@ func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, bsts B
 			return nil
 		}
 	}
-	if v.Kind() == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8 {
+	if v.Kind() == reflect.Slice && tInfo.elemIsUint8 {
 		src := val
 		if shared {
 			// SetBytes shares the underlying bytes of the source slice.
@@ -3215,7 +3226,7 @@ func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, bsts B
 		v.SetBytes(src)
 		return nil
 	}
-	if v.Kind() == reflect.Array && v.Type().Elem().Kind() == reflect.Uint8 {
+	if v.Kind() == reflect.Array && tInfo.elemIsUint8 {
 		vLen := v.Len()
 		i := 0
 		for ; i < vLen && i < len(val); i++ {
@@ -3232,9 +3243,9 @@ func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, bsts B
 	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
 }
 
-func fillTextString(t cborType, val []byte, v reflect.Value, tum TextUnmarshalerMode) error {
+func fillTextString(t cborType, val []byte, v reflect.Value, tInfo *typeInfo, tum TextUnmarshalerMode) error {
 	// Check if the value implements TextUnmarshaler and the mode allows it
-	if tum == TextUnmarshalerTextString && reflect.PointerTo(v.Type()).Implements(typeTextUnmarshaler) {
+	if tum == TextUnmarshalerTextString && tInfo.implementsTextUnmarshaler {
 		if v.CanAddr() {
 			v = v.Addr()
 			if u, ok := v.Interface().(encoding.TextUnmarshaler); ok {

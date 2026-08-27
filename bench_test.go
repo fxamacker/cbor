@@ -5,6 +5,7 @@ package cbor
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"reflect"
@@ -166,6 +167,19 @@ type SomeFieldsAllOmitEmpty struct {
 	F08 int `cbor:",omitempty"`
 }
 
+// address is a defined type with underlying []byte.
+// address has 8 methods and doesn't implement any Unmarshaler or Marshaler interfaces.
+type address []byte
+
+func (a address) Bytes() []byte         { return append([]byte(nil), a...) }
+func (a address) Compare(x address) int { return bytes.Compare(a, x) }
+func (a address) Equal(x address) bool  { return bytes.Equal(a, x) }
+func (a address) Hex() string           { return hex.EncodeToString([]byte(a)) }
+func (a address) HexWithPrefix() string { return fmt.Sprintf("0x%x", []byte(a)) }
+func (a address) Len() int              { return len(a) }
+func (a *address) Reset(x address)      { *a = append((*a)[:0], x...) }
+func (a address) String() string        { return fmt.Sprintf("0x%x", []byte(a)) }
+
 var decodeBenchmarks = []struct {
 	name          string
 	data          []byte
@@ -194,7 +208,7 @@ var decodeBenchmarks = []struct {
 	{
 		name:          "byte string",
 		data:          mustHexDecode("581a0102030405060708090a0b0c0d0e0f101112131415161718191a"),
-		decodeToTypes: []reflect.Type{typeIntf, typeByteSlice},
+		decodeToTypes: []reflect.Type{typeIntf, typeByteSlice, reflect.TypeFor[address]()},
 	}, // []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}
 	{
 		name:          "indefinite-length byte string",

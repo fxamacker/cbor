@@ -42,13 +42,16 @@ const (
 )
 
 type typeInfo struct {
-	elemTypeInfo *typeInfo
-	keyTypeInfo  *typeInfo
-	typ          reflect.Type
-	kind         reflect.Kind
-	nonPtrType   reflect.Type
-	nonPtrKind   reflect.Kind
-	spclType     specialType
+	elemTypeInfo                *typeInfo
+	keyTypeInfo                 *typeInfo
+	typ                         reflect.Type
+	kind                        reflect.Kind
+	nonPtrType                  reflect.Type
+	nonPtrKind                  reflect.Kind
+	spclType                    specialType
+	implementsBinaryUnmarshaler bool
+	implementsTextUnmarshaler   bool
+	elemIsUint8                 bool
 }
 
 func newTypeInfo(t reflect.Type) *typeInfo {
@@ -81,12 +84,17 @@ func newTypeInfo(t reflect.Type) *typeInfo {
 		tInfo.spclType = specialTypeJSONUnmarshalerIface
 	}
 
+	tInfo.implementsBinaryUnmarshaler = reflect.PointerTo(t).Implements(typeBinaryUnmarshaler)
+	tInfo.implementsTextUnmarshaler = reflect.PointerTo(t).Implements(typeTextUnmarshaler)
+
 	switch k {
 	case reflect.Array, reflect.Slice:
 		tInfo.elemTypeInfo = getTypeInfo(t.Elem())
+		tInfo.elemIsUint8 = tInfo.elemTypeInfo.kind == reflect.Uint8
 	case reflect.Map:
 		tInfo.keyTypeInfo = getTypeInfo(t.Key())
 		tInfo.elemTypeInfo = getTypeInfo(t.Elem())
+		tInfo.elemIsUint8 = tInfo.elemTypeInfo.kind == reflect.Uint8
 	}
 
 	return &tInfo
