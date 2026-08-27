@@ -52,6 +52,7 @@ type typeInfo struct {
 	implementsBinaryUnmarshaler bool
 	implementsTextUnmarshaler   bool
 	elemIsUint8                 bool
+	nonPtrTypeIsString          bool
 }
 
 func newTypeInfo(t reflect.Type) *typeInfo {
@@ -86,6 +87,7 @@ func newTypeInfo(t reflect.Type) *typeInfo {
 
 	tInfo.implementsBinaryUnmarshaler = reflect.PointerTo(t).Implements(typeBinaryUnmarshaler)
 	tInfo.implementsTextUnmarshaler = reflect.PointerTo(t).Implements(typeTextUnmarshaler)
+	tInfo.nonPtrTypeIsString = t == typeString
 
 	switch k {
 	case reflect.Array, reflect.Slice:

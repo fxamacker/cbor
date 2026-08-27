@@ -1587,6 +1587,10 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				return err
 			}
 		}
+
+		if tryFillTextString(b, v, tInfo) {
+			return nil
+		}
 		return fillTextString(t, b, v, tInfo, d.dm.textUnmarshaler)
 
 	case cborTypePrimitives:
@@ -3276,6 +3280,15 @@ func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, tInfo 
 		return nil
 	}
 	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
+}
+
+func tryFillTextString(val []byte, v reflect.Value, tInfo *typeInfo) bool {
+	// NOTE: this function is written to be inlinable.
+	if tInfo.nonPtrTypeIsString {
+		v.SetString(string(val))
+		return true
+	}
+	return false
 }
 
 func fillTextString(t cborType, val []byte, v reflect.Value, tInfo *typeInfo, tum TextUnmarshalerMode) error {
