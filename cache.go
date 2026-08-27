@@ -53,10 +53,15 @@ type typeInfo struct {
 	implementsTextUnmarshaler   bool
 	elemIsUint8                 bool
 	nonPtrTypeIsString          bool
+	typeIsString                bool
 }
 
 func newTypeInfo(t reflect.Type) *typeInfo {
-	tInfo := typeInfo{typ: t, kind: t.Kind()}
+	tInfo := typeInfo{
+		typ:          t,
+		kind:         t.Kind(),
+		typeIsString: t == typeString,
+	}
 
 	for t.Kind() == reflect.Pointer {
 		t = t.Elem()

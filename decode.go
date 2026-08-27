@@ -2544,6 +2544,7 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 	reuseKey, reuseEle := isImmutableKind(tInfo.keyTypeInfo.kind), isImmutableKind(tInfo.elemTypeInfo.kind)
 	var keyValue, eleValue reflect.Value
 	keyIsInterfaceType := keyType == typeIntf // If key type is any, need to check if key value is hashable.
+	keyIsStringType := tInfo.keyTypeInfo.typeIsString
 	var err, lastErr error
 	keyCount := v.Len()
 	var existingKeys map[any]bool // Store existing map keys, used for detecting duplicate map key.
@@ -2563,12 +2564,24 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 		} else if !reuseKey {
 			keyValue.SetZero()
 		}
-		if lastErr = d.parseToValue(keyValue, tInfo.keyTypeInfo); lastErr != nil {
-			if err == nil {
-				err = lastErr
+
+		// Fast path to parse cbor text string and assign to go string value.
+		keyDone := false
+		if keyIsStringType && d.nextCBORType() == cborTypeTextString {
+			if b, ok := d.tryParseSmallTextString(); ok {
+				keyValue.SetString(string(b))
+				keyDone = true
 			}
-			d.skip()
-			continue
+		}
+
+		if !keyDone {
+			if lastErr = d.parseToValue(keyValue, tInfo.keyTypeInfo); lastErr != nil {
+				if err == nil {
+					err = lastErr
+				}
+				d.skip()
+				continue
+			}
 		}
 
 		// Detect if CBOR map key can be used as Go map key.
