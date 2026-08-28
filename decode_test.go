@@ -11351,3 +11351,92 @@ func TestStreamDecodeToTimeAndInt(t *testing.T) {
 		})
 	}
 }
+
+func TestUnmarshalMapWithLargeStringKey(t *testing.T) {
+	type t1 struct {
+		A int `cbor:"aaaaaaaaaaaaaaaaaaaaaaa"`
+		B int `cbor:"bbbbbbbbbbbbbbbbbbbbbbbb"`
+	}
+
+	key1 := "aaaaaaaaaaaaaaaaaaaaaaa"
+	key2 := "bbbbbbbbbbbbbbbbbbbbbbbb"
+
+	data := mustHexDecode("a277616161616161616161616161616161616161616161616101781862626262626262626262626262626262626262626262626202") // {"aaaaaaaaaaaaaaaaaaaaaaa": 1, "bbbbbbbbbbbbbbbbbbbbbbbb": 2}
+
+	testCases := []struct {
+		name      string
+		value     any
+		wantValue any
+		equalFunc func(any) bool
+	}{
+		{
+			name:  "to map with string key",
+			value: map[string]int{},
+			wantValue: map[string]int{
+				"aaaaaaaaaaaaaaaaaaaaaaa":  1,
+				"bbbbbbbbbbbbbbbbbbbbbbbb": 2,
+			},
+		},
+		{
+			name:  "to map with *string key",
+			value: map[*string]int{},
+			wantValue: map[*string]int{
+				&key1: 1,
+				&key2: 2,
+			},
+			equalFunc: func(v any) bool {
+				m, ok := v.(map[*string]int)
+				if !ok {
+					return false
+				}
+				if len(m) != 2 {
+					return false
+				}
+				for key, value := range m {
+					if key == nil {
+						return false
+					}
+					switch *key {
+					case key1:
+						if value != 1 {
+							return false
+						}
+					case key2:
+						if value != 2 {
+							return false
+						}
+					default:
+						return false
+					}
+				}
+				return true
+			},
+		},
+		{
+			name:  "to struct",
+			value: t1{},
+			wantValue: t1{
+				A: 1,
+				B: 2,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			v := reflect.New(reflect.TypeOf(tc.value))
+			v.Elem().Set(reflect.ValueOf(tc.value))
+
+			if err := Unmarshal(data, v.Interface()); err != nil {
+				t.Fatalf("Unmarshal(0x%x) to %T returned error %v", data, v.Elem().Interface(), err)
+			}
+			equal := tc.equalFunc
+			if equal == nil {
+				equal = func(got any) bool { return reflect.DeepEqual(got, tc.wantValue) }
+			}
+			if got := v.Elem().Interface(); !equal(got) {
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, got, got, tc.wantValue, tc.wantValue)
+			}
+		})
+	}
+}
