@@ -557,7 +557,7 @@ func TestMarshalLargeByteString(t *testing.T) {
 	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 10000000}
 	testCases := make([]marshalTestCase, len(lengths))
 	for i, length := range lengths {
-		data := bytes.NewBuffer(encodeCborHeader(cborTypeByteString, uint64(length)))
+		data := bytes.NewBuffer(encodeCborHeader(cborTypeByteString, uint64(length))) //nolint:gosec
 		value := make([]byte, length)
 		for j := range length {
 			data.WriteByte(100)
@@ -574,7 +574,7 @@ func TestMarshalLargeTextString(t *testing.T) {
 	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 10000000}
 	testCases := make([]marshalTestCase, len(lengths))
 	for i, length := range lengths {
-		data := bytes.NewBuffer(encodeCborHeader(cborTypeTextString, uint64(length)))
+		data := bytes.NewBuffer(encodeCborHeader(cborTypeTextString, uint64(length))) //nolint:gosec
 		value := make([]byte, length)
 		for j := range length {
 			data.WriteByte(100)
@@ -591,7 +591,7 @@ func TestMarshalLargeArray(t *testing.T) {
 	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 131072}
 	testCases := make([]marshalTestCase, len(lengths))
 	for i, length := range lengths {
-		data := bytes.NewBuffer(encodeCborHeader(cborTypeArray, uint64(length)))
+		data := bytes.NewBuffer(encodeCborHeader(cborTypeArray, uint64(length))) //nolint:gosec
 		value := make([]string, length)
 		for j := range length {
 			data.Write([]byte{0x63, 0xe6, 0xb0, 0xb4})
@@ -608,7 +608,7 @@ func TestMarshalLargeMapCanonical(t *testing.T) {
 	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 131072}
 	testCases := make([]marshalTestCase, len(lengths))
 	for i, length := range lengths {
-		data := bytes.NewBuffer(encodeCborHeader(cborTypeMap, uint64(length)))
+		data := bytes.NewBuffer(encodeCborHeader(cborTypeMap, uint64(length))) //nolint:gosec
 		value := make(map[int]int, length)
 		for j := range length {
 			d := encodeCborHeader(cborTypePositiveInt, uint64(j))
