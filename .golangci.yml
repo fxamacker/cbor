@@ -65,6 +65,10 @@ linters:
     goconst:
       min-len: 2
       min-occurrences: 3
+      ignore-string-values:
+        - '^cbor$'
+        - '^json$'
+        - '^cbor: invalid UTF-8 string$'
     gocritic:
       disabled-checks:
         - commentedOutCode
