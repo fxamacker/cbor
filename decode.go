@@ -3235,7 +3235,7 @@ func fillFloat(t cborType, val float64, v reflect.Value) error {
 }
 
 func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, tInfo *typeInfo, bsts ByteStringToStringMode, bum BinaryUnmarshalerMode, tum TextUnmarshalerMode) error {
-	if bum == BinaryUnmarshalerByteString && tInfo.implementsBinaryUnmarshaler {
+	if bum == BinaryUnmarshalerByteString && tInfo.implBinaryUnmarshaler {
 		if v.CanAddr() {
 			v = v.Addr()
 			if u, ok := v.Interface().(encoding.BinaryUnmarshaler); ok {
@@ -3248,7 +3248,7 @@ func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, tInfo 
 		return errors.New("cbor: cannot set new value for " + v.Type().String())
 	}
 	if bsts != ByteStringToStringForbidden {
-		if tum == TextUnmarshalerTextString && tInfo.implementsTextUnmarshaler {
+		if tum == TextUnmarshalerTextString && tInfo.implTextUnmarshaler {
 			if v.CanAddr() {
 				v = v.Addr()
 				if u, ok := v.Interface().(encoding.TextUnmarshaler); ok {
@@ -3306,7 +3306,7 @@ func tryFillTextString(val []byte, v reflect.Value, tInfo *typeInfo) bool {
 
 func fillTextString(t cborType, val []byte, v reflect.Value, tInfo *typeInfo, tum TextUnmarshalerMode) error {
 	// Check if the value implements TextUnmarshaler and the mode allows it
-	if tum == TextUnmarshalerTextString && tInfo.implementsTextUnmarshaler {
+	if tum == TextUnmarshalerTextString && tInfo.implTextUnmarshaler {
 		if v.CanAddr() {
 			v = v.Addr()
 			if u, ok := v.Interface().(encoding.TextUnmarshaler); ok {
