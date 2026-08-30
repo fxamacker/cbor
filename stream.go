@@ -362,9 +362,7 @@ type RawMessage []byte
 // MarshalCBOR returns m or CBOR nil if m is nil.
 func (m RawMessage) MarshalCBOR() ([]byte, error) {
 	if len(m) == 0 {
-		b := make([]byte, len(cborNil))
-		copy(b, cborNil)
-		return b, nil
+		return []byte{cborNil}, nil
 	}
 	return m, nil
 }

@@ -5139,7 +5139,7 @@ func TestUnmarshalArrayToStructNoToArrayOptionError(t *testing.T) {
 	} else if _, ok := err.(*UnmarshalTypeError); !ok {
 		t.Errorf("Decode(%+v) returned wrong error type %T, want (*UnmarshalTypeError)", v1, err)
 	} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-		t.Errorf("Decode(%+v) returned error %q, want error containing %q", err.Error(), v1, "cannot unmarshal")
+		t.Errorf("Decode(%+v) returned error %q, want error containing %q", v1, err.Error(), "cannot unmarshal")
 	}
 	if !reflect.DeepEqual(v1, wantT) {
 		t.Errorf("Decode() = %+v (%T), want %+v (%T)", v1, v1, wantT, wantT)
@@ -5524,8 +5524,8 @@ func TestStructKeyAsIntError(t *testing.T) {
 
 func TestUnmarshalToNotNilInterface(t *testing.T) {
 	data := mustHexDecode("83010203") // []uint64{1, 2, 3}
-	s := "hello"                      //nolint:goconst
-	var v any = s                     // Unmarshal() sees v as a value of type any and sets CBOR data as default Go type.  s is unmodified.  Same behavior as encoding/json.
+	s := "hello"
+	var v any = s // Unmarshal() sees v as a value of type any and sets CBOR data as default Go type.  s is unmodified.  Same behavior as encoding/json.
 	wantV := []any{uint64(1), uint64(2), uint64(3)}
 	if err := Unmarshal(data, &v); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)

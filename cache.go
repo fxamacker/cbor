@@ -42,18 +42,18 @@ const (
 )
 
 type typeInfo struct {
-	elemTypeInfo                *typeInfo
-	keyTypeInfo                 *typeInfo
-	typ                         reflect.Type
-	kind                        reflect.Kind
-	nonPtrType                  reflect.Type
-	nonPtrKind                  reflect.Kind
-	spclType                    specialType
-	implementsBinaryUnmarshaler bool
-	implementsTextUnmarshaler   bool
-	elemIsUint8                 bool
-	nonPtrTypeIsString          bool
-	typeIsString                bool
+	elemTypeInfo          *typeInfo
+	keyTypeInfo           *typeInfo
+	typ                   reflect.Type
+	kind                  reflect.Kind
+	nonPtrType            reflect.Type
+	nonPtrKind            reflect.Kind
+	spclType              specialType
+	implBinaryUnmarshaler bool
+	implTextUnmarshaler   bool
+	elemIsUint8           bool
+	nonPtrTypeIsString    bool
+	typeIsString          bool
 }
 
 func newTypeInfo(t reflect.Type) *typeInfo {
@@ -90,8 +90,8 @@ func newTypeInfo(t reflect.Type) *typeInfo {
 		tInfo.spclType = specialTypeJSONUnmarshalerIface
 	}
 
-	tInfo.implementsBinaryUnmarshaler = reflect.PointerTo(t).Implements(typeBinaryUnmarshaler)
-	tInfo.implementsTextUnmarshaler = reflect.PointerTo(t).Implements(typeTextUnmarshaler)
+	tInfo.implBinaryUnmarshaler = reflect.PointerTo(t).Implements(typeBinaryUnmarshaler)
+	tInfo.implTextUnmarshaler = reflect.PointerTo(t).Implements(typeTextUnmarshaler)
 	tInfo.nonPtrTypeIsString = t == typeString
 
 	switch k {
@@ -124,9 +124,9 @@ func getDecodingStructType(t reflect.Type) (*decodingStructType, error) {
 		return structType, nil
 	}
 
-	flds, structOptions := getFields(t)
+	flds, structOptions := collectFields(t)
 
-	hasToArray, hasToIndefArray, err := arrayStructOptions(t, structOptions)
+	hasToArray, hasToIndefArray, err := parseArrayStructOptions(t, structOptions)
 	if err != nil {
 		structType := &decodingStructType{err: err}
 		decodingStructTypeCache.Store(t, structType)
@@ -144,7 +144,7 @@ func getDecodingStructType(t reflect.Type) (*decodingStructType, error) {
 
 	decFlds := make(decodingFields, len(flds))
 	for i, f := range flds {
-		// nameAsInt is set in getFields() except for fields with an unparsable tagged name.
+		// nameAsInt is set in collectFields() except for fields with an unparsable tagged name.
 		// Atoi() is called here to catch and save parsing errors.
 		if f.keyAsInt && f.nameAsInt == 0 {
 			if _, numErr := strconv.Atoi(f.name); numErr != nil {
@@ -160,7 +160,7 @@ func getDecodingStructType(t reflect.Type) (*decodingStructType, error) {
 			if fieldIndicesByIntKey == nil {
 				fieldIndicesByIntKey = make(map[int64]int, len(flds))
 			}
-			// The duplication check is only a safeguard, since getFields() already deduplicates fields.
+			// The duplication check is only a safeguard, since collectFields() already deduplicates fields.
 			if _, ok := fieldIndicesByIntKey[f.nameAsInt]; ok {
 				structType := &decodingStructType{
 					err: fmt.Errorf("cbor: two or more fields of %v have the same keyasint value %d", t, f.nameAsInt),
@@ -170,7 +170,7 @@ func getDecodingStructType(t reflect.Type) (*decodingStructType, error) {
 			}
 			fieldIndicesByIntKey[f.nameAsInt] = i
 		} else {
-			// The duplication check is only a safeguard, since getFields() already deduplicates fields.
+			// The duplication check is only a safeguard, since collectFields() already deduplicates fields.
 			if _, ok := fieldIndicesByName[f.name]; ok {
 				structType := &decodingStructType{
 					err: fmt.Errorf("cbor: two or more fields of %v have the same name %q", t, f.name),
@@ -199,7 +199,7 @@ func getDecodingStructType(t reflect.Type) (*decodingStructType, error) {
 func getDecodingStructToArrayType(t reflect.Type, flds fields) (*decodingStructType, error) {
 	decFlds := make(decodingFields, len(flds))
 	for i, f := range flds {
-		// nameAsInt is set in getFields() except for fields with an unparsable tagged name.
+		// nameAsInt is set in collectFields() except for fields with an unparsable tagged name.
 		// Atoi() is called here to catch and save parsing errors.
 		if f.keyAsInt && f.nameAsInt == 0 {
 			if _, numErr := strconv.Atoi(f.name); numErr != nil {
@@ -266,9 +266,9 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 		return structType, nil
 	}
 
-	flds, structOptions := getFields(t)
+	flds, structOptions := collectFields(t)
 
-	hasToArray, hasToIndefArray, err := arrayStructOptions(t, structOptions)
+	hasToArray, hasToIndefArray, err := parseArrayStructOptions(t, structOptions)
 	if err != nil {
 		structType := &encodingStructType{err: err}
 		encodingStructTypeCache.Store(t, structType)
@@ -299,7 +299,7 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 		// Encode field name
 		if f.keyAsInt {
 			if f.nameAsInt == 0 {
-				// nameAsInt is set in getFields() except for fields with an unparsable tagged name.
+				// nameAsInt is set in collectFields() except for fields with an unparsable tagged name.
 				// Atoi() is called here to catch and save parsing errors.
 				if _, numErr := strconv.Atoi(f.name); numErr != nil {
 					structType := &encodingStructType{
@@ -311,18 +311,18 @@ func getEncodingStructType(t reflect.Type) (*encodingStructType, error) {
 			}
 			nameAsInt := f.nameAsInt
 			if nameAsInt >= 0 {
-				ef.cborName = make([]byte, 0, encodedHeadLength(uint64(nameAsInt)))                 //nolint:gosec
-				ef.cborName = encodeHead(ef.cborName, byte(cborTypePositiveInt), uint64(nameAsInt)) //nolint:gosec
+				ef.cborName = make([]byte, 0, encodedHeadLength(uint64(nameAsInt)))
+				ef.cborName = appendHead(ef.cborName, byte(cborTypePositiveInt), uint64(nameAsInt))
 			} else {
 				n := nameAsInt*(-1) - 1
-				ef.cborName = make([]byte, 0, encodedHeadLength(uint64(n)))                 //nolint:gosec
-				ef.cborName = encodeHead(ef.cborName, byte(cborTypeNegativeInt), uint64(n)) //nolint:gosec
+				ef.cborName = make([]byte, 0, encodedHeadLength(uint64(n)))
+				ef.cborName = appendHead(ef.cborName, byte(cborTypeNegativeInt), uint64(n))
 			}
 
 			hasKeyAsInt = true
 		} else {
 			ef.cborName = make([]byte, 0, encodedHeadLength(uint64(len(f.name)))+len(f.name))
-			ef.cborName = encodeHead(ef.cborName, byte(cborTypeTextString), uint64(len(f.name)))
+			ef.cborName = appendHead(ef.cborName, byte(cborTypeTextString), uint64(len(f.name)))
 			ef.cborName = append(ef.cborName, f.name...)
 
 			// If cborName contains a text string, then cborNameByteString contains a
@@ -393,7 +393,7 @@ func getEncodeFunc(t reflect.Type) (encodeFunc, isEmptyFunc, isZeroFunc) {
 		fs := v.(encodeFuncs)
 		return fs.ef, fs.ief, fs.izf
 	}
-	ef, ief, izf := getEncodeFuncInternal(t)
+	ef, ief, izf := newEncodeFunc(t)
 	encodeFuncCache.Store(t, encodeFuncs{ef, ief, izf})
 	return ef, ief, izf
 }
@@ -419,10 +419,10 @@ func hasToIndefArrayOption(tag string) bool {
 	return idx >= 0 && (len(tag) == idx+len(s) || tag[idx+len(s)] == ',')
 }
 
-// arrayStructOptions reports whether the struct options request encoding as
+// parseArrayStructOptions reports whether the struct options request encoding as
 // a CBOR array (definite- or indefinite-length), and returns an error if the
 // two options are specified together (they are mutually exclusive).
-func arrayStructOptions(t reflect.Type, structOptions string) (hasToArray, hasToIndefArray bool, err error) {
+func parseArrayStructOptions(t reflect.Type, structOptions string) (hasToArray, hasToIndefArray bool, err error) {
 	hasToArray = hasToArrayOption(structOptions)
 	hasToIndefArray = hasToIndefArrayOption(structOptions)
 	if hasToArray && hasToIndefArray {

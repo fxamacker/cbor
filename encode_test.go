@@ -2192,7 +2192,7 @@ func TestIsZero(t *testing.T) {
 	}{
 		{
 			name: "nil",
-			t:    reflect.TypeOf(nil),
+			t:    nil,
 			v:    reflect.ValueOf(nil),
 			want: true,
 		},
@@ -3977,7 +3977,7 @@ func TestInvalidSort(t *testing.T) {
 	}
 }
 
-func TestTypeAlias(t *testing.T) { //nolint:dupl,unconvert
+func TestTypeAlias(t *testing.T) {
 	type myBool = bool
 	type myUint = uint
 	type myUint8 = uint8
@@ -7191,9 +7191,9 @@ func TestEncodedHeadLength(t *testing.T) {
 				if got != tc.wantLength {
 					t.Errorf("encodedHeadLength(%d) = %d, want %d", n, got, tc.wantLength)
 				}
-				b := encodeHead(nil, byte(cborTypePositiveInt), n)
+				b := appendHead(nil, byte(cborTypePositiveInt), n)
 				if len(b) != tc.wantLength {
-					t.Errorf("encodeHead(%d) encoded %d bytes, want %d bytes", n, len(b), tc.wantLength)
+					t.Errorf("appendHead(%d) encoded %d bytes, want %d bytes", n, len(b), tc.wantLength)
 				}
 			}
 		})

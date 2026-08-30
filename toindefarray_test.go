@@ -307,7 +307,7 @@ func TestEncodeStructToIndefArrayWithCBORTag(t *testing.T) {
 	tags := NewTagSet()
 	if err := tags.Add(
 		TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired},
-		reflect.TypeOf(S{}),
+		reflect.TypeFor[S](),
 		121,
 	); err != nil {
 		t.Fatalf("TagSet.Add returned error: %v", err)

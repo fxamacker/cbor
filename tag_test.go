@@ -705,22 +705,22 @@ func TestAddTagTypeAliasError(t *testing.T) {
 		},
 		{
 			name:         "[]byte",
-			typ:          reflect.TypeFor[myByteSlice](), //nolint:unconvert
+			typ:          reflect.TypeFor[myByteSlice](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got []uint8",
 		},
 		{
 			name:         "[]int",
-			typ:          reflect.TypeFor[myIntSlice](), //nolint:unconvert
+			typ:          reflect.TypeFor[myIntSlice](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got []int",
 		},
 		{
 			name:         "[4]int",
-			typ:          reflect.TypeFor[myIntArray](), //nolint:unconvert
+			typ:          reflect.TypeFor[myIntArray](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got [4]int",
 		},
 		{
 			name:         "map[int]int",
-			typ:          reflect.TypeFor[myMapIntInt](), //nolint:unconvert
+			typ:          reflect.TypeFor[myMapIntInt](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got map[int]int",
 		},
 	}
@@ -1241,7 +1241,7 @@ func TestMarshalUninitializedTag(t *testing.T) {
 	if err != nil {
 		t.Errorf("Marshal(%v) returned error %v", v, err)
 	}
-	if !bytes.Equal(b, cborNil) {
+	if !bytes.Equal(b, []byte{cborNil}) {
 		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, cborNil)
 	}
 }
@@ -1252,7 +1252,7 @@ func TestMarshalUninitializedRawTag(t *testing.T) {
 	if err != nil {
 		t.Errorf("Marshal(%v) returned error %v", v, err)
 	}
-	if !bytes.Equal(b, cborNil) {
+	if !bytes.Equal(b, []byte{cborNil}) {
 		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, cborNil)
 	}
 }

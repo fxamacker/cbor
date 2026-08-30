@@ -66,7 +66,7 @@ func (t *RawTag) unmarshalCBOR(data []byte) error {
 	d := decoder{data: data, dm: defaultDecMode}
 
 	// Unmarshal tag number.
-	typ, _, num := d.getHead()
+	typ, _, num := d.readHead()
 	if typ != cborTypeTag {
 		return &UnmarshalTypeError{CBORType: typ.String(), GoType: typeRawTag.String()}
 	}
@@ -83,18 +83,16 @@ func (t *RawTag) unmarshalCBOR(data []byte) error {
 func (t RawTag) MarshalCBOR() ([]byte, error) {
 	if t.Number == 0 && len(t.Content) == 0 {
 		// Marshal uninitialized cbor.RawTag
-		b := make([]byte, len(cborNil))
-		copy(b, cborNil)
-		return b, nil
+		return []byte{cborNil}, nil
 	}
 
 	content := t.Content
 	if len(content) == 0 {
-		content = cborNil
+		content = []byte{cborNil}
 	}
 
 	buf := make([]byte, 0, encodedHeadLength(t.Number)+len(content))
-	buf = encodeHead(buf, byte(cborTypeTag), t.Number)
+	buf = appendHead(buf, byte(cborTypeTag), t.Number)
 	buf = append(buf, content...)
 
 	return buf, nil
@@ -307,7 +305,7 @@ func newTagItem(opts TagOptions, contentType reflect.Type, num uint64, nestedNum
 	}
 	te.cborTagNum = make([]byte, 0, headSize)
 	for _, n := range te.num {
-		te.cborTagNum = encodeHead(te.cborTagNum, byte(cborTypeTag), n)
+		te.cborTagNum = appendHead(te.cborTagNum, byte(cborTypeTag), n)
 	}
 
 	return &te, nil
