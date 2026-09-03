@@ -4005,14 +4005,15 @@ func TestLengthOverflowsInt(t *testing.T) {
 	}
 }
 
-func TestMapKeyUnhashable(t *testing.T) {
+func TestMapKeyHashable(t *testing.T) {
 	testCases := []struct {
 		name         string
 		data         []byte
+		wantObj      any
 		wantErrorMsg string
 	}{
 		{
-			name:         "slice as map key",
+			name:         "empty slice as map key",
 			data:         mustHexDecode("bf8030ff"),
 			wantErrorMsg: "cbor: invalid map key type: []interface {}",
 		}, // {[]: -17}
@@ -4027,7 +4028,7 @@ func TestMapKeyUnhashable(t *testing.T) {
 			wantErrorMsg: "cbor: invalid map key type: []interface {}",
 		}, // {17({[undefined, -17, -17, -17, -17, -17, -17, -17]: -17, -17: -17}): -17}}
 		{
-			name:         "map as map key",
+			name:         "empty map as map key",
 			data:         mustHexDecode("bf30a1a030ff"),
 			wantErrorMsg: "cbor: invalid map key type: map",
 		}, // {-17: {{}: -17}}, empty map as map key
@@ -4051,21 +4052,173 @@ func TestMapKeyUnhashable(t *testing.T) {
 			data:         mustHexDecode("a1c34901000000000000000030"),
 			wantErrorMsg: "cbor: invalid map key type: big.Int",
 		}, // {-18446744073709551617: -17}
+		{
+			name: "tagged time.Time as map key",
+			data: mustHexDecode("a1c074323031332d30332d32315432303a30343a30305a01"),
+			wantObj: map[any]any{
+				time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC): uint64(1),
+			},
+		},
 	}
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var v any
-			if err := Unmarshal(tc.data, &v); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, tc.wantErrorMsg)
-			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
+			for _, typ := range []reflect.Type{typeIntf, typeMapIntfIntf} {
+				v := reflect.New(typ)
+				err := Unmarshal(tc.data, v.Interface())
+
+				if err == nil {
+					got := v.Elem().Interface()
+
+					if tc.wantErrorMsg != "" {
+						t.Errorf("Unmarshal(0x%x, %s): expected error containing %q, got nil", tc.data, typ, tc.wantErrorMsg)
+					} else if tc.wantObj != nil && !reflect.DeepEqual(got, tc.wantObj) {
+						t.Errorf("Unmarshal(0x%x, %s) = %v (%T), want %v (%T)", tc.data, typ, got, got, tc.wantObj, tc.wantObj)
+					}
+				} else {
+					if tc.wantErrorMsg == "" {
+						t.Errorf("Unmarshal(0x%x, %s): unexpected error: %q", tc.data, typ, err.Error())
+					} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+						t.Errorf("Unmarshal(0x%x, %s): got %q, want substring %q", tc.data, typ, err.Error(), tc.wantErrorMsg)
+					}
+				}
 			}
-			if _, ok := v.(map[any]any); ok {
-				var v map[any]any
-				if err := Unmarshal(tc.data, &v); err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, tc.wantErrorMsg)
-				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
+		})
+	}
+}
+
+func TestRegisteredMapKeyHashable(t *testing.T) {
+	type intArray [1]int     // Type and value comparable
+	type sliceArray [1][]int // Type and value not comparable
+	type anyArray [1]any     // Type comparable, value maybe comparable
+
+	type intStruct struct{ X int }     // Type and value comparable
+	type sliceStruct struct{ X []int } // Type and value not comparable
+	type anyStruct struct{ X any }     // Type comparable, value maybe comparable
+
+	type intStructArray [1]intStruct     // Type and value comparable
+	type sliceStructArray [1]sliceStruct // Type and value not comparable
+	type anyStructArray [1]anyStruct     // Type comparable, value maybe comparable
+
+	type zeroIntArray [0]int                 // Type and value comparable
+	type zeroSliceStructArray [0]sliceStruct // Type and value not comparable
+
+	tagOpts := TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}
+	tags := NewTagSet()
+	_ = tags.Add(tagOpts, reflect.TypeOf((*intArray)(nil)).Elem(), 128)
+	_ = tags.Add(tagOpts, reflect.TypeOf((*sliceArray)(nil)).Elem(), 129)
+	_ = tags.Add(tagOpts, reflect.TypeOf((*anyArray)(nil)).Elem(), 130)
+	_ = tags.Add(tagOpts, reflect.TypeOf((*intStruct)(nil)).Elem(), 131)
+	_ = tags.Add(tagOpts, reflect.TypeOf((*sliceStruct)(nil)).Elem(), 132)
+	_ = tags.Add(tagOpts, reflect.TypeOf((*anyStruct)(nil)).Elem(), 133)
+	_ = tags.Add(tagOpts, reflect.TypeOf((*intStructArray)(nil)).Elem(), 134)
+	_ = tags.Add(tagOpts, reflect.TypeOf((*sliceStructArray)(nil)).Elem(), 135)
+	_ = tags.Add(tagOpts, reflect.TypeOf((*anyStructArray)(nil)).Elem(), 136)
+	_ = tags.Add(tagOpts, reflect.TypeOf((*zeroIntArray)(nil)).Elem(), 137)
+	_ = tags.Add(tagOpts, reflect.TypeOf((*zeroSliceStructArray)(nil)).Elem(), 138)
+
+	dm, err := DecOptions{}.DecModeWithTags(tags)
+	if err != nil {
+		t.Fatalf("DecModeWithTags: unexpected error: %v", err)
+	}
+
+	testCases := []struct {
+		name         string
+		data         []byte
+		wantObj      any
+		wantErrorMsg string
+	}{
+		{
+			name:    "[1]int as map key",
+			data:    mustHexDecode("a1d880810102"), // {128([1]): 2}
+			wantObj: map[any]any{intArray([1]int{1}): uint64(2)},
+		},
+		{
+			name:         "[1][]int as map key",
+			data:         mustHexDecode("a1d88181810102"), // {129([[1]]): 2}
+			wantErrorMsg: "cbor: invalid map key type: cbor.sliceArray",
+		},
+		{
+			name:    "[1]any as map key, value is [1]any{1}",
+			data:    mustHexDecode("a1d882810102"), // {130([1]): 2}
+			wantObj: map[any]any{anyArray([1]any{uint64(1)}): uint64(2)},
+		},
+		{
+			name:         "[1]any as map key, value is [1]any{[]int{1}}",
+			data:         mustHexDecode("a1d88281810102"), // {130([[1]]): 2}
+			wantErrorMsg: "cbor: invalid map key type: cbor.anyArray",
+		},
+		{
+			name:    "intStruct as map key",
+			data:    mustHexDecode("a1d883a161580102"), // {131({"X": 1}): 2}
+			wantObj: map[any]any{intStruct{X: 1}: uint64(2)},
+		},
+		{
+			name:         "sliceStruct as map key",
+			data:         mustHexDecode("a1d884a16158810102"), // {132({"X": [1]}): 2}
+			wantErrorMsg: "cbor: invalid map key type: cbor.sliceStruct",
+		},
+		{
+			name:    "anyStruct as map key, value is anyStruct{X: 1}",
+			data:    mustHexDecode("a1d885a161580102"), // {133({"X": 1}): 2}
+			wantObj: map[any]any{anyStruct{X: uint64(1)}: uint64(2)},
+		},
+		{
+			name:         "anyStruct as map key, value is anyStruct{X: [1]}",
+			data:         mustHexDecode("a1d885a16158810102"), // {133({"X": [1]}): 2}
+			wantErrorMsg: "cbor: invalid map key type: cbor.anyStruct",
+		},
+		{
+			name:    "intStructArray as map key",
+			data:    mustHexDecode("a1d88681d883a161580102"), // {134([131({"X": 1})]): 2}
+			wantObj: map[any]any{intStructArray([1]intStruct{{X: 1}}): uint64(2)},
+		},
+		{
+			name:         "sliceStructArray as map key",
+			data:         mustHexDecode("a1d88781d884a16158810102"), // {135([132({"X": [1]})]): 2}
+			wantErrorMsg: "cbor: invalid map key type: cbor.sliceStructArray",
+		},
+		{
+			name:    "anyStructArray as map key, value is [1]anyStruct{X: 1}",
+			data:    mustHexDecode("a1d88881d885a161580102"), // {136([133({"X": 1})]): 2}
+			wantObj: map[any]any{anyStructArray([1]anyStruct{{X: uint64(1)}}): uint64(2)},
+		},
+		{
+			name:         "anyStructArray as map key, value is [1]anyStruct{X: [1]}",
+			data:         mustHexDecode("a1d88881d885a16158810102"), // {136([133({"X": [1]})]): 2}
+			wantErrorMsg: "cbor: invalid map key type: cbor.anyStructArray",
+		},
+		{
+			name:    "[0]int as map key",
+			data:    mustHexDecode("a1d8898002"), // {137([]): 2}
+			wantObj: map[any]any{zeroIntArray([0]int{}): uint64(2)},
+		},
+		{
+			name:         "[0]sliceStruct as map key",
+			data:         mustHexDecode("a1d88a8002"), // {138([]): 2}
+			wantErrorMsg: "cbor: invalid map key type: cbor.zeroSliceStructArray",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, typ := range []reflect.Type{typeIntf, typeMapIntfIntf} {
+				v := reflect.New(typ)
+				err := dm.Unmarshal(tc.data, v.Interface())
+				if err == nil {
+					got := v.Elem().Interface()
+
+					if tc.wantErrorMsg != "" {
+						t.Errorf("Unmarshal(0x%x, %s): expected error containing %q, got nil", tc.data, typ, tc.wantErrorMsg)
+					} else if tc.wantObj != nil && !reflect.DeepEqual(got, tc.wantObj) {
+						t.Errorf("Unmarshal(0x%x, %s) = %v (%T), want %v (%T)", tc.data, typ, got, got, tc.wantObj, tc.wantObj)
+					}
+				} else {
+					if tc.wantErrorMsg == "" {
+						t.Errorf("Unmarshal(0x%x, %s): unexpected error: %q", tc.data, typ, err.Error())
+					} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+						t.Errorf("Unmarshal(0x%x, %s): got %q, want substring %q", tc.data, typ, err.Error(), tc.wantErrorMsg)
+					}
 				}
 			}
 		})
