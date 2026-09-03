@@ -3348,15 +3348,35 @@ func isHashableValue(rv reflect.Value) bool {
 	case reflect.Slice, reflect.Map, reflect.Func:
 		return false
 
-	case reflect.Struct:
-		switch rv.Type() {
+	case reflect.Struct, reflect.Interface:
+		switch rt := rv.Type(); rt {
 		case typeTag:
 			tag := rv.Interface().(Tag)
 			return isHashableValue(reflect.ValueOf(tag.Content))
+		case typeTime:
+			return true
 		case typeBigInt:
 			return false
+		default:
+			// Both Type.Comparable() and Value.Comparable() checks are needed.
+			// - Type.Comparable() returns true for interface types, so
+			//   Value.Comparable() is needed to check the dynamic value.
+			// - Value.Comparable() returns true for zero-length array of interface,
+			//   array, or struct type (as of go1.27.1), so Type.Comparable() is
+			//   needed to reject zero-length array of uncomparable type.
+			return rt.Comparable() && rv.Comparable()
+		}
+
+	case reflect.Array:
+		switch rt := rv.Type(); rt.Elem().Kind() {
+		case reflect.Slice, reflect.Map, reflect.Func:
+			return false
+
+		case reflect.Struct, reflect.Array, reflect.Interface:
+			return rt.Comparable() && rv.Comparable()
 		}
 	}
+
 	return true
 }
 
