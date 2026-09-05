@@ -19,25 +19,30 @@ import (
 	"time"
 )
 
+type namedAny any
+
 var (
-	typeBool            = reflect.TypeOf(true)
-	typeUint8           = reflect.TypeOf(uint8(0))
-	typeUint16          = reflect.TypeOf(uint16(0))
-	typeUint32          = reflect.TypeOf(uint32(0))
-	typeUint64          = reflect.TypeOf(uint64(0))
-	typeInt8            = reflect.TypeOf(int8(0))
-	typeInt16           = reflect.TypeOf(int16(0))
-	typeInt32           = reflect.TypeOf(int32(0))
-	typeInt64           = reflect.TypeOf(int64(0))
-	typeFloat32         = reflect.TypeOf(float32(0))
-	typeFloat64         = reflect.TypeOf(float64(0))
-	typeByteArray       = reflect.TypeOf([5]byte{})
-	typeIntSlice        = reflect.TypeOf([]int{})
-	typeStringSlice     = reflect.TypeOf([]string{})
-	typeMapIntfIntf     = reflect.TypeOf(map[any]any{})
-	typeMapStringInt    = reflect.TypeOf(map[string]int{})
-	typeMapStringString = reflect.TypeOf(map[string]string{})
-	typeMapStringIntf   = reflect.TypeOf(map[string]any{})
+	typeBool             = reflect.TypeOf(true)
+	typeUint8            = reflect.TypeOf(uint8(0))
+	typeUint16           = reflect.TypeOf(uint16(0))
+	typeUint32           = reflect.TypeOf(uint32(0))
+	typeUint64           = reflect.TypeOf(uint64(0))
+	typeInt8             = reflect.TypeOf(int8(0))
+	typeInt16            = reflect.TypeOf(int16(0))
+	typeInt32            = reflect.TypeOf(int32(0))
+	typeInt64            = reflect.TypeOf(int64(0))
+	typeFloat32          = reflect.TypeOf(float32(0))
+	typeFloat64          = reflect.TypeOf(float64(0))
+	typeByteArray        = reflect.TypeOf([5]byte{})
+	typeIntSlice         = reflect.TypeOf([]int{})
+	typeStringSlice      = reflect.TypeOf([]string{})
+	typeMapIntfIntf      = reflect.TypeOf(map[any]any{})
+	typeMapNamedIntfIntf = reflect.TypeOf(map[namedAny]any{})
+	typeMapStringInt     = reflect.TypeOf(map[string]int{})
+	typeMapStringString  = reflect.TypeOf(map[string]string{})
+	typeMapStringIntf    = reflect.TypeOf(map[string]any{})
+	typeIntf             = reflect.TypeOf((*any)(nil)).Elem()
+	typeNamedIntf        = reflect.TypeOf((*namedAny)(nil)).Elem()
 )
 
 type unmarshalTestCase struct {
@@ -868,6 +873,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 		wantInterfaceValue: []any{uint64(1), uint64(2), uint64(3)},
 		wantValues: []any{
 			[]any{uint64(1), uint64(2), uint64(3)},
+			[]namedAny{uint64(1), uint64(2), uint64(3)},
 			[]byte{1, 2, 3},
 			[]int{1, 2, 3},
 			[]uint{1, 2, 3},
@@ -906,7 +912,9 @@ var unmarshalTestCases = []unmarshalTestCase{
 		wantInterfaceValue: []any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		wantValues: []any{
 			[]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[]namedAny{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 			[...]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[...]namedAny{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -936,7 +944,9 @@ var unmarshalTestCases = []unmarshalTestCase{
 		wantInterfaceValue: []any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		wantValues: []any{
 			[]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[]namedAny{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 			[...]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[...]namedAny{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -966,7 +976,9 @@ var unmarshalTestCases = []unmarshalTestCase{
 		wantInterfaceValue: []any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		wantValues: []any{
 			[]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[]namedAny{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 			[...]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[...]namedAny{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -996,6 +1008,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 		wantInterfaceValue: []any{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
 		wantValues: []any{
 			[]any{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
+			[]namedAny{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
 			[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
@@ -1068,7 +1081,9 @@ var unmarshalTestCases = []unmarshalTestCase{
 		wantInterfaceValue: []any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		wantValues: []any{
 			[]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[]namedAny{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 			[...]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[...]namedAny{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1098,7 +1113,9 @@ var unmarshalTestCases = []unmarshalTestCase{
 		wantInterfaceValue: []any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		wantValues: []any{
 			[]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[]namedAny{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 			[...]any{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
+			[...]namedAny{uint64(1), []any{uint64(2), uint64(3)}, []any{uint64(4), uint64(5)}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1128,6 +1145,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 		wantInterfaceValue: []any{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
 		wantValues: []any{
 			[]any{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
+			[]namedAny{uint64(1), uint64(2), uint64(3), uint64(4), uint64(5), uint64(6), uint64(7), uint64(8), uint64(9), uint64(10), uint64(11), uint64(12), uint64(13), uint64(14), uint64(15), uint64(16), uint64(17), uint64(18), uint64(19), uint64(20), uint64(21), uint64(22), uint64(23), uint64(24), uint64(25)},
 			[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
 			[]uint{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25},
@@ -1165,7 +1183,9 @@ var unmarshalTestCases = []unmarshalTestCase{
 		wantInterfaceValue: []any{"a", map[any]any{"b": "c"}},
 		wantValues: []any{
 			[]any{"a", map[any]any{"b": "c"}},
+			[]namedAny{"a", map[any]any{"b": "c"}},
 			[...]any{"a", map[any]any{"b": "c"}},
+			[...]namedAny{"a", map[any]any{"b": "c"}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1196,7 +1216,9 @@ var unmarshalTestCases = []unmarshalTestCase{
 		wantInterfaceValue: []any{"a", map[any]any{"b": "c"}},
 		wantValues: []any{
 			[]any{"a", map[any]any{"b": "c"}},
+			[]namedAny{"a", map[any]any{"b": "c"}},
 			[...]any{"a", map[any]any{"b": "c"}},
+			[...]namedAny{"a", map[any]any{"b": "c"}},
 		},
 		wrongTypes: []reflect.Type{
 			typeUint8,
@@ -1229,6 +1251,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 		wantInterfaceValue: map[any]any{},
 		wantValues: []any{
 			map[any]any{},
+			map[namedAny]any{},
 			map[string]bool{},
 			map[string]int{},
 			map[int]string{},
@@ -1261,6 +1284,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 		wantInterfaceValue: map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)},
 		wantValues: []any{
 			map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)},
+			map[namedAny]any{uint64(1): uint64(2), uint64(3): uint64(4)},
 			map[uint]int{1: 2, 3: 4}, map[int]uint{1: 2, 3: 4},
 		},
 		wrongTypes: []reflect.Type{
@@ -1291,6 +1315,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 		wantInterfaceValue: map[any]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
 		wantValues: []any{
 			map[any]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
+			map[namedAny]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
 			map[string]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
 		},
 		wrongTypes: []reflect.Type{
@@ -1321,6 +1346,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 		wantInterfaceValue: map[any]any{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
 		wantValues: []any{
 			map[any]any{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
+			map[namedAny]any{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
 			map[string]any{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
 			map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"},
 		},
@@ -1352,6 +1378,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 		wantInterfaceValue: map[any]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
 		wantValues: []any{
 			map[any]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
+			map[namedAny]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
 			map[string]any{"a": uint64(1), "b": []any{uint64(2), uint64(3)}},
 		},
 		wrongTypes: []reflect.Type{
@@ -1382,6 +1409,7 @@ var unmarshalTestCases = []unmarshalTestCase{
 		wantInterfaceValue: map[any]any{"Fun": true, "Amt": int64(-2)},
 		wantValues: []any{
 			map[any]any{"Fun": true, "Amt": int64(-2)},
+			map[namedAny]any{"Fun": true, "Amt": int64(-2)},
 			map[string]any{"Fun": true, "Amt": int64(-2)},
 		},
 		wrongTypes: []reflect.Type{
@@ -2294,14 +2322,21 @@ func mustBigInt(s string) big.Int {
 	return *bi
 }
 
-func TestUnmarshalToEmptyInterface(t *testing.T) {
+func TestUnmarshalToAny(t *testing.T) {
 	for _, tc := range unmarshalTestCases {
 		var v any
 		if err := Unmarshal(tc.data, &v); err != nil {
 			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-			continue
+		} else {
+			compareNonFloats(t, tc.data, v, tc.wantInterfaceValue)
 		}
-		compareNonFloats(t, tc.data, v, tc.wantInterfaceValue)
+
+		var nv namedAny
+		if err := Unmarshal(tc.data, &nv); err != nil {
+			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
+		} else {
+			compareNonFloats(t, tc.data, nv, tc.wantInterfaceValue)
+		}
 	}
 }
 
@@ -4006,88 +4041,183 @@ func TestLengthOverflowsInt(t *testing.T) {
 }
 
 func TestMapKeyHashable(t *testing.T) {
+	type anyArray [1]any
+	type namedAnyArray [1]namedAny
+	type anyStruct struct{ X any }
+	type namedAnyStruct struct{ X namedAny }
+
+	typeMapAnyArrayAny := reflect.TypeOf(map[anyArray]any{})
+	typeMapNamedAnyArrayAny := reflect.TypeOf(map[namedAnyArray]any{})
+	typeMapAnyStructAny := reflect.TypeOf(map[anyStruct]any{})
+	typeMapNamedAnyStructAny := reflect.TypeOf(map[namedAnyStruct]any{})
+	typeMapTagAny := reflect.TypeOf(map[Tag]any{})
+
 	testCases := []struct {
-		name         string
-		data         []byte
-		wantObj      any
-		wantErrorMsg string
+		name          string
+		data          []byte
+		wantObjs      map[reflect.Type]any
+		wantErrorMsgs map[reflect.Type]string
 	}{
 		{
-			name:         "empty slice as map key",
-			data:         mustHexDecode("bf8030ff"),
-			wantErrorMsg: "cbor: invalid map key type: []interface {}",
-		}, // {[]: -17}
+			name: "[]",
+			data: mustHexDecode("a18002"), // {[]: 2}
+			wantErrorMsgs: map[reflect.Type]string{
+				typeIntf:             "cbor: invalid map key type: []interface {}",
+				typeMapIntfIntf:      "cbor: invalid map key type: []interface {}",
+				typeMapNamedIntfIntf: "cbor: invalid map key type: []interface {}",
+			},
+		},
 		{
-			name:         "slice as map key",
-			data:         mustHexDecode("a1813030"),
-			wantErrorMsg: "cbor: invalid map key type: []interface {}",
-		}, // {[-17]: -17}
+			name: "[1]",
+			data: mustHexDecode("a1810102"), // {[1]: 2}
+			wantErrorMsgs: map[reflect.Type]string{
+				typeIntf:             "cbor: invalid map key type: []interface {}",
+				typeMapIntfIntf:      "cbor: invalid map key type: []interface {}",
+				typeMapNamedIntfIntf: "cbor: invalid map key type: []interface {}",
+			},
+			wantObjs: map[reflect.Type]any{
+				typeMapAnyArrayAny:      map[anyArray]any{[1]any{uint64(1)}: uint64(2)},
+				typeMapNamedAnyArrayAny: map[namedAnyArray]any{[1]namedAny{uint64(1)}: uint64(2)},
+			},
+		},
 		{
-			name:         "slice as map key",
-			data:         mustHexDecode("bfd1a388f730303030303030303030303030ff"),
-			wantErrorMsg: "cbor: invalid map key type: []interface {}",
-		}, // {17({[undefined, -17, -17, -17, -17, -17, -17, -17]: -17, -17: -17}): -17}}
+			name: "{}",
+			data: mustHexDecode("a1a002"), // {{}: 2}
+			wantErrorMsgs: map[reflect.Type]string{
+				typeIntf:             "cbor: invalid map key type: map",
+				typeMapIntfIntf:      "cbor: invalid map key type: map",
+				typeMapNamedIntfIntf: "cbor: invalid map key type: map",
+			},
+		},
 		{
-			name:         "empty map as map key",
-			data:         mustHexDecode("bf30a1a030ff"),
-			wantErrorMsg: "cbor: invalid map key type: map",
-		}, // {-17: {{}: -17}}, empty map as map key
+			name: "{1:2}",
+			data: mustHexDecode("a1a1010203"), // {{1:2}: 2}
+			wantErrorMsgs: map[reflect.Type]string{
+				typeIntf:             "cbor: invalid map key type: map",
+				typeMapIntfIntf:      "cbor: invalid map key type: map",
+				typeMapNamedIntfIntf: "cbor: invalid map key type: map",
+			},
+		},
 		{
-			name:         "map as map key",
-			data:         mustHexDecode("bfb0303030303030303030303030303030303030303030303030303030303030303030ff"),
-			wantErrorMsg: "cbor: invalid map key type: map",
-		}, // {{-17: -17}: -17}, map as key
+			name: "big.Int",
+			data: mustHexDecode("a13bbd3030303030303030"), // {-13632449055575519281: -17}
+			wantErrorMsgs: map[reflect.Type]string{
+				typeIntf:             "cbor: invalid map key type: big.Int",
+				typeMapIntfIntf:      "cbor: invalid map key type: big.Int",
+				typeMapNamedIntfIntf: "cbor: invalid map key type: big.Int",
+			},
+		},
 		{
-			name:         "big.Int as map key",
-			data:         mustHexDecode("a13bbd3030303030303030"),
-			wantErrorMsg: "cbor: invalid map key type: big.Int",
-		}, // {-13632449055575519281: -17}
+			name: "tagged positive big.Int",
+			data: mustHexDecode("a1c24901000000000000000030"), // {18446744073709551616: -17}
+			wantErrorMsgs: map[reflect.Type]string{
+				typeIntf:             "cbor: invalid map key type: big.Int",
+				typeMapIntfIntf:      "cbor: invalid map key type: big.Int",
+				typeMapNamedIntfIntf: "cbor: invalid map key type: big.Int",
+			},
+		},
 		{
-			name:         "tagged big.Int as map key",
-			data:         mustHexDecode("a1c24901000000000000000030"),
-			wantErrorMsg: "cbor: invalid map key type: big.Int",
-		}, // {18446744073709551616: -17}
+			name: "tagged negative big.Int",
+			data: mustHexDecode("a1c34901000000000000000030"), // {-18446744073709551617: -17}
+			wantErrorMsgs: map[reflect.Type]string{
+				typeIntf:             "cbor: invalid map key type: big.Int",
+				typeMapIntfIntf:      "cbor: invalid map key type: big.Int",
+				typeMapNamedIntfIntf: "cbor: invalid map key type: big.Int",
+			},
+		},
 		{
-			name:         "tagged big.Int as map key",
-			data:         mustHexDecode("a1c34901000000000000000030"),
-			wantErrorMsg: "cbor: invalid map key type: big.Int",
-		}, // {-18446744073709551617: -17}
+			name: "tagged time.Time",
+			data: mustHexDecode("a1c074323031332d30332d32315432303a30343a30305a01"), // {0("2013-03-21T20:04:00Z"): 1}
+			wantObjs: map[reflect.Type]any{
+				typeIntf:             map[any]any{time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC): uint64(1)},
+				typeMapIntfIntf:      map[any]any{time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC): uint64(1)},
+				typeMapNamedIntfIntf: map[namedAny]any{time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC): uint64(1)},
+				typeMapTagAny:        map[Tag]any{{Number: 0, Content: "2013-03-21T20:04:00Z"}: uint64(1)},
+			},
+		},
 		{
-			name: "tagged time.Time as map key",
-			data: mustHexDecode("a1c074323031332d30332d32315432303a30343a30305a01"),
-			wantObj: map[any]any{
-				time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC): uint64(1),
+			name: "[[1]]",
+			data: mustHexDecode("a181810102"), // {[[1]]: 2}
+			wantErrorMsgs: map[reflect.Type]string{
+				typeMapAnyArrayAny:      "cbor: invalid map key type: cbor.anyArray",
+				typeMapNamedAnyArrayAny: "cbor: invalid map key type: cbor.namedAnyArray",
+			},
+		},
+		{
+			name: "{X: 1}",
+			data: mustHexDecode("a1a161580102"), // {{"X": 1}: 2}
+			wantObjs: map[reflect.Type]any{
+				typeMapAnyStructAny:      map[anyStruct]any{{X: uint64(1)}: uint64(2)},
+				typeMapNamedAnyStructAny: map[namedAnyStruct]any{{X: uint64(1)}: uint64(2)},
+			},
+		},
+		{
+			name: "{X: [1]}",
+			data: mustHexDecode("a1a16158810102"), // {{"X": [1]}: 2}
+			wantErrorMsgs: map[reflect.Type]string{
+				typeMapAnyStructAny:      "cbor: invalid map key type: cbor.anyStruct",
+				typeMapNamedAnyStructAny: "cbor: invalid map key type: cbor.namedAnyStruct",
+			},
+		},
+		{
+			name: "139(1)",
+			data: mustHexDecode("a1d88b0102"), // {139(1): 2}
+			wantObjs: map[reflect.Type]any{
+				typeIntf:             map[any]any{Tag{Number: 139, Content: uint64(1)}: uint64(2)},
+				typeMapIntfIntf:      map[any]any{Tag{Number: 139, Content: uint64(1)}: uint64(2)},
+				typeMapNamedIntfIntf: map[namedAny]any{Tag{Number: 139, Content: uint64(1)}: uint64(2)},
+				typeMapTagAny:        map[Tag]any{{Number: 139, Content: uint64(1)}: uint64(2)},
+			},
+		},
+		{
+			name: "139([1])",
+			data: mustHexDecode("a1d88b810102"), // {139([1]): 2}
+			wantErrorMsgs: map[reflect.Type]string{
+				typeIntf:             "cbor: invalid map key type: cbor.Tag",
+				typeMapIntfIntf:      "cbor: invalid map key type: cbor.Tag",
+				typeMapNamedIntfIntf: "cbor: invalid map key type: cbor.Tag",
+				typeMapTagAny:        "cbor: invalid map key type: cbor.Tag",
 			},
 		},
 	}
 
+	name := func(typ reflect.Type, tcName string) string {
+		if typ.Kind() == reflect.Map {
+			return fmt.Sprintf("map key type %s, value %s", typ.Key(), tcName)
+		}
+		return fmt.Sprintf("destination %s, value %s", typ, tcName)
+	}
+
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			for _, typ := range []reflect.Type{typeIntf, typeMapIntfIntf} {
+		for typ, wantObj := range tc.wantObjs {
+			t.Run(name(typ, tc.name), func(t *testing.T) {
 				v := reflect.New(typ)
 				err := Unmarshal(tc.data, v.Interface())
-
-				if err == nil {
-					got := v.Elem().Interface()
-
-					if tc.wantErrorMsg != "" {
-						t.Errorf("Unmarshal(0x%x, %s): expected error containing %q, got nil", tc.data, typ, tc.wantErrorMsg)
-					} else if tc.wantObj != nil && !reflect.DeepEqual(got, tc.wantObj) {
-						t.Errorf("Unmarshal(0x%x, %s) = %v (%T), want %v (%T)", tc.data, typ, got, got, tc.wantObj, tc.wantObj)
-					}
-				} else {
-					if tc.wantErrorMsg == "" {
-						t.Errorf("Unmarshal(0x%x, %s): unexpected error: %q", tc.data, typ, err.Error())
-					} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-						t.Errorf("Unmarshal(0x%x, %s): got %q, want substring %q", tc.data, typ, err.Error(), tc.wantErrorMsg)
-					}
+				if err != nil {
+					t.Errorf("Unmarshal(0x%x, %s): unexpected error: %q", tc.data, typ, err.Error())
+				} else if got := v.Elem().Interface(); !reflect.DeepEqual(got, wantObj) {
+					t.Errorf("Unmarshal(0x%x, %s) = %v (%T), want %v (%T)", tc.data, typ, got, got, wantObj, wantObj)
 				}
-			}
-		})
+			})
+		}
+
+		for typ, wantErrorMsg := range tc.wantErrorMsgs {
+			t.Run(name(typ, tc.name), func(t *testing.T) {
+				v := reflect.New(typ)
+				err := Unmarshal(tc.data, v.Interface())
+				if err == nil {
+					t.Errorf("Unmarshal(0x%x, %s): expected error containing %q, got nil", tc.data, typ, wantErrorMsg)
+				} else if !strings.Contains(err.Error(), wantErrorMsg) {
+					t.Errorf("Unmarshal(0x%x, %s): got %q, want substring %q", tc.data, typ, err.Error(), wantErrorMsg)
+				}
+			})
+		}
 	}
 }
 
 func TestRegisteredMapKeyHashable(t *testing.T) {
+	type intSlice []int // Type not comparable
+
 	type intArray [1]int     // Type and value comparable
 	type sliceArray [1][]int // Type and value not comparable
 	type anyArray [1]any     // Type comparable, value maybe comparable
@@ -4116,85 +4246,125 @@ func TestRegisteredMapKeyHashable(t *testing.T) {
 	_ = tags.Add(tagOpts, reflect.TypeOf((*anyStructArray)(nil)).Elem(), 136)
 	_ = tags.Add(tagOpts, reflect.TypeOf((*zeroIntArray)(nil)).Elem(), 137)
 	_ = tags.Add(tagOpts, reflect.TypeOf((*zeroSliceStructArray)(nil)).Elem(), 138)
+	_ = tags.Add(tagOpts, reflect.TypeOf((*intSlice)(nil)).Elem(), 139)
 
 	dm, err := DecOptions{}.DecModeWithTags(tags)
 	if err != nil {
 		t.Fatalf("DecModeWithTags: unexpected error: %v", err)
 	}
 
+	destinationTypes := []reflect.Type{
+		typeIntf,             // any
+		typeMapIntfIntf,      // map[any]any
+		typeMapNamedIntfIntf, // map[namedAny]any
+	}
+
 	testCases := []struct {
 		name         string
 		data         []byte
-		wantObj      any
+		wantObjs     map[reflect.Type]any
 		wantErrorMsg string
 	}{
 		{
-			name:    "[1]int as map key",
-			data:    mustHexDecode("a1d880810102"), // {128([1]): 2}
-			wantObj: map[any]any{intArray([1]int{1}): uint64(2)},
+			name:         "map key type []int",
+			data:         mustHexDecode("a1d88b810102"), // {139([1]): 2}
+			wantErrorMsg: "cbor: invalid map key type: cbor.intSlice",
 		},
 		{
-			name:         "[1][]int as map key",
+			name: "map key type [1]int",
+			data: mustHexDecode("a1d880810102"), // {128([1]): 2}
+			wantObjs: map[reflect.Type]any{
+				typeIntf:             map[any]any{intArray([1]int{1}): uint64(2)},
+				typeMapIntfIntf:      map[any]any{intArray([1]int{1}): uint64(2)},
+				typeMapNamedIntfIntf: map[namedAny]any{intArray([1]int{1}): uint64(2)},
+			},
+		},
+		{
+			name:         "map key type [1][]int",
 			data:         mustHexDecode("a1d88181810102"), // {129([[1]]): 2}
 			wantErrorMsg: "cbor: invalid map key type: cbor.sliceArray",
 		},
 		{
-			name:    "[1]any as map key, value is [1]any{1}",
-			data:    mustHexDecode("a1d882810102"), // {130([1]): 2}
-			wantObj: map[any]any{anyArray([1]any{uint64(1)}): uint64(2)},
+			name: "map key type [1]any, value [1]",
+			data: mustHexDecode("a1d882810102"), // {130([1]): 2}
+			wantObjs: map[reflect.Type]any{
+				typeIntf:             map[any]any{anyArray([1]any{uint64(1)}): uint64(2)},
+				typeMapIntfIntf:      map[any]any{anyArray([1]any{uint64(1)}): uint64(2)},
+				typeMapNamedIntfIntf: map[namedAny]any{anyArray([1]any{uint64(1)}): uint64(2)},
+			},
 		},
 		{
-			name:         "[1]any as map key, value is [1]any{[]int{1}}",
+			name:         "map key type [1]any, value [[1]]",
 			data:         mustHexDecode("a1d88281810102"), // {130([[1]]): 2}
 			wantErrorMsg: "cbor: invalid map key type: cbor.anyArray",
 		},
 		{
-			name:    "intStruct as map key",
-			data:    mustHexDecode("a1d883a161580102"), // {131({"X": 1}): 2}
-			wantObj: map[any]any{intStruct{X: 1}: uint64(2)},
+			name: "map key type intStruct",
+			data: mustHexDecode("a1d883a161580102"), // {131({"X": 1}): 2}
+			wantObjs: map[reflect.Type]any{
+				typeIntf:             map[any]any{intStruct{X: 1}: uint64(2)},
+				typeMapIntfIntf:      map[any]any{intStruct{X: 1}: uint64(2)},
+				typeMapNamedIntfIntf: map[namedAny]any{intStruct{X: 1}: uint64(2)},
+			},
 		},
 		{
-			name:         "sliceStruct as map key",
+			name:         "map key type sliceStruct",
 			data:         mustHexDecode("a1d884a16158810102"), // {132({"X": [1]}): 2}
 			wantErrorMsg: "cbor: invalid map key type: cbor.sliceStruct",
 		},
 		{
-			name:    "anyStruct as map key, value is anyStruct{X: 1}",
-			data:    mustHexDecode("a1d885a161580102"), // {133({"X": 1}): 2}
-			wantObj: map[any]any{anyStruct{X: uint64(1)}: uint64(2)},
+			name: "map key type anyStruct, value anyStruct{X: 1}",
+			data: mustHexDecode("a1d885a161580102"), // {133({"X": 1}): 2}
+			wantObjs: map[reflect.Type]any{
+				typeIntf:             map[any]any{anyStruct{X: uint64(1)}: uint64(2)},
+				typeMapIntfIntf:      map[any]any{anyStruct{X: uint64(1)}: uint64(2)},
+				typeMapNamedIntfIntf: map[namedAny]any{anyStruct{X: uint64(1)}: uint64(2)},
+			},
 		},
 		{
-			name:         "anyStruct as map key, value is anyStruct{X: [1]}",
+			name:         "map key type anyStruct, value anyStruct{X: [1]}",
 			data:         mustHexDecode("a1d885a16158810102"), // {133({"X": [1]}): 2}
 			wantErrorMsg: "cbor: invalid map key type: cbor.anyStruct",
 		},
 		{
-			name:    "intStructArray as map key",
-			data:    mustHexDecode("a1d88681d883a161580102"), // {134([131({"X": 1})]): 2}
-			wantObj: map[any]any{intStructArray([1]intStruct{{X: 1}}): uint64(2)},
+			name: "map key type intStructArray",
+			data: mustHexDecode("a1d88681d883a161580102"), // {134([131({"X": 1})]): 2}
+			wantObjs: map[reflect.Type]any{
+				typeIntf:             map[any]any{intStructArray([1]intStruct{{X: 1}}): uint64(2)},
+				typeMapIntfIntf:      map[any]any{intStructArray([1]intStruct{{X: 1}}): uint64(2)},
+				typeMapNamedIntfIntf: map[namedAny]any{intStructArray([1]intStruct{{X: 1}}): uint64(2)},
+			},
 		},
 		{
-			name:         "sliceStructArray as map key",
+			name:         "map key type sliceStructArray",
 			data:         mustHexDecode("a1d88781d884a16158810102"), // {135([132({"X": [1]})]): 2}
 			wantErrorMsg: "cbor: invalid map key type: cbor.sliceStructArray",
 		},
 		{
-			name:    "anyStructArray as map key, value is [1]anyStruct{X: 1}",
-			data:    mustHexDecode("a1d88881d885a161580102"), // {136([133({"X": 1})]): 2}
-			wantObj: map[any]any{anyStructArray([1]anyStruct{{X: uint64(1)}}): uint64(2)},
+			name: "map key type anyStructArray, value [1]anyStruct{X: 1}",
+			data: mustHexDecode("a1d88881d885a161580102"), // {136([133({"X": 1})]): 2}
+			wantObjs: map[reflect.Type]any{
+				typeIntf:             map[any]any{anyStructArray([1]anyStruct{{X: uint64(1)}}): uint64(2)},
+				typeMapIntfIntf:      map[any]any{anyStructArray([1]anyStruct{{X: uint64(1)}}): uint64(2)},
+				typeMapNamedIntfIntf: map[namedAny]any{anyStructArray([1]anyStruct{{X: uint64(1)}}): uint64(2)},
+			},
 		},
 		{
-			name:         "anyStructArray as map key, value is [1]anyStruct{X: [1]}",
+			name:         "map key type anyStructArray, value [1]anyStruct{X: [1]}",
 			data:         mustHexDecode("a1d88881d885a16158810102"), // {136([133({"X": [1]})]): 2}
 			wantErrorMsg: "cbor: invalid map key type: cbor.anyStructArray",
 		},
 		{
-			name:    "[0]int as map key",
-			data:    mustHexDecode("a1d8898002"), // {137([]): 2}
-			wantObj: map[any]any{zeroIntArray([0]int{}): uint64(2)},
+			name: "map key type [0]int",
+			data: mustHexDecode("a1d8898002"), // {137([]): 2}
+			wantObjs: map[reflect.Type]any{
+				typeIntf:             map[any]any{zeroIntArray([0]int{}): uint64(2)},
+				typeMapIntfIntf:      map[any]any{zeroIntArray([0]int{}): uint64(2)},
+				typeMapNamedIntfIntf: map[namedAny]any{zeroIntArray([0]int{}): uint64(2)},
+			},
 		},
 		{
-			name:         "[0]sliceStruct as map key",
+			name:         "map key type [0]sliceStruct",
 			data:         mustHexDecode("a1d88a8002"), // {138([]): 2}
 			wantErrorMsg: "cbor: invalid map key type: cbor.zeroSliceStructArray",
 		},
@@ -4202,7 +4372,7 @@ func TestRegisteredMapKeyHashable(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			for _, typ := range []reflect.Type{typeIntf, typeMapIntfIntf} {
+			for _, typ := range destinationTypes {
 				v := reflect.New(typ)
 				err := dm.Unmarshal(tc.data, v.Interface())
 				if err == nil {
@@ -4210,8 +4380,10 @@ func TestRegisteredMapKeyHashable(t *testing.T) {
 
 					if tc.wantErrorMsg != "" {
 						t.Errorf("Unmarshal(0x%x, %s): expected error containing %q, got nil", tc.data, typ, tc.wantErrorMsg)
-					} else if tc.wantObj != nil && !reflect.DeepEqual(got, tc.wantObj) {
-						t.Errorf("Unmarshal(0x%x, %s) = %v (%T), want %v (%T)", tc.data, typ, got, got, tc.wantObj, tc.wantObj)
+					} else if wantObj, found := tc.wantObjs[typ]; !found {
+						t.Errorf("Unmarshal(0x%x, %s): no wantObjs entry for the destination type", tc.data, typ)
+					} else if !reflect.DeepEqual(got, wantObj) {
+						t.Errorf("Unmarshal(0x%x, %s) = %v (%T), want %v (%T)", tc.data, typ, got, got, wantObj, wantObj)
 					}
 				} else {
 					if tc.wantErrorMsg == "" {
@@ -7479,74 +7651,110 @@ func TestMapKeyByteString(t *testing.T) {
 		t.Errorf("DecMode() returned an error %+v", err)
 	}
 
+	typeMapTagAny := reflect.TypeOf(map[Tag]any{})
+
 	testCases := []struct {
-		name         string
-		data         []byte
-		wantObj      any
-		wantErrorMsg string
-		dm           DecMode
+		name          string
+		data          []byte
+		wantObjs      map[reflect.Type]any
+		wantErrorMsgs map[reflect.Type]string
+		dm            DecMode
 	}{
 		{
-			name:         "byte string map key with MapKeyByteStringForbidden",
-			data:         mustHexDecode("a143abcdef187b"),
-			wantErrorMsg: "cbor: invalid map key type: []uint8",
-			dm:           bsForbiddenMode,
+			name: "byte string map key with MapKeyByteStringForbidden",
+			data: mustHexDecode("a143abcdef187b"),
+			wantErrorMsgs: map[reflect.Type]string{
+				typeIntf:        "cbor: invalid map key type: []uint8",
+				typeMapIntfIntf: "cbor: invalid map key type: []uint8",
+			},
+			dm: bsForbiddenMode,
 		},
 		{
-			name:         "tagged byte string map key with MapKeyByteStringForbidden",
-			data:         mustHexDecode("a1d86443abcdef187b"),
-			wantErrorMsg: "cbor: invalid map key type: cbor.Tag",
-			dm:           bsForbiddenMode,
+			name: "tagged byte string map key with MapKeyByteStringForbidden",
+			data: mustHexDecode("a1d86443abcdef187b"),
+			wantErrorMsgs: map[reflect.Type]string{
+				typeIntf:        "cbor: invalid map key type: cbor.Tag",
+				typeMapIntfIntf: "cbor: invalid map key type: cbor.Tag",
+			},
+			dm: bsForbiddenMode,
 		},
 		{
-			name:         "nested tagged byte string map key with MapKeyByteStringForbidden",
-			data:         mustHexDecode("a1d865d86443abcdef187b"),
-			wantErrorMsg: "cbor: invalid map key type: cbor.Tag",
-			dm:           bsForbiddenMode,
+			name: "nested tagged byte string map key with MapKeyByteStringForbidden",
+			data: mustHexDecode("a1d865d86443abcdef187b"),
+			wantErrorMsgs: map[reflect.Type]string{
+				typeIntf:        "cbor: invalid map key type: cbor.Tag",
+				typeMapIntfIntf: "cbor: invalid map key type: cbor.Tag",
+			},
+			dm: bsForbiddenMode,
 		},
 		{
 			name: "byte string map key with MapKeyByteStringAllowed",
 			data: mustHexDecode("a143abcdef187b"),
-			wantObj: map[any]any{
-				ByteString("\xab\xcd\xef"): uint64(123),
+			wantObjs: map[reflect.Type]any{
+				typeIntf: map[any]any{
+					ByteString("\xab\xcd\xef"): uint64(123),
+				},
+				typeMapIntfIntf: map[any]any{
+					ByteString("\xab\xcd\xef"): uint64(123),
+				},
 			},
 			dm: bsAllowedMode,
 		},
 		{
 			name: "tagged byte string map key with MapKeyByteStringAllowed",
 			data: mustHexDecode("a1d86443abcdef187b"),
-			wantObj: map[any]any{
-				Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}: uint64(123),
+			wantObjs: map[reflect.Type]any{
+				typeIntf: map[any]any{
+					Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}: uint64(123),
+				},
+				typeMapIntfIntf: map[any]any{
+					Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}: uint64(123),
+				},
+				typeMapTagAny: map[Tag]any{
+					{Number: 100, Content: ByteString("\xab\xcd\xef")}: uint64(123),
+				},
 			},
 			dm: bsAllowedMode,
 		},
 		{
 			name: "nested tagged byte string map key with MapKeyByteStringAllowed",
 			data: mustHexDecode("a1d865d86443abcdef187b"),
-			wantObj: map[any]any{
-				Tag{Number: 101, Content: Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}}: uint64(123),
+			wantObjs: map[reflect.Type]any{
+				typeIntf: map[any]any{
+					Tag{Number: 101, Content: Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}}: uint64(123),
+				},
+				typeMapIntfIntf: map[any]any{
+					Tag{Number: 101, Content: Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}}: uint64(123),
+				},
+				typeMapTagAny: map[Tag]any{
+					{Number: 101, Content: Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}}: uint64(123),
+				},
 			},
 			dm: bsAllowedMode,
 		},
 	}
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			for _, typ := range []reflect.Type{typeIntf, typeMapIntfIntf} {
+			for typ, wantObj := range tc.wantObjs {
+				v := reflect.New(typ)
+				vPtr := v.Interface()
+				err = tc.dm.Unmarshal(tc.data, vPtr)
+				if err != nil {
+					t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
+				} else if !reflect.DeepEqual(v.Elem().Interface(), wantObj) {
+					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.data, v.Elem().Interface(), v.Elem().Interface(), wantObj, wantObj)
+				}
+			}
+
+			for typ, wantErrorMsg := range tc.wantErrorMsgs {
 				v := reflect.New(typ)
 				vPtr := v.Interface()
 				err = tc.dm.Unmarshal(tc.data, vPtr)
 				if err == nil {
-					if tc.wantErrorMsg != "" {
-						t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, tc.wantErrorMsg)
-					} else if !reflect.DeepEqual(v.Elem().Interface(), tc.wantObj) {
-						t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.data, v.Elem().Interface(), v.Elem().Interface(), tc.wantObj, tc.wantObj)
-					}
-				} else {
-					if tc.wantErrorMsg == "" {
-						t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
-					} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-						t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-					}
+					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, wantErrorMsg)
+				} else if !strings.Contains(err.Error(), wantErrorMsg) {
+					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), wantErrorMsg)
 				}
 			}
 		})
@@ -11487,6 +11695,218 @@ func TestStreamDecodeToTimeAndInt(t *testing.T) {
 			}
 			if v != 7 {
 				t.Errorf("Decode(0x%x) second item = %d, want 7", tc.data, v)
+			}
+		})
+	}
+}
+
+func TestNeedsHashableValueCheck(t *testing.T) {
+	type intStruct struct{ X int }     // Type and value comparable
+	type sliceStruct struct{ X []int } // Type and value not comparable
+	type anyStruct struct{ X any }     // Type comparable, value maybe comparable
+
+	type nestedIntStruct struct{ Y intStruct }
+	type nestedSliceStruct struct{ Y sliceStruct }
+	type nestedAnyStruct struct{ Y anyStruct }
+
+	type appender interface{ append([]byte) []byte }
+
+	testCases := []struct {
+		name string
+		typ  reflect.Type
+		want bool
+	}{
+		// Built-in primitives
+		{
+			name: "bool",
+			typ:  typeBool,
+			want: false,
+		},
+		{
+			name: "uint64",
+			typ:  typeUint64,
+			want: false,
+		},
+		{
+			name: "int64",
+			typ:  typeInt64,
+			want: false,
+		},
+		{
+			name: "[]byte",
+			typ:  typeByteSlice,
+			want: false,
+		},
+		{
+			name: "string",
+			typ:  typeString,
+			want: false,
+		},
+		{
+			name: "float64",
+			typ:  typeFloat64,
+			want: false,
+		},
+		// Interfaces
+		{
+			name: "any",
+			typ:  typeIntf,
+			want: true,
+		},
+		{
+			name: "namedAny",
+			typ:  typeNamedIntf,
+			want: true,
+		},
+		{
+			name: "appender",
+			typ:  reflect.TypeOf((*appender)(nil)).Elem(),
+			want: true,
+		},
+		// Arrays
+		{
+			name: "[0]int",
+			typ:  reflect.TypeOf([0]int{}),
+			want: false,
+		},
+		{
+			name: "[1]int",
+			typ:  reflect.TypeOf([1]int{}),
+			want: false,
+		},
+		{
+			name: "[0][]int",
+			typ:  reflect.TypeOf([0][]int{}),
+			want: false,
+		},
+		{
+			name: "[1][]int",
+			typ:  reflect.TypeOf([1][]int{}),
+			want: false,
+		},
+		{
+			name: "[0]any",
+			typ:  reflect.TypeOf([0]any{}),
+			want: true,
+		},
+		{
+			name: "[1]any",
+			typ:  reflect.TypeOf([1]any{}),
+			want: true,
+		},
+		{
+			name: "[0]namedAny",
+			typ:  reflect.TypeOf([0]namedAny{}),
+			want: true,
+		},
+		{
+			name: "[1]namedAny",
+			typ:  reflect.TypeOf([1]namedAny{}),
+			want: true,
+		},
+		{
+			name: "[0]appender",
+			typ:  reflect.TypeOf([0]appender{}),
+			want: true,
+		},
+		{
+			name: "[1]appender",
+			typ:  reflect.TypeOf([1]appender{}),
+			want: true,
+		},
+		{
+			name: "[0]intStruct",
+			typ:  reflect.TypeOf([0]intStruct{}),
+			want: false,
+		},
+		{
+			name: "[1]intStruct",
+			typ:  reflect.TypeOf([1]intStruct{}),
+			want: false,
+		},
+		{
+			name: "[0]sliceStruct",
+			typ:  reflect.TypeOf([0]sliceStruct{}),
+			want: false,
+		},
+		{
+			name: "[1]sliceStruct",
+			typ:  reflect.TypeOf([1]sliceStruct{}),
+			want: false,
+		},
+		{
+			name: "[0]anyStruct",
+			typ:  reflect.TypeOf([0]anyStruct{}),
+			want: true,
+		},
+		{
+			name: "[1]anyStruct",
+			typ:  reflect.TypeOf([1]anyStruct{}),
+			want: true,
+		},
+		// Structs
+		{
+			name: "time",
+			typ:  typeTime,
+			want: false,
+		},
+		{
+			name: "big.Int",
+			typ:  typeBigInt,
+			want: false,
+		},
+		{
+			name: "Tag",
+			typ:  typeTag,
+			want: true,
+		},
+		{
+			name: "intStruct",
+			typ:  reflect.TypeOf(intStruct{}),
+			want: false,
+		},
+		{
+			name: "sliceStruct",
+			typ:  reflect.TypeOf(sliceStruct{}),
+			want: false,
+		},
+		{
+			name: "anyStruct",
+			typ:  reflect.TypeOf(anyStruct{}),
+			want: true,
+		},
+		{
+			name: "nestedIntStruct",
+			typ:  reflect.TypeOf(nestedIntStruct{}),
+			want: false,
+		},
+		{
+			name: "nestedSliceStruct",
+			typ:  reflect.TypeOf(nestedSliceStruct{}),
+			want: false,
+		},
+		{
+			name: "nestedAnyStruct",
+			typ:  reflect.TypeOf(nestedAnyStruct{}),
+			want: true,
+		},
+		// Others
+		{
+			name: "*any",
+			typ:  reflect.TypeOf((**any)(nil)).Elem(),
+			want: false,
+		},
+		{
+			name: "chan any",
+			typ:  reflect.TypeOf((*chan any)(nil)).Elem(),
+			want: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := needsHashableValueCheck(tc.typ); got != tc.want {
+				t.Errorf("needsHashableValueCheck(%s): got %t, want %t", tc.typ.String(), got, tc.want)
 			}
 		})
 	}
