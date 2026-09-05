@@ -42,18 +42,19 @@ const (
 )
 
 type typeInfo struct {
-	elemTypeInfo          *typeInfo
-	keyTypeInfo           *typeInfo
-	typ                   reflect.Type
-	kind                  reflect.Kind
-	nonPtrType            reflect.Type
-	nonPtrKind            reflect.Kind
-	spclType              specialType
-	implBinaryUnmarshaler bool
-	implTextUnmarshaler   bool
-	elemIsUint8           bool
-	nonPtrTypeIsString    bool
-	typeIsString          bool
+	elemTypeInfo               *typeInfo
+	keyTypeInfo                *typeInfo
+	typ                        reflect.Type
+	kind                       reflect.Kind
+	nonPtrType                 reflect.Type
+	nonPtrKind                 reflect.Kind
+	spclType                   specialType
+	implBinaryUnmarshaler      bool
+	implTextUnmarshaler        bool
+	elemIsUint8                bool
+	nonPtrTypeIsString         bool
+	typeIsString               bool
+	keyNeedsHashableValueCheck bool
 }
 
 func newTypeInfo(t reflect.Type) *typeInfo {
@@ -100,11 +101,30 @@ func newTypeInfo(t reflect.Type) *typeInfo {
 		tInfo.elemIsUint8 = tInfo.elemTypeInfo.kind == reflect.Uint8
 	case reflect.Map:
 		tInfo.keyTypeInfo = getTypeInfo(t.Key())
+		tInfo.keyNeedsHashableValueCheck = needsHashableValueCheck(t.Key())
 		tInfo.elemTypeInfo = getTypeInfo(t.Elem())
 		tInfo.elemIsUint8 = tInfo.elemTypeInfo.kind == reflect.Uint8
 	}
 
 	return &tInfo
+}
+
+// needsHashableValueCheck returns true if the hashability of a value of
+// the given type can't be determined by the static type.
+func needsHashableValueCheck(typ reflect.Type) bool {
+	switch typ.Kind() {
+	case reflect.Interface:
+		return true
+	case reflect.Array:
+		return needsHashableValueCheck(typ.Elem())
+	case reflect.Struct:
+		for i := range typ.NumField() {
+			if needsHashableValueCheck(typ.Field(i).Type) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 type decodingStructType struct {

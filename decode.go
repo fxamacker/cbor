@@ -2543,7 +2543,6 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 	keyType, eleType := tInfo.keyTypeInfo.typ, tInfo.elemTypeInfo.typ
 	reuseKey, reuseEle := isImmutableKind(tInfo.keyTypeInfo.kind), isImmutableKind(tInfo.elemTypeInfo.kind)
 	var keyValue, eleValue reflect.Value
-	keyIsInterfaceType := keyType == typeIntf // If key type is any, need to check if key value is hashable.
 	keyIsStringType := tInfo.keyTypeInfo.typeIsString
 	var err, lastErr error
 	keyCount := v.Len()
@@ -2585,22 +2584,28 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 		}
 
 		// Detect if CBOR map key can be used as Go map key.
-		if keyIsInterfaceType && keyValue.Elem().IsValid() {
-			if !isHashableValue(keyValue.Elem()) {
-				var converted bool
-				if d.dm.mapKeyByteString == MapKeyByteStringAllowed {
-					var k any
-					k, converted = convertByteSliceToByteString(keyValue.Elem().Interface())
-					if converted {
-						keyValue.Set(reflect.ValueOf(k))
+		if tInfo.keyNeedsHashableValueCheck {
+			containedKeyValue := keyValue
+			if keyValue.Kind() == reflect.Interface {
+				containedKeyValue = keyValue.Elem()
+			}
+			if containedKeyValue.IsValid() {
+				if !isHashableValue(containedKeyValue) {
+					var converted bool
+					if d.dm.mapKeyByteString == MapKeyByteStringAllowed {
+						var k any
+						k, converted = convertByteSliceToByteString(containedKeyValue.Interface())
+						if converted {
+							keyValue.Set(reflect.ValueOf(k))
+						}
 					}
-				}
-				if !converted {
-					if err == nil {
-						err = &InvalidMapKeyTypeError{keyValue.Elem().Type().String()}
+					if !converted {
+						if err == nil {
+							err = &InvalidMapKeyTypeError{containedKeyValue.Type().String()}
+						}
+						d.skip()
+						continue
 					}
-					d.skip()
-					continue
 				}
 			}
 		}
@@ -3118,7 +3123,6 @@ func (d *decoder) nextCBORNil() bool {
 type jsonUnmarshaler interface{ UnmarshalJSON([]byte) error }
 
 var (
-	typeIntf                  = reflect.TypeFor[any]()
 	typeTime                  = reflect.TypeFor[time.Time]()
 	typeBigInt                = reflect.TypeFor[big.Int]()
 	typeUnmarshaler           = reflect.TypeFor[Unmarshaler]()
