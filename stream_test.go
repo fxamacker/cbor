@@ -1272,7 +1272,7 @@ func TestIndefiniteArrayWithNilElement(t *testing.T) {
 	}
 
 	var decoded []any
-	if err := Unmarshal(w.Bytes(), &decoded); err != nil {
+	if err := unmarshal(t, w.Bytes(), &decoded); err != nil {
 		t.Fatalf("Unmarshal() returned error %v", err)
 	}
 	if len(decoded) != 2 {
@@ -1347,7 +1347,7 @@ func TestIndefiniteMapWithNilElement(t *testing.T) {
 	}
 
 	var decoded map[string]any
-	if err := Unmarshal(w.Bytes(), &decoded); err != nil {
+	if err := unmarshal(t, w.Bytes(), &decoded); err != nil {
 		t.Fatalf("Unmarshal() returned error %v", err)
 	}
 	if len(decoded) != 1 {
@@ -1555,7 +1555,7 @@ func TestRawMessage(t *testing.T) {
 		B: &r,
 	}
 	var v strc
-	if err := Unmarshal(data, &v); err != nil {
+	if err := unmarshal(t, data, &v); err != nil {
 		t.Fatalf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if !reflect.DeepEqual(v, want) {
@@ -1570,13 +1570,13 @@ func TestRawMessage(t *testing.T) {
 	}
 
 	addr := fmt.Sprintf("%p", *v.B)
-	if err := Unmarshal(v.A, v.B); err != nil {
+	if err := unmarshal(t, v.A, v.B); err != nil {
 		t.Fatalf("Unmarshal(0x%x) returned error %v", v.A, err)
 	}
 	if addr != fmt.Sprintf("%p", *v.B) {
 		t.Fatalf("Unmarshal RawMessage should reuse underlying array if it has sufficient capacity")
 	}
-	if err := Unmarshal(data, v.B); err != nil {
+	if err := unmarshal(t, data, v.B); err != nil {
 		t.Fatalf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 	if addr == fmt.Sprintf("%p", *v.B) {
