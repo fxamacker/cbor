@@ -160,7 +160,7 @@ func TestUnmarshalSimpleValueOnBadData(t *testing.T) {
 			{
 				var v SimpleValue
 
-				err := Unmarshal(tc.data, &v)
+				err := unmarshal(t, tc.data, &v)
 				if err == nil {
 					t.Errorf("Unmarshal(%x) didn't return error", tc.data)
 				}
@@ -174,7 +174,7 @@ func TestUnmarshalSimpleValueOnBadData(t *testing.T) {
 
 func testUnmarshalInvalidSimpleValueToEmptyInterface(t *testing.T, data []byte) {
 	var v any
-	if err := Unmarshal(data, v); err == nil {
+	if err := unmarshal(t, data, v); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*SyntaxError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*SyntaxError)", data, err)
@@ -183,7 +183,7 @@ func testUnmarshalInvalidSimpleValueToEmptyInterface(t *testing.T, data []byte) 
 
 func testUnmarshalInvalidSimpleValue(t *testing.T, data []byte) {
 	var v SimpleValue
-	if err := Unmarshal(data, v); err == nil {
+	if err := unmarshal(t, data, v); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
 	} else if _, ok := err.(*SyntaxError); !ok {
 		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*SyntaxError)", data, err)
@@ -192,7 +192,7 @@ func testUnmarshalInvalidSimpleValue(t *testing.T, data []byte) {
 
 func testUnmarshalSimpleValueToEmptyInterface(t *testing.T, data []byte, want any) {
 	var v any
-	if err := Unmarshal(data, &v); err != nil {
+	if err := unmarshal(t, data, &v); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		return
 	}
@@ -206,7 +206,7 @@ func testUnmarshalSimpleValue(t *testing.T, data []byte, want SimpleValue) {
 
 	// Decode to SimpleValue
 	var v SimpleValue
-	err := Unmarshal(data, &v)
+	err := unmarshal(t, data, &v)
 	if err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		return
@@ -217,7 +217,7 @@ func testUnmarshalSimpleValue(t *testing.T, data []byte, want SimpleValue) {
 
 	// Decode to uninitialized *SimpleValue
 	var pv *SimpleValue
-	err = Unmarshal(data, &pv)
+	err = unmarshal(t, data, &pv)
 	if err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		return
@@ -235,7 +235,7 @@ func testUnmarshalSimpleValue(t *testing.T, data []byte, want SimpleValue) {
 	// Decode to initialized *SimpleValue
 	v = SimpleValue(0)
 	pv = &v
-	err = Unmarshal(data, &pv)
+	err = unmarshal(t, data, &pv)
 	if err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 		return

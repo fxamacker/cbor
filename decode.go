@@ -2585,6 +2585,7 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 func (d *decoder) parseArrayToStruct(v reflect.Value, tInfo *typeInfo) error {
 	structType, structTypeErr := getDecodingStructType(tInfo.nonPtrType)
 	if structTypeErr != nil {
+		d.skip()
 		return structTypeErr
 	}
 
@@ -2719,6 +2720,7 @@ func (d *decoder) decodeToStructField(v reflect.Value, f *decodingField, tInfo *
 func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
 	structType, structTypeErr := getDecodingStructType(tInfo.nonPtrType)
 	if structTypeErr != nil {
+		d.skip()
 		return structTypeErr
 	}
 

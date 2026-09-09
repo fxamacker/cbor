@@ -200,7 +200,7 @@ func TestUnmarshalByteStringOnBadData(t *testing.T) {
 			{
 				var v ByteString
 
-				err := Unmarshal(tc.data, &v)
+				err := unmarshal(t, tc.data, &v)
 				if err == nil {
 					t.Errorf("Unmarshal(%x) didn't return error", tc.data)
 				}
