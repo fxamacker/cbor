@@ -1720,3 +1720,57 @@ func (r *recoverableReader) Read(b []byte) (int, error) {
 	}
 	return r.nBytesReader.Read(b)
 }
+
+func TestRawMessageType(t *testing.T) {
+	testCases := []struct {
+		name    string
+		m       RawMessage
+		want    Type
+		wantStr string
+	}{
+		{"positive integer", RawMessage(mustHexDecode("00")), TypePositiveInt, "positive integer"},
+		{"positive integer with argument", RawMessage(mustHexDecode("1903e8")), TypePositiveInt, "positive integer"},
+		{"negative integer", RawMessage(mustHexDecode("20")), TypeNegativeInt, "negative integer"},
+		{"byte string", RawMessage(mustHexDecode("43010203")), TypeByteString, "byte string"},
+		{"indefinite-length byte string", RawMessage(mustHexDecode("5f42010243030405ff")), TypeByteString, "byte string"},
+		{"text string", RawMessage(mustHexDecode("63616263")), TypeTextString, "UTF-8 text string"},
+		{"array", RawMessage(mustHexDecode("83010203")), TypeArray, "array"},
+		{"indefinite-length array", RawMessage(mustHexDecode("9f010203ff")), TypeArray, "array"},
+		{"map", RawMessage(mustHexDecode("a201020304")), TypeMap, "map"},
+		{"tag", RawMessage(mustHexDecode("c074323031332d30332d32315432303a30343a30305a")), TypeTag, "tag"},
+		{"boolean primitive", RawMessage(mustHexDecode("f5")), TypePrimitives, "primitives"},
+		{"null primitive", RawMessage(mustHexDecode("f6")), TypePrimitives, "primitives"},
+		{"float primitive", RawMessage(mustHexDecode("fb3ff199999999999a")), TypePrimitives, "primitives"},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := tc.m.Type()
+			if err != nil {
+				t.Fatalf("RawMessage(0x%x).Type() returned error %v", []byte(tc.m), err)
+			}
+			if got != tc.want {
+				t.Errorf("RawMessage(0x%x).Type() = %d, want %d", []byte(tc.m), got, tc.want)
+			}
+			if got.String() != tc.wantStr {
+				t.Errorf("RawMessage(0x%x).Type().String() = %q, want %q", []byte(tc.m), got.String(), tc.wantStr)
+			}
+		})
+	}
+}
+
+func TestRawMessageTypeEmpty(t *testing.T) {
+	for _, m := range []RawMessage{nil, {}} {
+		got, err := m.Type()
+		if err == nil {
+			t.Errorf("RawMessage(%v).Type() = %d with no error, want error", []byte(m), got)
+		}
+	}
+}
+
+func TestTypeStringInvalid(t *testing.T) {
+	got := Type(0x01).String()
+	want := "Invalid type 1"
+	if got != want {
+		t.Errorf("Type(0x01).String() = %q, want %q", got, want)
+	}
+}

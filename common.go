@@ -45,6 +45,27 @@ func (t cborType) String() string {
 	}
 }
 
+// Type is the CBOR major type of an encoded data item, as defined in
+// RFC 8949 Section 3.1.  It is reported by RawMessage.Type.
+type Type uint8
+
+const (
+	TypePositiveInt Type = Type(cborTypePositiveInt) // unsigned integer (major type 0)
+	TypeNegativeInt Type = Type(cborTypeNegativeInt) // negative integer (major type 1)
+	TypeByteString  Type = Type(cborTypeByteString)  // byte string (major type 2)
+	TypeTextString  Type = Type(cborTypeTextString)  // UTF-8 text string (major type 3)
+	TypeArray       Type = Type(cborTypeArray)       // array (major type 4)
+	TypeMap         Type = Type(cborTypeMap)         // map (major type 5)
+	TypeTag         Type = Type(cborTypeTag)         // tagged data item (major type 6)
+	TypePrimitives  Type = Type(cborTypePrimitives)  // simple values and floating-point numbers (major type 7)
+)
+
+// String returns a human-readable description of the CBOR major type,
+// such as "array" or "UTF-8 text string".
+func (t Type) String() string {
+	return cborType(t).String()
+}
+
 type additionalInformation uint8
 
 const (
