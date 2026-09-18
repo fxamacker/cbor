@@ -48,7 +48,7 @@ func TestEncodeStructToIndefArrayBasic(t *testing.T) {
 	// toindefarray-tagged structs (the tag treats them the same way as
 	// `toarray` for decoding).
 	var out S
-	if err := Unmarshal(got, &out); err != nil {
+	if err := unmarshal(t, got, &out); err != nil {
 		t.Fatalf("Unmarshal returned error: %v", err)
 	}
 	if !reflect.DeepEqual(in, out) {
@@ -77,7 +77,7 @@ func TestEncodeStructToIndefArrayEmpty(t *testing.T) {
 	}
 
 	var out Empty
-	if err := Unmarshal(got, &out); err != nil {
+	if err := unmarshal(t, got, &out); err != nil {
 		t.Fatalf("Unmarshal returned error: %v", err)
 	}
 	if !reflect.DeepEqual(in, out) {
@@ -117,7 +117,7 @@ func TestEncodeStructToIndefArrayNested(t *testing.T) {
 	}
 
 	var out Outer
-	if err := Unmarshal(got, &out); err != nil {
+	if err := unmarshal(t, got, &out); err != nil {
 		t.Fatalf("Unmarshal returned error: %v", err)
 	}
 	if !reflect.DeepEqual(in, out) {
