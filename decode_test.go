@@ -2893,7 +2893,7 @@ func (s *nilUnmarshaler) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-func TestUnmarshalNil(t *testing.T) {
+func TestUnmarshalNull(t *testing.T) {
 	type T struct {
 		I int
 	}
@@ -3068,6 +3068,120 @@ func TestUnmarshalNil(t *testing.T) {
 					t.Errorf("Unmarshal(0x%x) to %T returned error %v", data, v.Elem().Interface(), err)
 				} else if !reflect.DeepEqual(v.Elem().Interface(), tc.wantValue) {
 					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v.Elem().Interface(), v.Elem().Interface(), tc.wantValue, tc.wantValue)
+				}
+			}
+		})
+	}
+}
+
+type myInt int
+
+func (i myInt) String() string { return fmt.Sprintf("myInt %d", int(i)) }
+
+type myMap map[string]int
+
+func (m myMap) String() string { return fmt.Sprintf("myMap %#v", map[string]int(m)) }
+
+type myStringSlice []string
+
+func (ss myStringSlice) String() string { return fmt.Sprintf("myStringSlice %#v", []string(ss)) }
+
+type myByteSlice []byte
+
+func (bs myByteSlice) String() string { return fmt.Sprintf("myByteSlice 0x%x", []byte(bs)) }
+
+func TestUnmarshalNullToInterface(t *testing.T) {
+	// Unmarshaling CBOR null/undefined to interface value sets the interface value to nil.
+
+	data := [][]byte{
+		{0xf6}, // null
+		{0xf7}, // undefined
+	}
+
+	testCases := []struct {
+		name  string
+		value func() fmt.Stringer
+	}{
+		{
+			name: "interface is nil",
+			value: func() fmt.Stringer {
+				var v fmt.Stringer
+				return v
+			},
+		},
+		{
+			name: "interface value is a pointer to non-nil map",
+			value: func() fmt.Stringer {
+				var v fmt.Stringer = &myMap{"a": 1}
+				return v
+			},
+		},
+		{
+			name: "interface value is a nil pointer",
+			value: func() fmt.Stringer {
+				var v fmt.Stringer = (*myMap)(nil)
+				return v
+			},
+		},
+		{
+			name: "interface value is non-nil map",
+			value: func() fmt.Stringer {
+				var v fmt.Stringer = myMap{"a": 1}
+				return v
+			},
+		},
+		{
+			name: "interface value is nil map",
+			value: func() fmt.Stringer {
+				var v fmt.Stringer = myMap(nil)
+				return v
+			},
+		},
+		{
+			name: "interface value is non-nil slice",
+			value: func() fmt.Stringer {
+				var v fmt.Stringer = myStringSlice{"a"}
+				return v
+			},
+		},
+		{
+			name: "interface value is nil slice",
+			value: func() fmt.Stringer {
+				var v fmt.Stringer = myStringSlice(nil)
+				return v
+			},
+		},
+		{
+			name: "interface value is non-nil byte slice",
+			value: func() fmt.Stringer {
+				var v fmt.Stringer = myByteSlice{1}
+				return v
+			},
+		},
+		{
+			name: "interface value is nil byte slice",
+			value: func() fmt.Stringer {
+				var v fmt.Stringer = myByteSlice(nil)
+				return v
+			},
+		},
+		{
+			name: "interface value is int",
+			value: func() fmt.Stringer {
+				var v fmt.Stringer = myInt(1)
+				return v
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, data := range data {
+				v := tc.value()
+				if err := unmarshal(t, data, &v); err != nil {
+					t.Errorf("Unmarshal(0x%x): unexpected error: %v", data, err)
+				} else if v != nil {
+					t.Errorf("Unmarshal(0x%x) = %v (%T), want nil", data, v, v)
 				}
 			}
 		})
@@ -4541,7 +4655,7 @@ func TestDecodeTime(t *testing.T) {
 		cborUnixTime    []byte
 		wantTime        time.Time
 	}{
-		// Decoding untagged CBOR null/defined to time.Time is no-op.  See TestUnmarshalNil.
+		// Decoding untagged CBOR null/defined to time.Time is no-op.  See TestUnmarshalNull.
 		{
 			name:            "null within unrecognized tag", // no-op in DecTagIgnored
 			cborRFC3339Time: mustHexDecode("dadeadbeeff6"),
@@ -9875,6 +9989,17 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 			data: []byte{0xf5},
 			into: typeBool,
 			want: false,
+			assertOnError: assertExactError(&UnacceptableDataItemError{
+				CBORType: "primitives",
+				Message:  "simple value 21 is not recognized",
+			}),
+		},
+		{
+			name: "reject true into a slice",
+			fns:  []func(*SimpleValueRegistry) error{WithRejectedSimpleValue(21)},
+			data: []byte{0x81, 0xf5},
+			into: reflect.TypeOf([]bool{}),
+			want: []bool(nil),
 			assertOnError: assertExactError(&UnacceptableDataItemError{
 				CBORType: "primitives",
 				Message:  "simple value 21 is not recognized",
