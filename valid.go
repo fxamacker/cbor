@@ -178,6 +178,14 @@ func (d *decoder) wellformedInternal(depth int, checkBuiltinTags bool) (int, err
 		}
 		depth = maxDepth
 
+	case cborTypePrimitives:
+		if ai <= 24 && d.dm.simpleValues != nil && d.dm.simpleValues.rejected[SimpleValue(val)] { //nolint:gosec
+			return 0, &UnacceptableDataItemError{
+				CBORType: t.String(),
+				Message:  "simple value " + strconv.FormatInt(int64(val), 10) + " is not recognized", //nolint:gosec
+			}
+		}
+
 	case cborTypeTag:
 		if d.dm.tagsMd == TagsForbidden {
 			return 0, &TagsMdError{}
@@ -295,8 +303,6 @@ func (d *decoder) wellformedIndefiniteArrayOrMap(t cborType, depth int, checkBui
 // tryWellformedSmallData returns true and advances offset on success
 // if the next CBOR data item is:
 // - (-24) <= integer < 24
-// - bool
-// - nil and undefined
 // - byte string and text string of less than 24 bytes
 func (d *decoder) tryWellformedSmallData() bool {
 	// NOTE: this function is written to be inlinable.
@@ -310,7 +316,7 @@ func (d *decoder) tryWellformedSmallData() bool {
 	}
 
 	switch cborType(d.data[d.off] & typeMask) {
-	case cborTypePositiveInt, cborTypeNegativeInt, cborTypePrimitives:
+	case cborTypePositiveInt, cborTypeNegativeInt:
 		d.off++
 		return true
 	case cborTypeByteString, cborTypeTextString:
