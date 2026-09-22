@@ -1076,7 +1076,7 @@ func (opts DecOptions) decMode() (*decMode, error) { //nolint:gocritic // ignore
 
 	if opts.DefaultByteStringType != nil &&
 		opts.DefaultByteStringType.Kind() != reflect.String &&
-		(opts.DefaultByteStringType.Kind() != reflect.Slice || opts.DefaultByteStringType.Elem().Kind() != reflect.Uint8) {
+		(opts.DefaultByteStringType.Kind() != reflect.Slice || opts.DefaultByteStringType.Elem() != typeByte) {
 		return nil, fmt.Errorf("cbor: invalid DefaultByteStringType: %s is not of kind string or []uint8", opts.DefaultByteStringType)
 	}
 
@@ -3133,6 +3133,7 @@ var (
 	typeJSONUnmarshaler       = reflect.TypeFor[jsonUnmarshaler]()
 	typeString                = reflect.TypeFor[string]()
 	typeByteSlice             = reflect.TypeFor[[]byte]()
+	typeByte                  = reflect.TypeFor[byte]()
 )
 
 func fillNil(_ cborType, v reflect.Value) error {
