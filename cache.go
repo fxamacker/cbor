@@ -51,8 +51,10 @@ type typeInfo struct {
 	keyNeedsHashableValueCheck bool
 }
 
-func newTypeInfo(t reflect.Type) *typeInfo {
+func newTypeInfo(t reflect.Type, newTypeInfos map[reflect.Type]*typeInfo) *typeInfo {
 	tInfo := typeInfo{typ: t, kind: t.Kind()}
+
+	newTypeInfos[t] = &tInfo
 
 	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
@@ -83,11 +85,11 @@ func newTypeInfo(t reflect.Type) *typeInfo {
 
 	switch k {
 	case reflect.Array, reflect.Slice:
-		tInfo.elemTypeInfo = getTypeInfo(t.Elem())
+		tInfo.elemTypeInfo = getTypeInfoWithNewTypeInfos(t.Elem(), newTypeInfos)
 	case reflect.Map:
-		tInfo.keyTypeInfo = getTypeInfo(t.Key())
+		tInfo.keyTypeInfo = getTypeInfoWithNewTypeInfos(t.Key(), newTypeInfos)
 		tInfo.keyNeedsHashableValueCheck = needsHashableValueCheck(t.Key())
-		tInfo.elemTypeInfo = getTypeInfo(t.Elem())
+		tInfo.elemTypeInfo = getTypeInfoWithNewTypeInfos(t.Elem(), newTypeInfos)
 	}
 
 	return &tInfo
@@ -421,9 +423,22 @@ func getTypeInfo(t reflect.Type) *typeInfo {
 	if v, _ := typeInfoCache.Load(t); v != nil {
 		return v.(*typeInfo)
 	}
-	tInfo := newTypeInfo(t)
-	typeInfoCache.Store(t, tInfo)
+	newTypeInfos := make(map[reflect.Type]*typeInfo)
+	tInfo := newTypeInfo(t, newTypeInfos)
+	for typ, ti := range newTypeInfos {
+		typeInfoCache.Store(typ, ti)
+	}
 	return tInfo
+}
+
+func getTypeInfoWithNewTypeInfos(t reflect.Type, newTypeInfos map[reflect.Type]*typeInfo) *typeInfo {
+	if tInfo, found := newTypeInfos[t]; found {
+		return tInfo
+	}
+	if v, _ := typeInfoCache.Load(t); v != nil {
+		return v.(*typeInfo)
+	}
+	return newTypeInfo(t, newTypeInfos)
 }
 
 func hasToArrayOption(tag string) bool {
