@@ -1403,8 +1403,8 @@ func (d *decoder) value(v any) error {
 // and does not perform bounds checking.
 func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
 
-	// Decode CBOR nil or CBOR undefined to pointer value by setting pointer value to nil.
-	if d.nextCBORNil() && v.Kind() == reflect.Pointer {
+	// Decode CBOR null/undefined to pointer/interface value by setting pointer/interface value to nil.
+	if d.nextCBORNil() && (v.Kind() == reflect.Pointer || v.Kind() == reflect.Interface) {
 		d.skip()
 		v.SetZero()
 		return nil
@@ -1595,13 +1595,6 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 			return fillFloat(t, f, v)
 
 		default: // ai <= 24
-			if d.dm.simpleValues.rejected[SimpleValue(val)] { //nolint:gosec
-				return &UnacceptableDataItemError{
-					CBORType: t.String(),
-					Message:  "simple value " + strconv.FormatInt(int64(val), 10) + " is not recognized", //nolint:gosec
-				}
-			}
-
 			switch ai {
 			case additionalInformationAsFalse,
 				additionalInformationAsTrue:
@@ -2157,12 +2150,6 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyc
 
 	case cborTypePrimitives:
 		_, ai, val := d.getHead()
-		if ai <= 24 && d.dm.simpleValues.rejected[SimpleValue(val)] { //nolint:gosec
-			return nil, &UnacceptableDataItemError{
-				CBORType: t.String(),
-				Message:  "simple value " + strconv.FormatInt(int64(val), 10) + " is not recognized", //nolint:gosec
-			}
-		}
 		if ai < 20 || ai == 24 {
 			return SimpleValue(val), nil //nolint:gosec
 		}
