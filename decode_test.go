@@ -9467,6 +9467,9 @@ func TestDecodeBignumToEmptyInterface(t *testing.T) {
 }
 
 func TestDecModeInvalidDefaultByteStringType(t *testing.T) {
+	type myUint8 uint8
+	type myUint8Slice []myUint8
+
 	for _, tc := range []struct {
 		name         string
 		opts         DecOptions
@@ -9491,6 +9494,16 @@ func TestDecModeInvalidDefaultByteStringType(t *testing.T) {
 			name:         "byte array",
 			opts:         DecOptions{DefaultByteStringType: reflect.TypeOf([42]byte{})},
 			wantErrorMsg: "cbor: invalid DefaultByteStringType: [42]uint8 is not of kind string or []uint8",
+		},
+		{
+			name:         "slice with named uint8",
+			opts:         DecOptions{DefaultByteStringType: reflect.TypeOf([]myUint8{})},
+			wantErrorMsg: "cbor: invalid DefaultByteStringType: []cbor.myUint8 is not of kind string or []uint8",
+		},
+		{
+			name:         "named slice with named uint8",
+			opts:         DecOptions{DefaultByteStringType: reflect.TypeOf(myUint8Slice{})},
+			wantErrorMsg: "cbor: invalid DefaultByteStringType: cbor.myUint8Slice is not of kind string or []uint8",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
