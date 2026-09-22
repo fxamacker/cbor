@@ -1412,8 +1412,20 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 
 	if tInfo.spclType == specialTypeIface {
 		if !v.IsNil() {
+			// Decode into the value in the interface only if the value is a non-nil pointer.
+			// Any other value in the interface is unaddressable and can't be decoded into.
+			e := v.Elem()
+			if e.Kind() != reflect.Pointer || e.IsNil() {
+				cType := d.nextCBORType()
+				d.skip()
+				return &UnmarshalTypeError{
+					CBORType: cType.String(),
+					GoType:   tInfo.nonPtrType.String(),
+				}
+			}
+
 			// Use value type
-			v = v.Elem()
+			v = e
 			tInfo = getTypeInfo(v.Type())
 		} else { //nolint:gocritic
 			// Create and use registered type if CBOR data is registered tag
