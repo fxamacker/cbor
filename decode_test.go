@@ -12121,3 +12121,132 @@ func TestNeedsHashableValueCheck(t *testing.T) {
 		})
 	}
 }
+
+type myArray [2]int
+
+func (a myArray) String() string { return fmt.Sprintf("myArray %#v", [2]int(a)) }
+
+type stringerWrapper struct {
+	Value fmt.Stringer
+	Msg   string
+}
+
+func TestUnmarshalToUnaddressableValue(t *testing.T) {
+	testCases := []struct {
+		name  string
+		data  []byte
+		value func() any
+		want  any
+	}{
+		{
+			name: "struct field interface value is int",
+			data: []byte{0xa2, 0x65, 'V', 'a', 'l', 'u', 'e', 0x01, 0x63, 'M', 's', 'g', 0x61, 0x61}, // {"Value": 1, "Msg": "a"}
+			value: func() any {
+				return &stringerWrapper{Value: myInt(20)}
+			},
+			want: &stringerWrapper{Value: myInt(20), Msg: "a"},
+		},
+		{
+			name: "struct field interface value is nil pointer",
+			data: []byte{0xa1, 0x65, 'V', 'a', 'l', 'u', 'e', 0x01}, // {"Value": 1}
+			value: func() any {
+				return &stringerWrapper{Value: (*myInt)(nil)}
+			},
+		},
+		{
+			name: "interface value is nil map",
+			data: []byte{0xa1, 0x61, 0x61, 0x01}, // {"a": 1}
+			value: func() any {
+				var v fmt.Stringer = myMap(nil)
+				return &v
+			},
+		},
+		{
+			name: "interface value is empty map",
+			data: []byte{0xa1, 0x61, 0x61, 0x01}, // {"a": 1}
+			value: func() any {
+				var v fmt.Stringer = myMap{}
+				return &v
+			},
+		},
+		{
+			name: "interface value is map",
+			data: []byte{0xa1, 0x61, 0x61, 0x01}, // {"a": 1}
+			value: func() any {
+				var v fmt.Stringer = myMap{"b": 2}
+				return &v
+			},
+		},
+		{
+			name: "interface value is nil slice",
+			data: []byte{0x81, 0x61, 0x61}, // ["a"]
+			value: func() any {
+				var v fmt.Stringer = myStringSlice(nil)
+				return &v
+			},
+		},
+		{
+			name: "interface value is empty slice",
+			data: []byte{0x81, 0x61, 0x61}, // ["a"]
+			value: func() any {
+				var v fmt.Stringer = myStringSlice{}
+				return &v
+			},
+		},
+		{
+			name: "interface value is slice",
+			data: []byte{0x81, 0x61, 0x61}, // ["a"]
+			value: func() any {
+				var v fmt.Stringer = myStringSlice{"b"}
+				return &v
+			},
+		},
+		{
+			name: "interface value is array",
+			data: []byte{0x81, 0x01}, // [1]
+			value: func() any {
+				var v fmt.Stringer = myArray{}
+				return &v
+			},
+		},
+		{
+			name: "interface value is nil byte slice",
+			data: []byte{0x41, 0x01}, // h'01'
+			value: func() any {
+				var v fmt.Stringer = myByteSlice(nil)
+				return &v
+			},
+		},
+		{
+			name: "interface value is empty byte slice",
+			data: []byte{0x41, 0x01}, // h'01'
+			value: func() any {
+				var v fmt.Stringer = myByteSlice{}
+				return &v
+			},
+		},
+		{
+			name: "interface value is byte slice",
+			data: []byte{0x41, 0x01}, // h'01'
+			value: func() any {
+				var v fmt.Stringer = myByteSlice{0x00}
+				return &v
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			v := tc.value()
+			err := unmarshal(t, tc.data, v)
+			if err == nil {
+				t.Errorf("Unmarshal(0x%x): expected *UnmarshalTypeError, got nil", tc.data)
+			} else if _, ok := err.(*UnmarshalTypeError); !ok {
+				t.Errorf("Unmarshal(0x%x) returned %T, want (*UnmarshalTypeError)", tc.data, err)
+			}
+			if tc.want != nil && !reflect.DeepEqual(v, tc.want) {
+				t.Errorf("Unmarshal(0x%x) = %+v, want %+v", tc.data, v, tc.want)
+			}
+		})
+	}
+}
