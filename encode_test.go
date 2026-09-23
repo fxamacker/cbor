@@ -7775,3 +7775,116 @@ func TestEncodedHeadLength(t *testing.T) {
 		})
 	}
 }
+
+func TestMarshalSelfReferenceDataTypes(t *testing.T) {
+	testCases := []struct {
+		name     string
+		value    any
+		wantData []byte
+	}{
+		{
+			name:     "self-ref slice type",
+			value:    selfRefSlice{selfRefSlice{}},
+			wantData: []byte{0x81, 0x80},
+		},
+		{
+			name:     "self-ref slice type with pointer",
+			value:    selfRefSliceWithP{&selfRefSliceWithP{}},
+			wantData: []byte{0x81, 0x80},
+		},
+		{
+			name:     "slice type with self-ref map",
+			value:    sliceWithSelfRefMap{selfRefMap{"a": selfRefMap{}}},
+			wantData: []byte{0x81, 0xa1, 0x61, 0x61, 0xa0},
+		},
+		{
+			name:     "self-ref map type",
+			value:    selfRefMap{"a": selfRefMap{}},
+			wantData: []byte{0xa1, 0x61, 0x61, 0xa0},
+		},
+		{
+			name:     "map type with self-ref slice",
+			value:    mapWithSelfRefSlice{"a": selfRefSlice{selfRefSlice{}}},
+			wantData: []byte{0xa1, 0x61, 0x61, 0x81, 0x80},
+		},
+		{
+			name:     "mutual-ref map and slice types",
+			value:    mutualRefMap{"a": mutualRefSlice{}},
+			wantData: []byte{0xa1, 0x61, 0x61, 0x80},
+		},
+		{
+			name:     "binary marshaler over unsupported self-ref type",
+			value:    marshalerOverSelfRefUnsupported{},
+			wantData: []byte{0x41, 0x74},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if b, err := Marshal(tc.value); err != nil {
+				t.Errorf("Marshal(%v): unexpected error: %v", tc.value, err)
+			} else if !bytes.Equal(b, tc.wantData) {
+				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.value, b, tc.wantData)
+			}
+		})
+	}
+}
+
+// Unsupported (chan key) types in a cycle through a slice, a pointer, etc.
+type (
+	selfRefUnsupportedSliceMap map[chan bool][]selfRefUnsupportedSliceMap
+	selfRefUnsupportedPtrMap   map[chan bool]*selfRefUnsupportedPtrMap
+
+	selfRefUnsupportedMap    map[chan bool][]selfRefUnsupportedMap
+	selfRefUnsupportedArray1 [1]selfRefUnsupportedMap
+	selfRefUnsupportedArray2 [2][]selfRefUnsupportedMap
+	selfRefUnsupportedRoot   map[*selfRefUnsupportedArray1]selfRefUnsupportedArray2
+
+	selfRefUnsupportedSliceMap2     map[chan bool][]selfRefUnsupportedSliceMap2
+	marshalerOverSelfRefUnsupported []selfRefUnsupportedSliceMap2
+)
+
+func (marshalerOverSelfRefUnsupported) MarshalBinary() ([]byte, error) {
+	return []byte("t"), nil
+}
+
+func TestMarshalSelfReferenceUnsupportedType(t *testing.T) {
+	testCases := []struct {
+		name   string
+		values []any
+	}{
+		{
+			name: "empty slice after its element type",
+			values: []any{
+				selfRefUnsupportedSliceMap{},
+				[]selfRefUnsupportedSliceMap{},
+			},
+		},
+		{
+			name: "nil pointer after its element type",
+			values: []any{
+				selfRefUnsupportedPtrMap{},
+				(*selfRefUnsupportedPtrMap)(nil),
+			},
+		},
+		{
+			name: "type reusing an in-build type from another branch",
+			values: []any{
+				selfRefUnsupportedRoot{},
+				selfRefUnsupportedArray2{},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, v := range tc.values {
+				_, err := Marshal(v)
+				if err == nil {
+					t.Errorf("Marshal(%v) = nil error, want *UnsupportedTypeError", v)
+				} else if _, ok := err.(*UnsupportedTypeError); !ok {
+					t.Errorf("Marshal(%v) error type = %T, want *UnsupportedTypeError", v, err)
+				}
+			}
+		})
+	}
+}
