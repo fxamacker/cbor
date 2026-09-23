@@ -12264,15 +12264,15 @@ func TestUnmarshalToUnaddressableValue(t *testing.T) {
 	}
 }
 
+type selfRefSlice []selfRefSlice
+type selfRefSliceWithP []*selfRefSliceWithP
+type selfRefMap map[string]selfRefMap
+type sliceWithSelfRefMap []selfRefMap
+type mapWithSelfRefSlice map[string]selfRefSlice
 type mutualRefSlice []mutualRefMap
 type mutualRefMap map[string]mutualRefSlice
 
 func TestUnmarshalToSelfReferenceDataTypes(t *testing.T) {
-	type selfRefSlice []selfRefSlice
-	type selfRefSliceWithP []*selfRefSliceWithP
-	type selfRefMap map[string]selfRefMap
-	type sliceWithSelfRefMap []selfRefMap
-	type mapWithSelfRefSlice map[string]selfRefSlice
 
 	testCases := []struct {
 		name string
