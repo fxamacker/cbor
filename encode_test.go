@@ -7180,3 +7180,74 @@ func mustParseTime(layout string, value string) time.Time {
 	}
 	return tm
 }
+
+func TestMarshalSelfReferenceDataTypes(t *testing.T) {
+	testCases := []struct {
+		name     string
+		value    any
+		wantData []byte
+	}{
+		{
+			name:     "self-ref slice type",
+			value:    selfRefSlice{selfRefSlice{}},
+			wantData: []byte{0x81, 0x80},
+		},
+		{
+			name:     "self-ref slice type with pointer",
+			value:    selfRefSliceWithP{&selfRefSliceWithP{}},
+			wantData: []byte{0x81, 0x80},
+		},
+		{
+			name:     "slice type with self-ref map",
+			value:    sliceWithSelfRefMap{selfRefMap{"a": selfRefMap{}}},
+			wantData: []byte{0x81, 0xa1, 0x61, 0x61, 0xa0},
+		},
+		{
+			name:     "self-ref map type",
+			value:    selfRefMap{"a": selfRefMap{}},
+			wantData: []byte{0xa1, 0x61, 0x61, 0xa0},
+		},
+		{
+			name:     "map type with self-ref slice",
+			value:    mapWithSelfRefSlice{"a": selfRefSlice{selfRefSlice{}}},
+			wantData: []byte{0xa1, 0x61, 0x61, 0x81, 0x80},
+		},
+		{
+			name:     "mutual-ref map and slice types",
+			value:    mutualRefMap{"a": mutualRefSlice{}},
+			wantData: []byte{0xa1, 0x61, 0x61, 0x80},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if b, err := Marshal(tc.value); err != nil {
+				t.Errorf("Marshal(%v): unexpected error: %v", tc.value, err)
+			} else if !bytes.Equal(b, tc.wantData) {
+				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.value, b, tc.wantData)
+			}
+		})
+	}
+}
+
+type selfRefUnsupportedKeyMap map[chan bool][]selfRefUnsupportedKeyMap
+
+func TestMarshalSelfReferenceUnsupportedType(t *testing.T) {
+	const wantErrorMsg = "cbor: unsupported type: cbor.selfRefUnsupportedKeyMap"
+
+	// Marshal selfRefUnsupportedKeyMap first so that []selfRefUnsupportedKeyMap is
+	// cached with an encodeFunc for an in-progress element type.
+	for _, v := range []any{
+		selfRefUnsupportedKeyMap{},
+		[]selfRefUnsupportedKeyMap{{}},
+	} {
+		_, err := Marshal(v)
+		if err == nil {
+			t.Errorf("Marshal(%v): expected error %q, got nil", v, wantErrorMsg)
+		} else if _, ok := err.(*UnsupportedTypeError); !ok {
+			t.Errorf("Marshal(%v) returned %T, want *UnsupportedTypeError", v, err)
+		} else if err.Error() != wantErrorMsg {
+			t.Errorf("Marshal(%v): got %q, want %q", v, err.Error(), wantErrorMsg)
+		}
+	}
+}
