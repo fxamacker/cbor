@@ -409,14 +409,44 @@ func getEncodingStructToArrayType(t reflect.Type, flds fields) (*encodingStructT
 	return structType, nil
 }
 
+type inProgressEncodeFuncs struct {
+	encodeFuncs
+	complete bool
+}
+
 func getEncodeFunc(t reflect.Type) (encodeFunc, isEmptyFunc, isZeroFunc) {
 	if v, _ := encodeFuncCache.Load(t); v != nil {
 		fs := v.(encodeFuncs)
 		return fs.ef, fs.ief, fs.izf
 	}
-	ef, ief, izf := getEncodeFuncInternal(t)
-	encodeFuncCache.Store(t, encodeFuncs{ef, ief, izf})
+	newEncodeFuncs := make(map[reflect.Type]*inProgressEncodeFuncs)
+	ef, ief, izf := getEncodeFuncInternal(t, newEncodeFuncs)
+	for typ, fs := range newEncodeFuncs {
+		encodeFuncCache.Store(typ, fs.encodeFuncs)
+	}
 	return ef, ief, izf
+}
+
+func getEncodeFuncWithNewEncodeFuncs(t reflect.Type, newEncodeFuncs map[reflect.Type]*inProgressEncodeFuncs) encodeFunc {
+	if fs, found := newEncodeFuncs[t]; found {
+		if fs.complete {
+			return fs.ef
+		}
+		return func(e *bytes.Buffer, em *encMode, v reflect.Value) error {
+			if fs.ef == nil {
+				return &UnsupportedTypeError{t}
+			}
+			return fs.ef(e, em, v)
+		}
+	}
+
+	if v, _ := encodeFuncCache.Load(t); v != nil {
+		fs := v.(encodeFuncs)
+		return fs.ef
+	}
+
+	ef, _, _ := getEncodeFuncInternal(t, newEncodeFuncs)
+	return ef
 }
 
 func getTypeInfo(t reflect.Type) *typeInfo {

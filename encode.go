@@ -1977,10 +1977,19 @@ var (
 	typeByteString      = reflect.TypeOf(ByteString(""))
 )
 
-func getEncodeFuncInternal(t reflect.Type) (ef encodeFunc, ief isEmptyFunc, izf isZeroFunc) {
+func getEncodeFuncInternal(t reflect.Type, newEncodeFuncs map[reflect.Type]*inProgressEncodeFuncs) (ef encodeFunc, ief isEmptyFunc, izf isZeroFunc) {
+	fs := &inProgressEncodeFuncs{}
+	newEncodeFuncs[t] = fs
+	defer func() {
+		fs.ef = ef
+		fs.ief = ief
+		fs.izf = izf
+		fs.complete = true
+	}()
+
 	k := t.Kind()
 	if k == reflect.Pointer {
-		return getEncodeIndirectValueFunc(t), isEmptyPtr, getIsZeroFunc(t)
+		return getEncodeIndirectValueFunc(t, newEncodeFuncs), isEmptyPtr, getIsZeroFunc(t)
 	}
 	switch t {
 	case typeSimpleValue:
@@ -2062,14 +2071,14 @@ func getEncodeFuncInternal(t reflect.Type) (ef encodeFunc, ief isEmptyFunc, izf 
 		fallthrough
 
 	case reflect.Array:
-		f, _, _ := getEncodeFunc(t.Elem())
+		f := getEncodeFuncWithNewEncodeFuncs(t.Elem(), newEncodeFuncs)
 		if f == nil {
 			return nil, nil, nil
 		}
 		return arrayEncodeFunc{f: f}.encode, isEmptySlice, getIsZeroFunc(t)
 
 	case reflect.Map:
-		f := getEncodeMapFunc(t)
+		f := getEncodeMapFunc(t, newEncodeFuncs)
 		if f == nil {
 			return nil, nil, nil
 		}
@@ -2093,11 +2102,11 @@ func getEncodeFuncInternal(t reflect.Type) (ef encodeFunc, ief isEmptyFunc, izf 
 	return nil, nil, nil
 }
 
-func getEncodeIndirectValueFunc(t reflect.Type) encodeFunc {
+func getEncodeIndirectValueFunc(t reflect.Type, newEncodeFuncs map[reflect.Type]*inProgressEncodeFuncs) encodeFunc {
 	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
-	f, _, _ := getEncodeFunc(t)
+	f := getEncodeFuncWithNewEncodeFuncs(t, newEncodeFuncs)
 	if f == nil {
 		return nil
 	}
