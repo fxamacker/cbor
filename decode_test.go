@@ -12263,3 +12263,89 @@ func TestUnmarshalToUnaddressableValue(t *testing.T) {
 		})
 	}
 }
+
+type mutualRefSlice []mutualRefMap
+type mutualRefMap map[string]mutualRefSlice
+
+func TestUnmarshalToSelfReferenceDataTypes(t *testing.T) {
+	type selfRefSlice []selfRefSlice
+	type selfRefSliceWithP []*selfRefSliceWithP
+	type selfRefMap map[string]selfRefMap
+	type sliceWithSelfRefMap []selfRefMap
+	type mapWithSelfRefSlice map[string]selfRefSlice
+
+	testCases := []struct {
+		name string
+		data []byte
+		val  func() any
+		want any
+	}{
+		{
+			name: "self-ref slice type",
+			data: []byte{0x81, 0x80},
+			val: func() any {
+				v := selfRefSlice{}
+				return &v
+			},
+			want: selfRefSlice{selfRefSlice{}},
+		},
+		{
+			name: "self-ref slice type with pointer",
+			data: []byte{0x81, 0x80},
+			val: func() any {
+				v := selfRefSliceWithP{}
+				return &v
+			},
+			want: selfRefSliceWithP{&selfRefSliceWithP{}},
+		},
+		{
+			name: "slice type with self-ref map",
+			data: []byte{0x81, 0xa1, 0x61, 0x61, 0xa0},
+			val: func() any {
+				v := sliceWithSelfRefMap{}
+				return &v
+			},
+			want: sliceWithSelfRefMap{selfRefMap{"a": selfRefMap{}}},
+		},
+		{
+			name: "self-ref map type",
+			data: []byte{0xa1, 0x61, 0x61, 0xa0},
+			val: func() any {
+				v := selfRefMap{}
+				return &v
+			},
+			want: selfRefMap{"a": selfRefMap{}},
+		},
+		{
+			name: "map type with self-ref slice",
+			data: []byte{0xa1, 0x61, 0x61, 0x81, 0x80},
+			val: func() any {
+				v := mapWithSelfRefSlice{}
+				return &v
+			},
+			want: mapWithSelfRefSlice{"a": selfRefSlice{selfRefSlice{}}},
+		},
+		{
+			name: "mutual-ref map and slice types",
+			data: []byte{0xa1, 0x61, 0x61, 0x80},
+			val: func() any {
+				v := mutualRefMap{}
+				return &v
+			},
+			want: mutualRefMap{"a": mutualRefSlice{}},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			v := tc.val()
+			err := Unmarshal(tc.data, v)
+			if err != nil {
+				t.Fatalf("Unmarshal(0x%x): unexpected error: %v", tc.data, err)
+			}
+			if !reflect.DeepEqual(reflect.ValueOf(v).Elem().Interface(), tc.want) {
+				t.Errorf("Unmarshal(0x%x) = %+v, want %+v", tc.data, reflect.ValueOf(v).Elem().Interface(), tc.want)
+			}
+		})
+	}
+}
