@@ -1722,6 +1722,9 @@ type binaryMarshalerEncoder struct {
 
 func (bme binaryMarshalerEncoder) encode(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if em.binaryMarshaler != BinaryMarshalerByteString {
+		if bme.alternateEncode == nil {
+			return &UnsupportedTypeError{Type: v.Type()}
+		}
 		return bme.alternateEncode(e, em, v)
 	}
 
@@ -1746,6 +1749,9 @@ func (bme binaryMarshalerEncoder) encode(e *bytes.Buffer, em *encMode, v reflect
 
 func (bme binaryMarshalerEncoder) isEmpty(em *encMode, v reflect.Value) (bool, error) {
 	if em.binaryMarshaler != BinaryMarshalerByteString {
+		if bme.alternateIsEmpty == nil {
+			return false, &UnsupportedTypeError{Type: v.Type()}
+		}
 		return bme.alternateIsEmpty(em, v)
 	}
 
@@ -1769,6 +1775,9 @@ type textMarshalerEncoder struct {
 
 func (tme textMarshalerEncoder) encode(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if em.textMarshaler == TextMarshalerNone {
+		if tme.alternateEncode == nil {
+			return &UnsupportedTypeError{Type: v.Type()}
+		}
 		return tme.alternateEncode(e, em, v)
 	}
 
@@ -1794,6 +1803,9 @@ func (tme textMarshalerEncoder) encode(e *bytes.Buffer, em *encMode, v reflect.V
 
 func (tme textMarshalerEncoder) isEmpty(em *encMode, v reflect.Value) (bool, error) {
 	if em.textMarshaler == TextMarshalerNone {
+		if tme.alternateIsEmpty == nil {
+			return false, &UnsupportedTypeError{Type: v.Type()}
+		}
 		return tme.alternateIsEmpty(em, v)
 	}
 
@@ -1817,6 +1829,9 @@ type jsonMarshalerEncoder struct {
 
 func (jme jsonMarshalerEncoder) encode(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if em.jsonMarshalerTranscoder == nil {
+		if jme.alternateEncode == nil {
+			return &UnsupportedTypeError{Type: v.Type()}
+		}
 		return jme.alternateEncode(e, em, v)
 	}
 
@@ -1855,6 +1870,9 @@ func (jme jsonMarshalerEncoder) encode(e *bytes.Buffer, em *encMode, v reflect.V
 
 func (jme jsonMarshalerEncoder) isEmpty(em *encMode, v reflect.Value) (bool, error) {
 	if em.jsonMarshalerTranscoder == nil {
+		if jme.alternateIsEmpty == nil {
+			return false, &UnsupportedTypeError{Type: v.Type()}
+		}
 		return jme.alternateIsEmpty(em, v)
 	}
 
