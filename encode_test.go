@@ -6772,6 +6772,83 @@ func TestBinaryMarshalerMode(t *testing.T) {
 	}
 }
 
+type binaryMarshalerWithUnsupportedType map[chan bool]any
+
+func (binaryMarshalerWithUnsupportedType) MarshalBinary() ([]byte, error) {
+	return []byte("MarshalBinary"), nil
+}
+
+func TestBinaryMarshalerModeWithUnsupportedType(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		opts      EncOptions
+		in        any
+		want      []byte
+		wantError bool
+	}{
+		{
+			name: "unsupported type implementing BinaryMarshaler is encoded as MarshalBinary's output in a byte string by default",
+			opts: EncOptions{},
+			in:   binaryMarshalerWithUnsupportedType{},
+			want: []byte("\x4dMarshalBinary"), // 'MarshalBinary'
+		},
+		{
+			name: "unsupported type implementing BinaryMarshaler is encoded as MarshalBinary's output in a byte string with BinaryMarshalerByteString",
+			opts: EncOptions{BinaryMarshaler: BinaryMarshalerByteString},
+			in:   binaryMarshalerWithUnsupportedType{},
+			want: []byte("\x4dMarshalBinary"), // 'MarshalBinary'
+		},
+		{
+			name:      "unsupported type implementing BinaryMarshaler can't be encoded with BinaryMarshalerNone",
+			opts:      EncOptions{BinaryMarshaler: BinaryMarshalerNone},
+			in:        binaryMarshalerWithUnsupportedType{},
+			wantError: true,
+		},
+		{
+			name: "struct with unsupported type implementing BinaryMarshaler can't be encoded with BinaryMarshalerNone",
+			opts: EncOptions{BinaryMarshaler: BinaryMarshalerNone},
+			in: struct {
+				M binaryMarshalerWithUnsupportedType
+			}{
+				M: binaryMarshalerWithUnsupportedType{},
+			},
+			wantError: true,
+		},
+		{
+			name: "struct with unsupported type implementing BinaryMarshaler with omitempty can't be encoded with BinaryMarshalerNone",
+			opts: EncOptions{BinaryMarshaler: BinaryMarshalerNone},
+			in: struct {
+				M binaryMarshalerWithUnsupportedType `cbor:",omitempty"`
+			}{
+				M: binaryMarshalerWithUnsupportedType{},
+			},
+			wantError: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			em, err := tc.opts.EncMode()
+			if err != nil {
+				t.Fatalf("EncMode(): unexpected error: %v", err)
+			}
+
+			got, err := em.Marshal(tc.in)
+			if tc.wantError {
+				if err == nil {
+					t.Fatalf("Marshal(%v): expected *UnsupportedTypeError, got nil", tc.in)
+				} else if _, ok := err.(*UnsupportedTypeError); !ok {
+					t.Errorf("Marshal(%v) returned %T, want *UnsupportedTypeError", tc.in, err)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("Marshal(%v): unexpected error: %v", tc.in, err)
+				} else if !bytes.Equal(tc.want, got) {
+					t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.in, got, tc.want)
+				}
+			}
+		})
+	}
+}
+
 type testTextMarshaler struct {
 	String string `cbor:"s"`
 	Error  error  `cbor:"-"`
@@ -6861,6 +6938,83 @@ func TestTextMarshalerMode(t *testing.T) {
 	}
 }
 
+type textMarshalerWithUnsupportedType map[chan bool]any
+
+func (tm *textMarshalerWithUnsupportedType) MarshalText() ([]byte, error) {
+	return []byte("MarshalText"), nil
+}
+
+func TestTextMarshalerModeWithUnsupportedType(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		opts      EncOptions
+		in        any
+		want      []byte
+		wantError bool
+	}{
+		{
+			name:      "unsupported type implementing TextMarshaler can't be encoded by default",
+			opts:      EncOptions{},
+			in:        textMarshalerWithUnsupportedType{},
+			wantError: true,
+		},
+		{
+			name:      "unsupported type implementing TextMarshaler can't be encoded with TextMarshalerNone",
+			opts:      EncOptions{TextMarshaler: TextMarshalerNone},
+			in:        textMarshalerWithUnsupportedType{},
+			wantError: true,
+		},
+		{
+			name: "unsupported type implementing TextMarshaler is encoded as MarshalText's output in a text string with TextMarshalerTextString",
+			opts: EncOptions{TextMarshaler: TextMarshalerTextString},
+			in:   textMarshalerWithUnsupportedType{},
+			want: []byte("\x6bMarshalText"),
+		},
+		{
+			name: "struct with unsupported type can't be encoded using TextMarshalerNone",
+			opts: EncOptions{TextMarshaler: TextMarshalerNone},
+			in: struct {
+				M textMarshalerWithUnsupportedType
+			}{
+				M: textMarshalerWithUnsupportedType{},
+			},
+			wantError: true,
+		},
+		{
+			name: "struct with unsupported type with omitempty can't be encoded using TextMarshalerNone",
+			opts: EncOptions{TextMarshaler: TextMarshalerNone},
+			in: struct {
+				M textMarshalerWithUnsupportedType `cbor:"m,omitempty"`
+			}{
+				M: textMarshalerWithUnsupportedType{},
+			},
+			wantError: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			em, err := tc.opts.EncMode()
+			if err != nil {
+				t.Fatalf("EncMode(): unexpected error: %v", err)
+			}
+
+			got, err := em.Marshal(tc.in)
+			if tc.wantError {
+				if err == nil {
+					t.Fatalf("Marshal(%v): expected *UnsupportedTypeError, got nil", tc.in)
+				} else if _, ok := err.(*UnsupportedTypeError); !ok {
+					t.Errorf("Marshal(%v) returned %T, want *UnsupportedTypeError", tc.in, err)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("Marshal(%v): unexpected error: %v", tc.in, err)
+				} else if !bytes.Equal(tc.want, got) {
+					t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.in, got, tc.want)
+				}
+			}
+		})
+	}
+}
+
 func TestTextMarshalerModeError(t *testing.T) {
 	testTags := NewTagSet()
 	if err := testTags.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeOf(testTextMarshaler{}), 9999); err != nil {
@@ -6931,6 +7085,12 @@ func (f transcodeFunc) Transcode(w io.Writer, r io.Reader) error {
 	return f(w, r)
 }
 
+type jsonMarshalerWithUnsupportedType map[chan bool]any
+
+func (m jsonMarshalerWithUnsupportedType) MarshalJSON() ([]byte, error) {
+	return []byte("MarshalJSON"), nil
+}
+
 func TestJSONMarshalerTranscoderNil(t *testing.T) {
 	enc, err := EncOptions{}.EncMode()
 	if err != nil {
@@ -6965,6 +7125,40 @@ func TestJSONMarshalerTranscoderNil(t *testing.T) {
 		}
 	}
 
+	{
+		// default encode behavior of underlying unsupported type
+		value := jsonMarshalerWithUnsupportedType{}
+		_, err := enc.Marshal(value)
+		if err == nil {
+			t.Errorf("Marshal(%v): expected *UnsupportedTypeError, got nil", value)
+		} else if _, ok := err.(*UnsupportedTypeError); !ok {
+			t.Errorf("Marshal(%v) returned %T, want *UnsupportedTypeError", value, err)
+		}
+	}
+	{
+		// default encode behavior of struct with underlying unsupported type
+		value := struct {
+			M jsonMarshalerWithUnsupportedType
+		}{}
+		_, err := enc.Marshal(value)
+		if err == nil {
+			t.Errorf("Marshal(%v): expected *UnsupportedTypeError, got nil", value)
+		} else if _, ok := err.(*UnsupportedTypeError); !ok {
+			t.Errorf("Marshal(%v) returned %T, want *UnsupportedTypeError", value, err)
+		}
+	}
+	{
+		// default empty condition of underlying unsupported type
+		value := struct {
+			M jsonMarshalerWithUnsupportedType `cbor:",omitempty"`
+		}{}
+		_, err := enc.Marshal(value)
+		if err == nil {
+			t.Errorf("Marshal(%v): expected *UnsupportedTypeError, got nil", value)
+		} else if _, ok := err.(*UnsupportedTypeError); !ok {
+			t.Errorf("Marshal(%v) returned %T, want *UnsupportedTypeError", value, err)
+		}
+	}
 }
 
 func TestJSONMarshalerTranscoder(t *testing.T) {
