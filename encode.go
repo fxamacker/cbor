@@ -1057,7 +1057,7 @@ func putEncodeBuffer(e *bytes.Buffer) {
 
 type encodeFunc func(e *bytes.Buffer, em *encMode, v reflect.Value) error
 type isEmptyFunc func(em *encMode, v reflect.Value) (empty bool, err error)
-type isZeroFunc func(v reflect.Value) (zero bool, err error)
+type isZeroFunc func(em *encMode, v reflect.Value) (zero bool, err error)
 
 func encode(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	if !v.IsValid() {
@@ -1568,7 +1568,7 @@ func encodeStruct(e *bytes.Buffer, em *encMode, v reflect.Value) (err error) {
 			}
 		}
 		if f.omitZero {
-			zero, err := f.izf(fv)
+			zero, err := f.izf(em, fv)
 			if err != nil {
 				return err
 			}
@@ -1718,6 +1718,8 @@ func encodeBigInt(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 type binaryMarshalerEncoder struct {
 	alternateEncode  encodeFunc
 	alternateIsEmpty isEmptyFunc
+	alternateIsZero  isZeroFunc
+	isZeroFunc       isZeroFunc
 }
 
 func (bme binaryMarshalerEncoder) encode(e *bytes.Buffer, em *encMode, v reflect.Value) error {
@@ -1768,9 +1770,21 @@ func (bme binaryMarshalerEncoder) isEmpty(em *encMode, v reflect.Value) (bool, e
 	return len(data) == 0, nil
 }
 
+func (bme binaryMarshalerEncoder) isZero(em *encMode, v reflect.Value) (bool, error) {
+	if em.binaryMarshaler != BinaryMarshalerByteString {
+		if bme.alternateEncode == nil {
+			return false, &UnsupportedTypeError{Type: v.Type()}
+		}
+		return bme.alternateIsZero(em, v)
+	}
+	return bme.isZeroFunc(em, v)
+}
+
 type textMarshalerEncoder struct {
 	alternateEncode  encodeFunc
 	alternateIsEmpty isEmptyFunc
+	alternateIsZero  isZeroFunc
+	isZeroFunc       isZeroFunc
 }
 
 func (tme textMarshalerEncoder) encode(e *bytes.Buffer, em *encMode, v reflect.Value) error {
@@ -1822,9 +1836,21 @@ func (tme textMarshalerEncoder) isEmpty(em *encMode, v reflect.Value) (bool, err
 	return len(data) == 0, nil
 }
 
+func (tme textMarshalerEncoder) isZero(em *encMode, v reflect.Value) (bool, error) {
+	if em.textMarshaler == TextMarshalerNone {
+		if tme.alternateEncode == nil {
+			return false, &UnsupportedTypeError{Type: v.Type()}
+		}
+		return tme.alternateIsZero(em, v)
+	}
+	return tme.isZeroFunc(em, v)
+}
+
 type jsonMarshalerEncoder struct {
 	alternateEncode  encodeFunc
 	alternateIsEmpty isEmptyFunc
+	alternateIsZero  isZeroFunc
+	isZeroFunc       isZeroFunc
 }
 
 func (jme jsonMarshalerEncoder) encode(e *bytes.Buffer, em *encMode, v reflect.Value) error {
@@ -1879,6 +1905,16 @@ func (jme jsonMarshalerEncoder) isEmpty(em *encMode, v reflect.Value) (bool, err
 	// As with types implementing cbor.Marshaler, transcoded json.Marshaler values always encode
 	// as exactly one complete CBOR data item.
 	return false, nil
+}
+
+func (jme jsonMarshalerEncoder) isZero(em *encMode, v reflect.Value) (bool, error) {
+	if em.jsonMarshalerTranscoder == nil {
+		if jme.alternateEncode == nil {
+			return false, &UnsupportedTypeError{Type: v.Type()}
+		}
+		return jme.alternateIsZero(em, v)
+	}
+	return jme.isZeroFunc(em, v)
 }
 
 func encodeMarshalerType(e *bytes.Buffer, em *encMode, v reflect.Value) error {
@@ -1996,6 +2032,9 @@ var (
 )
 
 func getEncodeFuncInternal(t reflect.Type) (ef encodeFunc, ief isEmptyFunc, izf isZeroFunc) {
+	// baseIzf stores the original izf before marshaler encoders unwinding.
+	var baseIzf isZeroFunc
+
 	k := t.Kind()
 	if k == reflect.Pointer {
 		return getEncodeIndirectValueFunc(t), isEmptyPtr, getIsZeroFunc(t)
@@ -2028,9 +2067,12 @@ func getEncodeFuncInternal(t reflect.Type) (ef encodeFunc, ief isEmptyFunc, izf 
 			bme := binaryMarshalerEncoder{
 				alternateEncode:  ef,
 				alternateIsEmpty: ief,
+				alternateIsZero:  izfOrDefault(t, izf),
+				isZeroFunc:       baseIzf,
 			}
 			ef = bme.encode
 			ief = bme.isEmpty
+			izf = bme.isZero
 		}()
 	}
 	if reflect.PointerTo(t).Implements(typeTextMarshaler) {
@@ -2039,9 +2081,12 @@ func getEncodeFuncInternal(t reflect.Type) (ef encodeFunc, ief isEmptyFunc, izf 
 			tme := textMarshalerEncoder{
 				alternateEncode:  ef,
 				alternateIsEmpty: ief,
+				alternateIsZero:  izfOrDefault(t, izf),
+				isZeroFunc:       baseIzf,
 			}
 			ef = tme.encode
 			ief = tme.isEmpty
+			izf = tme.isZero
 		}()
 	}
 	if reflect.PointerTo(t).Implements(typeJSONMarshaler) {
@@ -2051,11 +2096,19 @@ func getEncodeFuncInternal(t reflect.Type) (ef encodeFunc, ief isEmptyFunc, izf 
 			jme := jsonMarshalerEncoder{
 				alternateEncode:  ef,
 				alternateIsEmpty: ief,
+				alternateIsZero:  izfOrDefault(t, izf),
+				isZeroFunc:       baseIzf,
 			}
 			ef = jme.encode
 			ief = jme.isEmpty
+			izf = jme.isZero
 		}()
 	}
+
+	// Capture base izf before marshaler encoder unwinding.
+	defer func() {
+		baseIzf = izfOrDefault(t, izf)
+	}()
 
 	switch k {
 	case reflect.Bool:
@@ -2262,7 +2315,7 @@ func getIsZeroFunc(t reflect.Type) isZeroFunc {
 
 // isZeroInterfaceCustom returns true for nil or pointer-to-nil values,
 // and delegates to the custom IsZero() implementation otherwise.
-func isZeroInterfaceCustom(v reflect.Value) (bool, error) {
+func isZeroInterfaceCustom(_ *encMode, v reflect.Value) (bool, error) {
 	kind := v.Kind()
 
 	switch kind {
@@ -2284,7 +2337,7 @@ func isZeroInterfaceCustom(v reflect.Value) (bool, error) {
 
 // isZeroPointerCustom returns true for nil values,
 // and delegates to the custom IsZero() implementation otherwise.
-func isZeroPointerCustom(v reflect.Value) (bool, error) {
+func isZeroPointerCustom(_ *encMode, v reflect.Value) (bool, error) {
 	if v.IsNil() {
 		return true, nil
 	}
@@ -2292,12 +2345,12 @@ func isZeroPointerCustom(v reflect.Value) (bool, error) {
 }
 
 // isZeroCustom delegates to the custom IsZero() implementation.
-func isZeroCustom(v reflect.Value) (bool, error) {
+func isZeroCustom(_ *encMode, v reflect.Value) (bool, error) {
 	return v.Interface().(isZeroer).IsZero(), nil
 }
 
 // isZeroAddrCustom delegates to the custom IsZero() implementation of the addr of the value.
-func isZeroAddrCustom(v reflect.Value) (bool, error) {
+func isZeroAddrCustom(_ *encMode, v reflect.Value) (bool, error) {
 	if !v.CanAddr() {
 		// Temporarily box v so we can take the address.
 		v2 := reflect.New(v.Type()).Elem()
@@ -2308,7 +2361,7 @@ func isZeroAddrCustom(v reflect.Value) (bool, error) {
 }
 
 // isZeroDefault calls reflect.Value#IsZero()
-func isZeroDefault(v reflect.Value) (bool, error) {
+func isZeroDefault(_ *encMode, v reflect.Value) (bool, error) {
 	if !v.IsValid() {
 		// v is zero value
 		return true, nil
@@ -2317,10 +2370,17 @@ func isZeroDefault(v reflect.Value) (bool, error) {
 }
 
 // isZeroFieldStruct is used to determine whether to omit toarray structs
-func isZeroFieldStruct(v reflect.Value) (bool, error) {
+func isZeroFieldStruct(_ *encMode, v reflect.Value) (bool, error) {
 	structType, err := getEncodingStructType(v.Type())
 	if err != nil {
 		return false, err
 	}
 	return len(structType.fields) == 0, nil
+}
+
+func izfOrDefault(t reflect.Type, izf isZeroFunc) isZeroFunc {
+	if izf == nil {
+		return getIsZeroFunc(t)
+	}
+	return izf
 }

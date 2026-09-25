@@ -2435,7 +2435,7 @@ func TestIsZero(t *testing.T) {
 					t.Errorf("unexpected panic %v", err)
 				}
 			}()
-			got, err := getIsZeroFunc(tc.t)(tc.v)
+			got, err := getIsZeroFunc(tc.t)(nil, tc.v)
 			if tc.wantHasErr != (err != nil) {
 				t.Errorf("getIsZeroFunc() returned err=%v, wantErr=%v", err, tc.wantHasErr)
 			}
@@ -6702,8 +6702,8 @@ func TestEncModeInvalidTextMarshalerMode(t *testing.T) {
 }
 
 type testBinaryMarshaler struct {
-	StringField  string `cbor:"s"`
-	IntegerField int64  `cbor:"i"`
+	StringField  string `cbor:"s,omitempty"`
+	IntegerField int64  `cbor:"i,omitempty"`
 }
 
 func (testBinaryMarshaler) MarshalBinary() ([]byte, error) {
@@ -6753,6 +6753,46 @@ func TestBinaryMarshalerMode(t *testing.T) {
 			},
 			want: mustHexDecode("a26173617a616903"), // {"s": "z", "i": 3}
 		},
+		{
+			name: "struct with a field implementing BinaryMarshaler with omitempty flag encoded with BinaryMarshalerByteString",
+			opts: EncOptions{BinaryMarshaler: BinaryMarshalerByteString},
+			in: struct {
+				M testBinaryMarshaler `cbor:"m,omitempty"`
+			}{
+				M: testBinaryMarshaler{},
+			},
+			want: []byte{0xa1, 0x61, 0x6d, 0x4d, 'M', 'a', 'r', 's', 'h', 'a', 'l', 'B', 'i', 'n', 'a', 'r', 'y'},
+		},
+		{
+			name: "struct with a field implementing BinaryMarshaler with omitempty flag encoded with BinaryMarshalerNone",
+			opts: EncOptions{BinaryMarshaler: BinaryMarshalerNone},
+			in: struct {
+				M testBinaryMarshaler `cbor:"m,omitempty"`
+			}{
+				M: testBinaryMarshaler{},
+			},
+			want: mustHexDecode("a0"),
+		},
+		{
+			name: "struct with a field implementing BinaryMarshaler with omitzero flag encoded with BinaryMarshalerByteString",
+			opts: EncOptions{BinaryMarshaler: BinaryMarshalerByteString},
+			in: struct {
+				M testBinaryMarshaler `cbor:"m,omitzero"`
+			}{
+				M: testBinaryMarshaler{},
+			},
+			want: mustHexDecode("a0"),
+		},
+		{
+			name: "struct with a field implementing BinaryMarshaler with omitzero flag encoded with BinaryMarshalerNone",
+			opts: EncOptions{BinaryMarshaler: BinaryMarshalerNone},
+			in: struct {
+				M testBinaryMarshaler `cbor:"m,omitzero"`
+			}{
+				M: testBinaryMarshaler{},
+			},
+			want: mustHexDecode("a0"),
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			em, err := tc.opts.EncMode()
@@ -6775,6 +6815,12 @@ func TestBinaryMarshalerMode(t *testing.T) {
 type binaryMarshalerWithUnsupportedType map[chan bool]any
 
 func (binaryMarshalerWithUnsupportedType) MarshalBinary() ([]byte, error) {
+	return []byte("MarshalBinary"), nil
+}
+
+type binaryMarshalerUintptr uintptr
+
+func (binaryMarshalerUintptr) MarshalBinary() ([]byte, error) {
 	return []byte("MarshalBinary"), nil
 }
 
@@ -6823,6 +6869,34 @@ func TestBinaryMarshalerModeWithUnsupportedType(t *testing.T) {
 				M: binaryMarshalerWithUnsupportedType{},
 			},
 			wantError: true,
+		},
+		{
+			name: "struct with unsupported type implementing BinaryMarshaler with omitzero can't be encoded with BinaryMarshalerNone",
+			opts: EncOptions{BinaryMarshaler: BinaryMarshalerNone},
+			in: struct {
+				M binaryMarshalerWithUnsupportedType `cbor:",omitzero"`
+			}{
+				M: binaryMarshalerWithUnsupportedType{},
+			},
+			wantError: true,
+		},
+		{
+			name: "struct with uintptr type implementing BinaryMarshaler with omitzero is encoded with BinaryMarshalerByteString",
+			opts: EncOptions{BinaryMarshaler: BinaryMarshalerByteString},
+			in: struct {
+				B binaryMarshalerUintptr `cbor:"b,omitzero"`
+			}{
+				B: 1,
+			},
+			want: mustHexDecode("a161624d4d61727368616c42696e617279"), // {"b": 'MarshalBinary'}
+		},
+		{
+			name: "struct with zero uintptr type implementing BinaryMarshaler with omitzero is omitted with BinaryMarshalerByteString",
+			opts: EncOptions{BinaryMarshaler: BinaryMarshalerByteString},
+			in: struct {
+				B binaryMarshalerUintptr `cbor:"b,omitzero"`
+			}{},
+			want: mustHexDecode("a0"), // {}
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -6989,6 +7063,26 @@ func TestTextMarshalerModeWithUnsupportedType(t *testing.T) {
 				M: textMarshalerWithUnsupportedType{},
 			},
 			wantError: true,
+		},
+		{
+			name: "struct with unsupported type with omitzero can't be encoded using TextMarshalerNone",
+			opts: EncOptions{TextMarshaler: TextMarshalerNone},
+			in: struct {
+				M textMarshalerWithUnsupportedType `cbor:"m,omitzero"`
+			}{
+				M: textMarshalerWithUnsupportedType{},
+			},
+			wantError: true,
+		},
+		{
+			name: "struct with unsupported type with omitzero using TextMarshalerTextString",
+			opts: EncOptions{TextMarshaler: TextMarshalerTextString},
+			in: struct {
+				M textMarshalerWithUnsupportedType `cbor:"m,omitzero"`
+			}{
+				M: textMarshalerWithUnsupportedType(nil),
+			},
+			want: []byte{0xa0},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -7159,6 +7253,18 @@ func TestJSONMarshalerTranscoderNil(t *testing.T) {
 			t.Errorf("Marshal(%v) returned %T, want *UnsupportedTypeError", value, err)
 		}
 	}
+	{
+		// default zero condition of underlying unsupported type
+		value := struct {
+			M jsonMarshalerWithUnsupportedType `cbor:",omitzero"`
+		}{}
+		_, err := enc.Marshal(value)
+		if err == nil {
+			t.Errorf("Marshal(%v): expected *UnsupportedTypeError, got nil", value)
+		} else if _, ok := err.(*UnsupportedTypeError); !ok {
+			t.Errorf("Marshal(%v) returned %T, want *UnsupportedTypeError", value, err)
+		}
+	}
 }
 
 func TestJSONMarshalerTranscoder(t *testing.T) {
@@ -7263,6 +7369,22 @@ func TestJSONMarshalerTranscoder(t *testing.T) {
 			transcodeOutput: []byte{0x61, 'a'},
 			wantCborData:    []byte{0xa1, 0x61, 'm', 0x61, 'a'},
 		},
+		{
+			name: "omitzero with unsupported underlying type and non-zero value",
+			value: struct {
+				M jsonMarshalerWithUnsupportedType `cbor:"m,omitzero"`
+			}{M: jsonMarshalerWithUnsupportedType{}},
+			transcodeInput:  []byte("MarshalJSON"),
+			transcodeOutput: []byte{0x61, 'a'},
+			wantCborData:    []byte{0xa1, 0x61, 'm', 0x61, 'a'}, // {"m": "a"}
+		},
+		{
+			name: "omitzero with unsupported underlying type and zero value",
+			value: struct {
+				M jsonMarshalerWithUnsupportedType `cbor:"m,omitzero"`
+			}{},
+			wantCborData: []byte{0xa0}, // {}
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			opts := EncOptions{
@@ -7308,6 +7430,266 @@ func TestJSONMarshalerTranscoder(t *testing.T) {
 					t.Errorf("Marshal(%v) returned non-nil error %v", tc.value, err)
 				} else if !bytes.Equal(b, tc.wantCborData) {
 					t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.value, b, tc.wantCborData)
+				}
+			}
+		})
+	}
+}
+
+type binaryTextMarshalerWithUnsupportedType map[chan bool]any
+
+func (binaryTextMarshalerWithUnsupportedType) MarshalBinary() ([]byte, error) {
+	return []byte("MarshalBinary"), nil
+}
+
+func (binaryTextMarshalerWithUnsupportedType) MarshalText() ([]byte, error) {
+	return []byte("MarshalText"), nil
+}
+
+type binaryJSONMarshalerWithUnsupportedType map[chan bool]any
+
+func (binaryJSONMarshalerWithUnsupportedType) MarshalBinary() ([]byte, error) {
+	return []byte("MarshalBinary"), nil
+}
+
+func (binaryJSONMarshalerWithUnsupportedType) MarshalJSON() ([]byte, error) {
+	return []byte("MarshalJSON"), nil
+}
+
+type binaryTextJSONMarshalerWithUnsupportedType map[chan bool]any
+
+func (binaryTextJSONMarshalerWithUnsupportedType) MarshalBinary() ([]byte, error) {
+	return []byte("MarshalBinary"), nil
+}
+
+func (binaryTextJSONMarshalerWithUnsupportedType) MarshalText() ([]byte, error) {
+	return []byte("MarshalText"), nil
+}
+
+func (binaryTextJSONMarshalerWithUnsupportedType) MarshalJSON() ([]byte, error) {
+	return []byte("MarshalJSON"), nil
+}
+
+type isZeroBinaryTextMarshalerWithUnsupportedType map[chan bool]any
+
+func (isZeroBinaryTextMarshalerWithUnsupportedType) MarshalBinary() ([]byte, error) {
+	return []byte("MarshalBinary"), nil
+}
+
+func (isZeroBinaryTextMarshalerWithUnsupportedType) MarshalText() ([]byte, error) {
+	return []byte("MarshalText"), nil
+}
+
+func (isZeroBinaryTextMarshalerWithUnsupportedType) IsZero() bool {
+	return true
+}
+
+type textMarshalerInt int
+
+func (textMarshalerInt) MarshalText() ([]byte, error) {
+	return []byte("MarshalText"), nil
+}
+
+type jsonMarshalerInt int
+
+func (jsonMarshalerInt) MarshalJSON() ([]byte, error) {
+	return []byte("MarshalJSON"), nil
+}
+
+type binaryMarshalerToArrayStruct struct {
+	_ struct{} `cbor:",toarray"`
+	A int
+}
+
+func (binaryMarshalerToArrayStruct) MarshalBinary() ([]byte, error) {
+	return []byte("MarshalBinary"), nil
+}
+
+func TestOmitZeroWithMultipleMarshalers(t *testing.T) {
+	jsonTranscoder := transcodeFunc(func(w io.Writer, _ io.Reader) error {
+		_, err := w.Write([]byte{0x61, 'j'}) // "j"
+		return err
+	})
+
+	for _, tc := range []struct {
+		name      string
+		opts      EncOptions
+		in        any
+		want      []byte
+		wantError bool
+	}{
+		// Outermost marshaler is enabled, inner marshalers are disabled, and underlying type is unsupported.
+		{
+			name: "non-zero unsupported type implementing binary and text marshalers with BinaryMarshalerByteString and TextMarshalerNone",
+			opts: EncOptions{},
+			in: struct {
+				M binaryTextMarshalerWithUnsupportedType `cbor:"m,omitzero"`
+			}{
+				M: binaryTextMarshalerWithUnsupportedType{},
+			},
+			want: mustHexDecode("a1616d4d4d61727368616c42696e617279"), // {"m": h'4D61727368616C42696E617279'}
+		},
+		{
+			name: "zero unsupported type implementing binary and text marshalers with BinaryMarshalerByteString and TextMarshalerNone",
+			opts: EncOptions{},
+			in: struct {
+				M binaryTextMarshalerWithUnsupportedType `cbor:"m,omitzero"`
+			}{},
+			want: mustHexDecode("a0"), // {}
+		},
+		{
+			name: "non-zero unsupported type implementing binary and json marshalers with BinaryMarshalerByteString and nil JSONMarshalerTranscoder",
+			opts: EncOptions{},
+			in: struct {
+				M binaryJSONMarshalerWithUnsupportedType `cbor:"m,omitzero"`
+			}{
+				M: binaryJSONMarshalerWithUnsupportedType{},
+			},
+			want: mustHexDecode("a1616d4d4d61727368616c42696e617279"), // {"m": h'4D61727368616C42696E617279'}
+		},
+		{
+			name: "non-zero unsupported type implementing all marshalers with BinaryMarshalerByteString, TextMarshalerNone, and nil JSONMarshalerTranscoder",
+			opts: EncOptions{},
+			in: struct {
+				M binaryTextJSONMarshalerWithUnsupportedType `cbor:"m,omitzero"`
+			}{
+				M: binaryTextJSONMarshalerWithUnsupportedType{},
+			},
+			want: mustHexDecode("a1616d4d4d61727368616c42696e617279"), // {"m": h'4D61727368616C42696E617279'}
+		},
+		{
+			name: "zero unsupported type implementing all marshalers with BinaryMarshalerByteString, TextMarshalerNone, and nil JSONMarshalerTranscoder",
+			opts: EncOptions{},
+			in: struct {
+				M binaryTextJSONMarshalerWithUnsupportedType `cbor:"m,omitzero"`
+			}{},
+			want: mustHexDecode("a0"), // {}
+		},
+
+		// Outermost marshaler is disabled, an inner marshalers are enabled, and underlying type is unsupported.
+		{
+			name: "non-zero unsupported type implementing all marshalers with BinaryMarshalerNone and TextMarshalerTextString",
+			opts: EncOptions{BinaryMarshaler: BinaryMarshalerNone, TextMarshaler: TextMarshalerTextString},
+			in: struct {
+				M binaryTextJSONMarshalerWithUnsupportedType `cbor:"m,omitzero"`
+			}{
+				M: binaryTextJSONMarshalerWithUnsupportedType{},
+			},
+			want: mustHexDecode("a1616d6b4d61727368616c54657874"), // {"m": "MarshalText"}
+		},
+		{
+			name: "zero unsupported type implementing all marshalers with BinaryMarshalerNone and TextMarshalerTextString",
+			opts: EncOptions{BinaryMarshaler: BinaryMarshalerNone, TextMarshaler: TextMarshalerTextString},
+			in: struct {
+				M binaryTextJSONMarshalerWithUnsupportedType `cbor:"m,omitzero"`
+			}{},
+			want: mustHexDecode("a0"), // {}
+		},
+		{
+			name: "non-zero unsupported type implementing all marshalers with BinaryMarshalerNone and non-nil jsonTranscoder",
+			opts: EncOptions{BinaryMarshaler: BinaryMarshalerNone, JSONMarshalerTranscoder: jsonTranscoder},
+			in: struct {
+				M binaryTextJSONMarshalerWithUnsupportedType `cbor:"m,omitzero"`
+			}{
+				M: binaryTextJSONMarshalerWithUnsupportedType{},
+			},
+			want: mustHexDecode("a1616d616a"), // {"m": "j"}
+		},
+
+		// Every marshaler is disabled and the underlying type is unsupported.
+		{
+			name: "non-zero unsupported type implementing all marshalers with all marshalers disabled",
+			opts: EncOptions{BinaryMarshaler: BinaryMarshalerNone, TextMarshaler: TextMarshalerNone},
+			in: struct {
+				M binaryTextJSONMarshalerWithUnsupportedType `cbor:"m,omitzero"`
+			}{
+				M: binaryTextJSONMarshalerWithUnsupportedType{},
+			},
+			wantError: true,
+		},
+		{
+			name: "zero unsupported type implementing all marshalers with all marshalers disabled",
+			opts: EncOptions{BinaryMarshaler: BinaryMarshalerNone, TextMarshaler: TextMarshalerNone},
+			in: struct {
+				M binaryTextJSONMarshalerWithUnsupportedType `cbor:"m,omitzero"`
+			}{},
+			wantError: true,
+		},
+
+		// IsZero() method is honored when a marshaler is enabled.
+		{
+			name: "non-nil unsupported type implementing IsZeroer and binary and text marshalers with BinaryMarshalerByteString and TextMarshalerNone",
+			opts: EncOptions{},
+			in: struct {
+				M isZeroBinaryTextMarshalerWithUnsupportedType `cbor:"m,omitzero"`
+			}{M: isZeroBinaryTextMarshalerWithUnsupportedType{}},
+			want: mustHexDecode("a0"), // {}
+		},
+
+		// Marshaler is disabled and the underlying type is supported, so the
+		// zero check uses the underlying type.
+		{
+			name: "zero supported type implementing TextMarshaler with TextMarshalerNone",
+			opts: EncOptions{TextMarshaler: TextMarshalerNone},
+			in: struct {
+				M textMarshalerInt `cbor:"m,omitzero"`
+			}{},
+			want: mustHexDecode("a0"), // {}
+		},
+		{
+			name: "non-zero supported type implementing TextMarshaler with TextMarshalerNone",
+			opts: EncOptions{TextMarshaler: TextMarshalerNone},
+			in: struct {
+				M textMarshalerInt `cbor:"m,omitzero"`
+			}{M: 1},
+			want: mustHexDecode("a1616d01"), // {"m": 1}
+		},
+		{
+			name: "zero supported type implementing JSONMarshaler with nil JSONMarshalerTranscoder",
+			opts: EncOptions{},
+			in: struct {
+				M jsonMarshalerInt `cbor:"m,omitzero"`
+			}{},
+			want: mustHexDecode("a0"), // {}
+		},
+		{
+			name: "non-zero supported type implementing JSONMarshaler with nil JSONMarshalerTranscoder",
+			opts: EncOptions{},
+			in: struct {
+				M jsonMarshalerInt `cbor:"m,omitzero"`
+			}{M: 1},
+			want: mustHexDecode("a1616d01"), // {"m": 1}
+		},
+
+		// Zero check of the underlying type is preserved when a marshaler is
+		// enabled: a toarray struct with fields is never zero.
+		{
+			name: "zero toarray struct implementing BinaryMarshaler with BinaryMarshalerByteString",
+			opts: EncOptions{BinaryMarshaler: BinaryMarshalerByteString},
+			in: struct {
+				M binaryMarshalerToArrayStruct `cbor:"m,omitzero"`
+			}{},
+			want: mustHexDecode("a1616d4d4d61727368616c42696e617279"), // {"m": h'4D61727368616C42696E617279'}
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			em, err := tc.opts.EncMode()
+			if err != nil {
+				t.Fatalf("EncMode(): unexpected error: %v", err)
+			}
+
+			got, err := em.Marshal(tc.in)
+			if tc.wantError {
+				if err == nil {
+					t.Fatalf("Marshal(%v): expected *UnsupportedTypeError, got nil", tc.in)
+				} else if _, ok := err.(*UnsupportedTypeError); !ok {
+					t.Errorf("Marshal(%v) returned %T, want *UnsupportedTypeError", tc.in, err)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("Marshal(%v): unexpected error: %v", tc.in, err)
+				} else if !bytes.Equal(tc.want, got) {
+					t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.in, got, tc.want)
 				}
 			}
 		})
