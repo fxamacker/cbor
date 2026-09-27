@@ -3282,6 +3282,167 @@ func TestEncodeTime(t *testing.T) {
 	}
 }
 
+func TestEncodeTimeUnixMicro(t *testing.T) {
+	em, err := EncOptions{Time: TimeUnixMicro}.EncMode()
+	if err != nil {
+		t.Fatalf("EncMode() returned error %v", err)
+	}
+
+	testCases := []struct {
+		name          string
+		tm            time.Time
+		wantData      []byte
+		skipRoundTrip bool
+	}{
+		// Unix seconds within [minUnixNanoSecs, maxUnixNanoSecs].
+		{
+			name:     "1677-09-21T00:12:44Z",
+			tm:       time.Unix(math.MinInt64/1_000_000_000, 0),
+			wantData: mustHexDecode("fbc2012e0be8200000"),
+		},
+		{
+			name:          "1677-09-21T00:12:44.000014Z",
+			tm:            time.Date(1677, 9, 21, 0, 12, 44, 14000, time.UTC),
+			wantData:      mustHexDecode("fbc2012e0be81ffff8"),
+			skipRoundTrip: true,
+		},
+		{
+			name:     "1677-09-21T00:12:44.5Z",
+			tm:       time.Date(1677, 9, 21, 0, 12, 44, 500000000, time.UTC),
+			wantData: mustHexDecode("fbc2012e0be81c0000"),
+		},
+		{
+			name:     "1677-09-21T00:12:45.25Z",
+			tm:       time.Date(1677, 9, 21, 0, 12, 45, 250000000, time.UTC),
+			wantData: mustHexDecode("fbc2012e0be8160000"),
+		},
+		{
+			name:     "1900-01-01T00:00:00.25Z",
+			tm:       time.Date(1900, 1, 1, 0, 0, 0, 250000000, time.UTC),
+			wantData: mustHexDecode("fbc1e0754fcff80000"),
+		},
+		{
+			name:     "1969-12-31T23:59:59.002137Z",
+			tm:       time.Date(1969, 12, 31, 23, 59, 59, 2137000, time.UTC),
+			wantData: mustHexDecode("fbbfefee7e62dc6e2b"),
+		},
+		{
+			name:     "1969-12-31T23:59:59.5Z",
+			tm:       time.Date(1969, 12, 31, 23, 59, 59, 500000000, time.UTC),
+			wantData: mustHexDecode("fbbfe0000000000000"),
+		},
+		{
+			name:          "2013-03-21T20:04:00.25Z",
+			tm:            time.Date(2013, 3, 21, 20, 4, 0, 250000000, time.UTC),
+			wantData:      mustHexDecode("fb41d452d9ec0fffff"),
+			skipRoundTrip: true,
+		},
+		{
+			name:     "2026-09-24T12:00:00.5Z",
+			tm:       time.Date(2026, 9, 24, 12, 0, 0, 500000000, time.UTC),
+			wantData: mustHexDecode("fb41daad4430200000"),
+		},
+		{
+			name:     "2026-11-01T00:04:58.5Z",
+			tm:       time.Date(2026, 11, 1, 0, 4, 58, 500000000, time.UTC),
+			wantData: mustHexDecode("fb41dab9a08aa00000"),
+		},
+		{
+			name:     "2262-04-11T23:47:15Z",
+			tm:       time.Unix(math.MaxInt64/1_000_000_000-1, 0),
+			wantData: mustHexDecode("fb42012e0be8180000"),
+		},
+		{
+			name:          "2262-04-11T23:47:15.000001Z",
+			tm:            time.Date(2262, 4, 11, 23, 47, 15, 1000, time.UTC),
+			wantData:      mustHexDecode("fb42012e0be8180000"),
+			skipRoundTrip: true,
+		},
+
+		// Unix seconds outside [minUnixNanoSecs, maxUnixNanoSecs].
+		{
+			name:     "0001-01-01T00:00:01Z",
+			tm:       time.Date(1, 1, 1, 0, 0, 1, 0, time.UTC),
+			wantData: mustHexDecode("fbc22cef23edfe0000"),
+		},
+		{
+			name:     "1000-01-01T00:00:00.25Z",
+			tm:       time.Date(1000, 1, 1, 0, 0, 0, 250000000, time.UTC),
+			wantData: mustHexDecode("fbc21c820bcdff0000"),
+		},
+		{
+			name:     "1677-09-21T00:12:43Z",
+			tm:       time.Date(1677, 9, 21, 0, 12, 43, 0, time.UTC),
+			wantData: mustHexDecode("fbc2012e0be8280000"),
+		},
+		{
+			name:     "2262-04-11T23:47:16.5Z",
+			tm:       time.Date(2262, 4, 11, 23, 47, 16, 500000000, time.UTC),
+			wantData: mustHexDecode("fb42012e0be8240000"),
+		},
+		{
+			name:     "2262-04-11T23:47:16.875Z",
+			tm:       time.Date(2262, 4, 11, 23, 47, 16, 875000000, time.UTC),
+			wantData: mustHexDecode("fb42012e0be8270000"),
+		},
+		{
+			name:     "2262-04-11T23:47:17Z",
+			tm:       time.Date(2262, 4, 11, 23, 47, 17, 0, time.UTC),
+			wantData: mustHexDecode("fb42012e0be8280000"),
+		},
+		{
+			name:     "9999-12-31T23:59:59.5Z",
+			tm:       time.Date(9999, 12, 31, 23, 59, 59, 500000000, time.UTC),
+			wantData: mustHexDecode("fb424d7ffa20bfc000"),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := em.Marshal(tc.tm)
+			if err != nil {
+				t.Fatalf("Marshal(%v) returned error %v", tc.tm, err)
+			} else if !bytes.Equal(b, tc.wantData) {
+				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.tm, b, tc.wantData)
+			}
+
+			if !tc.skipRoundTrip {
+				var got time.Time
+				if err := Unmarshal(b, &got); err != nil {
+					t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
+				} else if !got.Equal(tc.tm) {
+					t.Errorf("Unmarshal(0x%x) = %v, want %v", b, got.UTC(), tc.tm)
+				}
+			}
+		})
+	}
+
+	// Encoded values keep time order across the int64 Unix nanoseconds range limits
+	// and across the boundaries where the encoding formula changes.
+	for _, center := range []time.Time{
+		time.Unix(0, math.MinInt64).UTC(),
+		time.Unix(0, math.MaxInt64).UTC(),
+		time.Unix(minUnixNanoSecs, 0).UTC(),
+		time.Unix(maxUnixNanoSecs+1, 0).UTC(),
+	} {
+		prev := math.Inf(-1)
+		for d := -2 * time.Millisecond; d <= 2*time.Millisecond; d += time.Microsecond {
+			tm := center.Add(d)
+			b, err := em.Marshal(tm)
+			if err != nil {
+				t.Fatalf("Marshal(%v) returned error %v", tm, err)
+			}
+			var f float64
+			if err := Unmarshal(b, &f); err != nil {
+				t.Fatalf("Unmarshal(0x%x) returned error %v", b, err)
+			}
+			if f < prev {
+				t.Fatalf("Marshal(%v) encodes %v, want >= %v (encoded value of the previous time)", tm, f, prev)
+			}
+			prev = f
+		}
+	}
+}
+
 func TestInvalidTimeMode(t *testing.T) {
 	for _, tc := range []struct {
 		name         string
