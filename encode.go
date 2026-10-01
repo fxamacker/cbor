@@ -16,6 +16,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -1650,6 +1651,7 @@ func encodeTime(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 		}
 		encodeHead(e, byte(cborTypeTag), uint64(tagNumber))
 	}
+	var s string
 	switch em.time {
 	case TimeUnix:
 		secs := t.Unix()
@@ -1680,17 +1682,28 @@ func encodeTime(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 		return encodeFloat(e, em, reflect.ValueOf(f))
 
 	case TimeRFC3339:
-		s := t.Format(time.RFC3339)
-		return encodeString(e, em, reflect.ValueOf(s))
+		s = t.Format(time.RFC3339)
 
 	case TimeRFC3339NanoUTC:
-		s := t.UTC().Format(time.RFC3339Nano)
-		return encodeString(e, em, reflect.ValueOf(s))
+		s = t.UTC().Format(time.RFC3339Nano)
 
 	default: // TimeRFC3339Nano
-		s := t.Format(time.RFC3339Nano)
-		return encodeString(e, em, reflect.ValueOf(s))
+		s = t.Format(time.RFC3339Nano)
 	}
+	if isWrongYearFromGo(t, s) {
+		return &UnsupportedValueError{msg: "time.Time formatted by Go with a wrong year"}
+	}
+	return encodeString(e, em, reflect.ValueOf(s))
+}
+
+// isWrongYearFromGo reports whether s, the text Go formatted from t, has a wrong year.
+// Go's standard library can return wrong results for times in or near the ~257-year range
+// about 292 billion years ago.
+func isWrongYearFromGo(t time.Time, s string) bool {
+	// When t plus one week is before year 0, the text must have a '-' prefix
+	// with any time zone offset under one week.
+	const cutoff = -62167219200 - 7*24*60*60 // 0000-01-01T00:00:00Z minus one week for time zone offsets
+	return t.Unix() < cutoff && !strings.HasPrefix(s, "-")
 }
 
 func encodeBigInt(e *bytes.Buffer, em *encMode, v reflect.Value) error {
