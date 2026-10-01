@@ -1630,6 +1630,13 @@ func encodeIntf(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	return encode(e, em, v.Elem())
 }
 
+// Inclusive range of Unix seconds within which Time.UnixNano is defined
+// for any nanosecond fraction.
+const (
+	minUnixNanoSecs = math.MinInt64 / 1_000_000_000
+	maxUnixNanoSecs = math.MaxInt64/1_000_000_000 - 1
+)
+
 func encodeTime(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 	t := v.Interface().(time.Time)
 	if t.IsZero() {
@@ -1650,7 +1657,17 @@ func encodeTime(e *bytes.Buffer, em *encMode, v reflect.Value) error {
 
 	case TimeUnixMicro:
 		t = t.UTC().Round(time.Microsecond)
-		f := float64(t.UnixNano()) / 1e9
+		var f float64
+		if secs := t.Unix(); secs >= minUnixNanoSecs && secs <= maxUnixNanoSecs {
+			// Unix seconds within [minUnixNanoSecs, maxUnixNanoSecs]
+			// are encoded from time.UnixNano to keep encoded data unchanged.
+			f = float64(t.UnixNano()) / 1e9
+		} else {
+			// Unix seconds outside [minUnixNanoSecs, maxUnixNanoSecs]
+			// are encoded from Unix seconds and nanoseconds.
+			nsecs := t.Nanosecond()
+			f = float64(secs) + float64(nsecs)/1e9
+		}
 		return encodeFloat(e, em, reflect.ValueOf(f))
 
 	case TimeUnixDynamic:
