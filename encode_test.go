@@ -3408,6 +3408,151 @@ func TestEncodeTimeUnixMicro(t *testing.T) {
 	}
 }
 
+func TestEncodeTimeRFC3339WrongYear(t *testing.T) {
+	timeModeNames := map[TimeMode]string{
+		TimeRFC3339:        "TimeRFC3339",
+		TimeRFC3339Nano:    "TimeRFC3339Nano",
+		TimeRFC3339NanoUTC: "TimeRFC3339NanoUTC",
+	}
+
+	encTagModeNames := map[EncTagMode]string{
+		EncTagNone:     "EncTagNone",
+		EncTagRequired: "EncTagRequired",
+	}
+
+	// minUnixTimeSec is the earliest Unix seconds that Go formats with correct year in Go 1.23
+	// and earlier versions.  Go 1.24 and later also format 306 days earlier with correct year,
+	// so test cases avoid [minUnixTimeSec-306 days, minUnixTimeSec) to have the same results
+	// with every Go version.
+	const minUnixTimeSec = -9223372028715321600
+
+	const day = 24 * 60 * 60
+
+	utcMinus12Offset := -12 * 60 * 60
+	utcMinus12 := time.FixedZone("UTC-12", utcMinus12Offset)
+
+	utcPlus14Offset := 14 * 60 * 60
+	utcPlus14 := time.FixedZone("UTC+14", utcPlus14Offset)
+
+	utcMinus307dOffset := -307 * day
+	utcMinus307d := time.FixedZone("UTC-307d", utcMinus307dOffset)
+
+	type want struct {
+		opt       TimeMode
+		wantData  []byte
+		wantError bool
+	}
+
+	testCases := []struct {
+		name  string
+		tm    time.Time
+		wants []want
+	}{
+		// Correct year
+		{
+			name: "min",
+			tm:   time.Unix(minUnixTimeSec, 0).UTC(),
+			wants: []want{
+				{opt: TimeRFC3339, wantData: []byte("\x78\x1d-292277022399-01-01T00:00:00Z")},
+				{opt: TimeRFC3339Nano, wantData: []byte("\x78\x1d-292277022399-01-01T00:00:00Z")},
+				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x78\x1d-292277022399-01-01T00:00:00Z")},
+			},
+		},
+		{
+			name: "local min in UTC-12",
+			tm:   time.Unix(minUnixTimeSec+int64(-utcMinus12Offset), 0).In(utcMinus12),
+			wants: []want{
+				{opt: TimeRFC3339, wantData: []byte("\x78\x22-292277022399-01-01T00:00:00-12:00")},
+				{opt: TimeRFC3339Nano, wantData: []byte("\x78\x22-292277022399-01-01T00:00:00-12:00")},
+				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x78\x1d-292277022399-01-01T12:00:00Z")},
+			},
+		},
+		{
+			// UTC year is negative, but local year is 0.
+			name: "-0001-12-31T23:59:59Z in UTC+14",
+			tm:   time.Unix(-62167219201, 0).In(utcPlus14),
+			wants: []want{
+				{opt: TimeRFC3339, wantData: []byte("\x78\x190000-01-01T13:59:59+14:00")},
+				{opt: TimeRFC3339Nano, wantData: []byte("\x78\x190000-01-01T13:59:59+14:00")},
+				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x75-0001-12-31T23:59:59Z")},
+			},
+		},
+		{
+			name: "MaxInt64",
+			tm:   time.Unix(math.MaxInt64, 0).UTC(),
+			wants: []want{
+				{opt: TimeRFC3339, wantData: []byte("\x78\x1c292277026596-12-04T15:30:07Z")},
+				{opt: TimeRFC3339Nano, wantData: []byte("\x78\x1c292277026596-12-04T15:30:07Z")},
+				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x78\x1c292277026596-12-04T15:30:07Z")},
+			},
+		},
+
+		// Wrong year from Go
+		{
+			name: "min-307d",
+			tm:   time.Unix(minUnixTimeSec-307*day, 0).UTC(),
+			wants: []want{
+				{opt: TimeRFC3339, wantError: true},
+				{opt: TimeRFC3339Nano, wantError: true},
+				{opt: TimeRFC3339NanoUTC, wantError: true},
+			},
+		},
+		{
+			name: "MinInt64",
+			tm:   time.Unix(math.MinInt64, 0).UTC(),
+			wants: []want{
+				{opt: TimeRFC3339, wantError: true},
+				{opt: TimeRFC3339Nano, wantError: true},
+				{opt: TimeRFC3339NanoUTC, wantError: true},
+			},
+		},
+		{
+			// UTC year is correct, but local year is wrong.
+			name: "min in UTC-307d",
+			tm:   time.Unix(minUnixTimeSec, 0).In(utcMinus307d),
+			wants: []want{
+				{opt: TimeRFC3339, wantError: true},
+				{opt: TimeRFC3339Nano, wantError: true},
+				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x78\x1d-292277022399-01-01T00:00:00Z")},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		for _, w := range tc.wants {
+			for _, tagMode := range []EncTagMode{EncTagNone, EncTagRequired} {
+				name := tc.name + " with " + timeModeNames[w.opt] + " and " + encTagModeNames[tagMode] + " options"
+				t.Run(name, func(t *testing.T) {
+					em, err := EncOptions{Time: w.opt, TimeTag: tagMode}.EncMode()
+					if err != nil {
+						t.Fatalf("EncMode() error = %v", err)
+					}
+					b, err := em.Marshal(tc.tm)
+					if w.wantError {
+						if err == nil {
+							t.Fatalf("Marshal(%v) = 0x%x, want *UnsupportedValueError", tc.tm, b)
+						}
+						if _, ok := err.(*UnsupportedValueError); !ok {
+							t.Fatalf("Marshal(%v) error = %v (%T), want *UnsupportedValueError", tc.tm, err, err)
+						}
+					} else {
+						if err != nil {
+							t.Fatalf("Marshal(%v) error = %v", tc.tm, err)
+						}
+						wantData := w.wantData
+						if tagMode == EncTagRequired {
+							wantData = append([]byte{0xc0}, w.wantData...)
+						}
+						if !bytes.Equal(b, wantData) {
+							t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.tm, b, wantData)
+						}
+					}
+				})
+			}
+		}
+	}
+}
+
 func TestInvalidTimeMode(t *testing.T) {
 	for _, tc := range []struct {
 		name         string
