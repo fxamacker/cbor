@@ -10,6 +10,8 @@ Thank you for your interest in contributing to fxamacker/cbor!
 
 #### PR Was Proposed and Welcomed in Currently Open Issue
 
+**REQUIRED:** before opening a PR, comment on the related issue saying you plan to work on it, and wait for a maintainer to reply that you can proceed. Approval given to someone else, or approval of the idea in general, does not extend to you.  No reply means not approved. PRs opened without this approval may be closed.
+
 - [ ] This PR was proposed and welcomed by maintainer(s) in issue #___
 - [ ] Closes or Updates Issue #___
 
