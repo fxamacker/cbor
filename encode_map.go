@@ -65,9 +65,9 @@ func (me *mapKeyValueEncodeFunc) encodeKeyValues(dst []byte, em *encMode, v refl
 	return dst, nil
 }
 
-func getEncodeMapFunc(t reflect.Type) encodeFunc {
-	kf, _, _ := getEncodeFunc(t.Key())
-	ef, _, _ := getEncodeFunc(t.Elem())
+func getEncodeMapFunc(t reflect.Type, newEncodeFuncs map[reflect.Type]*inProgressEncodeFuncs) encodeFunc {
+	kf := getEncodeFuncWithNewEncodeFuncs(t.Key(), newEncodeFuncs)
+	ef := getEncodeFuncWithNewEncodeFuncs(t.Elem(), newEncodeFuncs)
 	if kf == nil || ef == nil {
 		return nil
 	}
