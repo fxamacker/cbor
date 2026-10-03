@@ -6089,6 +6089,7 @@ func TestDecOptions(t *testing.T) {
 		BinaryUnmarshaler:         BinaryUnmarshalerNone,
 		TextUnmarshaler:           TextUnmarshalerTextString,
 		JSONUnmarshalerTranscoder: stubTranscoder{},
+		FixedArrayLength:          FixedArrayLengthEnforced,
 	}
 	ov := reflect.ValueOf(opts1)
 	for i := range ov.NumField() {
@@ -12451,3 +12452,303 @@ func TestUnmarshalToSelfReferenceDataTypes(t *testing.T) {
 		})
 	}
 }
+
+func TestDecModeInvalidFixedArrayLengthMode(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		opts         DecOptions
+		wantErrorMsg string
+	}{
+		{
+			name:         "below range of valid modes",
+			opts:         DecOptions{FixedArrayLength: -1},
+			wantErrorMsg: "cbor: invalid FixedArrayLength -1",
+		},
+		{
+			name:         "above range of valid modes",
+			opts:         DecOptions{FixedArrayLength: 101},
+			wantErrorMsg: "cbor: invalid FixedArrayLength 101",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.opts.DecMode()
+			if err == nil {
+				t.Errorf("DecMode() didn't return an error")
+			} else if err.Error() != tc.wantErrorMsg {
+				t.Errorf("DecMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
+			}
+		})
+	}
+}
+
+func TestUnmarshalFixedArrayLengthByteString(t *testing.T) {
+	dmDefault, err := DecOptions{FixedArrayLength: FixedArrayLengthNone}.DecMode()
+	if err != nil {
+		t.Fatalf("DecMode() error: %v", err)
+	}
+	dmEnforced, err := DecOptions{FixedArrayLength: FixedArrayLengthEnforced}.DecMode()
+	if err != nil {
+		t.Fatalf("DecMode() error: %v", err)
+	}
+
+	bytes31 := make([]byte, 31)
+	for i := range bytes31 {
+		bytes31[i] = byte(i + 1)
+	}
+	cborBytes31, err := Marshal(bytes31)
+	if err != nil {
+		t.Fatalf("Marshal() error: %v", err)
+	}
+
+	bytes32 := make([]byte, 32)
+	for i := range bytes32 {
+		bytes32[i] = byte(i + 1)
+	}
+	cborBytes32, err := Marshal(bytes32)
+	if err != nil {
+		t.Fatalf("Marshal() error: %v", err)
+	}
+
+	bytes33 := make([]byte, 33)
+	for i := range bytes33 {
+		bytes33[i] = byte(i + 1)
+	}
+	cborBytes33, err := Marshal(bytes33)
+	if err != nil {
+		t.Fatalf("Marshal() error: %v", err)
+	}
+
+	// 1. Shorter byte string into [32]byte
+	{
+		var dst [32]byte
+		if err := dmDefault.Unmarshal(cborBytes31, &dst); err != nil {
+			t.Errorf("default mode expected success for shorter byte string, got: %v", err)
+		} else if dst[31] != 0 || dst[0] != 1 {
+			t.Errorf("default mode did not zero-pad as expected: %x", dst)
+		}
+
+		dst = [32]byte{}
+		err := dmEnforced.Unmarshal(cborBytes31, &dst)
+		if err == nil {
+			t.Errorf("enforced mode expected error for shorter byte string, got nil")
+		} else {
+			var typeErr *UnmarshalTypeError
+			if !errors.As(err, &typeErr) {
+				t.Errorf("enforced mode expected *UnmarshalTypeError, got %T: %v", err, err)
+			}
+			if dst != [32]byte{} {
+				t.Errorf("destination array should remain unmodified on error, got %x", dst)
+			}
+		}
+	}
+
+	// 2. Longer byte string into [32]byte
+	{
+		var dst [32]byte
+		if err := dmDefault.Unmarshal(cborBytes33, &dst); err != nil {
+			t.Errorf("default mode expected success for longer byte string, got: %v", err)
+		} else if dst[31] != 32 {
+			t.Errorf("default mode did not truncate as expected: %x", dst)
+		}
+
+		dst = [32]byte{}
+		err := dmEnforced.Unmarshal(cborBytes33, &dst)
+		if err == nil {
+			t.Errorf("enforced mode expected error for longer byte string, got nil")
+		} else {
+			var typeErr *UnmarshalTypeError
+			if !errors.As(err, &typeErr) {
+				t.Errorf("enforced mode expected *UnmarshalTypeError, got %T: %v", err, err)
+			}
+			if dst != [32]byte{} {
+				t.Errorf("destination array should remain unmodified on error, got %x", dst)
+			}
+		}
+	}
+
+	// 3. Exact matching byte string into [32]byte
+	{
+		var dst [32]byte
+		if err := dmEnforced.Unmarshal(cborBytes32, &dst); err != nil {
+			t.Errorf("enforced mode expected success for exact match, got: %v", err)
+		} else {
+			for i := range dst {
+				if dst[i] != byte(i+1) {
+					t.Errorf("unexpected byte at index %d: got %d, want %d", i, dst[i], i+1)
+				}
+			}
+		}
+	}
+
+	// 4. Zero-length array [0]byte
+	{
+		var dst0 [0]byte
+		if err := dmEnforced.Unmarshal(mustHexDecode("40"), &dst0); err != nil {
+			t.Errorf("enforced mode expected success for [0]byte with 0-byte input, got: %v", err)
+		}
+		if err := dmEnforced.Unmarshal(mustHexDecode("4101"), &dst0); err == nil {
+			t.Errorf("enforced mode expected error for [0]byte with 1-byte input, got nil")
+		}
+	}
+
+	// 5. Indefinite-length byte string: 5 bytes total (_ h'0102', h'030405')
+	{
+		indefBytes := mustHexDecode("5f42010243030405ff")
+		var dst5 [5]byte
+		if err := dmEnforced.Unmarshal(indefBytes, &dst5); err != nil {
+			t.Errorf("enforced mode expected success for indefinite byte string matching length, got: %v", err)
+		}
+		var dst6 [6]byte
+		if err := dmEnforced.Unmarshal(indefBytes, &dst6); err == nil {
+			t.Errorf("enforced mode expected error for indefinite byte string shorter than [6]byte, got nil")
+		}
+		var dst4 [4]byte
+		if err := dmEnforced.Unmarshal(indefBytes, &dst4); err == nil {
+			t.Errorf("enforced mode expected error for indefinite byte string longer than [4]byte, got nil")
+		}
+	}
+
+	// 6. Defined type based on [32]byte
+	{
+		type MyHash [32]byte
+		var h MyHash
+		if err := dmEnforced.Unmarshal(cborBytes31, &h); err == nil {
+			t.Errorf("enforced mode expected error for defined type with mismatched length, got nil")
+		}
+		if err := dmEnforced.Unmarshal(cborBytes32, &h); err != nil {
+			t.Errorf("enforced mode expected success for defined type with matching length, got: %v", err)
+		}
+	}
+
+	// 7. Struct with fixed array field
+	{
+		type Payload struct {
+			Data [32]byte `cbor:"data"`
+		}
+		cborStruct31 := mustHexDecode("a16464617461581f" + hex.EncodeToString(bytes31))
+		var p Payload
+		err := dmEnforced.Unmarshal(cborStruct31, &p)
+		if err == nil {
+			t.Errorf("enforced mode expected error for struct field with mismatched length, got nil")
+		} else {
+			var typeErr *UnmarshalTypeError
+			if !errors.As(err, &typeErr) {
+				t.Errorf("expected *UnmarshalTypeError, got %T: %v", err, err)
+			} else if !strings.Contains(typeErr.StructFieldName, "Payload.data") {
+				t.Errorf("expected StructFieldName to contain Payload.data, got %q", typeErr.StructFieldName)
+			}
+		}
+
+		cborStruct32 := mustHexDecode("a164646174615820" + hex.EncodeToString(bytes32))
+		var pOk Payload
+		if err := dmEnforced.Unmarshal(cborStruct32, &pOk); err != nil {
+			t.Errorf("enforced mode expected success for struct field with matching length, got: %v", err)
+		}
+	}
+
+	// 8. Stream decoder recovery
+	{
+		var streamData []byte
+		streamData = append(streamData, cborBytes31...)
+		streamData = append(streamData, cborBytes32...)
+
+		dec := dmEnforced.NewDecoder(bytes.NewReader(streamData))
+		var v1 [32]byte
+		if err := dec.Decode(&v1); err == nil {
+			t.Errorf("stream decode item 1 expected error, got nil")
+		}
+		var v2 [32]byte
+		if err := dec.Decode(&v2); err != nil {
+			t.Errorf("stream decode item 2 expected success after error, got: %v", err)
+		} else if v2[0] != 1 || v2[31] != 32 {
+			t.Errorf("stream decode item 2 unexpected data: %x", v2)
+		}
+	}
+}
+
+func TestUnmarshalFixedArrayLengthCBORArray(t *testing.T) {
+	dmDefault, err := DecOptions{FixedArrayLength: FixedArrayLengthNone}.DecMode()
+	if err != nil {
+		t.Fatalf("DecMode() error: %v", err)
+	}
+	dmEnforced, err := DecOptions{FixedArrayLength: FixedArrayLengthEnforced}.DecMode()
+	if err != nil {
+		t.Fatalf("DecMode() error: %v", err)
+	}
+
+	// Definite-length array: [1, 2] -> 820102
+	cborArr2 := mustHexDecode("820102")
+	// Definite-length array: [1, 2, 3] -> 83010203
+	cborArr3 := mustHexDecode("83010203")
+	// Definite-length array: [1, 2, 3, 4] -> 8401020304
+	cborArr4 := mustHexDecode("8401020304")
+
+	// Match: [3]int with 3 items
+	{
+		var dst [3]int
+		if err := dmEnforced.Unmarshal(cborArr3, &dst); err != nil {
+			t.Errorf("enforced mode expected success for matching CBOR array, got: %v", err)
+		} else if dst != [3]int{1, 2, 3} {
+			t.Errorf("unexpected decoded array: %v", dst)
+		}
+	}
+
+	// Shorter: [3]int with 2 items
+	{
+		var dst [3]int
+		if err := dmDefault.Unmarshal(cborArr2, &dst); err != nil {
+			t.Errorf("default mode expected success for shorter CBOR array, got: %v", err)
+		} else if dst != [3]int{1, 2, 0} {
+			t.Errorf("default mode did not zero-pad as expected: %v", dst)
+		}
+
+		dst = [3]int{}
+		if err := dmEnforced.Unmarshal(cborArr2, &dst); err == nil {
+			t.Errorf("enforced mode expected error for shorter CBOR array, got nil")
+		} else if dst != [3]int{} {
+			t.Errorf("destination array should remain unmodified on error, got %v", dst)
+		}
+	}
+
+	// Longer: [3]int with 4 items
+	{
+		var dst [3]int
+		if err := dmDefault.Unmarshal(cborArr4, &dst); err != nil {
+			t.Errorf("default mode expected success for longer CBOR array, got: %v", err)
+		} else if dst != [3]int{1, 2, 3} {
+			t.Errorf("default mode did not truncate as expected: %v", dst)
+		}
+
+		dst = [3]int{}
+		if err := dmEnforced.Unmarshal(cborArr4, &dst); err == nil {
+			t.Errorf("enforced mode expected error for longer CBOR array, got nil")
+		} else if dst != [3]int{} {
+			t.Errorf("destination array should remain unmodified on error, got %v", dst)
+		}
+	}
+
+	// Indefinite-length array: _ [1, 2, 3] -> 9f010203ff
+	cborIndef3 := mustHexDecode("9f010203ff")
+	cborIndef2 := mustHexDecode("9f0102ff")
+	cborIndef4 := mustHexDecode("9f01020304ff")
+
+	{
+		var dst [3]int
+		if err := dmEnforced.Unmarshal(cborIndef3, &dst); err != nil {
+			t.Errorf("enforced mode expected success for indefinite CBOR array matching length, got: %v", err)
+		} else if dst != [3]int{1, 2, 3} {
+			t.Errorf("unexpected decoded array: %v", dst)
+		}
+
+		dst = [3]int{}
+		if err := dmEnforced.Unmarshal(cborIndef2, &dst); err == nil {
+			t.Errorf("enforced mode expected error for indefinite CBOR array shorter than [3]int, got nil")
+		}
+
+		dst = [3]int{}
+		if err := dmEnforced.Unmarshal(cborIndef4, &dst); err == nil {
+			t.Errorf("enforced mode expected error for indefinite CBOR array longer than [3]int, got nil")
+		}
+	}
+}
+
