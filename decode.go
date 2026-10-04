@@ -1402,6 +1402,16 @@ func (d *decoder) value(v any) error {
 // parseToValue decodes CBOR data to value.  It assumes data is well-formed,
 // and does not perform bounds checking.
 func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolint:gocyclo
+	// Strip self-described CBOR tag number before checking for CBOR null/undefined,
+	// so that 55799(null) decodes the same as null.
+	for d.nextCBORType() == cborTypeTag {
+		off := d.off
+		_, _, tagNum := d.getHead()
+		if tagNum != tagNumSelfDescribedCBOR {
+			d.off = off
+			break
+		}
+	}
 
 	// Decode CBOR null/undefined to pointer/interface value by setting pointer/interface value to nil.
 	if d.nextCBORNil() && (v.Kind() == reflect.Pointer || v.Kind() == reflect.Interface) {
@@ -1463,16 +1473,6 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 			v.Set(reflect.New(v.Type().Elem()))
 		}
 		v = v.Elem()
-	}
-
-	// Strip self-described CBOR tag number.
-	for d.nextCBORType() == cborTypeTag {
-		off := d.off
-		_, _, tagNum := d.getHead()
-		if tagNum != tagNumSelfDescribedCBOR {
-			d.off = off
-			break
-		}
 	}
 
 	// Check validity of supported built-in tags.
