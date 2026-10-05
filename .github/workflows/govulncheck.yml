@@ -39,7 +39,7 @@ jobs:
         check-latest: true
  
     - name: Install latest govulncheck
-      run: go install golang.org/x/vuln/cmd/govulncheck@0782b76014f15f24e22a438f30f308df42899ba1 # v1.3.0
+      run: go install golang.org/x/vuln/cmd/govulncheck@617f44b718537dccdea1915395650e0529e3b72e # v1.7.0
 
     - name: Run govulncheck
       run: govulncheck -show=traces ./...
