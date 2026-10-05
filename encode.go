@@ -307,55 +307,53 @@ func (icm InfConvertMode) valid() bool {
 	return icm >= 0 && icm < maxInfConvert
 }
 
-// TimeMode specifies how to encode time.Time values in compliance with RFC 8949 (CBOR):
-// - Section 3.4.1: Standard Date/Time String
-// - Section 3.4.2: Epoch-Based Date/Time
-// For more info, see:
-// - https://www.rfc-editor.org/rfc/rfc8949.html
-// NOTE: User applications that prefer to encode time with fractional seconds to an integer
-// (instead of floating point or text string) can use a CBOR tag number not assigned by IANA:
-//  1. Define a user-defined type in Go with just a time.Time or int64 as its data.
-//  2. Implement the cbor.Marshaler and cbor.Unmarshaler interface for that user-defined type
-//     to encode or decode the tagged data item with an enclosed integer content.
+// TimeMode selects the RFC 8949 (CBOR) format to use when encoding time.Time values:
+//   - Section 3.4.1: Standard Date/Time String (CBOR tag 0)
+//   - Section 3.4.2: Epoch-Based Date/Time (CBOR tag 1, integer or floating-point)
+//
+// To emit CBOR tag number 0 or 1, use EncOptions{TimeTag: EncTagRequired}.
+//
+// RFC 8949 specifies fractional seconds as text or floating-point, but not as integers.
+// User-defined types can use integer-based format for fractional seconds by implementing
+// cbor.Marshaler and cbor.Unmarshaler (without CBOR tag number 0 or 1).
 type TimeMode int
 
 const (
-	// TimeUnix causes time.Time to encode to a CBOR time (tag 1) with an integer content
-	// representing seconds elapsed (with 1-second precision) since UNIX Epoch UTC.
-	// The TimeUnix option is location independent and has a clear precision guarantee.
+	// TimeUnix encodes to the integer format specified by RFC 8949 for whole seconds,
+	// with 1-second precision.  For fractional seconds, use other TimeMode options or
+	// a custom CBOR time format (see TimeMode and cbor.Marshaler).
 	TimeUnix TimeMode = iota
 
-	// TimeUnixMicro causes time.Time to encode to a CBOR time (tag 1) with a floating point content
-	// representing seconds elapsed (with up to 1-microsecond precision) since UNIX Epoch UTC.
-	// NOTE: The floating point content is encoded to the shortest floating-point encoding that preserves
-	// the 64-bit floating point value. I.e., the floating point encoding can be IEEE 764:
-	// binary64, binary32, or binary16 depending on the content's value.
+	// TimeUnixMicro encodes to the floating-point format specified by RFC 8949 for
+	// fractional seconds, with up to 1-microsecond precision that decreases for times
+	// far from 1970.  Like all binary floating-point formats, IEEE 754 binary64
+	// (float64) cannot represent most decimal fractions exactly.
+	// For more precision, use TimeRFC3339NanoUTC or a custom CBOR time format (see
+	// TimeMode and cbor.Marshaler) to store fractional seconds in an integer.
 	TimeUnixMicro
 
-	// TimeUnixDynamic causes time.Time to encode to a CBOR time (tag 1) with either an integer content or
-	// a floating point content, depending on the content's value.  This option is equivalent to dynamically
-	// choosing TimeUnix if time.Time doesn't have fractional seconds, and using TimeUnixMicro if time.Time
-	// has fractional seconds.
+	// TimeUnixDynamic encodes to the integer or floating-point format specified by
+	// RFC 8949.  It encodes to an integer if the time rounded to microseconds is a
+	// whole second, and otherwise to the floating-point format.  Like all binary
+	// floating-point formats, IEEE 754 binary64 (float64) cannot represent most decimal
+	// fractions exactly.  For precision details and alternative formats, see TimeMode
+	// and TimeUnixMicro.
 	TimeUnixDynamic
 
-	// TimeRFC3339 causes time.Time to encode to a CBOR time (tag 0) with a text string content
-	// representing the time using 1-second precision in RFC3339 format.  If the time.Time has a
-	// non-UTC timezone then a "localtime - UTC" numeric offset will be included as specified in RFC3339.
-	// NOTE: User applications can avoid including the RFC3339 numeric offset by:
-	// - providing a time.Time value set to UTC, or
-	// - using the TimeUnix, TimeUnixMicro, TimeUnixDynamic, or TimeRFC3339NanoUTC option.
+	// TimeRFC3339 encodes to the text format specified by RFC 8949, with 1-second
+	// precision and the UTC offset of the time.Time.  To always encode "Z" (zero
+	// offset), use UTC time.Time values or TimeRFC3339NanoUTC.
+	// For fractional seconds, use other TimeMode options or a custom CBOR time format
+	// (see TimeMode and cbor.Marshaler).
 	TimeRFC3339
 
-	// TimeRFC3339Nano causes time.Time to encode to a CBOR time (tag 0) with a text string content
-	// representing the time using 1-nanosecond precision in RFC3339 format.  If the time.Time has a
-	// non-UTC timezone then a "localtime - UTC" numeric offset will be included as specified in RFC3339.
-	// NOTE: User applications can avoid including the RFC3339 numeric offset by:
-	// - providing a time.Time value set to UTC, or
-	// - using the TimeUnix, TimeUnixMicro, TimeUnixDynamic, or TimeRFC3339NanoUTC option.
+	// TimeRFC3339Nano encodes to the text format specified by RFC 8949, with
+	// 1-nanosecond precision and the UTC offset of the time.Time.  To always encode
+	// "Z" (zero offset), use UTC time.Time values or TimeRFC3339NanoUTC.
 	TimeRFC3339Nano
 
-	// TimeRFC3339NanoUTC causes time.Time to encode to a CBOR time (tag 0) with a text string content
-	// representing UTC time using nanosecond precision in RFC3339 format.
+	// TimeRFC3339NanoUTC encodes to the text format specified by RFC 8949, with
+	// 1-nanosecond precision and the time converted to UTC ("Z").
 	TimeRFC3339NanoUTC
 
 	maxTimeMode
@@ -1678,8 +1676,8 @@ func encodeTime(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 }
 
 // isWrongYearFromGo reports whether s, the text Go formatted from t, has a wrong year.
-// Go's standard library can return wrong results for times in or near the ~257-year range
-// about 292 billion years ago.
+// Go's standard library can return wrong results for times in the ~257-year range about
+// 292 billion years ago, extended by the size of any negative UTC offset.
 func isWrongYearFromGo(t time.Time, s string) bool {
 	// When t plus one week is before year 0, the text must have a '-' prefix
 	// with any time zone offset under one week.

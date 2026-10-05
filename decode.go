@@ -93,7 +93,7 @@ import (
 // and NaN float values decode to time.Time's zero value.
 //
 // To unmarshal CBOR null (0xf6) and undefined (0xf7) values into a
-// slice/map/pointer, Unmarshal sets Go value to nil.  Because null is often
+// slice/map/pointer/interface, Unmarshal sets Go value to nil.  Because null is often
 // used to mean "not present", unmarshaling CBOR null and undefined value
 // into any other Go type has no effect and returns no error.
 //
@@ -1413,7 +1413,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		}
 	}
 
-	// Decode CBOR null/undefined to pointer/interface value by setting pointer/interface value to nil.
+	// Decode CBOR null or undefined values into a pointer or interface by setting it to nil.
 	if d.nextCBORNil() && (v.Kind() == reflect.Pointer || v.Kind() == reflect.Interface) {
 		d.skip()
 		v.SetZero()
