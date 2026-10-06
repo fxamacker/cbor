@@ -3092,10 +3092,15 @@ func (bs myByteSlice) String() string { return fmt.Sprintf("myByteSlice 0x%x", [
 
 func TestUnmarshalNullToInterface(t *testing.T) {
 	// Unmarshaling CBOR null/undefined to interface value sets the interface value to nil.
+	// Tag number 55799 enclosing null/undefined has no effect (RFC 8949 Section 3.4.6).
 
 	data := [][]byte{
-		{0xf6}, // null
-		{0xf7}, // undefined
+		mustHexDecode("f6"),             // null
+		mustHexDecode("f7"),             // undefined
+		mustHexDecode("d9d9f7f6"),       // 55799(null)
+		mustHexDecode("d9d9f7f7"),       // 55799(undefined)
+		mustHexDecode("d9d9f7d9d9f7f6"), // 55799(55799(null))
+		mustHexDecode("d9d9f7d9d9f7f7"), // 55799(55799(undefined))
 	}
 
 	testCases := []struct {
@@ -3186,6 +3191,86 @@ func TestUnmarshalNullToInterface(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUnmarshalNullToPointer(t *testing.T) {
+	// Unmarshaling CBOR null/undefined to pointer sets the value to nil.
+	// Tag number 55799 enclosing null/undefined has no effect (RFC 8949 Section 3.4.6).
+
+	data := [][]byte{
+		mustHexDecode("f6"),             // null
+		mustHexDecode("f7"),             // undefined
+		mustHexDecode("d9d9f7f6"),       // 55799(null)
+		mustHexDecode("d9d9f7f7"),       // 55799(undefined)
+		mustHexDecode("d9d9f7d9d9f7f6"), // 55799(55799(null))
+		mustHexDecode("d9d9f7d9d9f7f7"), // 55799(55799(undefined))
+	}
+
+	testCases := []struct {
+		name  string
+		value func() any
+	}{
+		{
+			name:  "nil pointer",
+			value: func() any { return (*int)(nil) },
+		},
+		{
+			name: "non-nil pointer",
+			value: func() any {
+				i := 1
+				return &i
+			},
+		},
+		{
+			name: "non-nil pointer to cbor.Unmarshaler",
+			value: func() any {
+				u := nilUnmarshaler("hello world")
+				return &u
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, data := range data {
+				p := tc.value()
+				v := reflect.New(reflect.TypeOf(p))
+				v.Elem().Set(reflect.ValueOf(p))
+
+				if err := unmarshal(t, data, v.Interface()); err != nil {
+					t.Errorf("Unmarshal(0x%x): unexpected error: %v", data, err)
+				} else if !v.Elem().IsNil() {
+					t.Errorf("Unmarshal(0x%x) = %v (%T), want nil", data, v.Elem().Interface(), v.Elem().Interface())
+				}
+			}
+		})
+	}
+
+	t.Run("empty interface", func(t *testing.T) {
+		for _, data := range data {
+			var v any = "hello world"
+			if err := unmarshal(t, data, &v); err != nil {
+				t.Errorf("Unmarshal(0x%x): unexpected error: %v", data, err)
+			} else if v != nil {
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want nil", data, v, v)
+			}
+		}
+	})
+
+	t.Run("struct field", func(t *testing.T) {
+		for _, data := range [][]byte{
+			mustHexDecode("a16150f6"),       // {"P": null}
+			mustHexDecode("a16150d9d9f7f6"), // {"P": 55799(null)}
+		} {
+			one := 1
+			v := struct{ P *int }{P: &one}
+			if err := unmarshal(t, data, &v); err != nil {
+				t.Errorf("Unmarshal(0x%x): unexpected error: %v", data, err)
+			} else if v.P != nil {
+				t.Errorf("Unmarshal(0x%x) = %+v, want P nil", data, v)
+			}
+		}
+	})
 }
 
 var invalidUnmarshalTestCases = []struct {
@@ -8309,6 +8394,42 @@ func TestUnmarshalTagNum55799AsElement(t *testing.T) {
 				} else if !strings.Contains(err.Error(), "cannot unmarshal") {
 					t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.data, err.Error(), "cannot unmarshal")
 				}
+			}
+		})
+	}
+}
+
+func TestUnmarshalTagNum55799EnclosingRegisteredTagToInterface(t *testing.T) {
+	// Tag number 55799 enclosing a registered tag has no effect when decoding to an
+	// interface implemented by the registered type (RFC 8949 Section 3.4.6).
+	tags := NewTagSet()
+	if err := tags.Add(TagOptions{DecTag: DecTagRequired}, reflect.TypeOf(StringFoo("")), 100); err != nil {
+		t.Fatalf("TagSet.Add(): unexpected error: %v", err)
+	}
+	dm, err := DecOptions{}.DecModeWithTags(tags)
+	if err != nil {
+		t.Fatalf("DecModeWithTags(): unexpected error: %v", err)
+	}
+
+	for _, data := range [][]byte{
+		mustHexDecode("d8646161"),       // 100("a")
+		mustHexDecode("d9d9f7d8646161"), // 55799(100("a"))
+	} {
+		t.Run(fmt.Sprintf("0x%x to provided interface", data), func(t *testing.T) {
+			var v Foo
+			if err := unmarshalWithDM(t, dm, data, &v); err != nil {
+				t.Errorf("Unmarshal(0x%x): unexpected error: %v", data, err)
+			} else if f, ok := v.(*StringFoo); !ok || *f != "a" {
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want &StringFoo(\"a\")", data, v, v)
+			}
+		})
+
+		t.Run(fmt.Sprintf("0x%x to empty interface", data), func(t *testing.T) {
+			var v any
+			if err := unmarshalWithDM(t, dm, data, &v); err != nil {
+				t.Errorf("Unmarshal(0x%x): unexpected error: %v", data, err)
+			} else if f, ok := v.(StringFoo); !ok || f != "a" {
+				t.Errorf("Unmarshal(0x%x) = %v (%T), want StringFoo(\"a\")", data, v, v)
 			}
 		})
 	}
