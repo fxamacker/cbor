@@ -4717,30 +4717,355 @@ func TestUnmarshalUndefinedElement(t *testing.T) {
 }
 
 func TestMapKeyNil(t *testing.T) {
-	testData := [][]byte{
-		mustHexDecode("a1f630"), // {null: -17}
+	for _, tc := range []struct {
+		name         string
+		data         []byte
+		want         any
+		decodeToType reflect.Type
+	}{
+		{
+			name:         "decode {null: 1} to any",
+			data:         mustHexDecode("a1f601"), // {null: 1}
+			want:         map[any]any{nil: uint64(1)},
+			decodeToType: typeIntf,
+		},
+		{
+			name:         "decode {null: 1} to map[any]any",
+			data:         mustHexDecode("a1f601"), // {null: 1}
+			want:         map[any]any{nil: uint64(1)},
+			decodeToType: typeMapIntfIntf,
+		},
+		{
+			name:         "decode {null: 1} to map[int]any",
+			data:         mustHexDecode("a1f601"), // {null: 1}
+			want:         map[int]any{0: uint64(1)},
+			decodeToType: reflect.TypeFor[map[int]any](),
+		},
+		{
+			name:         "decode {null: 1} to map[string]any",
+			data:         mustHexDecode("a1f601"), // {null: 1}
+			want:         map[string]any{"": uint64(1)},
+			decodeToType: reflect.TypeFor[map[string]any](),
+		},
+		{
+			name:         "decode {null: 1, 2: 3} to any",
+			data:         mustHexDecode("a2f6010203"), // {null: 1, 2: 3}
+			want:         map[any]any{nil: uint64(1), uint64(2): uint64(3)},
+			decodeToType: typeIntf,
+		},
+		{
+			name:         "decode {null: 1, 2: 3} to map[any]any",
+			data:         mustHexDecode("a2f6010203"), // {null: 1, 2: 3}
+			want:         map[any]any{nil: uint64(1), uint64(2): uint64(3)},
+			decodeToType: typeMapIntfIntf,
+		},
+		{
+			name:         "decode {null: 1, 2: 3} to map[int]any",
+			data:         mustHexDecode("a2f6010203"), // {null: 1, 2: 3}
+			want:         map[int]any{0: uint64(1), int(2): uint64(3)},
+			decodeToType: reflect.TypeFor[map[int]any](),
+		},
+		{
+			name:         "decode {null: 1, \"a\": 3} to map[string]any",
+			data:         mustHexDecode("a2f601616103"), // {null: 1, "a": 3}
+			want:         map[string]any{"": uint64(1), "a": uint64(3)},
+			decodeToType: reflect.TypeFor[map[string]any](),
+		},
+		{
+			name:         "decode {2: 3, null: 1} to any",
+			data:         mustHexDecode("a20203f601"), // {2: 3, null: 1}
+			want:         map[any]any{nil: uint64(1), uint64(2): uint64(3)},
+			decodeToType: typeIntf,
+		},
+		{
+			name:         "decode {2: 3, null: 1} to map[any]any",
+			data:         mustHexDecode("a20203f601"), // {2: 3, null: 1}
+			want:         map[any]any{nil: uint64(1), uint64(2): uint64(3)},
+			decodeToType: typeMapIntfIntf,
+		},
+		{
+			name:         "decode {2: 3, null: 1} to map[int]any",
+			data:         mustHexDecode("a20203f601"), // {2: 3, null: 1}
+			want:         map[int]any{0: uint64(1), int(2): uint64(3)},
+			decodeToType: reflect.TypeFor[map[int]any](),
+		},
+		{
+			name:         "decode {\"a\": 3, null: 1} to map[string]any",
+			data:         mustHexDecode("a2616103f601"), // {"a": 3, null: 1}
+			want:         map[string]any{"": uint64(1), "a": uint64(3)},
+			decodeToType: reflect.TypeFor[map[string]any](),
+		},
+		{
+			name:         "decode {\"a\": 3, 100(null): 1} to map[string]any",
+			data:         mustHexDecode("a2616103d864f601"), // {"a": 3, 100(null): 1}
+			want:         map[string]any{"": uint64(1), "a": uint64(3)},
+			decodeToType: reflect.TypeFor[map[string]any](),
+		},
+		{
+			name:         "decode {\"a\": 3, 55799(null): 1} to map[string]any",
+			data:         mustHexDecode("a2616103d9d9f7f601"), // {"a": 3, 55799(null): 1}
+			want:         map[string]any{"": uint64(1), "a": uint64(3)},
+			decodeToType: reflect.TypeFor[map[string]any](),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			v := reflect.New(tc.decodeToType)
+			if err := unmarshal(t, tc.data, v.Interface()); err != nil {
+				t.Fatalf("Unmarshal(0x%x): unexpected error: %v", tc.data, err)
+			} else if !reflect.DeepEqual(v.Elem().Interface(), tc.want) {
+				t.Errorf("Unmarshal(0x%x) = %+v, want %+v", tc.data, v.Elem().Interface(), tc.want)
+			}
+		})
 	}
-	want := map[any]any{nil: int64(-17)}
-	for _, data := range testData {
-		var intf any
-		if err := unmarshal(t, data, &intf); err != nil {
-			t.Fatalf("Unmarshal(0x%x) returned error %v", data, err)
-		} else if !reflect.DeepEqual(intf, want) {
-			t.Errorf("Unmarshal(0x%x) returned %+v, want %+v", data, intf, want)
-		}
-		if _, err := Marshal(intf); err != nil {
-			t.Errorf("Marshal(%v) returned error %v", intf, err)
-		}
+}
 
-		var v map[any]any
-		if err := unmarshal(t, data, &v); err != nil {
-			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-		} else if !reflect.DeepEqual(v, want) {
-			t.Errorf("Unmarshal(0x%x) returned %+v, want %+v", data, v, want)
-		}
-		if _, err := Marshal(v); err != nil {
-			t.Errorf("Marshal(%v) returned error %v", v, err)
-		}
+func TestMapKeyDuplicateNil(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		data         []byte
+		want         any
+		wantErrorMsg string
+		decodeToType reflect.Type
+		opts         DecOptions
+	}{
+		{
+			name:         "decode {null: 1, null: 2} to any with DupMapKeyQuiet",
+			data:         mustHexDecode("a2f601f602"), // {null: 1, null: 2}
+			want:         map[any]any{nil: uint64(2)},
+			decodeToType: typeIntf,
+			opts: DecOptions{
+				DupMapKey: DupMapKeyQuiet,
+			},
+		},
+		{
+			name:         "decode {null: 1, null: 2} to any with DupMapKeyEnforcedAPF",
+			data:         mustHexDecode("a2f601f602"), // {null: 1, null: 2}
+			wantErrorMsg: "cbor: found duplicate map key <nil> at map element index 1",
+			decodeToType: typeIntf,
+			opts: DecOptions{
+				DupMapKey: DupMapKeyEnforcedAPF,
+			},
+		},
+		{
+			name:         "decode {null: 1, null: 2} to map[any]any with DupMapKeyQuiet",
+			data:         mustHexDecode("a2f601f602"), // {null: 1, null: 2}
+			want:         map[any]any{nil: uint64(2)},
+			decodeToType: typeMapIntfIntf,
+			opts: DecOptions{
+				DupMapKey: DupMapKeyQuiet,
+			},
+		},
+		{
+			name:         "decode {null: 1, null: 2} to map[any]any with DupMapKeyEnforcedAPF",
+			data:         mustHexDecode("a2f601f602"), // {null: 1, null: 2}
+			wantErrorMsg: "cbor: found duplicate map key <nil> at map element index 1",
+			decodeToType: typeMapIntfIntf,
+			opts: DecOptions{
+				DupMapKey: DupMapKeyEnforcedAPF,
+			},
+		},
+		{
+			name:         "decode {null: 1, null: 2} to map[int]any with DupMapKeyQuiet",
+			data:         mustHexDecode("a2f601f602"), // {null: 1, null: 2}
+			want:         map[int]any{0: uint64(2)},
+			decodeToType: reflect.TypeFor[map[int]any](),
+			opts: DecOptions{
+				DupMapKey: DupMapKeyQuiet,
+			},
+		},
+		{
+			name:         "decode {null: 1, null: 2} to map[int]any with DupMapKeyEnforcedAPF",
+			data:         mustHexDecode("a2f601f602"), // {null: 1, null: 2}
+			wantErrorMsg: "cbor: found duplicate map key 0 at map element index 1",
+			decodeToType: reflect.TypeFor[map[int]any](),
+			opts: DecOptions{
+				DupMapKey: DupMapKeyEnforcedAPF,
+			},
+		},
+		{
+			name:         "decode {null: 1, null: 2} to map[string]any with DupMapKeyQuiet",
+			data:         mustHexDecode("a2f601f602"), // {null: 1, null: 2}
+			want:         map[string]any{"": uint64(2)},
+			decodeToType: reflect.TypeFor[map[string]any](),
+			opts: DecOptions{
+				DupMapKey: DupMapKeyQuiet,
+			},
+		},
+		{
+			name:         "decode {null: 1, null: 2} to map[string]any with DupMapKeyEnforcedAPF",
+			data:         mustHexDecode("a2f601f602"), // {null: 1, null: 2}
+			wantErrorMsg: "cbor: found duplicate map key \"\" at map element index 1",
+			decodeToType: reflect.TypeFor[map[string]any](),
+			opts: DecOptions{
+				DupMapKey: DupMapKeyEnforcedAPF,
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dm, _ := tc.opts.DecMode()
+
+			v := reflect.New(tc.decodeToType)
+			err := unmarshalWithDM(t, dm, tc.data, v.Interface())
+			if tc.wantErrorMsg == "" {
+				if err != nil {
+					t.Fatalf("Unmarshal(0x%x): unexpected error: %v", tc.data, err)
+				} else if !reflect.DeepEqual(v.Elem().Interface(), tc.want) {
+					t.Errorf("Unmarshal(0x%x) = %+v, want %+v", tc.data, v.Elem().Interface(), tc.want)
+				}
+			} else {
+				if err == nil {
+					t.Fatalf("Unmarshal(0x%x): expected *DupMapKeyError, got nil", tc.data)
+				} else if _, ok := err.(*DupMapKeyError); !ok {
+					t.Errorf("Unmarshal(0x%x) returned %T, want *DupMapKeyError", tc.data, err)
+				} else if err.Error() != tc.wantErrorMsg {
+					t.Errorf("Unmarshal(0x%x): got %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
+				}
+			}
+		})
+	}
+}
+
+func TestMapValueNil(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		data         []byte
+		want         any
+		decodeToType reflect.Type
+	}{
+		{
+			name:         "decode {1: null} to any",
+			data:         mustHexDecode("a101f6"), // {1: null}
+			want:         map[any]any{uint64(1): nil},
+			decodeToType: typeIntf,
+		},
+		{
+			name:         "decode {1: null} to map[any]any",
+			data:         mustHexDecode("a101f6"), // {1: null}
+			want:         map[any]any{uint64(1): nil},
+			decodeToType: typeMapIntfIntf,
+		},
+		{
+			name:         "decode {1: null} to map[int]int",
+			data:         mustHexDecode("a101f6"), // {1: null}
+			want:         map[int]int{1: 0},
+			decodeToType: reflect.TypeFor[map[int]int](),
+		},
+		{
+			name:         "decode {1: null, 2: 3} to any",
+			data:         mustHexDecode("a201f60203"), // {1: null, 2: 3}
+			want:         map[any]any{uint64(1): nil, uint64(2): uint64(3)},
+			decodeToType: typeIntf,
+		},
+		{
+			name:         "decode {1: null, 2: 3} to map[any]any",
+			data:         mustHexDecode("a201f60203"), // {1: null, 2: 3}
+			want:         map[any]any{uint64(1): nil, uint64(2): uint64(3)},
+			decodeToType: typeMapIntfIntf,
+		},
+		{
+			name:         "decode {1: null, 2: 3} to map[int]int",
+			data:         mustHexDecode("a201f60203"), // {1: null, 2: 3}
+			want:         map[int]int{1: 0, 2: 3},
+			decodeToType: reflect.TypeFor[map[int]int](),
+		},
+		{
+			name:         "decode {1: null, 2: \"a\"} to map[int]string",
+			data:         mustHexDecode("a201f6026161"), // {1: null, 2: "a"}
+			want:         map[int]string{1: "", 2: "a"},
+			decodeToType: reflect.TypeFor[map[int]string](),
+		},
+		{
+			name:         "decode {2: 3, 1: null} to any",
+			data:         mustHexDecode("a2020301f6"), // {2: 3, 1: null}
+			want:         map[any]any{uint64(1): nil, uint64(2): uint64(3)},
+			decodeToType: typeIntf,
+		},
+		{
+			name:         "decode {2: 3, 1: null} to map[any]any",
+			data:         mustHexDecode("a2020301f6"), // {2: 3, 1: null}
+			want:         map[any]any{uint64(1): nil, uint64(2): uint64(3)},
+			decodeToType: typeMapIntfIntf,
+		},
+		{
+			name:         "decode {2: 3, 1: null} to map[int]int",
+			data:         mustHexDecode("a2020301f6"), // {2: 3, 1: null}
+			want:         map[int]int{1: 0, 2: 3},
+			decodeToType: reflect.TypeFor[map[int]int](),
+		},
+		{
+			name:         "decode {2: \"a\", 1: null} to map[int]string",
+			data:         mustHexDecode("a202616101f6"), // {2: "a", 1: null}
+			want:         map[int]string{1: "", 2: "a"},
+			decodeToType: reflect.TypeFor[map[int]string](),
+		},
+		{
+			name:         "decode {\"a\": 3, \"b\": 100(null)} to map[string]int",
+			data:         mustHexDecode("a26161036162d864f6"), // {"a": 3, "b": 100(null)}
+			want:         map[string]int{"a": 3, "b": 0},
+			decodeToType: reflect.TypeFor[map[string]int](),
+		},
+		{
+			name:         "decode {\"a\": 3, \"b\": 55799(null)} to map[string]int",
+			data:         mustHexDecode("a26161036162d9d9f7f6"), // {"a": 3, "b": 55799(null)}
+			want:         map[string]int{"a": 3, "b": 0},
+			decodeToType: reflect.TypeFor[map[string]int](),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			v := reflect.New(tc.decodeToType)
+			if err := unmarshal(t, tc.data, v.Interface()); err != nil {
+				t.Fatalf("Unmarshal(0x%x): unexpected error: %v", tc.data, err)
+			} else if !reflect.DeepEqual(v.Elem().Interface(), tc.want) {
+				t.Errorf("Unmarshal(0x%x) = %+v, want %+v", tc.data, v.Elem().Interface(), tc.want)
+			}
+		})
+	}
+}
+
+type noopOnEmptyDataUnmarshaler string
+
+func (su *noopOnEmptyDataUnmarshaler) UnmarshalCBOR(data []byte) error {
+	var s string
+	err := Unmarshal(data, &s)
+	if err != nil {
+		return err
+	}
+	if s == "" {
+		// No-op on empty data
+		return nil
+	}
+	*su = noopOnEmptyDataUnmarshaler(s)
+	return nil
+}
+
+func TestMapEntryWithNoOpOnEmptyDataUnmarshaler(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		data         []byte
+		want         any
+		decodeToType reflect.Type
+	}{
+		{
+			name:         "decode {\"a\": 2, \"\": 1} to map[noopOnEmptyDataUnmarshaler]int",
+			data:         mustHexDecode("a26161026001"), // {"a": 2, "": 1}
+			want:         map[noopOnEmptyDataUnmarshaler]int{noopOnEmptyDataUnmarshaler(""): 1, noopOnEmptyDataUnmarshaler("a"): 2},
+			decodeToType: reflect.TypeFor[map[noopOnEmptyDataUnmarshaler]int](),
+		},
+		{
+			name:         "decode {2: \"a\", 1: \"\"} to map[int]noopOnEmptyDataUnmarshaler",
+			data:         mustHexDecode("a20261610160"), // {2: "a", 1: ""}
+			want:         map[int]noopOnEmptyDataUnmarshaler{1: noopOnEmptyDataUnmarshaler(""), 2: noopOnEmptyDataUnmarshaler("a")},
+			decodeToType: reflect.TypeFor[map[int]noopOnEmptyDataUnmarshaler](),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			v := reflect.New(tc.decodeToType)
+			if err := unmarshal(t, tc.data, v.Interface()); err != nil {
+				t.Fatalf("Unmarshal(0x%x): unexpected error: %v", tc.data, err)
+			} else if !reflect.DeepEqual(v.Elem().Interface(), tc.want) {
+				t.Errorf("Unmarshal(0x%x) = %+v, want %+v", tc.data, v.Elem().Interface(), tc.want)
+			}
+		})
 	}
 }
 

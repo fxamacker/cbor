@@ -2540,7 +2540,6 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 		v.Set(reflect.MakeMapWithSize(tInfo.nonPtrType, mapsize))
 	}
 	keyType, eleType := tInfo.keyTypeInfo.typ, tInfo.elemTypeInfo.typ
-	reuseKey, reuseEle := isImmutableKind(tInfo.keyTypeInfo.kind), isImmutableKind(tInfo.elemTypeInfo.kind)
 	var keyValue, eleValue reflect.Value
 	keyIsStringType := tInfo.keyTypeInfo.typeIsString
 	var err, lastErr error
@@ -2559,7 +2558,7 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 		// Parse CBOR map key.
 		if !keyValue.IsValid() {
 			keyValue = reflect.New(keyType).Elem()
-		} else if !reuseKey {
+		} else {
 			keyValue.SetZero()
 		}
 
@@ -2612,7 +2611,7 @@ func (d *decoder) parseMapToMap(v reflect.Value, tInfo *typeInfo) error { //noli
 		// Parse CBOR map value.
 		if !eleValue.IsValid() {
 			eleValue = reflect.New(eleType).Elem()
-		} else if !reuseEle {
+		} else {
 			eleValue.SetZero()
 		}
 		if lastErr := d.parseToValue(eleValue, tInfo.elemTypeInfo); lastErr != nil {
@@ -3333,20 +3332,6 @@ func fillTextString(t cborType, val []byte, v reflect.Value, tInfo *typeInfo, tu
 	}
 
 	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
-}
-
-func isImmutableKind(k reflect.Kind) bool {
-	switch k {
-	case reflect.Bool,
-		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
-		reflect.Float32, reflect.Float64,
-		reflect.String:
-		return true
-
-	default:
-		return false
-	}
 }
 
 func isHashableValue(rv reflect.Value) bool {
