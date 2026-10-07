@@ -1119,30 +1119,40 @@ func encode(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 
 func encodeBool(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 	dst = em.appendTagBytes(dst, v)
-	if v.Bool() {
-		dst = append(dst, cborTrue)
-	} else {
-		dst = append(dst, cborFalse)
+	return appendBool(dst, v.Bool()), nil
+}
+
+func appendBool(dst []byte, b bool) []byte {
+	// NOTE: this function is written to be inlinable.
+	bs := cborFalse
+	if b {
+		bs = cborTrue
 	}
-	return dst, nil
+	return append(dst, bs)
 }
 
 func encodeInt(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 	dst = em.appendTagBytes(dst, v)
 	i := v.Int()
 	if i >= 0 {
-		dst = appendHead(dst, byte(cborTypePositiveInt), uint64(i))
-		return dst, nil
+		return appendPositiveInt(dst, uint64(i)), nil
 	}
-	i = i*(-1) - 1
-	dst = appendHead(dst, byte(cborTypeNegativeInt), uint64(i))
-	return dst, nil
+	return appendNegativeInt(dst, i), nil
 }
 
 func encodeUint(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 	dst = em.appendTagBytes(dst, v)
-	dst = appendHead(dst, byte(cborTypePositiveInt), v.Uint())
-	return dst, nil
+	return appendPositiveInt(dst, v.Uint()), nil
+}
+
+func appendPositiveInt(dst []byte, i uint64) []byte {
+	// NOTE: this function is written to be inlinable.
+	return appendHead(dst, byte(cborTypePositiveInt), i)
+}
+
+func appendNegativeInt(dst []byte, i int64) []byte {
+	// NOTE: this function is written to be inlinable.
+	return appendHead(dst, byte(cborTypeNegativeInt), uint64(^i)) //nolint:gosec
 }
 
 func encodeFloat(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
@@ -1154,31 +1164,39 @@ func encodeFloat(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 	if math.IsInf(f64, 0) {
 		return encodeInf(dst, em, v)
 	}
-	fopt := em.shortestFloat
-	if v.Kind() == reflect.Float64 && (fopt == ShortestFloatNone || cannotFitFloat32(f64)) {
+	if em.shortestFloat == ShortestFloatNone {
+		if v.Kind() == reflect.Float64 {
+			return appendFloat64(dst, f64), nil
+		}
+		return appendFloat32(dst, float32(f64)), nil
+	}
+
+	return appendShortestFloat64(dst, f64)
+}
+
+func appendShortestFloat64(dst []byte, f64 float64) ([]byte, error) {
+	if cannotFitFloat32(f64) {
 		return appendFloat64(dst, f64), nil
 	}
 
 	f32 := float32(f64)
-	if fopt == ShortestFloat16 {
-		var f16 float16.Float16
-		p := float16.PrecisionFromfloat32(f32)
-		switch p {
-		case float16.PrecisionExact:
-			// Roundtrip float32->float16->float32 test isn't needed.
-			f16 = float16.Fromfloat32(f32)
-		case float16.PrecisionUnknown:
-			// Try roundtrip float32->float16->float32 to determine if float32 can fit into float16.
-			f16 = float16.Fromfloat32(f32)
-			if f16.Float32() == f32 {
-				p = float16.PrecisionExact
-			}
-		}
-		if p == float16.PrecisionExact {
-			return appendFloat16(dst, f16), nil
+
+	var f16 float16.Float16
+	p := float16.PrecisionFromfloat32(f32)
+	switch p {
+	case float16.PrecisionExact:
+		// Roundtrip float32->float16->float32 test isn't needed.
+		f16 = float16.Fromfloat32(f32)
+	case float16.PrecisionUnknown:
+		// Try roundtrip float32->float16->float32 to determine if float32 can fit into float16.
+		f16 = float16.Fromfloat32(f32)
+		if f16.Float32() == f32 {
+			p = float16.PrecisionExact
 		}
 	}
-
+	if p == float16.PrecisionExact {
+		return appendFloat16(dst, f16), nil
+	}
 	return appendFloat32(dst, f32), nil
 }
 
@@ -1285,39 +1303,44 @@ func appendFloat64(dst []byte, f64 float64) []byte {
 	)
 }
 
-func encodeByteString(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
-	vk := v.Kind()
-	if vk == reflect.Slice && v.IsNil() && em.nilContainers == NilContainerAsNull {
-		dst = append(dst, cborNil)
-		return dst, nil
+func encodeByteSlice(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
+	if v.IsNil() && em.nilContainers == NilContainerAsNull {
+		return append(dst, cborNil), nil
 	}
-	if vk == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8 && em.byteSliceLaterEncodingTag != 0 {
+	if em.byteSliceLaterEncodingTag != 0 {
 		dst = appendHead(dst, byte(cborTypeTag), em.byteSliceLaterEncodingTag)
 	}
 	dst = em.appendTagBytes(dst, v)
+	return appendByteString(dst, v.Bytes()), nil
+}
+
+func appendByteString(dst []byte, bs []byte) []byte {
+	// NOTE: this function is written to be inlinable.
+	dst = appendHead(dst, byte(cborTypeByteString), uint64(len(bs)))
+	return append(dst, bs...)
+}
+
+func encodeByteArrayAsByteString(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
+	dst = em.appendTagBytes(dst, v)
 	slen := v.Len()
-	if slen == 0 {
-		dst = append(dst, byte(cborTypeByteString))
-		return dst, nil
-	}
 	dst = appendHead(dst, byte(cborTypeByteString), uint64(slen)) //nolint:gosec
-	if vk == reflect.Array {
-		dst = slices.Grow(dst, slen)
-		for i := range slen {
-			dst = append(dst, byte(v.Index(i).Uint())) //nolint:gosec
-		}
-		return dst, nil
+	dst = slices.Grow(dst, slen)
+	for i := range slen {
+		dst = append(dst, byte(v.Index(i).Uint())) //nolint:gosec
 	}
-	dst = append(dst, v.Bytes()...)
 	return dst, nil
 }
 
 func encodeString(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 	dst = em.appendTagBytes(dst, v)
 	s := v.String()
+	return appendStringWithEM(dst, em, s), nil
+}
+
+func appendStringWithEM(dst []byte, em *encMode, s string) []byte {
+	// NOTE: this function is written to be inlinable.
 	dst = appendHead(dst, byte(em.stringMajorType), uint64(len(s)))
-	dst = append(dst, s...)
-	return dst, nil
+	return append(dst, s...)
 }
 
 type arrayEncodeFunc struct {
@@ -1326,7 +1349,7 @@ type arrayEncodeFunc struct {
 
 func (ae arrayEncodeFunc) encode(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 	if em.byteArray == ByteArrayToByteSlice && v.Type().Elem().Kind() == reflect.Uint8 {
-		return encodeByteString(dst, em, v)
+		return encodeByteArrayAsByteString(dst, em, v)
 	}
 	if v.Kind() == reflect.Slice && v.IsNil() && em.nilContainers == NilContainerAsNull {
 		dst = append(dst, cborNil)
@@ -1384,6 +1407,11 @@ func (me mapEncodeFunc) encode(dst []byte, em *encMode, v reflect.Value) ([]byte
 	if dst, err = me.e(dst, em, v, kvs); err != nil {
 		return dst, err
 	}
+
+	return sortEncodedKeyValues(dst, em, kvs, kvBeginOffset), nil
+}
+
+func sortEncodedKeyValues(dst []byte, em *encMode, kvs []keyValue, kvBeginOffset int) []byte {
 	kvTotalLen := len(dst) - kvBeginOffset
 
 	// Use the capacity at the tail of the encode buffer as a staging area to rearrange the
@@ -1416,7 +1444,7 @@ func (me mapEncodeFunc) encode(dst []byte, em *encMode, v reflect.Value) ([]byte
 	}
 	copy(kvb, tmp)
 
-	return dst, nil
+	return dst
 }
 
 // keyValue is the position of an encoded pair in a buffer. All offsets are zero-based and relative
@@ -2176,7 +2204,7 @@ func newEncodeFunc(t reflect.Type, newEncodeFuncs map[reflect.Type]*inProgressEn
 
 	case reflect.Slice:
 		if t.Elem().Kind() == reflect.Uint8 {
-			return encodeByteString, isEmptySlice, getIsZeroFunc(t)
+			return encodeByteSlice, isEmptySlice, getIsZeroFunc(t)
 		}
 		fallthrough
 
