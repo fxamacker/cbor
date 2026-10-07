@@ -22,27 +22,27 @@ import (
 type namedAny any
 
 var (
-	typeBool             = reflect.TypeFor[bool]()
-	typeUint8            = reflect.TypeFor[uint8]()
-	typeUint16           = reflect.TypeFor[uint16]()
-	typeUint32           = reflect.TypeFor[uint32]()
-	typeUint64           = reflect.TypeFor[uint64]()
-	typeInt8             = reflect.TypeFor[int8]()
-	typeInt16            = reflect.TypeFor[int16]()
-	typeInt32            = reflect.TypeFor[int32]()
-	typeInt64            = reflect.TypeFor[int64]()
-	typeFloat32          = reflect.TypeFor[float32]()
-	typeFloat64          = reflect.TypeFor[float64]()
-	typeByteArray        = reflect.TypeFor[[5]byte]()
-	typeIntSlice         = reflect.TypeFor[[]int]()
-	typeStringSlice      = reflect.TypeFor[[]string]()
-	typeMapIntfIntf      = reflect.TypeFor[map[any]any]()
-	typeMapNamedIntfIntf = reflect.TypeFor[map[namedAny]any]()
-	typeMapStringInt     = reflect.TypeFor[map[string]int]()
-	typeMapStringString  = reflect.TypeFor[map[string]string]()
-	typeMapStringIntf    = reflect.TypeFor[map[string]any]()
-	typeIntf             = reflect.TypeFor[any]()
-	typeNamedIntf        = reflect.TypeFor[namedAny]()
+	typeBool            = reflect.TypeFor[bool]()
+	typeUint8           = reflect.TypeFor[uint8]()
+	typeUint16          = reflect.TypeFor[uint16]()
+	typeUint32          = reflect.TypeFor[uint32]()
+	typeUint64          = reflect.TypeFor[uint64]()
+	typeInt8            = reflect.TypeFor[int8]()
+	typeInt16           = reflect.TypeFor[int16]()
+	typeInt32           = reflect.TypeFor[int32]()
+	typeInt64           = reflect.TypeFor[int64]()
+	typeFloat32         = reflect.TypeFor[float32]()
+	typeFloat64         = reflect.TypeFor[float64]()
+	typeByteArray       = reflect.TypeFor[[5]byte]()
+	typeIntSlice        = reflect.TypeFor[[]int]()
+	typeStringSlice     = reflect.TypeFor[[]string]()
+	typeMapAnyAny       = reflect.TypeFor[map[any]any]()
+	typeMapNamedAnyAny  = reflect.TypeFor[map[namedAny]any]()
+	typeMapStringInt    = reflect.TypeFor[map[string]int]()
+	typeMapStringString = reflect.TypeFor[map[string]string]()
+	typeMapStringAny    = reflect.TypeFor[map[string]any]()
+	typeAny             = reflect.TypeFor[any]()
+	typeNamedAny        = reflect.TypeFor[namedAny]()
 )
 
 type unmarshalTestCase struct {
@@ -4353,18 +4353,18 @@ func TestMapKeyHashable(t *testing.T) {
 			name: "[]",
 			data: mustHexDecode("a18002"), // {[]: 2}
 			wantErrorMsgs: map[reflect.Type]string{
-				typeIntf:             "cbor: invalid map key type: []interface {}",
-				typeMapIntfIntf:      "cbor: invalid map key type: []interface {}",
-				typeMapNamedIntfIntf: "cbor: invalid map key type: []interface {}",
+				typeAny:            "cbor: invalid map key type: []interface {}",
+				typeMapAnyAny:      "cbor: invalid map key type: []interface {}",
+				typeMapNamedAnyAny: "cbor: invalid map key type: []interface {}",
 			},
 		},
 		{
 			name: "[1]",
 			data: mustHexDecode("a1810102"), // {[1]: 2}
 			wantErrorMsgs: map[reflect.Type]string{
-				typeIntf:             "cbor: invalid map key type: []interface {}",
-				typeMapIntfIntf:      "cbor: invalid map key type: []interface {}",
-				typeMapNamedIntfIntf: "cbor: invalid map key type: []interface {}",
+				typeAny:            "cbor: invalid map key type: []interface {}",
+				typeMapAnyAny:      "cbor: invalid map key type: []interface {}",
+				typeMapNamedAnyAny: "cbor: invalid map key type: []interface {}",
 			},
 			wantObjs: map[reflect.Type]any{
 				typeMapAnyArrayAny:      map[anyArray]any{[1]any{uint64(1)}: uint64(2)},
@@ -4375,55 +4375,55 @@ func TestMapKeyHashable(t *testing.T) {
 			name: "{}",
 			data: mustHexDecode("a1a002"), // {{}: 2}
 			wantErrorMsgs: map[reflect.Type]string{
-				typeIntf:             "cbor: invalid map key type: map",
-				typeMapIntfIntf:      "cbor: invalid map key type: map",
-				typeMapNamedIntfIntf: "cbor: invalid map key type: map",
+				typeAny:            "cbor: invalid map key type: map",
+				typeMapAnyAny:      "cbor: invalid map key type: map",
+				typeMapNamedAnyAny: "cbor: invalid map key type: map",
 			},
 		},
 		{
 			name: "{1:2}",
 			data: mustHexDecode("a1a1010203"), // {{1:2}: 2}
 			wantErrorMsgs: map[reflect.Type]string{
-				typeIntf:             "cbor: invalid map key type: map",
-				typeMapIntfIntf:      "cbor: invalid map key type: map",
-				typeMapNamedIntfIntf: "cbor: invalid map key type: map",
+				typeAny:            "cbor: invalid map key type: map",
+				typeMapAnyAny:      "cbor: invalid map key type: map",
+				typeMapNamedAnyAny: "cbor: invalid map key type: map",
 			},
 		},
 		{
 			name: "big.Int",
 			data: mustHexDecode("a13bbd3030303030303030"), // {-13632449055575519281: -17}
 			wantErrorMsgs: map[reflect.Type]string{
-				typeIntf:             "cbor: invalid map key type: big.Int",
-				typeMapIntfIntf:      "cbor: invalid map key type: big.Int",
-				typeMapNamedIntfIntf: "cbor: invalid map key type: big.Int",
+				typeAny:            "cbor: invalid map key type: big.Int",
+				typeMapAnyAny:      "cbor: invalid map key type: big.Int",
+				typeMapNamedAnyAny: "cbor: invalid map key type: big.Int",
 			},
 		},
 		{
 			name: "tagged positive big.Int",
 			data: mustHexDecode("a1c24901000000000000000030"), // {18446744073709551616: -17}
 			wantErrorMsgs: map[reflect.Type]string{
-				typeIntf:             "cbor: invalid map key type: big.Int",
-				typeMapIntfIntf:      "cbor: invalid map key type: big.Int",
-				typeMapNamedIntfIntf: "cbor: invalid map key type: big.Int",
+				typeAny:            "cbor: invalid map key type: big.Int",
+				typeMapAnyAny:      "cbor: invalid map key type: big.Int",
+				typeMapNamedAnyAny: "cbor: invalid map key type: big.Int",
 			},
 		},
 		{
 			name: "tagged negative big.Int",
 			data: mustHexDecode("a1c34901000000000000000030"), // {-18446744073709551617: -17}
 			wantErrorMsgs: map[reflect.Type]string{
-				typeIntf:             "cbor: invalid map key type: big.Int",
-				typeMapIntfIntf:      "cbor: invalid map key type: big.Int",
-				typeMapNamedIntfIntf: "cbor: invalid map key type: big.Int",
+				typeAny:            "cbor: invalid map key type: big.Int",
+				typeMapAnyAny:      "cbor: invalid map key type: big.Int",
+				typeMapNamedAnyAny: "cbor: invalid map key type: big.Int",
 			},
 		},
 		{
 			name: "tagged time.Time",
 			data: mustHexDecode("a1c074323031332d30332d32315432303a30343a30305a01"), // {0("2013-03-21T20:04:00Z"): 1}
 			wantObjs: map[reflect.Type]any{
-				typeIntf:             map[any]any{time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC): uint64(1)},
-				typeMapIntfIntf:      map[any]any{time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC): uint64(1)},
-				typeMapNamedIntfIntf: map[namedAny]any{time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC): uint64(1)},
-				typeMapTagAny:        map[Tag]any{{Number: 0, Content: "2013-03-21T20:04:00Z"}: uint64(1)},
+				typeAny:            map[any]any{time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC): uint64(1)},
+				typeMapAnyAny:      map[any]any{time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC): uint64(1)},
+				typeMapNamedAnyAny: map[namedAny]any{time.Date(2013, 3, 21, 20, 4, 0, 0, time.UTC): uint64(1)},
+				typeMapTagAny:      map[Tag]any{{Number: 0, Content: "2013-03-21T20:04:00Z"}: uint64(1)},
 			},
 		},
 		{
@@ -4454,20 +4454,20 @@ func TestMapKeyHashable(t *testing.T) {
 			name: "139(1)",
 			data: mustHexDecode("a1d88b0102"), // {139(1): 2}
 			wantObjs: map[reflect.Type]any{
-				typeIntf:             map[any]any{Tag{Number: 139, Content: uint64(1)}: uint64(2)},
-				typeMapIntfIntf:      map[any]any{Tag{Number: 139, Content: uint64(1)}: uint64(2)},
-				typeMapNamedIntfIntf: map[namedAny]any{Tag{Number: 139, Content: uint64(1)}: uint64(2)},
-				typeMapTagAny:        map[Tag]any{{Number: 139, Content: uint64(1)}: uint64(2)},
+				typeAny:            map[any]any{Tag{Number: 139, Content: uint64(1)}: uint64(2)},
+				typeMapAnyAny:      map[any]any{Tag{Number: 139, Content: uint64(1)}: uint64(2)},
+				typeMapNamedAnyAny: map[namedAny]any{Tag{Number: 139, Content: uint64(1)}: uint64(2)},
+				typeMapTagAny:      map[Tag]any{{Number: 139, Content: uint64(1)}: uint64(2)},
 			},
 		},
 		{
 			name: "139([1])",
 			data: mustHexDecode("a1d88b810102"), // {139([1]): 2}
 			wantErrorMsgs: map[reflect.Type]string{
-				typeIntf:             "cbor: invalid map key type: cbor.Tag",
-				typeMapIntfIntf:      "cbor: invalid map key type: cbor.Tag",
-				typeMapNamedIntfIntf: "cbor: invalid map key type: cbor.Tag",
-				typeMapTagAny:        "cbor: invalid map key type: cbor.Tag",
+				typeAny:            "cbor: invalid map key type: cbor.Tag",
+				typeMapAnyAny:      "cbor: invalid map key type: cbor.Tag",
+				typeMapNamedAnyAny: "cbor: invalid map key type: cbor.Tag",
+				typeMapTagAny:      "cbor: invalid map key type: cbor.Tag",
 			},
 		},
 	}
@@ -4545,9 +4545,9 @@ func TestRegisteredMapKeyHashable(t *testing.T) {
 	}
 
 	destinationTypes := []reflect.Type{
-		typeIntf,             // any
-		typeMapIntfIntf,      // map[any]any
-		typeMapNamedIntfIntf, // map[namedAny]any
+		typeAny,            // any
+		typeMapAnyAny,      // map[any]any
+		typeMapNamedAnyAny, // map[namedAny]any
 	}
 
 	testCases := []struct {
@@ -4565,9 +4565,9 @@ func TestRegisteredMapKeyHashable(t *testing.T) {
 			name: "map key type [1]int",
 			data: mustHexDecode("a1d880810102"), // {128([1]): 2}
 			wantObjs: map[reflect.Type]any{
-				typeIntf:             map[any]any{intArray([1]int{1}): uint64(2)},
-				typeMapIntfIntf:      map[any]any{intArray([1]int{1}): uint64(2)},
-				typeMapNamedIntfIntf: map[namedAny]any{intArray([1]int{1}): uint64(2)},
+				typeAny:            map[any]any{intArray([1]int{1}): uint64(2)},
+				typeMapAnyAny:      map[any]any{intArray([1]int{1}): uint64(2)},
+				typeMapNamedAnyAny: map[namedAny]any{intArray([1]int{1}): uint64(2)},
 			},
 		},
 		{
@@ -4579,9 +4579,9 @@ func TestRegisteredMapKeyHashable(t *testing.T) {
 			name: "map key type [1]any, value [1]",
 			data: mustHexDecode("a1d882810102"), // {130([1]): 2}
 			wantObjs: map[reflect.Type]any{
-				typeIntf:             map[any]any{anyArray([1]any{uint64(1)}): uint64(2)},
-				typeMapIntfIntf:      map[any]any{anyArray([1]any{uint64(1)}): uint64(2)},
-				typeMapNamedIntfIntf: map[namedAny]any{anyArray([1]any{uint64(1)}): uint64(2)},
+				typeAny:            map[any]any{anyArray([1]any{uint64(1)}): uint64(2)},
+				typeMapAnyAny:      map[any]any{anyArray([1]any{uint64(1)}): uint64(2)},
+				typeMapNamedAnyAny: map[namedAny]any{anyArray([1]any{uint64(1)}): uint64(2)},
 			},
 		},
 		{
@@ -4593,9 +4593,9 @@ func TestRegisteredMapKeyHashable(t *testing.T) {
 			name: "map key type intStruct",
 			data: mustHexDecode("a1d883a161580102"), // {131({"X": 1}): 2}
 			wantObjs: map[reflect.Type]any{
-				typeIntf:             map[any]any{intStruct{X: 1}: uint64(2)},
-				typeMapIntfIntf:      map[any]any{intStruct{X: 1}: uint64(2)},
-				typeMapNamedIntfIntf: map[namedAny]any{intStruct{X: 1}: uint64(2)},
+				typeAny:            map[any]any{intStruct{X: 1}: uint64(2)},
+				typeMapAnyAny:      map[any]any{intStruct{X: 1}: uint64(2)},
+				typeMapNamedAnyAny: map[namedAny]any{intStruct{X: 1}: uint64(2)},
 			},
 		},
 		{
@@ -4607,9 +4607,9 @@ func TestRegisteredMapKeyHashable(t *testing.T) {
 			name: "map key type anyStruct, value anyStruct{X: 1}",
 			data: mustHexDecode("a1d885a161580102"), // {133({"X": 1}): 2}
 			wantObjs: map[reflect.Type]any{
-				typeIntf:             map[any]any{anyStruct{X: uint64(1)}: uint64(2)},
-				typeMapIntfIntf:      map[any]any{anyStruct{X: uint64(1)}: uint64(2)},
-				typeMapNamedIntfIntf: map[namedAny]any{anyStruct{X: uint64(1)}: uint64(2)},
+				typeAny:            map[any]any{anyStruct{X: uint64(1)}: uint64(2)},
+				typeMapAnyAny:      map[any]any{anyStruct{X: uint64(1)}: uint64(2)},
+				typeMapNamedAnyAny: map[namedAny]any{anyStruct{X: uint64(1)}: uint64(2)},
 			},
 		},
 		{
@@ -4621,9 +4621,9 @@ func TestRegisteredMapKeyHashable(t *testing.T) {
 			name: "map key type intStructArray",
 			data: mustHexDecode("a1d88681d883a161580102"), // {134([131({"X": 1})]): 2}
 			wantObjs: map[reflect.Type]any{
-				typeIntf:             map[any]any{intStructArray([1]intStruct{{X: 1}}): uint64(2)},
-				typeMapIntfIntf:      map[any]any{intStructArray([1]intStruct{{X: 1}}): uint64(2)},
-				typeMapNamedIntfIntf: map[namedAny]any{intStructArray([1]intStruct{{X: 1}}): uint64(2)},
+				typeAny:            map[any]any{intStructArray([1]intStruct{{X: 1}}): uint64(2)},
+				typeMapAnyAny:      map[any]any{intStructArray([1]intStruct{{X: 1}}): uint64(2)},
+				typeMapNamedAnyAny: map[namedAny]any{intStructArray([1]intStruct{{X: 1}}): uint64(2)},
 			},
 		},
 		{
@@ -4635,9 +4635,9 @@ func TestRegisteredMapKeyHashable(t *testing.T) {
 			name: "map key type anyStructArray, value [1]anyStruct{X: 1}",
 			data: mustHexDecode("a1d88881d885a161580102"), // {136([133({"X": 1})]): 2}
 			wantObjs: map[reflect.Type]any{
-				typeIntf:             map[any]any{anyStructArray([1]anyStruct{{X: uint64(1)}}): uint64(2)},
-				typeMapIntfIntf:      map[any]any{anyStructArray([1]anyStruct{{X: uint64(1)}}): uint64(2)},
-				typeMapNamedIntfIntf: map[namedAny]any{anyStructArray([1]anyStruct{{X: uint64(1)}}): uint64(2)},
+				typeAny:            map[any]any{anyStructArray([1]anyStruct{{X: uint64(1)}}): uint64(2)},
+				typeMapAnyAny:      map[any]any{anyStructArray([1]anyStruct{{X: uint64(1)}}): uint64(2)},
+				typeMapNamedAnyAny: map[namedAny]any{anyStructArray([1]anyStruct{{X: uint64(1)}}): uint64(2)},
 			},
 		},
 		{
@@ -4649,9 +4649,9 @@ func TestRegisteredMapKeyHashable(t *testing.T) {
 			name: "map key type [0]int",
 			data: mustHexDecode("a1d8898002"), // {137([]): 2}
 			wantObjs: map[reflect.Type]any{
-				typeIntf:             map[any]any{zeroIntArray([0]int{}): uint64(2)},
-				typeMapIntfIntf:      map[any]any{zeroIntArray([0]int{}): uint64(2)},
-				typeMapNamedIntfIntf: map[namedAny]any{zeroIntArray([0]int{}): uint64(2)},
+				typeAny:            map[any]any{zeroIntArray([0]int{}): uint64(2)},
+				typeMapAnyAny:      map[any]any{zeroIntArray([0]int{}): uint64(2)},
+				typeMapNamedAnyAny: map[namedAny]any{zeroIntArray([0]int{}): uint64(2)},
 			},
 		},
 		{
@@ -4727,13 +4727,13 @@ func TestMapKeyNil(t *testing.T) {
 			name:         "decode {null: 1} to any",
 			data:         mustHexDecode("a1f601"), // {null: 1}
 			want:         map[any]any{nil: uint64(1)},
-			decodeToType: typeIntf,
+			decodeToType: typeAny,
 		},
 		{
 			name:         "decode {null: 1} to map[any]any",
 			data:         mustHexDecode("a1f601"), // {null: 1}
 			want:         map[any]any{nil: uint64(1)},
-			decodeToType: typeMapIntfIntf,
+			decodeToType: typeMapAnyAny,
 		},
 		{
 			name:         "decode {null: 1} to map[int]any",
@@ -4751,13 +4751,13 @@ func TestMapKeyNil(t *testing.T) {
 			name:         "decode {null: 1, 2: 3} to any",
 			data:         mustHexDecode("a2f6010203"), // {null: 1, 2: 3}
 			want:         map[any]any{nil: uint64(1), uint64(2): uint64(3)},
-			decodeToType: typeIntf,
+			decodeToType: typeAny,
 		},
 		{
 			name:         "decode {null: 1, 2: 3} to map[any]any",
 			data:         mustHexDecode("a2f6010203"), // {null: 1, 2: 3}
 			want:         map[any]any{nil: uint64(1), uint64(2): uint64(3)},
-			decodeToType: typeMapIntfIntf,
+			decodeToType: typeMapAnyAny,
 		},
 		{
 			name:         "decode {null: 1, 2: 3} to map[int]any",
@@ -4775,13 +4775,13 @@ func TestMapKeyNil(t *testing.T) {
 			name:         "decode {2: 3, null: 1} to any",
 			data:         mustHexDecode("a20203f601"), // {2: 3, null: 1}
 			want:         map[any]any{nil: uint64(1), uint64(2): uint64(3)},
-			decodeToType: typeIntf,
+			decodeToType: typeAny,
 		},
 		{
 			name:         "decode {2: 3, null: 1} to map[any]any",
 			data:         mustHexDecode("a20203f601"), // {2: 3, null: 1}
 			want:         map[any]any{nil: uint64(1), uint64(2): uint64(3)},
-			decodeToType: typeMapIntfIntf,
+			decodeToType: typeMapAnyAny,
 		},
 		{
 			name:         "decode {2: 3, null: 1} to map[int]any",
@@ -4832,7 +4832,7 @@ func TestMapKeyDuplicateNil(t *testing.T) {
 			name:         "decode {null: 1, null: 2} to any with DupMapKeyQuiet",
 			data:         mustHexDecode("a2f601f602"), // {null: 1, null: 2}
 			want:         map[any]any{nil: uint64(2)},
-			decodeToType: typeIntf,
+			decodeToType: typeAny,
 			opts: DecOptions{
 				DupMapKey: DupMapKeyQuiet,
 			},
@@ -4841,7 +4841,7 @@ func TestMapKeyDuplicateNil(t *testing.T) {
 			name:         "decode {null: 1, null: 2} to any with DupMapKeyEnforcedAPF",
 			data:         mustHexDecode("a2f601f602"), // {null: 1, null: 2}
 			wantErrorMsg: "cbor: found duplicate map key <nil> at map element index 1",
-			decodeToType: typeIntf,
+			decodeToType: typeAny,
 			opts: DecOptions{
 				DupMapKey: DupMapKeyEnforcedAPF,
 			},
@@ -4850,7 +4850,7 @@ func TestMapKeyDuplicateNil(t *testing.T) {
 			name:         "decode {null: 1, null: 2} to map[any]any with DupMapKeyQuiet",
 			data:         mustHexDecode("a2f601f602"), // {null: 1, null: 2}
 			want:         map[any]any{nil: uint64(2)},
-			decodeToType: typeMapIntfIntf,
+			decodeToType: typeMapAnyAny,
 			opts: DecOptions{
 				DupMapKey: DupMapKeyQuiet,
 			},
@@ -4859,7 +4859,7 @@ func TestMapKeyDuplicateNil(t *testing.T) {
 			name:         "decode {null: 1, null: 2} to map[any]any with DupMapKeyEnforcedAPF",
 			data:         mustHexDecode("a2f601f602"), // {null: 1, null: 2}
 			wantErrorMsg: "cbor: found duplicate map key <nil> at map element index 1",
-			decodeToType: typeMapIntfIntf,
+			decodeToType: typeMapAnyAny,
 			opts: DecOptions{
 				DupMapKey: DupMapKeyEnforcedAPF,
 			},
@@ -4936,13 +4936,13 @@ func TestMapValueNil(t *testing.T) {
 			name:         "decode {1: null} to any",
 			data:         mustHexDecode("a101f6"), // {1: null}
 			want:         map[any]any{uint64(1): nil},
-			decodeToType: typeIntf,
+			decodeToType: typeAny,
 		},
 		{
 			name:         "decode {1: null} to map[any]any",
 			data:         mustHexDecode("a101f6"), // {1: null}
 			want:         map[any]any{uint64(1): nil},
-			decodeToType: typeMapIntfIntf,
+			decodeToType: typeMapAnyAny,
 		},
 		{
 			name:         "decode {1: null} to map[int]int",
@@ -4954,13 +4954,13 @@ func TestMapValueNil(t *testing.T) {
 			name:         "decode {1: null, 2: 3} to any",
 			data:         mustHexDecode("a201f60203"), // {1: null, 2: 3}
 			want:         map[any]any{uint64(1): nil, uint64(2): uint64(3)},
-			decodeToType: typeIntf,
+			decodeToType: typeAny,
 		},
 		{
 			name:         "decode {1: null, 2: 3} to map[any]any",
 			data:         mustHexDecode("a201f60203"), // {1: null, 2: 3}
 			want:         map[any]any{uint64(1): nil, uint64(2): uint64(3)},
-			decodeToType: typeMapIntfIntf,
+			decodeToType: typeMapAnyAny,
 		},
 		{
 			name:         "decode {1: null, 2: 3} to map[int]int",
@@ -4978,13 +4978,13 @@ func TestMapValueNil(t *testing.T) {
 			name:         "decode {2: 3, 1: null} to any",
 			data:         mustHexDecode("a2020301f6"), // {2: 3, 1: null}
 			want:         map[any]any{uint64(1): nil, uint64(2): uint64(3)},
-			decodeToType: typeIntf,
+			decodeToType: typeAny,
 		},
 		{
 			name:         "decode {2: 3, 1: null} to map[any]any",
 			data:         mustHexDecode("a2020301f6"), // {2: 3, 1: null}
 			want:         map[any]any{uint64(1): nil, uint64(2): uint64(3)},
-			decodeToType: typeMapIntfIntf,
+			decodeToType: typeMapAnyAny,
 		},
 		{
 			name:         "decode {2: 3, 1: null} to map[int]int",
@@ -5284,67 +5284,67 @@ func TestDecodeInvalidTagTime(t *testing.T) {
 		{
 			name:          "tag 0 with invalid RFC3339 time string",
 			data:          mustHexDecode("c07f657374726561646d696e67ff"),
-			decodeToTypes: []reflect.Type{typeIntf, typeTime},
+			decodeToTypes: []reflect.Type{typeAny, typeTime},
 			wantErrorMsg:  "cbor: cannot set streaming for time.Time",
 		},
 		{
 			name:          "tag 0 with invalid UTF-8 string",
 			data:          mustHexDecode("c07f62e6b061b4ff"),
-			decodeToTypes: []reflect.Type{typeIntf, typeTime},
+			decodeToTypes: []reflect.Type{typeAny, typeTime},
 			wantErrorMsg:  "cbor: invalid UTF-8 string",
 		},
 		{
 			name:          "tag 0 with integer content",
 			data:          mustHexDecode("c01a514b67b0"),
-			decodeToTypes: []reflect.Type{typeIntf, typeTime},
+			decodeToTypes: []reflect.Type{typeAny, typeTime},
 			wantErrorMsg:  "cbor: tag number 0 must be followed by text string, got positive integer",
 		},
 		{
 			name:          "tag 0 with byte string content",
 			data:          mustHexDecode("c04f013030303030303030e03031ed3030"),
-			decodeToTypes: []reflect.Type{typeIntf, typeTime},
+			decodeToTypes: []reflect.Type{typeAny, typeTime},
 			wantErrorMsg:  "cbor: tag number 0 must be followed by text string, got byte string",
 		},
 		{
 			name:          "tag 0 with integer content as array element",
 			data:          mustHexDecode("81c01a514b67b0"),
-			decodeToTypes: []reflect.Type{typeIntf, typeTimeSlice},
+			decodeToTypes: []reflect.Type{typeAny, typeTimeSlice},
 			wantErrorMsg:  "cbor: tag number 0 must be followed by text string, got positive integer",
 		},
 		{
 			name:          "tag 1 with negative integer overflow",
 			data:          mustHexDecode("c13bffffffffffffffff"),
-			decodeToTypes: []reflect.Type{typeIntf, typeTime},
+			decodeToTypes: []reflect.Type{typeAny, typeTime},
 			wantErrorMsg:  "cbor: cannot unmarshal negative integer into Go value of type time.Time (-18446744073709551616 overflows Go's int64)",
 		},
 		{
 			name:          "tag 1 with positive float64 overflow",
 			data:          mustHexDecode("c1fb4415af1d78b58c40"), // 1(1e+20)
-			decodeToTypes: []reflect.Type{typeIntf, typeTime},
+			decodeToTypes: []reflect.Type{typeAny, typeTime},
 			wantErrorMsg:  "overflows Go's int64",
 		},
 		{
 			name:          "tag 1 with negative float64 overflow",
 			data:          mustHexDecode("c1fbc415af1d78b58c40"), // 1(-1e+20)
-			decodeToTypes: []reflect.Type{typeIntf, typeTime},
+			decodeToTypes: []reflect.Type{typeAny, typeTime},
 			wantErrorMsg:  "overflows Go's int64",
 		},
 		{
 			name:          "tag 1 with string content",
 			data:          mustHexDecode("c174323031332d30332d32315432303a30343a30305a"),
-			decodeToTypes: []reflect.Type{typeIntf, typeTime},
+			decodeToTypes: []reflect.Type{typeAny, typeTime},
 			wantErrorMsg:  "cbor: tag number 1 must be followed by integer or floating-point number, got UTF-8 text string",
 		},
 		{
 			name:          "tag 1 with simple value",
 			data:          mustHexDecode("d801f6"), // 1(null)
-			decodeToTypes: []reflect.Type{typeIntf, typeTime},
+			decodeToTypes: []reflect.Type{typeAny, typeTime},
 			wantErrorMsg:  "cbor: tag number 1 must be followed by integer or floating-point number, got primitive",
 		},
 		{
 			name:          "tag 1 with string content as array element",
 			data:          mustHexDecode("81c174323031332d30332d32315432303a30343a30305a"),
-			decodeToTypes: []reflect.Type{typeIntf, typeTimeSlice},
+			decodeToTypes: []reflect.Type{typeAny, typeTimeSlice},
 			wantErrorMsg:  "cbor: tag number 1 must be followed by integer or floating-point number, got UTF-8 text string",
 		},
 	}
@@ -8286,8 +8286,8 @@ func TestMapKeyByteString(t *testing.T) {
 			name: "byte string map key with MapKeyByteStringForbidden",
 			data: mustHexDecode("a143abcdef187b"),
 			wantErrorMsgs: map[reflect.Type]string{
-				typeIntf:        "cbor: invalid map key type: []uint8",
-				typeMapIntfIntf: "cbor: invalid map key type: []uint8",
+				typeAny:       "cbor: invalid map key type: []uint8",
+				typeMapAnyAny: "cbor: invalid map key type: []uint8",
 			},
 			dm: bsForbiddenMode,
 		},
@@ -8295,8 +8295,8 @@ func TestMapKeyByteString(t *testing.T) {
 			name: "tagged byte string map key with MapKeyByteStringForbidden",
 			data: mustHexDecode("a1d86443abcdef187b"),
 			wantErrorMsgs: map[reflect.Type]string{
-				typeIntf:        "cbor: invalid map key type: cbor.Tag",
-				typeMapIntfIntf: "cbor: invalid map key type: cbor.Tag",
+				typeAny:       "cbor: invalid map key type: cbor.Tag",
+				typeMapAnyAny: "cbor: invalid map key type: cbor.Tag",
 			},
 			dm: bsForbiddenMode,
 		},
@@ -8304,8 +8304,8 @@ func TestMapKeyByteString(t *testing.T) {
 			name: "nested tagged byte string map key with MapKeyByteStringForbidden",
 			data: mustHexDecode("a1d865d86443abcdef187b"),
 			wantErrorMsgs: map[reflect.Type]string{
-				typeIntf:        "cbor: invalid map key type: cbor.Tag",
-				typeMapIntfIntf: "cbor: invalid map key type: cbor.Tag",
+				typeAny:       "cbor: invalid map key type: cbor.Tag",
+				typeMapAnyAny: "cbor: invalid map key type: cbor.Tag",
 			},
 			dm: bsForbiddenMode,
 		},
@@ -8313,10 +8313,10 @@ func TestMapKeyByteString(t *testing.T) {
 			name: "byte string map key with MapKeyByteStringAllowed",
 			data: mustHexDecode("a143abcdef187b"),
 			wantObjs: map[reflect.Type]any{
-				typeIntf: map[any]any{
+				typeAny: map[any]any{
 					ByteString("\xab\xcd\xef"): uint64(123),
 				},
-				typeMapIntfIntf: map[any]any{
+				typeMapAnyAny: map[any]any{
 					ByteString("\xab\xcd\xef"): uint64(123),
 				},
 			},
@@ -8326,10 +8326,10 @@ func TestMapKeyByteString(t *testing.T) {
 			name: "tagged byte string map key with MapKeyByteStringAllowed",
 			data: mustHexDecode("a1d86443abcdef187b"),
 			wantObjs: map[reflect.Type]any{
-				typeIntf: map[any]any{
+				typeAny: map[any]any{
 					Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}: uint64(123),
 				},
-				typeMapIntfIntf: map[any]any{
+				typeMapAnyAny: map[any]any{
 					Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}: uint64(123),
 				},
 				typeMapTagAny: map[Tag]any{
@@ -8342,10 +8342,10 @@ func TestMapKeyByteString(t *testing.T) {
 			name: "nested tagged byte string map key with MapKeyByteStringAllowed",
 			data: mustHexDecode("a1d865d86443abcdef187b"),
 			wantObjs: map[reflect.Type]any{
-				typeIntf: map[any]any{
+				typeAny: map[any]any{
 					Tag{Number: 101, Content: Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}}: uint64(123),
 				},
-				typeMapIntfIntf: map[any]any{
+				typeMapAnyAny: map[any]any{
 					Tag{Number: 101, Content: Tag{Number: 100, Content: ByteString("\xab\xcd\xef")}}: uint64(123),
 				},
 				typeMapTagAny: map[Tag]any{
@@ -9119,19 +9119,19 @@ func TestUnmarshalInvalidTagBignum(t *testing.T) {
 		{
 			name:          "tag 2 with string",
 			data:          mustHexDecode("c27f657374726561646d696e67ff"),
-			decodeToTypes: []reflect.Type{typeIntf, typeBigInt},
+			decodeToTypes: []reflect.Type{typeAny, typeBigInt},
 			wantErrorMsg:  "cbor: tag number 2 or 3 must be followed by byte string, got UTF-8 text string",
 		},
 		{
 			name:          "tag 3 with string",
 			data:          mustHexDecode("c37f657374726561646d696e67ff"),
-			decodeToTypes: []reflect.Type{typeIntf, typeBigInt},
+			decodeToTypes: []reflect.Type{typeAny, typeBigInt},
 			wantErrorMsg:  "cbor: tag number 2 or 3 must be followed by byte string, got UTF-8 text string",
 		},
 		{
 			name:          "tag 3 with negative integer",
 			data:          mustHexDecode("81C330"), // [3(-17)]
-			decodeToTypes: []reflect.Type{typeIntf, typeBigIntSlice},
+			decodeToTypes: []reflect.Type{typeAny, typeBigIntSlice},
 			wantErrorMsg:  "cbor: tag number 2 or 3 must be followed by byte string, got negative integer",
 		},
 	}
@@ -9510,9 +9510,9 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 	cborDataNestedMap := mustHexDecode("a268496e744669656c6401684d61704669656c64a2616101616202") // {"IntField": 1, "MapField": {"a": 1, "b": 2}}
 
 	decOptionsDefault := DecOptions{}
-	decOptionsMapIntfIntfType := DecOptions{DefaultMapType: reflect.TypeFor[map[any]any]()}
+	decOptionsMapAnyAnyType := DecOptions{DefaultMapType: reflect.TypeFor[map[any]any]()}
 	decOptionsMapStringIntType := DecOptions{DefaultMapType: reflect.TypeFor[map[string]int]()}
-	decOptionsMapStringIntfType := DecOptions{DefaultMapType: reflect.TypeFor[map[string]any]()}
+	decOptionsMapStringAnyType := DecOptions{DefaultMapType: reflect.TypeFor[map[string]any]()}
 
 	testCases := []struct {
 		name         string
@@ -9555,19 +9555,19 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 		// Decode CBOR map to map[any]any using default map type option
 		{
 			name:      "decode CBOR map[int]int to Go map[any]any",
-			opts:      decOptionsMapIntfIntfType,
+			opts:      decOptionsMapAnyAnyType,
 			data:      cborDataMapIntInt,
 			wantValue: map[any]any{uint64(1): uint64(2), uint64(3): uint64(4)},
 		},
 		{
 			name:      "decode CBOR map[string]int to Go map[any]any",
-			opts:      decOptionsMapIntfIntfType,
+			opts:      decOptionsMapAnyAnyType,
 			data:      cborDataMapStringInt,
 			wantValue: map[any]any{"a": uint64(1), "b": uint64(2)},
 		},
 		{
 			name: "decode CBOR array of map[string]int to Go []map[any]any",
-			opts: decOptionsMapIntfIntfType,
+			opts: decOptionsMapAnyAnyType,
 			data: cborDataArrayOfMapStringint,
 			wantValue: []any{
 				map[any]any{"a": uint64(1), "b": uint64(2)},
@@ -9576,7 +9576,7 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 		},
 		{
 			name: "decode CBOR nested map to Go map[any]any",
-			opts: decOptionsMapIntfIntfType,
+			opts: decOptionsMapAnyAnyType,
 			data: cborDataNestedMap,
 			wantValue: map[any]any{
 				"IntField": uint64(1),
@@ -9586,19 +9586,19 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 		// Decode CBOR map to map[string]any using default map type option
 		{
 			name:         "decode CBOR map[int]int to Go map[string]any",
-			opts:         decOptionsMapStringIntfType,
+			opts:         decOptionsMapStringAnyType,
 			data:         cborDataMapIntInt,
 			wantErrorMsg: "cbor: cannot unmarshal positive integer into Go value of type string",
 		},
 		{
 			name:      "decode CBOR map[string]int to Go map[string]any",
-			opts:      decOptionsMapStringIntfType,
+			opts:      decOptionsMapStringAnyType,
 			data:      cborDataMapStringInt,
 			wantValue: map[string]any{"a": uint64(1), "b": uint64(2)},
 		},
 		{
 			name: "decode CBOR array of map[string]int to Go []map[string]any",
-			opts: decOptionsMapStringIntfType,
+			opts: decOptionsMapStringAnyType,
 			data: cborDataArrayOfMapStringint,
 			wantValue: []any{
 				map[string]any{"a": uint64(1), "b": uint64(2)},
@@ -9607,7 +9607,7 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 		},
 		{
 			name: "decode CBOR nested map to Go map[string]any",
-			opts: decOptionsMapStringIntfType,
+			opts: decOptionsMapStringAnyType,
 			data: cborDataNestedMap,
 			wantValue: map[string]any{
 				"IntField": uint64(1),
@@ -10400,7 +10400,7 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 			name:          "default false into any",
 			fns:           nil,
 			data:          []byte{0xf4},
-			into:          typeIntf,
+			into:          typeAny,
 			want:          false,
 			assertOnError: assertNilError,
 		},
@@ -10416,7 +10416,7 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 			name:          "default true into any",
 			fns:           nil,
 			data:          []byte{0xf5},
-			into:          typeIntf,
+			into:          typeAny,
 			want:          true,
 			assertOnError: assertNilError,
 		},
@@ -10432,7 +10432,7 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 			name:          "default null into any",
 			fns:           nil,
 			data:          []byte{0xf6},
-			into:          typeIntf,
+			into:          typeAny,
 			want:          nil,
 			assertOnError: assertNilError,
 		},
@@ -10440,7 +10440,7 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 			name:          "default undefined into any",
 			fns:           nil,
 			data:          []byte{0xf7},
-			into:          typeIntf,
+			into:          typeAny,
 			want:          nil,
 			assertOnError: assertNilError,
 		},
@@ -10448,7 +10448,7 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 			name: "reject undefined into any",
 			fns:  []func(*SimpleValueRegistry) error{WithRejectedSimpleValue(23)},
 			data: []byte{0xf7},
-			into: typeIntf,
+			into: typeAny,
 			want: nil,
 			assertOnError: assertExactError(&UnacceptableDataItemError{
 				CBORType: "primitives",
@@ -11814,7 +11814,7 @@ func TestBignumTagMode(t *testing.T) {
 				typeByteArray,
 				typeByteSlice,
 				typeBigInt,
-				typeIntf,
+				typeAny,
 			} {
 				t.Run(dstType.String(), func(t *testing.T) {
 					dstv := reflect.New(dstType)
@@ -12521,12 +12521,12 @@ func TestNeedsHashableValueCheck(t *testing.T) {
 		// Interfaces
 		{
 			name: "any",
-			typ:  typeIntf,
+			typ:  typeAny,
 			want: true,
 		},
 		{
 			name: "namedAny",
-			typ:  typeNamedIntf,
+			typ:  typeNamedAny,
 			want: true,
 		},
 		{
