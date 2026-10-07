@@ -173,6 +173,8 @@ func TestUnmarshalSimpleValueOnBadData(t *testing.T) {
 }
 
 func testUnmarshalInvalidSimpleValueToEmptyInterface(t *testing.T, data []byte) {
+	t.Helper()
+
 	var v any
 	if err := unmarshal(t, data, v); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
@@ -182,6 +184,8 @@ func testUnmarshalInvalidSimpleValueToEmptyInterface(t *testing.T, data []byte) 
 }
 
 func testUnmarshalInvalidSimpleValue(t *testing.T, data []byte) {
+	t.Helper()
+
 	var v SimpleValue
 	if err := unmarshal(t, data, v); err == nil {
 		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
@@ -191,6 +195,8 @@ func testUnmarshalInvalidSimpleValue(t *testing.T, data []byte) {
 }
 
 func testUnmarshalSimpleValueToEmptyInterface(t *testing.T, data []byte, want any) {
+	t.Helper()
+
 	var v any
 	if err := unmarshal(t, data, &v); err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
@@ -202,6 +208,8 @@ func testUnmarshalSimpleValueToEmptyInterface(t *testing.T, data []byte, want an
 }
 
 func testUnmarshalSimpleValue(t *testing.T, data []byte, want SimpleValue) {
+	t.Helper()
+
 	cborNil := isCBORNil(data)
 
 	// Decode to SimpleValue

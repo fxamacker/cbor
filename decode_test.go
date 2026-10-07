@@ -2426,6 +2426,8 @@ func TestUnmarshalToRawMessage(t *testing.T) {
 }
 
 func testUnmarshalToRawMessage(t *testing.T, data []byte) {
+	t.Helper()
+
 	cborNil := isCBORNil(data)
 
 	// Decode to RawMessage
@@ -2481,6 +2483,8 @@ func TestUnmarshalToCompatibleTypes(t *testing.T) {
 }
 
 func testUnmarshalToCompatibleType(t *testing.T, data []byte, wantValue any, compare func(gotValue any)) {
+	t.Helper()
+
 	var rv reflect.Value
 
 	cborNil := isCBORNil(data)
@@ -2544,6 +2548,8 @@ func TestUnmarshalToIncompatibleTypes(t *testing.T) {
 }
 
 func testUnmarshalToIncompatibleType(t *testing.T, data []byte, wrongType reflect.Type) {
+	t.Helper()
+
 	var rv reflect.Value
 
 	// Decode to wrongType, same as:
@@ -2585,6 +2591,8 @@ func testUnmarshalToIncompatibleType(t *testing.T, data []byte, wrongType reflec
 }
 
 func compareNonFloats(t *testing.T, data []byte, got any, want any) {
+	t.Helper()
+
 	switch tm := want.(type) {
 	case time.Time:
 		if vt, ok := got.(time.Time); !ok || !tm.Equal(vt) {
@@ -2634,6 +2642,8 @@ func TestUnmarshalFloatToIncompatibleTypes(t *testing.T) {
 }
 
 func compareFloats(t *testing.T, data []byte, got any, want any, equalityThreshold float64) {
+	t.Helper()
+
 	var gotFloat64, wantFloat64 float64
 
 	switch want := want.(type) {
