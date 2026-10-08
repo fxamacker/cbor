@@ -1427,28 +1427,31 @@ type keyValue struct {
 	nextOffset  int
 }
 
-var keyValuePool = sync.Pool{}
+// maxPooledKeyValues is the max capacity of []keyValue in keyValuePool.
+const maxPooledKeyValues = 1024
+
+var keyValuePool = sync.Pool{
+	New: func() any {
+		return new([]keyValue)
+	},
+}
 
 func getKeyValues(length int) *[]keyValue {
-	v := keyValuePool.Get()
-	if v == nil {
-		y := make([]keyValue, length)
-		return &y
+	v := keyValuePool.Get().(*[]keyValue)
+	if cap(*v) < length {
+		*v = make([]keyValue, length)
+	} else {
+		*v = (*v)[:length]
 	}
-	x := v.(*[]keyValue)
-	if cap(*x) >= length {
-		*x = (*x)[:length]
-		return x
-	}
-	// []keyValue from the pool does not have enough capacity.
-	// Return it back to the pool and create a new one.
-	keyValuePool.Put(x)
-	y := make([]keyValue, length)
-	return &y
+	return v
 }
 
 func putKeyValues(x *[]keyValue) {
-	*x = (*x)[:0]
+	if cap(*x) > maxPooledKeyValues {
+		*x = nil
+	} else {
+		*x = (*x)[:0]
+	}
 	keyValuePool.Put(x)
 }
 
