@@ -1649,7 +1649,13 @@ const (
 )
 
 func encodeTime(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
-	t := v.Interface().(time.Time)
+	var t time.Time
+	if v.CanAddr() {
+		t = *v.Addr().Interface().(*time.Time)
+	} else {
+		t = v.Interface().(time.Time)
+	}
+
 	if t.IsZero() {
 		dst = append(dst, cborNil) // Even if tag is required, encode as CBOR null.
 		return dst, nil
@@ -1721,7 +1727,13 @@ func encodeBigInt(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 		return dst, &UnsupportedTypeError{Type: typeBigInt}
 	}
 
-	vbi := v.Interface().(big.Int)
+	var vbi big.Int
+	if v.CanAddr() {
+		vbi = *v.Addr().Interface().(*big.Int)
+	} else {
+		vbi = v.Interface().(big.Int)
+	}
+
 	sign := vbi.Sign()
 	bi := new(big.Int).SetBytes(vbi.Bytes()) // bi is absolute value of v
 	if sign < 0 {
@@ -2006,7 +2018,12 @@ func encodeTag(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 		return dst, errors.New("cbor: cannot encode cbor.Tag when TagsMd is TagsForbidden")
 	}
 
-	t := v.Interface().(Tag)
+	var t Tag
+	if v.CanAddr() {
+		t = *v.Addr().Interface().(*Tag)
+	} else {
+		t = v.Interface().(Tag)
+	}
 
 	if t.Number == 0 && t.Content == nil {
 		// Marshal uninitialized cbor.Tag

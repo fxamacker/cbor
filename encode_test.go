@@ -3216,6 +3216,10 @@ func TestEncodeTime(t *testing.T) {
 			},
 		},
 	}
+
+	type s struct{ T time.Time }
+	wantStructPrefix := []byte{0xa1, 0x61, 0x54}
+
 	for _, tc := range testCases {
 		for _, convert := range tc.convert {
 			name := tc.name + " with " + convert.opt.name + " option"
@@ -3225,6 +3229,7 @@ func TestEncodeTime(t *testing.T) {
 					t.Errorf("EncMode() returned error %v", err)
 				}
 
+				// Marshal time.Time
 				b, err := em.Marshal(tc.tm)
 				if err != nil {
 					t.Errorf("Marshal(%+v) returned error %v", tc.tm, err)
@@ -3232,10 +3237,21 @@ func TestEncodeTime(t *testing.T) {
 					t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.tm, b, convert.wantCborData)
 				}
 
-				var tm time.Time
-				err = unmarshal(t, b, &tm)
+				// Marshal *struct{time.Time}
+				v := s{T: tc.tm}
+				want := append([]byte(nil), wantStructPrefix...)
+				want = append(want, convert.wantCborData...)
+				b, err = em.Marshal(&v)
 				if err != nil {
-					t.Errorf("Unmarshal(0x%x) to time.Time returned error %v", b, err)
+					t.Errorf("Marshal(%+v) returned error %v", v, err)
+				} else if !bytes.Equal(b, want) {
+					t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, want)
+				}
+
+				var tm time.Time
+				err = unmarshal(t, convert.wantCborData, &tm)
+				if err != nil {
+					t.Errorf("Unmarshal(0x%x) to time.Time returned error %v", convert.wantCborData, err)
 				} else if convert.roundtrip {
 					if convert.opt.hasLocalOffset && tc.tm.Compare(tm) != 0 {
 						t.Errorf("failed to rountrip local time: want %s, got %s", tc.tm, tm)
@@ -6222,6 +6238,9 @@ func TestMarshalPosBigInt(t *testing.T) {
 		t.Errorf("EncMode() returned an error %v", err)
 	}
 
+	type s struct{ B big.Int }
+	wantStructPrefix := []byte{0xa1, 0x61, 0x42}
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			if b, err := dmShortest.Marshal(tc.value); err != nil {
@@ -6234,6 +6253,15 @@ func TestMarshalPosBigInt(t *testing.T) {
 				t.Errorf("Marshal(%v) returned error %v", tc.value, err)
 			} else if !bytes.Equal(b, tc.cborDataBigInt) {
 				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.value, b, tc.cborDataBigInt)
+			}
+
+			v := s{B: tc.value}
+			want := append([]byte(nil), wantStructPrefix...)
+			want = append(want, tc.cborDataBigInt...)
+			if b, err := dmBigInt.Marshal(&v); err != nil {
+				t.Errorf("Marshal(%v) returned error %v", v, err)
+			} else if !bytes.Equal(b, want) {
+				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
 			}
 		})
 	}

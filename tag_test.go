@@ -1281,6 +1281,20 @@ func TestMarshalRawTagWithEmptyContent(t *testing.T) {
 	}
 }
 
+func TestMarshalAddressableTag(t *testing.T) {
+	type s struct{ T Tag }
+
+	v := s{T: Tag{Number: 100, Content: 1}}
+	want := []byte{0xa1, 0x61, 0x54, 0xd8, 0x64, 0x01} // {"T": 100(1)}
+	b, err := Marshal(&v)
+	if err != nil {
+		t.Fatalf("Marshal(%v): unexpected error: %v", v, err)
+	}
+	if !bytes.Equal(b, want) {
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
+	}
+}
+
 func TestEncodeTag(t *testing.T) {
 	m := make(map[any]bool)
 	m[10] = true
