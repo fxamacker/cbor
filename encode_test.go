@@ -691,6 +691,8 @@ func encodeCborHeader(t cborType, n uint64) []byte {
 }
 
 func testMarshal(t *testing.T, testCases []marshalTestCase) {
+	t.Helper()
+
 	em, err := EncOptions{Sort: SortCanonical}.EncMode()
 	if err != nil {
 		t.Errorf("EncMode() returned an error %v", err)
@@ -724,7 +726,7 @@ func testMarshal(t *testing.T, testCases []marshalTestCase) {
 			if err := bem.MarshalToBuffer(value, &buf2); err != nil {
 				t.Errorf("MarshalToBuffer(%v) returned error %v", value, err)
 			} else if !bytes.Equal(buf2.Bytes(), tc.wantData) {
-				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", value, buf2.Bytes(), tc.wantData)
+				t.Errorf("MarshalToBuffer(%v) = 0x%x, want 0x%x", value, buf2.Bytes(), tc.wantData)
 			}
 		}
 		r := RawMessage(tc.wantData)
