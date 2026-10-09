@@ -769,6 +769,38 @@ func (tum TextUnmarshalerMode) valid() bool {
 	return tum >= 0 && tum < maxTextUnmarshalerMode
 }
 
+// FixedArrayLengthMode specifies how to handle length mismatches when decoding
+// CBOR data into Go fixed-size arrays.
+type FixedArrayLengthMode int
+
+const (
+	// FixedArrayLengthNone preserves the default behavior: if the CBOR data item
+	// has more elements or bytes than the destination Go array, extra elements
+	// are discarded; if fewer, remaining Go array elements are set to zero values.
+	FixedArrayLengthNone FixedArrayLengthMode = iota
+
+	// FixedArrayLengthEnforced requires the length of the CBOR data item (byte string or array)
+	// to match the length of the destination Go array, returning an error otherwise.
+	FixedArrayLengthEnforced
+
+	maxFixedArrayLengthMode
+)
+
+func (falm FixedArrayLengthMode) valid() bool {
+	return falm >= 0 && falm < maxFixedArrayLengthMode
+}
+
+// ArrayLengthMode is an alias for FixedArrayLengthMode.
+type ArrayLengthMode = FixedArrayLengthMode
+
+const (
+	// ArrayLengthNone is an alias for FixedArrayLengthNone.
+	ArrayLengthNone = FixedArrayLengthNone
+
+	// ArrayLengthEnforced is an alias for FixedArrayLengthEnforced.
+	ArrayLengthEnforced = FixedArrayLengthEnforced
+)
+
 // DecOptions specifies decoding options.
 type DecOptions struct {
 	// DupMapKey specifies whether to enforce duplicate map key.
@@ -912,6 +944,10 @@ type DecOptions struct {
 	// implement json.Unmarshaler but do not also implement cbor.Unmarshaler. If nil, decoding
 	// behavior is not influenced by whether or not a type implements json.Unmarshaler.
 	JSONUnmarshalerTranscoder Transcoder
+
+	// FixedArrayLength specifies how to handle length mismatches when decoding
+	// CBOR data into Go fixed-size arrays.
+	FixedArrayLength FixedArrayLengthMode
 }
 
 // DecMode returns DecMode with immutable options and no tags (safe for concurrency).
@@ -1128,6 +1164,10 @@ func (opts DecOptions) decMode() (*decMode, error) { //nolint:gocritic // ignore
 		return nil, errors.New("cbor: invalid TextUnmarshaler " + strconv.Itoa(int(opts.TextUnmarshaler)))
 	}
 
+	if !opts.FixedArrayLength.valid() {
+		return nil, errors.New("cbor: invalid FixedArrayLength " + strconv.Itoa(int(opts.FixedArrayLength)))
+	}
+
 	dm := decMode{
 		dupMapKey:                 opts.DupMapKey,
 		timeTag:                   opts.TimeTag,
@@ -1157,6 +1197,7 @@ func (opts DecOptions) decMode() (*decMode, error) { //nolint:gocritic // ignore
 		binaryUnmarshaler:         opts.BinaryUnmarshaler,
 		textUnmarshaler:           opts.TextUnmarshaler,
 		jsonUnmarshalerTranscoder: opts.JSONUnmarshalerTranscoder,
+		fixedArrayLength:          opts.FixedArrayLength,
 	}
 
 	return &dm, nil
@@ -1238,6 +1279,7 @@ type decMode struct {
 	binaryUnmarshaler         BinaryUnmarshalerMode
 	textUnmarshaler           TextUnmarshalerMode
 	jsonUnmarshalerTranscoder Transcoder
+	fixedArrayLength          FixedArrayLengthMode
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -1280,6 +1322,7 @@ func (dm *decMode) DecOptions() DecOptions {
 		BinaryUnmarshaler:         dm.binaryUnmarshaler,
 		TextUnmarshaler:           dm.textUnmarshaler,
 		JSONUnmarshalerTranscoder: dm.jsonUnmarshalerTranscoder,
+		FixedArrayLength:          dm.fixedArrayLength,
 	}
 }
 
@@ -1588,7 +1631,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 			copied = copied || converted
 		}
 
-		return fillByteString(t, b, !copied, v, tInfo, d.dm.byteStringToString, d.dm.binaryUnmarshaler, d.dm.textUnmarshaler)
+		return fillByteString(t, b, !copied, v, tInfo, d.dm.byteStringToString, d.dm.binaryUnmarshaler, d.dm.textUnmarshaler, d.dm.fixedArrayLength)
 
 	case cborTypeTextString:
 		b, isSmallText := d.tryParseSmallTextString()
@@ -1648,7 +1691,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				return nil
 			}
 			if tInfo.nonPtrKind == reflect.Slice || tInfo.nonPtrKind == reflect.Array {
-				return fillByteString(t, b, !copied, v, tInfo, ByteStringToStringForbidden, d.dm.binaryUnmarshaler, d.dm.textUnmarshaler)
+				return fillByteString(t, b, !copied, v, tInfo, ByteStringToStringForbidden, d.dm.binaryUnmarshaler, d.dm.textUnmarshaler, d.dm.fixedArrayLength)
 			}
 			if bi.IsUint64() {
 				return fillPositiveInt(t, bi.Uint64(), v)
@@ -1671,7 +1714,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				return nil
 			}
 			if tInfo.nonPtrKind == reflect.Slice || tInfo.nonPtrKind == reflect.Array {
-				return fillByteString(t, b, !copied, v, tInfo, ByteStringToStringForbidden, d.dm.binaryUnmarshaler, d.dm.textUnmarshaler)
+				return fillByteString(t, b, !copied, v, tInfo, ByteStringToStringForbidden, d.dm.binaryUnmarshaler, d.dm.textUnmarshaler, d.dm.fixedArrayLength)
 			}
 			if bi.IsInt64() {
 				return fillNegativeInt(t, bi.Int64(), v)
@@ -2435,11 +2478,24 @@ func (d *decoder) parseArrayToSlice(v reflect.Value, tInfo *typeInfo) error {
 }
 
 func (d *decoder) parseArrayToArray(v reflect.Value, tInfo *typeInfo) error {
+	start := d.off
 	_, _, val, indefiniteLength := d.readHeadWithIndefiniteLengthFlag()
 	hasSize := !indefiniteLength
 	count := int(val) //nolint:gosec
+	if !hasSize && d.dm.fixedArrayLength == FixedArrayLengthEnforced {
+		count = d.countItemsUntilBreak()
+	}
 	gi := 0
 	vLen := v.Len()
+	if d.dm.fixedArrayLength == FixedArrayLengthEnforced && count != vLen {
+		d.off = start
+		d.skip()
+		return &UnmarshalTypeError{
+			CBORType: cborTypeArray.String(),
+			GoType:   v.Type().String(),
+			errorMsg: fmt.Sprintf("cannot decode CBOR array of %d elements into Go array of length %d", count, vLen),
+		}
+	}
 	var err error
 	for ci := 0; (hasSize && ci < count) || (!hasSize && !d.foundBreak()); ci++ {
 		if gi < vLen {
@@ -3239,7 +3295,7 @@ func fillFloat(t cborType, val float64, v reflect.Value) error {
 	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
 }
 
-func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, tInfo *typeInfo, bsts ByteStringToStringMode, bum BinaryUnmarshalerMode, tum TextUnmarshalerMode) error {
+func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, tInfo *typeInfo, bsts ByteStringToStringMode, bum BinaryUnmarshalerMode, tum TextUnmarshalerMode, falm FixedArrayLengthMode) error {
 	if bum == BinaryUnmarshalerByteString && tInfo.implBinaryUnmarshaler {
 		if v.CanAddr() {
 			v = v.Addr()
@@ -3285,6 +3341,13 @@ func fillByteString(t cborType, val []byte, shared bool, v reflect.Value, tInfo 
 	}
 	if v.Kind() == reflect.Array && tInfo.elemIsUint8 {
 		vLen := v.Len()
+		if falm == FixedArrayLengthEnforced && len(val) != vLen {
+			return &UnmarshalTypeError{
+				CBORType: t.String(),
+				GoType:   v.Type().String(),
+				errorMsg: fmt.Sprintf("cannot decode %d bytes into Go array of length %d", len(val), vLen),
+			}
+		}
 		i := 0
 		for ; i < vLen && i < len(val); i++ {
 			v.Index(i).SetUint(uint64(val[i]))
