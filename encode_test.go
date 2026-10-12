@@ -8236,3 +8236,146 @@ func TestMarshalSelfReferenceUnsupportedType(t *testing.T) {
 		})
 	}
 }
+
+type vCBORMarshaler struct{}
+
+func (r vCBORMarshaler) MarshalCBOR() ([]byte, error) {
+	return []byte{0xf6}, nil
+}
+
+type pCBORMarshaler struct{}
+
+func (r *pCBORMarshaler) MarshalCBOR() ([]byte, error) {
+	return []byte{0xf7}, nil
+}
+
+type vBinaryMarshaler struct{}
+
+func (r vBinaryMarshaler) MarshalBinary() ([]byte, error) {
+	return mustHexDecode("010203"), nil
+}
+
+type pBinaryMarshaler struct{}
+
+func (r *pBinaryMarshaler) MarshalBinary() ([]byte, error) {
+	return mustHexDecode("040506"), nil
+}
+
+type vTextMarshaler struct{}
+
+func (r vTextMarshaler) MarshalText() ([]byte, error) {
+	return mustHexDecode("61"), nil
+}
+
+type pTextMarshaler struct{}
+
+func (r *pTextMarshaler) MarshalText() ([]byte, error) {
+	return mustHexDecode("62"), nil
+}
+
+type vJSONMarshaler struct{}
+
+func (r vJSONMarshaler) MarshalJSON() ([]byte, error) {
+	return []byte("true"), nil
+}
+
+type pJSONMarshaler struct{}
+
+func (r *pJSONMarshaler) MarshalJSON() ([]byte, error) {
+	return []byte("false"), nil
+}
+
+func TestMarshalAddressableMarshaler(t *testing.T) {
+	em, err := EncOptions{
+		TextMarshaler: TextMarshalerTextString,
+		JSONMarshalerTranscoder: transcodeFunc(func(w io.Writer, r io.Reader) error {
+			b, err := io.ReadAll(r)
+			if err != nil {
+				return err
+			}
+			if bytes.Equal(b, []byte("true")) {
+				_, err = w.Write([]byte{0xf5})
+			} else if bytes.Equal(b, []byte("false")) {
+				_, err = w.Write([]byte{0xf4})
+			} else {
+				err = fmt.Errorf("unrecognized json data %x", b)
+			}
+			return err
+		}),
+	}.EncMode()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("Marshaler", func(t *testing.T) {
+		v := struct {
+			V vCBORMarshaler `cbor:",omitempty"`
+			P pCBORMarshaler `cbor:",omitempty"`
+		}{
+			V: vCBORMarshaler{},
+			P: pCBORMarshaler{},
+		}
+		want := mustHexDecode("a26156f66150f7") // {"V": null, "P": undefined}
+		b, err := em.Marshal(&v)
+		if err != nil {
+			t.Fatalf("Marshal(%+v): unexpected error: %v", v, err)
+		}
+		if !bytes.Equal(b, want) {
+			t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, want)
+		}
+	})
+
+	t.Run("BinaryMarshaler", func(t *testing.T) {
+		v := struct {
+			V vBinaryMarshaler `cbor:",omitempty"`
+			P pBinaryMarshaler `cbor:",omitempty"`
+		}{
+			V: vBinaryMarshaler{},
+			P: pBinaryMarshaler{},
+		}
+		want := mustHexDecode("a2615643010203615043040506") // {"V": h'010203', "P": h'040506'}
+		b, err := em.Marshal(&v)
+		if err != nil {
+			t.Fatalf("Marshal(%+v): unexpected error: %v", v, err)
+		}
+		if !bytes.Equal(b, want) {
+			t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, want)
+		}
+	})
+
+	t.Run("TextMarshaler", func(t *testing.T) {
+		v := struct {
+			V vTextMarshaler `cbor:",omitempty"`
+			P pTextMarshaler `cbor:",omitempty"`
+		}{
+			V: vTextMarshaler{},
+			P: pTextMarshaler{},
+		}
+		want := mustHexDecode("a26156616161506162") // {"V": "a", "P": "b"}
+		b, err := em.Marshal(&v)
+		if err != nil {
+			t.Fatalf("Marshal(%+v): unexpected error: %v", v, err)
+		}
+		if !bytes.Equal(b, want) {
+			t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, want)
+		}
+	})
+
+	t.Run("json.Marshaler", func(t *testing.T) {
+		v := struct {
+			V vJSONMarshaler `cbor:",omitempty"`
+			P pJSONMarshaler `cbor:",omitempty"`
+		}{
+			V: vJSONMarshaler{},
+			P: pJSONMarshaler{},
+		}
+		want := mustHexDecode("a26156f56150f4") // {"V": true, "P": false}
+		b, err := em.Marshal(&v)
+		if err != nil {
+			t.Fatalf("Marshal(%+v): unexpected error: %v", v, err)
+		}
+		if !bytes.Equal(b, want) {
+			t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, want)
+		}
+	})
+}
