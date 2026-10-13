@@ -3342,7 +3342,12 @@ func isHashableValue(rv reflect.Value) bool {
 	case reflect.Struct, reflect.Interface:
 		switch rt := rv.Type(); rt {
 		case typeTag:
-			tag := rv.Interface().(Tag)
+			var tag Tag
+			if rv.CanAddr() {
+				tag = *rv.Addr().Interface().(*Tag)
+			} else {
+				tag = rv.Interface().(Tag)
+			}
 			return isHashableValue(reflect.ValueOf(tag.Content))
 		case typeTime:
 			return true

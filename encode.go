@@ -1649,7 +1649,13 @@ const (
 )
 
 func encodeTime(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
-	t := v.Interface().(time.Time)
+	var t time.Time
+	if v.CanAddr() {
+		t = *v.Addr().Interface().(*time.Time)
+	} else {
+		t = v.Interface().(time.Time)
+	}
+
 	if t.IsZero() {
 		dst = append(dst, cborNil) // Even if tag is required, encode as CBOR null.
 		return dst, nil
@@ -1721,7 +1727,13 @@ func encodeBigInt(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 		return dst, &UnsupportedTypeError{Type: typeBigInt}
 	}
 
-	vbi := v.Interface().(big.Int)
+	var vbi big.Int
+	if v.CanAddr() {
+		vbi = *v.Addr().Interface().(*big.Int)
+	} else {
+		vbi = v.Interface().(big.Int)
+	}
+
 	sign := vbi.Sign()
 	bi := new(big.Int).SetBytes(vbi.Bytes()) // bi is absolute value of v
 	if sign < 0 {
@@ -1770,10 +1782,13 @@ func (bme binaryMarshalerEncoder) encode(dst []byte, em *encMode, v reflect.Valu
 		return bme.alternateEncode(dst, em, v)
 	}
 
-	vt := v.Type()
-	m, ok := v.Interface().(encoding.BinaryMarshaler)
+	bmv := v
+	if bmv.CanAddr() {
+		bmv = bmv.Addr()
+	}
+	m, ok := bmv.Interface().(encoding.BinaryMarshaler)
 	if !ok {
-		pv := reflect.New(vt)
+		pv := reflect.New(v.Type())
 		pv.Elem().Set(v)
 		m = pv.Interface().(encoding.BinaryMarshaler)
 	}
@@ -1795,7 +1810,11 @@ func (bme binaryMarshalerEncoder) isEmpty(em *encMode, v reflect.Value) (bool, e
 		return bme.alternateIsEmpty(em, v)
 	}
 
-	m, ok := v.Interface().(encoding.BinaryMarshaler)
+	bmv := v
+	if bmv.CanAddr() {
+		bmv = bmv.Addr()
+	}
+	m, ok := bmv.Interface().(encoding.BinaryMarshaler)
 	if !ok {
 		pv := reflect.New(v.Type())
 		pv.Elem().Set(v)
@@ -1833,16 +1852,19 @@ func (tme textMarshalerEncoder) encode(dst []byte, em *encMode, v reflect.Value)
 		return tme.alternateEncode(dst, em, v)
 	}
 
-	vt := v.Type()
-	m, ok := v.Interface().(encoding.TextMarshaler)
+	tmv := v
+	if tmv.CanAddr() {
+		tmv = tmv.Addr()
+	}
+	m, ok := tmv.Interface().(encoding.TextMarshaler)
 	if !ok {
-		pv := reflect.New(vt)
+		pv := reflect.New(v.Type())
 		pv.Elem().Set(v)
 		m = pv.Interface().(encoding.TextMarshaler)
 	}
 	data, err := m.MarshalText()
 	if err != nil {
-		return dst, fmt.Errorf("cbor: cannot marshal text for %s: %w", vt, err)
+		return dst, fmt.Errorf("cbor: cannot marshal text for %s: %w", v.Type(), err)
 	}
 	dst = em.appendTagBytes(dst, v)
 
@@ -1859,7 +1881,11 @@ func (tme textMarshalerEncoder) isEmpty(em *encMode, v reflect.Value) (bool, err
 		return tme.alternateIsEmpty(em, v)
 	}
 
-	m, ok := v.Interface().(encoding.TextMarshaler)
+	tmv := v
+	if tmv.CanAddr() {
+		tmv = tmv.Addr()
+	}
+	m, ok := tmv.Interface().(encoding.TextMarshaler)
 	if !ok {
 		pv := reflect.New(v.Type())
 		pv.Elem().Set(v)
@@ -1916,10 +1942,13 @@ func (jme jsonMarshalerEncoder) encode(dst []byte, em *encMode, v reflect.Value)
 		return jme.alternateEncode(dst, em, v)
 	}
 
-	vt := v.Type()
-	m, ok := v.Interface().(jsonMarshaler)
+	jmv := v
+	if jmv.CanAddr() {
+		jmv = jmv.Addr()
+	}
+	m, ok := jmv.Interface().(jsonMarshaler)
 	if !ok {
-		pv := reflect.New(vt)
+		pv := reflect.New(v.Type())
 		pv.Elem().Set(v)
 		m = pv.Interface().(jsonMarshaler)
 	}
@@ -1937,7 +1966,7 @@ func (jme jsonMarshalerEncoder) encode(dst []byte, em *encMode, v reflect.Value)
 
 	err = em.jsonMarshalerTranscoder.Transcode(e, bytes.NewReader(json))
 	if err != nil {
-		return dst, &TranscodeError{err: err, rtype: vt, sourceFormat: "json", targetFormat: "cbor"}
+		return dst, &TranscodeError{err: err, rtype: v.Type(), sourceFormat: "json", targetFormat: "cbor"}
 	}
 
 	b := e.Bytes()
@@ -1945,7 +1974,7 @@ func (jme jsonMarshalerEncoder) encode(dst []byte, em *encMode, v reflect.Value)
 	// Validate that the transcode function has written exactly one well-formed data item.
 	d := decoder{data: b, dm: getMarshalerDecMode(em.indefLength, em.tagsMd)}
 	if err := d.wellformed(false, true); err != nil {
-		return dst, &TranscodeError{err: err, rtype: vt, sourceFormat: "json", targetFormat: "cbor"}
+		return dst, &TranscodeError{err: err, rtype: v.Type(), sourceFormat: "json", targetFormat: "cbor"}
 	}
 
 	dst = append(dst, b...)
@@ -1979,7 +2008,11 @@ func encodeMarshalerType(dst []byte, em *encMode, v reflect.Value) ([]byte, erro
 	if em.tagsMd == TagsForbidden && v.Type() == typeRawTag {
 		return dst, errors.New("cbor: cannot encode cbor.RawTag when TagsMd is TagsForbidden")
 	}
-	m, ok := v.Interface().(Marshaler)
+	mv := v
+	if mv.CanAddr() {
+		mv = mv.Addr()
+	}
+	m, ok := mv.Interface().(Marshaler)
 	if !ok {
 		pv := reflect.New(v.Type())
 		pv.Elem().Set(v)
@@ -2006,7 +2039,12 @@ func encodeTag(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 		return dst, errors.New("cbor: cannot encode cbor.Tag when TagsMd is TagsForbidden")
 	}
 
-	t := v.Interface().(Tag)
+	var t Tag
+	if v.CanAddr() {
+		t = *v.Addr().Interface().(*Tag)
+	} else {
+		t = v.Interface().(Tag)
+	}
 
 	if t.Number == 0 && t.Content == nil {
 		// Marshal uninitialized cbor.Tag
@@ -2425,7 +2463,11 @@ func isZeroPointerCustom(_ *encMode, v reflect.Value) (bool, error) {
 
 // isZeroCustom delegates to the custom IsZero() implementation.
 func isZeroCustom(_ *encMode, v reflect.Value) (bool, error) {
-	return v.Interface().(isZeroer).IsZero(), nil
+	zv := v
+	if zv.CanAddr() {
+		zv = zv.Addr()
+	}
+	return zv.Interface().(isZeroer).IsZero(), nil
 }
 
 // isZeroAddrCustom delegates to the custom IsZero() implementation of the addr of the value.
