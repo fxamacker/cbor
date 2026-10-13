@@ -2442,7 +2442,11 @@ func isZeroPointerCustom(_ *encMode, v reflect.Value) (bool, error) {
 
 // isZeroCustom delegates to the custom IsZero() implementation.
 func isZeroCustom(_ *encMode, v reflect.Value) (bool, error) {
-	return v.Interface().(isZeroer).IsZero(), nil
+	zv := v
+	if zv.CanAddr() {
+		zv = zv.Addr()
+	}
+	return zv.Interface().(isZeroer).IsZero(), nil
 }
 
 // isZeroAddrCustom delegates to the custom IsZero() implementation of the addr of the value.

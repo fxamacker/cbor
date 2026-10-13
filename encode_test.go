@@ -2339,6 +2339,18 @@ func TestIsZero(t *testing.T) {
 			v:    reflect.ValueOf(&zeroTestTypeCustom{value: 1}),
 			want: false,
 		},
+		{
+			name: "custom-structreceiver-zero-addressablestructvalue",
+			t:    reflect.TypeFor[zeroTestTypeCustom](),
+			v:    reflect.ValueOf(&zeroTestTypeCustom{value: 42}).Elem(),
+			want: true,
+		},
+		{
+			name: "custom-structreceiver-nonzero-addressablestructvalue",
+			t:    reflect.TypeFor[zeroTestTypeCustom](),
+			v:    reflect.ValueOf(&zeroTestTypeCustom{value: 1}).Elem(),
+			want: false,
+		},
 
 		{
 			name: "custom-structreceiver-zero-pointervalue",
