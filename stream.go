@@ -202,7 +202,17 @@ func (enc *Encoder) Encode(v any) error {
 
 	bp := getEncodeBuffer()
 
-	b, err := encode(*bp, enc.em, reflect.ValueOf(v))
+	rv := reflect.ValueOf(v)
+
+	var b []byte
+	var handled bool
+	var err error
+	if tryFastPath(rv) {
+		b, handled, err = fastEncode(*bp, enc.em, v)
+	}
+	if !handled {
+		b, err = encode(*bp, enc.em, rv)
+	}
 	*bp = b[:0]
 
 	// Validate the encoded chunk against the indefinite-length data item using a byte-based check.

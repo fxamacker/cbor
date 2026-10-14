@@ -538,6 +538,227 @@ func BenchmarkMarshal(b *testing.B) {
 		Slci: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
 		Mss:  map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"},
 	}
+	// Marshal nested map[string]any to CBOR map.
+	m3 := map[string]any{
+		"id":          "kb-2e8bc9402de2",
+		"title":       "Lorem ipsum dolor sit amet elit",
+		"slug":        "dolor-sit-amet",
+		"locale":      "en-US",
+		"state":       "published",
+		"createdAt":   "2026-02-03T08:15:42Z",
+		"updatedAt":   "2026-03-11T16:04:09Z",
+		"publishedAt": "2026-03-11T16:05:30Z",
+		"archivedAt":  nil,
+		"revision":    int64(7),
+		"authorId":    "usr-9121c4",
+		"featured":    false,
+		"tags":        []any{"lorem", "ipsum", "dolors"},
+		"coverImage":  map[string]any{"src": "/media/sed-do-tempor.png", "alt": "Sed do eiusmod tempor magna", "width": int64(960), "height": int64(540)},
+		"body": map[string]any{
+			"type": "doc",
+			"content": []any{
+				map[string]any{
+					"type":    "heading",
+					"attrs":   map[string]any{"textAlign": "left", "level": int64(2), "id": "overview"},
+					"content": []any{map[string]any{"type": "text", "text": "Overview"}},
+				},
+				map[string]any{
+					"type":  "paragraph",
+					"attrs": map[string]any{"textAlign": "left"},
+					"content": []any{
+						map[string]any{"type": "text", "text": "Ut enim ad minim veniam, quis nostrud "},
+						map[string]any{"type": "text", "text": "laboris", "marks": []any{map[string]any{"type": "bold"}}},
+						map[string]any{"type": "text", "text": ", nisi ut aliquip ex ea."},
+					},
+				},
+				map[string]any{
+					"type":    "heading",
+					"attrs":   map[string]any{"textAlign": "left", "level": int64(2), "id": "steps"},
+					"content": []any{map[string]any{"type": "text", "text": "Steps"}},
+				},
+				map[string]any{
+					"type":  "orderedList",
+					"attrs": map[string]any{"start": int64(1)},
+					"content": []any{
+						map[string]any{
+							"type": "listItem",
+							"content": []any{
+								map[string]any{
+									"type":    "paragraph",
+									"attrs":   map[string]any{"textAlign": "left"},
+									"content": []any{map[string]any{"type": "text", "text": "Duis aute irure dolor in veniam."}},
+								},
+							},
+						},
+						map[string]any{
+							"type": "listItem",
+							"content": []any{
+								map[string]any{
+									"type":    "paragraph",
+									"attrs":   map[string]any{"textAlign": "left"},
+									"content": []any{map[string]any{"type": "text", "text": "Excepteur sint, sunt in culpa id"}},
+								},
+							},
+						},
+						map[string]any{
+							"type": "listItem",
+							"content": []any{
+								map[string]any{
+									"type":    "paragraph",
+									"attrs":   map[string]any{"textAlign": "left"},
+									"content": []any{map[string]any{"type": "text", "text": "Cillum dolore eu fugiat n"}},
+								},
+							},
+						},
+					},
+				},
+				map[string]any{
+					"type":  "callout",
+					"attrs": map[string]any{"tone": "caution"},
+					"content": []any{
+						map[string]any{
+							"type":    "paragraph",
+							"attrs":   map[string]any{"textAlign": "left"},
+							"content": []any{map[string]any{"type": "text", "text": "Nulla pariatur, excepteur sint occaecat"}},
+						},
+					},
+				},
+				map[string]any{
+					"type":  "paragraph",
+					"attrs": map[string]any{"textAlign": "left"},
+					"content": []any{
+						map[string]any{"type": "text", "text": "Anim esse? "},
+						map[string]any{
+							"type": "text",
+							"text": "Id est laborum.",
+							"marks": []any{
+								map[string]any{
+									"type":  "link",
+									"attrs": map[string]any{"href": "https://example.com/lorem/dolore", "target": "_blank", "rel": "noopener", "class": nil},
+								},
+							},
+						},
+						map[string]any{"type": "text", "text": "."},
+					},
+				},
+			},
+		},
+		"history": []any{
+			map[string]any{
+				"revision":  int64(7),
+				"savedAt":   "2026-03-11T16:04:09Z",
+				"editorId":  "usr-9121c4",
+				"note":      "Commodo consequat",
+				"minor":     false,
+				"diffStats": map[string]any{"insertions": int64(18), "deletions": int64(9)},
+			},
+			map[string]any{
+				"revision":  int64(6),
+				"savedAt":   "2026-02-27T10:22:51Z",
+				"editorId":  "usr-5c91e9",
+				"note":      nil,
+				"minor":     true,
+				"diffStats": map[string]any{"insertions": int64(2), "deletions": int64(2)},
+			},
+			map[string]any{
+				"revision":  int64(5),
+				"savedAt":   "2026-02-19T14:48:16Z",
+				"editorId":  "usr-9121c4",
+				"note":      "Velit esse sed",
+				"minor":     false,
+				"diffStats": map[string]any{"insertions": int64(41), "deletions": int64(3)},
+			},
+			map[string]any{
+				"revision":  int64(4),
+				"savedAt":   "2026-02-04T13:05:27Z",
+				"editorId":  "usr-5c91e9",
+				"note":      "Quis aut",
+				"minor":     true,
+				"diffStats": map[string]any{"insertions": int64(1), "deletions": int64(1)},
+			},
+		},
+		"review": map[string]any{
+			"decision":    "approved",
+			"completedAt": "2026-03-11T16:04:58Z",
+			"reviewerId":  "usr-4d0f12",
+			"checklist":   map[string]any{"linksChecked": true, "screenshotsCurrent": true, "styleGuide": true},
+		},
+		"settings": map[string]any{
+			"visibility":    "public",
+			"layout":        "wide",
+			"comments":      map[string]any{"enabled": true, "moderation": "afterPost", "sortOrder": "newest"},
+			"toc":           map[string]any{"enabled": true, "maxDepth": int64(3)},
+			"feedback":      map[string]any{"enabled": true, "prompt": "Amet consectetur?"},
+			"sharing":       map[string]any{"enabled": true, "allowPrint": true, "allowCopy": false},
+			"notifications": map[string]any{"onComment": true, "onFeedback": false},
+			"permissions":   map[string]any{"edit": "team", "comment": "everyone"},
+			"relatedLimit":  int64(4),
+			"customCss":     nil,
+			"layoutOptions": map[string]any{},
+			"overrides":     map[string]any{},
+		},
+		"seo": map[string]any{
+			"metaTitle":       "Lorem ipsum dolor sit am",
+			"metaDescription": "Lorem ipsum dolor sit amet, adipiscing.",
+			"canonicalUrl":    "https://example.com/help/dolor-sit-amet",
+			"noIndex":         false,
+			"keywords":        []any{"dolor sit amet", "ipsum", "sed do tempor"},
+			"openGraph":       map[string]any{"type": "article", "imageUrl": "https://example.com/media/sed-do-tempor.png"},
+			"alternates":      map[string]any{"de": "/de/help/dolor-sit-amet", "fr": "/fr/help/dolor-sit-amet", "es": "/es/help/dolor-sit-amet"},
+			"structuredData":  map[string]any{},
+		},
+		"translations": map[string]any{
+			"de": map[string]any{"state": "current", "revision": int64(7), "translatedAt": "2026-03-12T09:10:33Z", "translatorId": "usr-3378ff"},
+			"fr": map[string]any{"state": "outdated", "revision": int64(5), "translatedAt": "2026-02-20T11:02:18Z", "translatorId": "usr-3378ff"},
+			"es": map[string]any{"state": "outdated", "revision": int64(6), "translatedAt": "2026-02-28T08:44:05Z", "translatorId": "usr-3378ff"},
+			"ja": map[string]any{"state": "requested", "revision": int64(7), "translatedAt": nil, "translatorId": nil},
+		},
+		"renditions": map[string]any{
+			"web": map[string]any{
+				"format":     "html",
+				"url":        "/help/dolor-sit-amet",
+				"renderedAt": "2026-03-11T16:05:12Z",
+				"sizeBytes":  int64(23817),
+				"checksum":   "384cb5f21297367c",
+				"cacheHit":   false,
+				"attempts":   int64(1),
+				"error":      nil,
+				"timing":     map[string]any{"queuedMs": int64(12), "renderMs": int64(184), "uploadMs": int64(37)},
+				"input":      map[string]any{"revision": int64(7), "theme": "standard"},
+			},
+			"print": map[string]any{
+				"format":     "pdf",
+				"url":        "/help/pdf/dolor-sit-amet.pdf",
+				"renderedAt": "2026-03-11T16:05:19Z",
+				"sizeBytes":  int64(88214),
+				"checksum":   "6d573c5617454cf4",
+				"cacheHit":   false,
+				"pageCount":  int64(2),
+				"attempts":   int64(2),
+				"error":      nil,
+				"timing":     map[string]any{"queuedMs": int64(15), "renderMs": int64(1342), "uploadMs": int64(96)},
+				"input":      map[string]any{"revision": int64(7), "theme": "printable"},
+			},
+		},
+		"metrics": map[string]any{
+			"views":          int64(4736),
+			"uniqueVisitors": int64(3377),
+			"helpfulVotes":   int64(212),
+			"unhelpfulVotes": int64(19),
+			"byChannel":      map[string]any{"web": int64(4529), "app": int64(207)},
+			"bySource":       map[string]any{"search": int64(2894), "related": int64(1087), "direct": int64(755)},
+			"byLocale":       map[string]any{"en": int64(3641), "de": int64(598), "fr": int64(301), "es": int64(196)},
+			"byDevice":       map[string]any{"desktop": int64(3052), "mobile": int64(1684)},
+		},
+		"customFields": map[string]any{},
+	}
+	// Marshal nested map[any]any to CBOR map, such as m3 decoded to any with default options.
+	var m4 any
+	if data, err := Marshal(m3); err != nil {
+		b.Fatal("Marshal:", err)
+	} else if err = Unmarshal(data, &m4); err != nil {
+		b.Fatal("Unmarshal:", err)
+	}
 	var moreBenchmarks = []struct {
 		name  string
 		value any
@@ -545,6 +766,14 @@ func BenchmarkMarshal(b *testing.B) {
 		{
 			name:  "map[string]any/map",
 			value: m1,
+		},
+		{
+			name:  "nested map[string]any/map",
+			value: m3,
+		},
+		{
+			name:  "nested map[any]any/map",
+			value: m4,
 		},
 		{
 			name:  "struct/map",
@@ -588,7 +817,7 @@ func BenchmarkMarshal(b *testing.B) {
 			value: v2,
 		},
 		{
-			name:  "[]any/map",
+			name:  "[]any/array",
 			value: slc,
 		},
 		{
@@ -600,6 +829,36 @@ func BenchmarkMarshal(b *testing.B) {
 		b.Run(bm.name, func(b *testing.B) {
 			for b.Loop() {
 				if _, err := Marshal(bm.value); err != nil {
+					b.Fatal("Marshal:", err)
+				}
+			}
+		})
+	}
+
+	// Marshal nested maps with sorted keys.
+	sortedEM, err := EncOptions{Sort: SortBytewiseLexical}.EncMode()
+	if err != nil {
+		b.Fatal("EncMode:", err)
+	}
+	for _, bm := range []struct {
+		name  string
+		em    EncMode
+		value any
+	}{
+		{
+			name:  "nested map[string]any/map/bytewise lexical",
+			em:    sortedEM,
+			value: m3,
+		},
+		{
+			name:  "nested map[any]any/map/bytewise lexical",
+			em:    sortedEM,
+			value: m4,
+		},
+	} {
+		b.Run(bm.name, func(b *testing.B) {
+			for b.Loop() {
+				if _, err := bm.em.Marshal(bm.value); err != nil {
 					b.Fatal("Marshal:", err)
 				}
 			}

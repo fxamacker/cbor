@@ -1046,7 +1046,17 @@ func (em *encMode) appendTagBytesSlow(dst []byte, v reflect.Value) []byte {
 func (em *encMode) Marshal(v any) ([]byte, error) {
 	bp := getEncodeBuffer()
 
-	b, err := encode(*bp, em, reflect.ValueOf(v))
+	rv := reflect.ValueOf(v)
+
+	var b []byte
+	var handled bool
+	var err error
+	if tryFastPath(rv) {
+		b, handled, err = fastEncode(*bp, em, v)
+	}
+	if !handled {
+		b, err = encode(*bp, em, rv)
+	}
 	*bp = b[:0]
 	if err != nil {
 		putEncodeBuffer(bp)
@@ -1071,7 +1081,18 @@ func (em *encMode) MarshalToBuffer(v any, buf *bytes.Buffer) error {
 	if buf == nil {
 		return errors.New("cbor: encoding buffer provided by user is nil")
 	}
-	b, err := encode(buf.AvailableBuffer(), em, reflect.ValueOf(v))
+
+	rv := reflect.ValueOf(v)
+
+	var b []byte
+	var handled bool
+	var err error
+	if tryFastPath(rv) {
+		b, handled, err = fastEncode(buf.AvailableBuffer(), em, v)
+	}
+	if !handled {
+		b, err = encode(buf.AvailableBuffer(), em, rv)
+	}
 	if err != nil {
 		return err
 	}
@@ -1161,6 +1182,7 @@ func appendNegativeInt(dst []byte, i int64) []byte {
 	return appendHead(dst, byte(cborTypeNegativeInt), uint64(^i)) //nolint:gosec
 }
 
+// NOTE: encodeFloat must be in sync with appendFloat64WithEM and produce the same encoded data.
 func encodeFloat(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 	dst = em.appendTagBytes(dst, v)
 	f64 := v.Float()
@@ -1309,6 +1331,7 @@ func appendFloat64(dst []byte, f64 float64) []byte {
 	)
 }
 
+// NOTE: encodeByteSlice must be in sync with appendByteSliceWithEM and produce the same encoded data.
 func encodeByteSlice(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 	if v.IsNil() && em.nilContainers == NilContainerAsNull {
 		return append(dst, cborNil), nil
@@ -1353,6 +1376,7 @@ type arrayEncodeFunc struct {
 	f encodeFunc
 }
 
+// NOTE: arrayEncodeFunc.encode must be in sync with appendSliceAnyWithEM and produce the same encoded data.
 func (ae arrayEncodeFunc) encode(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 	if em.byteArray == ByteArrayToByteSlice && v.Type().Elem().Kind() == reflect.Uint8 {
 		return encodeByteArrayAsByteString(dst, em, v)
@@ -1386,6 +1410,8 @@ type mapEncodeFunc struct {
 	e encodeKeyValueFunc
 }
 
+// NOTE: mapEncodeFunc.encode must be in sync with appendMapAnyAnyWithEM, appendMapStringAnyWithEM,
+// appendMapStringStringWithEM and produce the same encoded data.
 func (me mapEncodeFunc) encode(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 	if v.IsNil() && em.nilContainers == NilContainerAsNull {
 		dst = append(dst, cborNil)
@@ -2079,6 +2105,9 @@ func encodeTag(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 	}
 
 	// Marshal tag content
+	if enableEncodingFastPath {
+		return appendAnyWithEM(dst, &vem, t.Content)
+	}
 	return encode(dst, &vem, reflect.ValueOf(t.Content))
 }
 
@@ -2147,8 +2176,14 @@ var (
 	typeJSONMarshaler   = reflect.TypeFor[jsonMarshaler]()
 	typeRawMessage      = reflect.TypeFor[RawMessage]()
 	typeByteString      = reflect.TypeFor[ByteString]()
+	typeAny             = reflect.TypeFor[any]()
+	typeSliceAny        = reflect.TypeFor[[]any]()
+	typeMapAnyAny       = reflect.TypeFor[map[any]any]()
+	typeMapStringAny    = reflect.TypeFor[map[string]any]()
+	typeMapStringString = reflect.TypeFor[map[string]string]()
 )
 
+//nolint:gocyclo
 func newEncodeFunc(t reflect.Type, newEncodeFuncs map[reflect.Type]*inProgressEncodeFuncs) (ef encodeFunc, ief isEmptyFunc, izf isZeroFunc) {
 	// baseIzf stores the original izf before marshaler encoders unwinding.
 	var baseIzf isZeroFunc
@@ -2184,6 +2219,24 @@ func newEncodeFunc(t reflect.Type, newEncodeFuncs map[reflect.Type]*inProgressEn
 
 	case typeByteString:
 		return encodeMarshalerType, isEmptyString, getIsZeroFunc(t)
+	}
+	if enableEncodingFastPath {
+		switch t {
+		case typeAny:
+			return encodeAny, isEmptyInterface, getIsZeroFunc(t)
+
+		case typeSliceAny:
+			return encodeSliceAny, isEmptySlice, getIsZeroFunc(t)
+
+		case typeMapAnyAny:
+			return encodeMapAnyAny, isEmptyMap, getIsZeroFunc(t)
+
+		case typeMapStringAny:
+			return encodeMapStringAny, isEmptyMap, getIsZeroFunc(t)
+
+		case typeMapStringString:
+			return encodeMapStringString, isEmptyMap, getIsZeroFunc(t)
+		}
 	}
 	if reflect.PointerTo(t).Implements(typeMarshaler) {
 		return encodeMarshalerType, alwaysNotEmpty, getIsZeroFunc(t)
@@ -2514,4 +2567,41 @@ func izfOrDefault(t reflect.Type, izf isZeroFunc) isZeroFunc {
 		return getIsZeroFunc(t)
 	}
 	return izf
+}
+
+func encodeAny(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
+	if v.IsNil() {
+		return append(dst, cborNil), nil
+	}
+
+	e := v.Elem()
+
+	var handled bool
+	var err error
+	if tryFastPath(e) {
+		dst, handled, err = fastEncode(dst, em, v.Interface())
+	}
+	if !handled {
+		dst, err = encode(dst, em, e)
+	}
+	return dst, err
+}
+
+func encodeSliceAny(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
+	if v.CanAddr() {
+		return appendSliceAnyWithEM(dst, em, *v.Addr().Interface().(*[]any))
+	}
+	return appendSliceAnyWithEM(dst, em, v.Interface().([]any))
+}
+
+func encodeMapAnyAny(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
+	return appendMapAnyAnyWithEM(dst, em, v.Interface().(map[any]any))
+}
+
+func encodeMapStringAny(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
+	return appendMapStringAnyWithEM(dst, em, v.Interface().(map[string]any))
+}
+
+func encodeMapStringString(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
+	return appendMapStringStringWithEM(dst, em, v.Interface().(map[string]string))
 }
