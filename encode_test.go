@@ -5901,6 +5901,16 @@ func TestEncModeInvalidBigIntConvertMode(t *testing.T) {
 			opts:         EncOptions{BigIntConvert: 101},
 			wantErrorMsg: "cbor: invalid BigIntConvertMode 101",
 		},
+		{
+			name:         "above range of valid modes with TagsForbidden",
+			opts:         EncOptions{BigIntConvert: 101, TagsMd: TagsForbidden},
+			wantErrorMsg: "cbor: invalid BigIntConvertMode 101",
+		},
+		{
+			name:         "BigIntConvertNone with TagsForbidden",
+			opts:         EncOptions{BigIntConvert: BigIntConvertNone, TagsMd: TagsForbidden},
+			wantErrorMsg: "cbor: cannot set TagsMd to TagsForbidden when BigIntConvert is BigIntConvertNone",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := tc.opts.EncMode()
@@ -6245,10 +6255,16 @@ func TestMarshalPosBigInt(t *testing.T) {
 	if err != nil {
 		t.Errorf("EncMode() returned an error %v", err)
 	}
+	dmShortestWithTagsForbidden, err := EncOptions{TagsMd: TagsForbidden}.EncMode()
+	if err != nil {
+		t.Errorf("EncMode() returned an error %v", err)
+	}
 	dmBigInt, err := EncOptions{BigIntConvert: BigIntConvertNone}.EncMode()
 	if err != nil {
 		t.Errorf("EncMode() returned an error %v", err)
 	}
+
+	tagsForbiddenErrorMsg := "cbor: cannot encode big.Int outside CBOR integer range when TagsMd is TagsForbidden"
 
 	type s struct{ B big.Int }
 	wantStructPrefix := []byte{0xa1, 0x61, 0x42}
@@ -6265,6 +6281,21 @@ func TestMarshalPosBigInt(t *testing.T) {
 				t.Errorf("Marshal(%v) returned error %v", tc.value, err)
 			} else if !bytes.Equal(b, tc.cborDataBigInt) {
 				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.value, b, tc.cborDataBigInt)
+			}
+
+			b, err := dmShortestWithTagsForbidden.Marshal(tc.value)
+			if bytes.Equal(tc.cborDataShortest, tc.cborDataBigInt) {
+				if err == nil {
+					t.Errorf("Marshal(%v): expected error, got nil", tc.value)
+				} else if err.Error() != tagsForbiddenErrorMsg {
+					t.Errorf("Marshal(%v): got %q, want %q", tc.value, err.Error(), tagsForbiddenErrorMsg)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Marshal(%v) returned error %v", tc.value, err)
+				} else if !bytes.Equal(b, tc.cborDataShortest) {
+					t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.value, b, tc.cborDataShortest)
+				}
 			}
 
 			v := s{B: tc.value}
@@ -6340,10 +6371,16 @@ func TestMarshalNegBigInt(t *testing.T) {
 	if err != nil {
 		t.Errorf("EncMode() returned an error %v", err)
 	}
+	dmShortestWithTagsForbidden, err := EncOptions{TagsMd: TagsForbidden}.EncMode()
+	if err != nil {
+		t.Errorf("EncMode() returned an error %v", err)
+	}
 	dmBigInt, err := EncOptions{BigIntConvert: BigIntConvertNone}.EncMode()
 	if err != nil {
 		t.Errorf("EncMode() returned an error %v", err)
 	}
+
+	tagsForbiddenErrorMsg := "cbor: cannot encode big.Int outside CBOR integer range when TagsMd is TagsForbidden"
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -6357,6 +6394,21 @@ func TestMarshalNegBigInt(t *testing.T) {
 				t.Errorf("Marshal(%v) returned error %v", tc.value, err)
 			} else if !bytes.Equal(b, tc.cborDataBigInt) {
 				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.value, b, tc.cborDataBigInt)
+			}
+
+			b, err := dmShortestWithTagsForbidden.Marshal(tc.value)
+			if bytes.Equal(tc.cborDataShortest, tc.cborDataBigInt) {
+				if err == nil {
+					t.Errorf("Marshal(%v): expected error, got nil", tc.value)
+				} else if err.Error() != tagsForbiddenErrorMsg {
+					t.Errorf("Marshal(%v): got %q, want %q", tc.value, err.Error(), tagsForbiddenErrorMsg)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Marshal(%v) returned error %v", tc.value, err)
+				} else if !bytes.Equal(b, tc.cborDataShortest) {
+					t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.value, b, tc.cborDataShortest)
+				}
 			}
 		})
 	}
@@ -6750,6 +6802,8 @@ func TestSortModeFastShuffleEmptyStruct(t *testing.T) {
 }
 
 func TestInvalidByteSliceExpectedFormat(t *testing.T) {
+	tagsForbiddenErrorMsg := "cbor: cannot set TagsMd to TagsForbidden when ByteSliceLaterFormat is not ByteSliceLaterFormatNone"
+
 	for _, tc := range []struct {
 		name         string
 		opts         EncOptions
@@ -6764,6 +6818,26 @@ func TestInvalidByteSliceExpectedFormat(t *testing.T) {
 			name:         "above range of valid modes",
 			opts:         EncOptions{ByteSliceLaterFormat: 101},
 			wantErrorMsg: "cbor: invalid ByteSliceLaterFormat 101",
+		},
+		{
+			name:         "above range of valid modes with TagsForbidden",
+			opts:         EncOptions{ByteSliceLaterFormat: 101, TagsMd: TagsForbidden},
+			wantErrorMsg: "cbor: invalid ByteSliceLaterFormat 101",
+		},
+		{
+			name:         "ByteSliceLaterFormatBase64URL with TagsForbidden",
+			opts:         EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64URL, TagsMd: TagsForbidden},
+			wantErrorMsg: tagsForbiddenErrorMsg,
+		},
+		{
+			name:         "ByteSliceLaterFormatBase64 with TagsForbidden",
+			opts:         EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64, TagsMd: TagsForbidden},
+			wantErrorMsg: tagsForbiddenErrorMsg,
+		},
+		{
+			name:         "ByteSliceLaterFormatBase16 with TagsForbidden",
+			opts:         EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase16, TagsMd: TagsForbidden},
+			wantErrorMsg: tagsForbiddenErrorMsg,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

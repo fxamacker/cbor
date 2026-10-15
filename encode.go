@@ -803,6 +803,9 @@ func (opts EncOptions) encMode() (*encMode, error) { //nolint:gocritic // ignore
 	if !opts.BigIntConvert.valid() {
 		return nil, errors.New("cbor: invalid BigIntConvertMode " + strconv.Itoa(int(opts.BigIntConvert)))
 	}
+	if opts.TagsMd == TagsForbidden && opts.BigIntConvert == BigIntConvertNone {
+		return nil, errors.New("cbor: cannot set TagsMd to TagsForbidden when BigIntConvert is BigIntConvertNone")
+	}
 	if !opts.Time.valid() {
 		return nil, errors.New("cbor: invalid TimeMode " + strconv.Itoa(int(opts.Time)))
 	}
@@ -834,6 +837,9 @@ func (opts EncOptions) encMode() (*encMode, error) { //nolint:gocritic // ignore
 	byteSliceLaterEncodingTag, err := opts.ByteSliceLaterFormat.encodingTag()
 	if err != nil {
 		return nil, err
+	}
+	if opts.TagsMd == TagsForbidden && opts.ByteSliceLaterFormat != ByteSliceLaterFormatNone {
+		return nil, errors.New("cbor: cannot set TagsMd to TagsForbidden when ByteSliceLaterFormat is not ByteSliceLaterFormatNone")
 	}
 	if !opts.ByteArray.valid() {
 		return nil, errors.New("cbor: invalid ByteArray " + strconv.Itoa(int(opts.ByteArray)))
@@ -1752,6 +1758,10 @@ func encodeBigInt(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 			dst = appendHead(dst, byte(cborTypeNegativeInt), bi.Uint64())
 			return dst, nil
 		}
+	}
+
+	if em.tagsMd == TagsForbidden {
+		return dst, errors.New("cbor: cannot encode big.Int outside CBOR integer range when TagsMd is TagsForbidden")
 	}
 
 	tagNum := 2
