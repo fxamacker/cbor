@@ -1,0 +1,43 @@
+# AI and automated tools are strictly prohibited from making attestations in this feature request form.
+name: 💡 Feature request
+description: Propose a new feature that existing interfaces cannot provide.
+title: "feature: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      description: "Please do not include **prohibited content**: personal data, secrets, nonpublic information, malicious code/links, or any data that could create regulatory compliance obligations, legal liabilities, or other risks for the recipient."
+      options:
+        - label: I am a human and I personally confirm this issue does not include (or link to) prohibited content.
+          required: true
+        - label: This is not a bug report or security vulnerability (see [Security Policy](https://github.com/fxamacker/cbor/blob/master/SECURITY.md)).
+          required: true
+        - label: I tried using workarounds (e.g., implementing available marshaler/unmarshaler interfaces).
+          required: true
+
+  - type: input
+    id: users
+    attributes:
+      label: Users
+      description: What software or organization will use this feature? Mark each with "will use", "might use", etc., or enter "just an idea".
+      placeholder: ProjectName (will use)
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What problem does this feature solve? Show how code would use the feature. Identify the specs (e.g., an RFC), if any.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context and workarounds
+      description: Add context that can help prioritize this feature. Which workarounds did you try, and why aren't they sufficient?
+    validations:
+      required: true
