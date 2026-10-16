@@ -1,41 +1,34 @@
-# How to contribute
+# Contributing to fxamacker/cbor
 
-You can contribute by using the library, opening issues, or opening pull requests.
+Thank you for contributing to this CBOR codec.
 
-## Bug reports and security vulnerabilities
+These guidelines reduce security risks, operational risks, and legal risks from unvetted AI-generated content, false positives, uncoordinated pull requests, and uncertain authorship.  Issues and pull requests that do not follow them may be closed.
 
-Most issues are tracked publicly on [GitHub](https://github.com/fxamacker/cbor/issues). 
+## Security Vulnerabilities
 
-To report security vulnerabilities, please email faye.github@gmail.com and allow time for the problem to be resolved before disclosing it to the public.  For more info, see [Security Policy](https://github.com/fxamacker/cbor#security-policy).
+Please do not open public issues or pull requests for security vulnerabilities.  Report them privately as described in the [Security Policy](https://github.com/fxamacker/cbor/blob/master/SECURITY.md).
 
-Please do not send data that might contain personally identifiable information, even if you think you have permission.  That type of support requires payment and a signed contract where I'm indemnified, held harmless, and defended by you for any data you send to me.
+## Prohibited Content
 
-## Pull requests
+Please do not transmit personal data, secrets, nonpublic information, malicious code/links, or any data that could create regulatory compliance obligations, legal liabilities, or other risks for the recipient.
 
-Please [create an issue](https://github.com/fxamacker/cbor/issues/new/choose) before you begin work on a PR.  The improvement may have already been considered, etc.
+## Opening Issues
 
-Pull requests have signing requirements and must not be anonymous.  Exceptions are usually made for docs and CI scripts.
+Before opening an issue, please ensure a human confirms it matters in real use.  Some AI-detected bugs only occur when AI-written reproducers use anti-patterns or settings that don't reflect real user apps in production environments.
 
-See the [Pull Request Template](https://github.com/fxamacker/cbor/blob/master/.github/pull_request_template.md) for details.
+You can open an issue from the [Issues page](https://github.com/fxamacker/cbor/issues), or create one using these links:
 
-Pull requests have a greater chance of being approved if:
-- it does not reduce speed, increase memory use, reduce security, etc. for people not using the new option or feature.
-- it has > 97% code coverage.
+- [Open a bug report](https://github.com/fxamacker/cbor/issues/new?template=1-bug-report.yml)
+- [Open a feature request](https://github.com/fxamacker/cbor/issues/new?template=2-feature-request.yml)
 
-## Describe your issue
+## Opening Pull Requests
 
-Clearly describe the issue:
-* If it's a bug, please provide: **version of this library** and **Go** (`go version`), **unmodified error message**, and describe **how to reproduce it**.  Also state **what you expected to happen** instead of the error.
-* If you propose a change or addition, try to give an example how the improved code could look like or how to use it.
-* If you found a compilation error, please confirm you're using a supported version of Go. If you are, then provide the output of `go version` first, followed by the complete error message.
+Although contributors may use AI to improve their PR description (e.g., to improve grammar), all attestations must be made by a human (e.g., adding Signed-off-by lines to commits, certifying DCO 1.1, or confirming they personally reviewed each changed line).
 
-## Please don't
+To ensure work is well-coordinated, please comment on the related issue saying you plan to work on it, and wait for a maintainer to reply that you can proceed before opening a PR.  Even a one-line change can affect in-progress work, planned work, or ongoing maintenance (e.g., testing, fuzzing, and backward compatibility checks).  If no related issue exists, create one first.
 
-Please don't send data containing personally identifiable information, even if you think you have permission.  That type of support requires payment and a contract where I'm indemnified, held harmless, and defended for any data you send to me.
+Please follow the [Pull Request Template](https://github.com/fxamacker/cbor/blob/master/.github/pull_request_template.md), which lists requirements for coordination, AI usage disclosure, standards, compatibility, performance, and sign-off (DCO 1.1).
 
-Please don't send CBOR data larger than 1024 bytes by email. If you want to send crash-producing CBOR data > 1024 bytes by email, please get my permission before sending it to me.
+## Special Thanks
 
-## Credits
-
-- This guide used nlohmann/json contribution guidelines for inspiration as suggested in issue #22.
-- Special thanks to @lukseven for pointing out the contribution guidelines didn't mention signing requirements.
+- @lukseven for pointing out in 2021 that the contribution guidelines didn't mention signing requirements.
