@@ -465,11 +465,40 @@ var marshalTestCases = []marshalTestCase{
 	}, // [nil, nil, nil]
 }
 
+func testMarshalWithFP(t *testing.T, f func(t *testing.T)) {
+	testCases := []struct {
+		name     string
+		enableFP bool
+	}{
+		{name: "enable fast path", enableFP: true},
+		{name: "disable fast path", enableFP: false},
+	}
+	t.Cleanup(func() {
+		enableEncodingFastPath = true
+		encodeFuncCache.Clear()
+		encodingStructTypeCache.Clear()
+	})
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			enableEncodingFastPath = tc.enableFP
+			encodeFuncCache.Clear()
+			encodingStructTypeCache.Clear()
+			f(t)
+		})
+	}
+}
+
 func TestMarshal(t *testing.T) {
-	testMarshal(t, marshalTestCases)
+	testMarshalWithFP(t, func(t *testing.T) {
+		testMarshal(t, marshalTestCases)
+	})
 }
 
 func TestInvalidTypeMarshal(t *testing.T) {
+	testMarshalWithFP(t, testInvalidTypeMarshal)
+}
+
+func testInvalidTypeMarshal(t *testing.T) {
 	type s1 struct {
 		Chan chan bool
 	}
@@ -553,6 +582,10 @@ func TestInvalidTypeMarshal(t *testing.T) {
 }
 
 func TestMarshalLargeByteString(t *testing.T) {
+	testMarshalWithFP(t, testMarshalLargeByteString)
+}
+
+func testMarshalLargeByteString(t *testing.T) {
 	// []byte{100, 100, 100, ...}
 	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 10000000}
 	testCases := make([]marshalTestCase, len(lengths))
@@ -570,6 +603,10 @@ func TestMarshalLargeByteString(t *testing.T) {
 }
 
 func TestMarshalLargeTextString(t *testing.T) {
+	testMarshalWithFP(t, testMarshalLargeTextString)
+}
+
+func testMarshalLargeTextString(t *testing.T) {
 	// "ddd..."
 	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 10000000}
 	testCases := make([]marshalTestCase, len(lengths))
@@ -587,6 +624,10 @@ func TestMarshalLargeTextString(t *testing.T) {
 }
 
 func TestMarshalLargeArray(t *testing.T) {
+	testMarshalWithFP(t, testMarshalLargeArray)
+}
+
+func testMarshalLargeArray(t *testing.T) {
 	// []string{"水", "水", "水", ...}
 	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 131072}
 	testCases := make([]marshalTestCase, len(lengths))
@@ -604,6 +645,10 @@ func TestMarshalLargeArray(t *testing.T) {
 }
 
 func TestMarshalLargeMapCanonical(t *testing.T) {
+	testMarshalWithFP(t, testMarshalLargeMapCanonical)
+}
+
+func testMarshalLargeMapCanonical(t *testing.T) {
 	// map[int]int {0:0, 1:1, 2:2, ...}
 	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 131072}
 	testCases := make([]marshalTestCase, len(lengths))
@@ -623,6 +668,10 @@ func TestMarshalLargeMapCanonical(t *testing.T) {
 }
 
 func TestMarshalLargeMap(t *testing.T) {
+	testMarshalWithFP(t, testMarshalLargeMap)
+}
+
+func testMarshalLargeMap(t *testing.T) {
 	// map[int]int {0:0, 1:1, 2:2, ...}
 	lengths := []int{0, 1, 2, 22, 23, 24, 254, 255, 256, 65534, 65535, 65536, 131072}
 	for _, length := range lengths {
@@ -755,6 +804,10 @@ type outer struct {
 }
 
 func TestMarshalStruct(t *testing.T) {
+	testMarshalWithFP(t, testMarshalStruct)
+}
+
+func testMarshalStruct(t *testing.T) {
 	v1 := outer{
 		IntField:          123,
 		FloatField:        100000.0,
@@ -795,6 +848,10 @@ func TestMarshalStruct(t *testing.T) {
 // TestMarshalStructVariableLength tests marshaling structs that can encode to CBOR maps of varying
 // size depending on their field contents.
 func TestMarshalStructVariableLength(t *testing.T) {
+	testMarshalWithFP(t, testMarshalStructVariableLength)
+}
+
+func testMarshalStructVariableLength(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		in   any
@@ -844,6 +901,10 @@ func TestMarshalStructVariableLength(t *testing.T) {
 }
 
 func TestMarshalStructCanonical(t *testing.T) {
+	testMarshalWithFP(t, testMarshalStructCanonical)
+}
+
+func testMarshalStructCanonical(t *testing.T) {
 	v := outer{
 		IntField:          123,
 		FloatField:        100000.0,
@@ -927,6 +988,10 @@ func TestMarshalStructCanonical(t *testing.T) {
 }
 
 func TestMarshalNullPointerToEmbeddedStruct(t *testing.T) {
+	testMarshalWithFP(t, testMarshalNullPointerToEmbeddedStruct)
+}
+
+func testMarshalNullPointerToEmbeddedStruct(t *testing.T) {
 	type (
 		T1 struct {
 			X int
@@ -947,6 +1012,10 @@ func TestMarshalNullPointerToEmbeddedStruct(t *testing.T) {
 }
 
 func TestMarshalNullPointerToStruct(t *testing.T) {
+	testMarshalWithFP(t, testMarshalNullPointerToStruct)
+}
+
+func testMarshalNullPointerToStruct(t *testing.T) {
 	type (
 		T1 struct {
 			X int
@@ -971,6 +1040,10 @@ func TestMarshalNullPointerToStruct(t *testing.T) {
 // tests in JSON encoding package to ensure that the same rules are
 // followed.
 func TestAnonymousFields1(t *testing.T) {
+	testMarshalWithFP(t, testAnonymousFields1)
+}
+
+func testAnonymousFields1(t *testing.T) {
 	// Fields (T1.X, T2.X) with the same name at the same level are ignored
 	type (
 		T1 struct{ x, X int }
@@ -991,6 +1064,10 @@ func TestAnonymousFields1(t *testing.T) {
 }
 
 func TestAnonymousFields2(t *testing.T) {
+	testMarshalWithFP(t, testAnonymousFields2)
+}
+
+func testAnonymousFields2(t *testing.T) {
 	// Field (T.X) with the same name at a less nested level is serialized
 	type (
 		T1 struct{ x, X int }
@@ -1020,6 +1097,10 @@ func TestAnonymousFields2(t *testing.T) {
 }
 
 func TestAnonymousFields3(t *testing.T) {
+	testMarshalWithFP(t, testAnonymousFields3)
+}
+
+func testAnonymousFields3(t *testing.T) {
 	// Unexported embedded field (myInt) of non-struct type is ignored
 	type (
 		myInt int
@@ -1038,6 +1119,10 @@ func TestAnonymousFields3(t *testing.T) {
 }
 
 func TestAnonymousFields4(t *testing.T) {
+	testMarshalWithFP(t, testAnonymousFields4)
+}
+
+func testAnonymousFields4(t *testing.T) {
 	// Exported embedded field (MyInt) of non-struct type is serialized
 	type (
 		MyInt int
@@ -1063,6 +1148,10 @@ func TestAnonymousFields4(t *testing.T) {
 }
 
 func TestAnonymousFields5(t *testing.T) {
+	testMarshalWithFP(t, testAnonymousFields5)
+}
+
+func testAnonymousFields5(t *testing.T) {
 	// Unexported embedded field (*myInt) of pointer to non-struct type is ignored
 	type (
 		myInt int
@@ -1082,6 +1171,10 @@ func TestAnonymousFields5(t *testing.T) {
 }
 
 func TestAnonymousFields6(t *testing.T) {
+	testMarshalWithFP(t, testAnonymousFields6)
+}
+
+func testAnonymousFields6(t *testing.T) {
 	// Exported embedded field (*MyInt) of pointer to non-struct type should be serialized
 	type (
 		MyInt int
@@ -1108,6 +1201,10 @@ func TestAnonymousFields6(t *testing.T) {
 }
 
 func TestAnonymousFields7(t *testing.T) {
+	testMarshalWithFP(t, testAnonymousFields7)
+}
+
+func testAnonymousFields7(t *testing.T) {
 	// Exported fields (t1.X, T2.Y) of embedded structs should have their exported fields be serialized
 	type (
 		t1 struct{ x, X int }
@@ -1136,6 +1233,10 @@ func TestAnonymousFields7(t *testing.T) {
 }
 
 func TestAnonymousFields8(t *testing.T) {
+	testMarshalWithFP(t, testAnonymousFields8)
+}
+
+func testAnonymousFields8(t *testing.T) {
 	// Exported fields of pointers (t1.X, T2.Y)
 	type (
 		t1 struct{ x, X int }
@@ -1180,6 +1281,10 @@ func TestAnonymousFields8(t *testing.T) {
 }
 
 func TestAnonymousFields9(t *testing.T) {
+	testMarshalWithFP(t, testAnonymousFields9)
+}
+
+func testAnonymousFields9(t *testing.T) {
 	// Multiple levels of nested anonymous fields
 	type (
 		MyInt1 int
@@ -1218,6 +1323,10 @@ func TestAnonymousFields9(t *testing.T) {
 }
 
 func TestAnonymousFields10(t *testing.T) {
+	testMarshalWithFP(t, testAnonymousFields10)
+}
+
+func testAnonymousFields10(t *testing.T) {
 	// Fields of the same struct type at the same level
 	type (
 		t3 struct {
@@ -1255,6 +1364,10 @@ func TestAnonymousFields10(t *testing.T) {
 }
 
 func TestAnonymousFields11(t *testing.T) {
+	testMarshalWithFP(t, testAnonymousFields11)
+}
+
+func testAnonymousFields11(t *testing.T) {
 	// Fields (T.t2.X, T.t1.t2.X) of the same struct type at different levels
 	type (
 		t2 struct {
@@ -1288,6 +1401,10 @@ func TestAnonymousFields11(t *testing.T) {
 }
 
 func TestOmitAndRenameStructField(t *testing.T) {
+	testMarshalWithFP(t, testOmitAndRenameStructField)
+}
+
+func testOmitAndRenameStructField(t *testing.T) {
 	type T struct {
 		I   int // never omit
 		Io  int `cbor:",omitempty"` // omit empty
@@ -1317,6 +1434,10 @@ func TestOmitAndRenameStructField(t *testing.T) {
 }
 
 func TestOmitEmptyForBuiltinType(t *testing.T) {
+	testMarshalWithFP(t, testOmitEmptyForBuiltinType)
+}
+
+func testOmitEmptyForBuiltinType(t *testing.T) {
 	type T struct {
 		B     bool           `cbor:"b"`
 		Bo    bool           `cbor:"bo,omitempty"`
@@ -1358,6 +1479,10 @@ func TestOmitEmptyForBuiltinType(t *testing.T) {
 }
 
 func TestOmitEmptyForAnonymousStruct(t *testing.T) {
+	testMarshalWithFP(t, testOmitEmptyForAnonymousStruct)
+}
+
+func testOmitEmptyForAnonymousStruct(t *testing.T) {
 	type T struct {
 		Str  struct{} `cbor:"str"`
 		Stro struct{} `cbor:"stro,omitempty"`
@@ -1372,6 +1497,10 @@ func TestOmitEmptyForAnonymousStruct(t *testing.T) {
 }
 
 func TestOmitEmptyForStruct1(t *testing.T) {
+	testMarshalWithFP(t, testOmitEmptyForStruct1)
+}
+
+func testOmitEmptyForStruct1(t *testing.T) {
 	type T1 struct {
 		Bo    bool           `cbor:"bo,omitempty"`
 		UIo   uint           `cbor:"uio,omitempty"`
@@ -1397,6 +1526,10 @@ func TestOmitEmptyForStruct1(t *testing.T) {
 }
 
 func TestOmitEmptyForStruct2(t *testing.T) {
+	testMarshalWithFP(t, testOmitEmptyForStruct2)
+}
+
+func testOmitEmptyForStruct2(t *testing.T) {
 	type T1 struct {
 		Bo    bool           `cbor:"bo,omitempty"`
 		UIo   uint           `cbor:"uio,omitempty"`
@@ -1449,6 +1582,10 @@ func TestInvalidOmitEmptyMode(t *testing.T) {
 }
 
 func TestOmitEmptyMode(t *testing.T) {
+	testMarshalWithFP(t, testOmitEmptyMode)
+}
+
+func testOmitEmptyMode(t *testing.T) {
 	type T1 struct{}
 	type T struct {
 		B     bool           `cbor:"b"`
@@ -1514,6 +1651,10 @@ func TestOmitEmptyMode(t *testing.T) {
 }
 
 func TestOmitEmptyForNestedStruct(t *testing.T) {
+	testMarshalWithFP(t, testOmitEmptyForNestedStruct)
+}
+
+func testOmitEmptyForNestedStruct(t *testing.T) {
 	type T1 struct {
 		Bo    bool           `cbor:"bo,omitempty"`
 		UIo   uint           `cbor:"uio,omitempty"`
@@ -1542,6 +1683,10 @@ func TestOmitEmptyForNestedStruct(t *testing.T) {
 }
 
 func TestOmitEmptyForToArrayStruct1(t *testing.T) {
+	testMarshalWithFP(t, testOmitEmptyForToArrayStruct1)
+}
+
+func testOmitEmptyForToArrayStruct1(t *testing.T) {
 	type T1 struct {
 		_    struct{} `cbor:",toarray"`
 		b    bool
@@ -1571,6 +1716,10 @@ func TestOmitEmptyForToArrayStruct1(t *testing.T) {
 }
 
 func TestOmitEmptyForToArrayStruct2(t *testing.T) {
+	testMarshalWithFP(t, testOmitEmptyForToArrayStruct2)
+}
+
+func testOmitEmptyForToArrayStruct2(t *testing.T) {
 	type T1 struct {
 		_     struct{}       `cbor:",toarray"`
 		Bo    bool           `cbor:"bo"`
@@ -1597,6 +1746,10 @@ func TestOmitEmptyForToArrayStruct2(t *testing.T) {
 }
 
 func TestOmitEmptyForStructWithPtrToAnonymousField(t *testing.T) {
+	testMarshalWithFP(t, testOmitEmptyForStructWithPtrToAnonymousField)
+}
+
+func testOmitEmptyForStructWithPtrToAnonymousField(t *testing.T) {
 	type (
 		T1 struct {
 			X int `cbor:"x,omitempty"`
@@ -1656,6 +1809,10 @@ func TestOmitEmptyForStructWithPtrToAnonymousField(t *testing.T) {
 }
 
 func TestOmitEmptyForStructWithAnonymousField(t *testing.T) {
+	testMarshalWithFP(t, testOmitEmptyForStructWithAnonymousField)
+}
+
+func testOmitEmptyForStructWithAnonymousField(t *testing.T) {
 	type (
 		T1 struct {
 			X int `cbor:"x,omitempty"`
@@ -1715,6 +1872,10 @@ func TestOmitEmptyForStructWithAnonymousField(t *testing.T) {
 }
 
 func TestOmitEmptyForBinaryMarshaler1(t *testing.T) {
+	testMarshalWithFP(t, testOmitEmptyForBinaryMarshaler1)
+}
+
+func testOmitEmptyForBinaryMarshaler1(t *testing.T) {
 	type T1 struct {
 		No number `cbor:"no,omitempty"`
 	}
@@ -1742,6 +1903,10 @@ func TestOmitEmptyForBinaryMarshaler1(t *testing.T) {
 }
 
 func TestOmitEmptyForBinaryMarshaler2(t *testing.T) {
+	testMarshalWithFP(t, testOmitEmptyForBinaryMarshaler2)
+}
+
+func testOmitEmptyForBinaryMarshaler2(t *testing.T) {
 	type T1 struct {
 		So stru `cbor:"so,omitempty"`
 	}
@@ -1770,6 +1935,10 @@ func TestOmitEmptyForBinaryMarshaler2(t *testing.T) {
 
 // omitempty is a no-op for time.Time.
 func TestOmitEmptyForTime(t *testing.T) {
+	testMarshalWithFP(t, testOmitEmptyForTime)
+}
+
+func testOmitEmptyForTime(t *testing.T) {
 	type T struct {
 		Tm time.Time `cbor:"t,omitempty"`
 	}
@@ -1784,6 +1953,10 @@ func TestOmitEmptyForTime(t *testing.T) {
 
 // omitempty is a no-op for big.Int.
 func TestOmitEmptyForBigInt(t *testing.T) {
+	testMarshalWithFP(t, testOmitEmptyForBigInt)
+}
+
+func testOmitEmptyForBigInt(t *testing.T) {
 	type T struct {
 		I big.Int `cbor:"bi,omitempty"`
 	}
@@ -1797,6 +1970,10 @@ func TestOmitEmptyForBigInt(t *testing.T) {
 }
 
 func TestOmitZeroForBuiltinType(t *testing.T) {
+	testMarshalWithFP(t, testOmitZeroForBuiltinType)
+}
+
+func testOmitZeroForBuiltinType(t *testing.T) {
 	type T struct {
 		B     bool           `cbor:"b"`
 		Bo    bool           `cbor:"bo,omitzero"`
@@ -1838,6 +2015,10 @@ func TestOmitZeroForBuiltinType(t *testing.T) {
 }
 
 func TestOmitZeroForAnonymousStruct(t *testing.T) {
+	testMarshalWithFP(t, testOmitZeroForAnonymousStruct)
+}
+
+func testOmitZeroForAnonymousStruct(t *testing.T) {
 	type T struct {
 		Str  struct{} `cbor:"str"`
 		Stro struct{} `cbor:"stro,omitzero"`
@@ -1852,6 +2033,10 @@ func TestOmitZeroForAnonymousStruct(t *testing.T) {
 }
 
 func TestOmitZeroForStruct1(t *testing.T) {
+	testMarshalWithFP(t, testOmitZeroForStruct1)
+}
+
+func testOmitZeroForStruct1(t *testing.T) {
 	type T1 struct {
 		Bo    bool           `cbor:"bo,omitzero"`
 		UIo   uint           `cbor:"uio,omitzero"`
@@ -1877,6 +2062,10 @@ func TestOmitZeroForStruct1(t *testing.T) {
 }
 
 func TestOmitZeroForStruct2(t *testing.T) {
+	testMarshalWithFP(t, testOmitZeroForStruct2)
+}
+
+func testOmitZeroForStruct2(t *testing.T) {
 	type T1 struct {
 		Bo    bool           `cbor:"bo,omitzero"`
 		UIo   uint           `cbor:"uio,omitzero"`
@@ -1901,6 +2090,10 @@ func TestOmitZeroForStruct2(t *testing.T) {
 }
 
 func TestOmitZeroForNestedStruct(t *testing.T) {
+	testMarshalWithFP(t, testOmitZeroForNestedStruct)
+}
+
+func testOmitZeroForNestedStruct(t *testing.T) {
 	type T1 struct {
 		Bo    bool           `cbor:"bo,omitzero"`
 		UIo   uint           `cbor:"uio,omitzero"`
@@ -1929,6 +2122,10 @@ func TestOmitZeroForNestedStruct(t *testing.T) {
 }
 
 func TestOmitZeroForToArrayStruct1(t *testing.T) {
+	testMarshalWithFP(t, testOmitZeroForToArrayStruct1)
+}
+
+func testOmitZeroForToArrayStruct1(t *testing.T) {
 	type T1 struct {
 		_    struct{} `cbor:",toarray"`
 		b    bool
@@ -1958,6 +2155,10 @@ func TestOmitZeroForToArrayStruct1(t *testing.T) {
 }
 
 func TestOmitZeroForToArrayStruct2(t *testing.T) {
+	testMarshalWithFP(t, testOmitZeroForToArrayStruct2)
+}
+
+func testOmitZeroForToArrayStruct2(t *testing.T) {
 	type T1 struct {
 		_     struct{}       `cbor:",toarray"`
 		Bo    bool           `cbor:"bo"`
@@ -1984,6 +2185,10 @@ func TestOmitZeroForToArrayStruct2(t *testing.T) {
 }
 
 func TestOmitZeroForStructWithPtrToAnonymousField(t *testing.T) {
+	testMarshalWithFP(t, testOmitZeroForStructWithPtrToAnonymousField)
+}
+
+func testOmitZeroForStructWithPtrToAnonymousField(t *testing.T) {
 	type (
 		T1 struct {
 			X int `cbor:"x,omitzero"`
@@ -2043,6 +2248,10 @@ func TestOmitZeroForStructWithPtrToAnonymousField(t *testing.T) {
 }
 
 func TestOmitZeroForStructWithAnonymousField(t *testing.T) {
+	testMarshalWithFP(t, testOmitZeroForStructWithAnonymousField)
+}
+
+func testOmitZeroForStructWithAnonymousField(t *testing.T) {
 	type (
 		T1 struct {
 			X int `cbor:"x,omitzero"`
@@ -2102,6 +2311,10 @@ func TestOmitZeroForStructWithAnonymousField(t *testing.T) {
 }
 
 func TestOmitZeroForBinaryMarshaler1(t *testing.T) {
+	testMarshalWithFP(t, testOmitZeroForBinaryMarshaler1)
+}
+
+func testOmitZeroForBinaryMarshaler1(t *testing.T) {
 	type T1 struct {
 		No number `cbor:"no,omitzero"`
 	}
@@ -2129,6 +2342,10 @@ func TestOmitZeroForBinaryMarshaler1(t *testing.T) {
 }
 
 func TestOmitZeroForBinaryMarshaler2(t *testing.T) {
+	testMarshalWithFP(t, testOmitZeroForBinaryMarshaler2)
+}
+
+func testOmitZeroForBinaryMarshaler2(t *testing.T) {
 	type T1 struct {
 		So stru `cbor:"so,omitzero"`
 	}
@@ -2156,6 +2373,10 @@ func TestOmitZeroForBinaryMarshaler2(t *testing.T) {
 }
 
 func TestOmitZeroForTime(t *testing.T) {
+	testMarshalWithFP(t, testOmitZeroForTime)
+}
+
+func testOmitZeroForTime(t *testing.T) {
 	type T struct {
 		Tm time.Time `cbor:"t,omitzero"`
 	}
@@ -2169,6 +2390,10 @@ func TestOmitZeroForTime(t *testing.T) {
 }
 
 func TestOmitZeroForBigInt(t *testing.T) {
+	testMarshalWithFP(t, testOmitZeroForBigInt)
+}
+
+func testOmitZeroForBigInt(t *testing.T) {
 	type T struct {
 		I big.Int `cbor:"bi,omitzero"`
 	}
@@ -2480,6 +2705,10 @@ func (z *zeroTestTypeCustomPointer) IsZero() bool {
 }
 
 func TestJSONStdlibOmitZero(t *testing.T) {
+	testMarshalWithFP(t, testJSONStdlibOmitZero)
+}
+
+func testJSONStdlibOmitZero(t *testing.T) {
 	type CBOR struct {
 		S string `cbor:"s,omitzero"`
 	}
@@ -2514,6 +2743,10 @@ func TestJSONStdlibOmitZero(t *testing.T) {
 }
 
 func TestTaggedField(t *testing.T) {
+	testMarshalWithFP(t, testTaggedField)
+}
+
+func testTaggedField(t *testing.T) {
 	// A field (T2.X) with a tag dominates untagged field.
 	type (
 		T1 struct {
@@ -2546,6 +2779,10 @@ func TestTaggedField(t *testing.T) {
 }
 
 func TestDuplicatedFields(t *testing.T) {
+	testMarshalWithFP(t, testDuplicatedFields)
+}
+
+func testDuplicatedFields(t *testing.T) {
 	// Duplicate fields (T.T1.S, T.T2.S) are ignored.
 	type (
 		T1 struct {
@@ -2593,6 +2830,10 @@ func (s TReader) Read(_ []byte) (n int, err error) {
 }
 
 func TestTaggedAnonymousField(t *testing.T) {
+	testMarshalWithFP(t, testTaggedAnonymousField)
+}
+
+func testTaggedAnonymousField(t *testing.T) {
 	// Anonymous field with a name given in its CBOR tag is treated as having that name, rather than being anonymous.
 	type (
 		T1 struct {
@@ -2622,6 +2863,10 @@ func TestTaggedAnonymousField(t *testing.T) {
 }
 
 func TestAnonymousInterfaceField(t *testing.T) {
+	testMarshalWithFP(t, testAnonymousInterfaceField)
+}
+
+func testAnonymousInterfaceField(t *testing.T) {
 	// Anonymous field of interface type is treated the same as having that type as its name, rather than being anonymous.
 	type (
 		T struct {
@@ -2652,6 +2897,10 @@ func TestAnonymousInterfaceField(t *testing.T) {
 }
 
 func TestEncodeInterface(t *testing.T) {
+	testMarshalWithFP(t, testEncodeInterface)
+}
+
+func testEncodeInterface(t *testing.T) {
 	var r io.Reader = TReader{X: 2}
 	want := []byte{0xa1, 0x61, 0x58, 0x02} // {X:2}
 	b, err := Marshal(r)
@@ -2755,6 +3004,10 @@ var (
 )
 
 func TestEncodeTime(t *testing.T) {
+	testMarshalWithFP(t, testEncodeTime)
+}
+
+func testEncodeTime(t *testing.T) {
 	type conversion struct {
 		opt          encTimeOption
 		wantCborData []byte
@@ -3278,6 +3531,10 @@ func TestEncodeTime(t *testing.T) {
 }
 
 func TestEncodeTimeUnixMicro(t *testing.T) {
+	testMarshalWithFP(t, testEncodeTimeUnixMicro)
+}
+
+func testEncodeTimeUnixMicro(t *testing.T) {
 	em, err := EncOptions{Time: TimeUnixMicro}.EncMode()
 	if err != nil {
 		t.Fatalf("EncMode() returned error %v", err)
@@ -3439,6 +3696,10 @@ func TestEncodeTimeUnixMicro(t *testing.T) {
 }
 
 func TestEncodeTimeRFC3339WrongYear(t *testing.T) {
+	testMarshalWithFP(t, testEncodeTimeRFC3339WrongYear)
+}
+
+func testEncodeTimeRFC3339WrongYear(t *testing.T) {
 	timeModeNames := map[TimeMode]string{
 		TimeRFC3339:        "TimeRFC3339",
 		TimeRFC3339Nano:    "TimeRFC3339Nano",
@@ -3612,6 +3873,10 @@ func TestInvalidTimeMode(t *testing.T) {
 }
 
 func TestMarshalStructTag1(t *testing.T) {
+	testMarshalWithFP(t, testMarshalStructTag1)
+}
+
+func testMarshalStructTag1(t *testing.T) {
 	type strc struct {
 		A string `cbor:"a"`
 		B string `cbor:"b"`
@@ -3631,6 +3896,10 @@ func TestMarshalStructTag1(t *testing.T) {
 }
 
 func TestMarshalStructTag2(t *testing.T) {
+	testMarshalWithFP(t, testMarshalStructTag2)
+}
+
+func testMarshalStructTag2(t *testing.T) {
 	type strc struct {
 		A string `json:"a"`
 		B string `json:"b"`
@@ -3650,6 +3919,10 @@ func TestMarshalStructTag2(t *testing.T) {
 }
 
 func TestMarshalStructTag3(t *testing.T) {
+	testMarshalWithFP(t, testMarshalStructTag3)
+}
+
+func testMarshalStructTag3(t *testing.T) {
 	type strc struct {
 		A string `json:"x" cbor:"a"`
 		B string `json:"y" cbor:"b"`
@@ -3669,6 +3942,10 @@ func TestMarshalStructTag3(t *testing.T) {
 }
 
 func TestMarshalStructTag4(t *testing.T) {
+	testMarshalWithFP(t, testMarshalStructTag4)
+}
+
+func testMarshalStructTag4(t *testing.T) {
 	type strc struct {
 		A string `json:"x" cbor:"a"`
 		B string `json:"y" cbor:"b"`
@@ -3688,6 +3965,10 @@ func TestMarshalStructTag4(t *testing.T) {
 }
 
 func TestMarshalStructLongFieldName(t *testing.T) {
+	testMarshalWithFP(t, testMarshalStructLongFieldName)
+}
+
+func testMarshalStructLongFieldName(t *testing.T) {
 	type strc struct {
 		A string `cbor:"a"`
 		B string `cbor:"abcdefghijklmnopqrstuvwxyz"`
@@ -3707,6 +3988,10 @@ func TestMarshalStructLongFieldName(t *testing.T) {
 }
 
 func TestMarshalRawMessageValue(t *testing.T) {
+	testMarshalWithFP(t, testMarshalRawMessageValue)
+}
+
+func testMarshalRawMessageValue(t *testing.T) {
 	type (
 		T1 struct {
 			M RawMessage `cbor:",omitempty"`
@@ -3961,6 +4246,10 @@ func TestMarshalRawMessageValue(t *testing.T) {
 }
 
 func TestCyclicDataStructure(t *testing.T) {
+	testMarshalWithFP(t, testCyclicDataStructure)
+}
+
+func testCyclicDataStructure(t *testing.T) {
 	type Node struct {
 		V int   `cbor:"v"`
 		N *Node `cbor:"n,omitempty"`
@@ -3984,6 +4273,10 @@ func TestCyclicDataStructure(t *testing.T) {
 }
 
 func TestMarshalUnmarshalStructKeyAsInt(t *testing.T) {
+	testMarshalWithFP(t, testMarshalUnmarshalStructKeyAsInt)
+}
+
+func testMarshalUnmarshalStructKeyAsInt(t *testing.T) {
 	type T struct {
 		F1 int `cbor:"1,omitempty,keyasint"`
 		F2 int `cbor:"2,omitempty"`
@@ -4031,6 +4324,10 @@ func TestMarshalUnmarshalStructKeyAsInt(t *testing.T) {
 }
 
 func TestMarshalStructKeyAsIntNumError(t *testing.T) {
+	testMarshalWithFP(t, testMarshalStructKeyAsIntNumError)
+}
+
+func testMarshalStructKeyAsIntNumError(t *testing.T) {
 	type T1 struct {
 		F1 int `cbor:"2.0,keyasint"`
 	}
@@ -4076,6 +4373,10 @@ func TestMarshalStructKeyAsIntNumError(t *testing.T) {
 }
 
 func TestMarshalUnmarshalStructToArray(t *testing.T) {
+	testMarshalWithFP(t, testMarshalUnmarshalStructToArray)
+}
+
+func testMarshalUnmarshalStructToArray(t *testing.T) {
 	type T1 struct {
 		M int `cbor:",omitempty"`
 	}
@@ -4152,6 +4453,10 @@ func TestMarshalUnmarshalStructToArray(t *testing.T) {
 }
 
 func TestMapSort(t *testing.T) {
+	testMarshalWithFP(t, testMapSort)
+}
+
+func testMapSort(t *testing.T) {
 	m := make(map[any]any)
 	m[10] = true
 	m[100] = true
@@ -4214,6 +4519,10 @@ func TestMapSort(t *testing.T) {
 }
 
 func TestStructSort(t *testing.T) {
+	testMarshalWithFP(t, testStructSort)
+}
+
+func testStructSort(t *testing.T) {
 	type T struct {
 		A bool `cbor:"aa"`
 		B bool `cbor:"z"`
@@ -4314,6 +4623,10 @@ func TestInvalidSort(t *testing.T) {
 }
 
 func TestTypeAlias(t *testing.T) {
+	testMarshalWithFP(t, testTypeAlias)
+}
+
+func testTypeAlias(t *testing.T) {
 	type myBool = bool
 	type myUint = uint
 	type myUint8 = uint8
@@ -4436,7 +4749,11 @@ func TestTypeAlias(t *testing.T) {
 	testRoundTrip(t, testCases, em, dm)
 }
 
-func TestNewTypeWithBuiltinUnderlyingType(t *testing.T) { //nolint:dupl
+func TestNewTypeWithBuiltinUnderlyingType(t *testing.T) {
+	testMarshalWithFP(t, testNewTypeWithBuiltinUnderlyingType)
+}
+
+func testNewTypeWithBuiltinUnderlyingType(t *testing.T) { //nolint:dupl
 	type myBool bool
 	type myUint uint
 	type myUint8 uint8
@@ -4560,6 +4877,10 @@ func TestNewTypeWithBuiltinUnderlyingType(t *testing.T) { //nolint:dupl
 }
 
 func TestShortestFloat16(t *testing.T) {
+	testMarshalWithFP(t, testShortestFloat16)
+}
+
+func testShortestFloat16(t *testing.T) {
 	testCases := []struct {
 		name         string
 		f64          float64
@@ -4665,6 +4986,10 @@ func TestShortestFloat16(t *testing.T) {
 }
 
 func TestShortestFloatNone(t *testing.T) {
+	testMarshalWithFP(t, testShortestFloatNone)
+}
+
+func testShortestFloatNone(t *testing.T) {
 	testCases := []struct {
 		name         string
 		f            any
@@ -4871,6 +5196,10 @@ func TestInvalidShortestFloat(t *testing.T) {
 }
 
 func TestInfConvert(t *testing.T) {
+	testMarshalWithFP(t, testInfConvert)
+}
+
+func testInfConvert(t *testing.T) {
 	infConvertNoneOpt := EncOptions{InfConvert: InfConvertNone}
 	infConvertFloat16Opt := EncOptions{InfConvert: InfConvertFloat16}
 	testCases := []struct {
@@ -4990,6 +5319,10 @@ func TestInvalidInfConvert(t *testing.T) {
 }
 
 func TestNilContainers(t *testing.T) {
+	testMarshalWithFP(t, testNilContainers)
+}
+
+func testNilContainers(t *testing.T) {
 	nilContainersNull := EncOptions{NilContainers: NilContainerAsNull}
 	nilContainersEmpty := EncOptions{NilContainers: NilContainerAsEmpty}
 
@@ -5136,6 +5469,10 @@ var (
 )
 
 func TestNaNConvert(t *testing.T) {
+	testMarshalWithFP(t, testNaNConvert)
+}
+
+func testNaNConvert(t *testing.T) {
 	nanConvert7e00Opt := EncOptions{NaNConvert: NaNConvert7e00}
 	nanConvertNoneOpt := EncOptions{NaNConvert: NaNConvertNone}
 	nanConvertPreserveSignalOpt := EncOptions{NaNConvert: NaNConvertPreserveSignal}
@@ -5667,6 +6004,10 @@ func TestInvalidNaNConvert(t *testing.T) {
 }
 
 func TestMarshalSenML(t *testing.T) {
+	testMarshalWithFP(t, testMarshalSenML)
+}
+
+func testMarshalSenML(t *testing.T) {
 	// Data from https://tools.ietf.org/html/rfc8428#section-6
 	// Data contains 13 floating-point numbers.
 	data := mustHexDecode("87a721781b75726e3a6465763a6f773a3130653230373361303130383030363a22fb41d303a15b00106223614120050067766f6c7461676501615602fb405e066666666666a3006763757272656e74062402fb3ff3333333333333a3006763757272656e74062302fb3ff4cccccccccccda3006763757272656e74062202fb3ff6666666666666a3006763757272656e74062102f93e00a3006763757272656e74062002fb3ff999999999999aa3006763757272656e74060002fb3ffb333333333333")
@@ -6156,6 +6497,10 @@ func TestEncIndefiniteLengthOption(t *testing.T) {
 }
 
 func TestEncTagsMdOption(t *testing.T) {
+	testMarshalWithFP(t, testEncTagsMdOption)
+}
+
+func testEncTagsMdOption(t *testing.T) {
 	// Default option allows encoding CBOR tags
 	tag := Tag{123, "hello"}
 	if _, err := Marshal(tag); err != nil {
@@ -6207,6 +6552,10 @@ func TestEncTagsMdOption(t *testing.T) {
 }
 
 func TestMarshalPosBigInt(t *testing.T) {
+	testMarshalWithFP(t, testMarshalPosBigInt)
+}
+
+func testMarshalPosBigInt(t *testing.T) {
 	testCases := []struct {
 		name             string
 		cborDataShortest []byte
@@ -6311,6 +6660,10 @@ func TestMarshalPosBigInt(t *testing.T) {
 }
 
 func TestMarshalNegBigInt(t *testing.T) {
+	testMarshalWithFP(t, testMarshalNegBigInt)
+}
+
+func testMarshalNegBigInt(t *testing.T) {
 	testCases := []struct {
 		name             string
 		cborDataShortest []byte
@@ -6415,6 +6768,10 @@ func TestMarshalNegBigInt(t *testing.T) {
 }
 
 func TestStructWithSimpleValueFields(t *testing.T) {
+	testMarshalWithFP(t, testStructWithSimpleValueFields)
+}
+
+func testStructWithSimpleValueFields(t *testing.T) {
 	type T struct {
 		SV1 SimpleValue `cbor:",omitempty"` // omit empty
 		SV2 SimpleValue
@@ -6439,6 +6796,10 @@ func TestStructWithSimpleValueFields(t *testing.T) {
 }
 
 func TestMapWithSimpleValueKey(t *testing.T) {
+	testMarshalWithFP(t, testMapWithSimpleValueKey)
+}
+
+func testMapWithSimpleValueKey(t *testing.T) {
 	data := []byte{0xa2, 0x00, 0x00, 0xe0, 0x00} // {0: 0, simple(0): 0}
 
 	// Decode CBOR map with positive integer 0 and simple value 0 as keys.
@@ -6473,6 +6834,10 @@ func TestMapWithSimpleValueKey(t *testing.T) {
 }
 
 func TestMarshalStringType(t *testing.T) {
+	testMarshalWithFP(t, testMarshalStringType)
+}
+
+func testMarshalStringType(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		opts EncOptions
@@ -6511,6 +6876,10 @@ func TestMarshalStringType(t *testing.T) {
 }
 
 func TestMarshalFieldNameType(t *testing.T) {
+	testMarshalWithFP(t, testMarshalFieldNameType)
+}
+
+func testMarshalFieldNameType(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		opts EncOptions
@@ -6577,6 +6946,10 @@ func TestMarshalFieldNameType(t *testing.T) {
 }
 
 func TestMarshalRawMessageContainingMalformedCBORData(t *testing.T) {
+	testMarshalWithFP(t, testMarshalRawMessageContainingMalformedCBORData)
+}
+
+func testMarshalRawMessageContainingMalformedCBORData(t *testing.T) {
 	testCases := []struct {
 		name         string
 		value        any
@@ -6631,6 +7004,10 @@ func (m marshaler) MarshalCBOR() (data []byte, err error) {
 }
 
 func TestMarshalerReturnsMalformedCBORData(t *testing.T) {
+	testMarshalWithFP(t, testMarshalerReturnsMalformedCBORData)
+}
+
+func testMarshalerReturnsMalformedCBORData(t *testing.T) {
 
 	testCases := []struct {
 		name         string
@@ -6677,6 +7054,10 @@ func TestMarshalerReturnsMalformedCBORData(t *testing.T) {
 }
 
 func TestMarshalerReturnsDisallowedCBORData(t *testing.T) {
+	testMarshalWithFP(t, testMarshalerReturnsDisallowedCBORData)
+}
+
+func testMarshalerReturnsDisallowedCBORData(t *testing.T) {
 
 	testCases := []struct {
 		name         string
@@ -6737,6 +7118,10 @@ func TestMarshalerReturnsDisallowedCBORData(t *testing.T) {
 }
 
 func TestSortModeFastShuffle(t *testing.T) {
+	testMarshalWithFP(t, testSortModeFastShuffle)
+}
+
+func testSortModeFastShuffle(t *testing.T) {
 	em, err := EncOptions{Sort: SortFastShuffle}.EncMode()
 	if err != nil {
 		t.Fatal(err)
@@ -6787,6 +7172,10 @@ func TestSortModeFastShuffle(t *testing.T) {
 }
 
 func TestSortModeFastShuffleEmptyStruct(t *testing.T) {
+	testMarshalWithFP(t, testSortModeFastShuffleEmptyStruct)
+}
+
+func testSortModeFastShuffleEmptyStruct(t *testing.T) {
 	em, err := EncOptions{Sort: SortFastShuffle}.EncMode()
 	if err != nil {
 		t.Fatal(err)
@@ -6880,6 +7269,10 @@ func TestInvalidByteArray(t *testing.T) {
 }
 
 func TestMarshalByteArrayMode(t *testing.T) {
+	testMarshalWithFP(t, testMarshalByteArrayMode)
+}
+
+func testMarshalByteArrayMode(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		opts EncOptions
@@ -6924,6 +7317,10 @@ func TestMarshalByteArrayMode(t *testing.T) {
 }
 
 func TestMarshalByteSliceMode(t *testing.T) {
+	testMarshalWithFP(t, testMarshalByteSliceMode)
+}
+
+func testMarshalByteSliceMode(t *testing.T) {
 	type namedByteSlice []byte
 	ts := NewTagSet()
 	if err := ts.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeFor[namedByteSlice](), 0xcc); err != nil {
@@ -7023,6 +7420,10 @@ func TestMarshalByteSliceMode(t *testing.T) {
 }
 
 func TestBigIntConvertReject(t *testing.T) {
+	testMarshalWithFP(t, testBigIntConvertReject)
+}
+
+func testBigIntConvertReject(t *testing.T) {
 	em, err := EncOptions{BigIntConvert: BigIntConvertReject}.EncMode()
 	if err != nil {
 		t.Fatal(err)
@@ -7105,6 +7506,10 @@ func (testBinaryMarshaler) MarshalBinary() ([]byte, error) {
 }
 
 func TestBinaryMarshalerMode(t *testing.T) {
+	testMarshalWithFP(t, testBinaryMarshalerMode)
+}
+
+func testBinaryMarshalerMode(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		opts EncOptions
@@ -7219,6 +7624,10 @@ func (binaryMarshalerUintptr) MarshalBinary() ([]byte, error) {
 }
 
 func TestBinaryMarshalerModeWithUnsupportedType(t *testing.T) {
+	testMarshalWithFP(t, testBinaryMarshalerModeWithUnsupportedType)
+}
+
+func testBinaryMarshalerModeWithUnsupportedType(t *testing.T) {
 	for _, tc := range []struct {
 		name      string
 		opts      EncOptions
@@ -7327,6 +7736,10 @@ func (tm *testTextMarshaler) MarshalText() ([]byte, error) {
 }
 
 func TestTextMarshalerMode(t *testing.T) {
+	testMarshalWithFP(t, testTextMarshalerMode)
+}
+
+func testTextMarshalerMode(t *testing.T) {
 	testTags := NewTagSet()
 	if err := testTags.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeFor[testTextMarshaler](), 9999); err != nil {
 		t.Fatal(err)
@@ -7413,6 +7826,10 @@ func (tm *textMarshalerWithUnsupportedType) MarshalText() ([]byte, error) {
 }
 
 func TestTextMarshalerModeWithUnsupportedType(t *testing.T) {
+	testMarshalWithFP(t, testTextMarshalerModeWithUnsupportedType)
+}
+
+func testTextMarshalerModeWithUnsupportedType(t *testing.T) {
 	for _, tc := range []struct {
 		name      string
 		opts      EncOptions
@@ -7504,6 +7921,10 @@ func TestTextMarshalerModeWithUnsupportedType(t *testing.T) {
 }
 
 func TestTextMarshalerModeError(t *testing.T) {
+	testMarshalWithFP(t, testTextMarshalerModeError)
+}
+
+func testTextMarshalerModeError(t *testing.T) {
 	testTags := NewTagSet()
 	if err := testTags.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeFor[testTextMarshaler](), 9999); err != nil {
 		t.Fatal(err)
@@ -7580,6 +8001,10 @@ func (m jsonMarshalerWithUnsupportedType) MarshalJSON() ([]byte, error) {
 }
 
 func TestJSONMarshalerTranscoderNil(t *testing.T) {
+	testMarshalWithFP(t, testJSONMarshalerTranscoderNil)
+}
+
+func testJSONMarshalerTranscoderNil(t *testing.T) {
 	enc, err := EncOptions{}.EncMode()
 	if err != nil {
 		t.Fatal(err)
@@ -7662,6 +8087,10 @@ func TestJSONMarshalerTranscoderNil(t *testing.T) {
 }
 
 func TestJSONMarshalerTranscoder(t *testing.T) {
+	testMarshalWithFP(t, testJSONMarshalerTranscoder)
+}
+
+func testJSONMarshalerTranscoder(t *testing.T) {
 	testTags := NewTagSet()
 	if err := testTags.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeFor[stubJSONMarshaler](), 9999); err != nil {
 		t.Fatal(err)
@@ -7900,6 +8329,10 @@ func (binaryMarshalerToArrayStruct) MarshalBinary() ([]byte, error) {
 }
 
 func TestOmitZeroWithMultipleMarshalers(t *testing.T) {
+	testMarshalWithFP(t, testOmitZeroWithMultipleMarshalers)
+}
+
+func testOmitZeroWithMultipleMarshalers(t *testing.T) {
 	jsonTranscoder := transcodeFunc(func(w io.Writer, _ io.Reader) error {
 		_, err := w.Write([]byte{0x61, 'j'}) // "j"
 		return err
@@ -8091,6 +8524,10 @@ func TestOmitZeroWithMultipleMarshalers(t *testing.T) {
 }
 
 func TestMarshalerErrorUnwrap(t *testing.T) {
+	testMarshalWithFP(t, testMarshalerErrorUnwrap)
+}
+
+func testMarshalerErrorUnwrap(t *testing.T) {
 	innerErr := errors.New("MarshalCBOR: error")
 	v := marshalCBORError(innerErr.Error())
 	_, err := Marshal(v)
@@ -8199,6 +8636,10 @@ func TestEncodedHeadLength(t *testing.T) {
 }
 
 func TestMarshalSelfReferenceDataTypes(t *testing.T) {
+	testMarshalWithFP(t, testMarshalSelfReferenceDataTypes)
+}
+
+func testMarshalSelfReferenceDataTypes(t *testing.T) {
 	testCases := []struct {
 		name     string
 		value    any
@@ -8271,6 +8712,10 @@ func (marshalerOverSelfRefUnsupported) MarshalBinary() ([]byte, error) {
 }
 
 func TestMarshalSelfReferenceUnsupportedType(t *testing.T) {
+	testMarshalWithFP(t, testMarshalSelfReferenceUnsupportedType)
+}
+
+func testMarshalSelfReferenceUnsupportedType(t *testing.T) {
 	testCases := []struct {
 		name   string
 		values []any
@@ -8360,6 +8805,10 @@ func (r *pJSONMarshaler) MarshalJSON() ([]byte, error) {
 }
 
 func TestMarshalAddressableMarshaler(t *testing.T) {
+	testMarshalWithFP(t, testMarshalAddressableMarshaler)
+}
+
+func testMarshalAddressableMarshaler(t *testing.T) {
 	em, err := EncOptions{
 		TextMarshaler: TextMarshalerTextString,
 		JSONMarshalerTranscoder: transcodeFunc(func(w io.Writer, r io.Reader) error {
@@ -8452,4 +8901,423 @@ func TestMarshalAddressableMarshaler(t *testing.T) {
 			t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, want)
 		}
 	})
+}
+
+func TestMarshalNilByteStringArrayAndMap(t *testing.T) {
+	testMarshalWithFP(t, testMarshalNilByteStringArrayAndMap)
+}
+
+func testMarshalNilByteStringArrayAndMap(t *testing.T) {
+	type s1 struct {
+		B []byte
+	}
+	type s2 struct {
+		A []any
+	}
+	type s3 struct {
+		M map[string]any
+	}
+
+	nilContainersAsNullEM, _ := EncOptions{
+		NilContainers: NilContainerAsNull,
+	}.EncMode()
+
+	nilContainersAsEmptyEM, _ := EncOptions{
+		NilContainers: NilContainerAsEmpty,
+	}.EncMode()
+
+	for _, tc := range []struct {
+		name string
+		em   EncMode
+		in   any
+		want []byte
+	}{
+		{
+			name: "[]byte(nil) with NilContainerAsNull opt",
+			em:   nilContainersAsNullEM,
+			in:   []byte(nil),
+			want: []byte{0xf6}, // null
+		},
+		{
+			name: "[]byte(nil) with NilContainerAsEmpty opt",
+			em:   nilContainersAsEmptyEM,
+			in:   []byte(nil),
+			want: []byte{0x40}, // h''
+		},
+		{
+			name: "struct{[]byte(nil)} with NilContainerAsNull opt",
+			em:   nilContainersAsNullEM,
+			in:   s1{B: []byte(nil)},
+			want: []byte{0xa1, 0x61, 0x42, 0xf6}, // {"B": null}
+		},
+		{
+			name: "struct{[]byte(nil)} with NilContainerAsEmpty opt",
+			em:   nilContainersAsEmptyEM,
+			in:   s1{B: []byte(nil)},
+			want: []byte{0xa1, 0x61, 0x42, 0x40}, // {"B": h''}
+		},
+		{
+			name: "[]any(nil) with NilContainerAsNull opt",
+			em:   nilContainersAsNullEM,
+			in:   []any(nil),
+			want: []byte{0xf6}, // null
+		},
+		{
+			name: "[]any(nil) with NilContainerAsEmpty opt",
+			em:   nilContainersAsEmptyEM,
+			in:   []any(nil),
+			want: []byte{0x80}, // []
+		},
+		{
+			name: "struct{[]any(nil)} with NilContainerAsNull opt",
+			em:   nilContainersAsNullEM,
+			in:   s2{A: []any(nil)},
+			want: []byte{0xa1, 0x61, 0x41, 0xf6}, // {"A": null}
+		},
+		{
+			name: "struct{[]any(nil)} with NilContainerAsEmpty opt",
+			em:   nilContainersAsEmptyEM,
+			in:   s2{A: []any(nil)},
+			want: []byte{0xa1, 0x61, 0x41, 0x80}, // {"A": []}
+		},
+		{
+			name: "map[string]any(nil) with NilContainerAsNull opt",
+			em:   nilContainersAsNullEM,
+			in:   map[string]any(nil),
+			want: []byte{0xf6}, // null
+		},
+		{
+			name: "map[string]any(nil) with NilContainerAsEmpty opt",
+			em:   nilContainersAsEmptyEM,
+			in:   map[string]any(nil),
+			want: []byte{0xa0}, // {}
+		},
+		{
+			name: "struct{map[string]any(nil)} with NilContainerAsNull opt",
+			em:   nilContainersAsNullEM,
+			in:   s3{M: map[string]any(nil)},
+			want: []byte{0xa1, 0x61, 0x4d, 0xf6}, // {"M": null}
+		},
+		{
+			name: "struct{map[string]any(nil)} with NilContainerAsEmpty opt",
+			em:   nilContainersAsEmptyEM,
+			in:   s3{M: map[string]any(nil)},
+			want: []byte{0xa1, 0x61, 0x4d, 0xa0}, // {"M": {}}
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := tc.em.Marshal(tc.in)
+			if err != nil {
+				t.Fatalf("Marshal(%#v): unexpected error: %v", tc.in, err)
+			}
+
+			if !bytes.Equal(tc.want, got) {
+				t.Errorf("Marshal(%#v) = 0x%x, want 0x%x", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestMarshalNilInterface(t *testing.T) {
+	testMarshalWithFP(t, testMarshalNilInterface)
+}
+
+func testMarshalNilInterface(t *testing.T) {
+	type s struct {
+		R io.Reader
+	}
+
+	v := s{}
+	want := []byte{0xa1, 0x61, 0x52, 0xf6} // {"R": null}
+
+	got, err := Marshal(v)
+	if err != nil {
+		t.Fatalf("Marshal(%v): unexpected error: %v", v, err)
+	}
+
+	if !bytes.Equal(want, got) {
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, got, want)
+	}
+}
+
+func TestMarshalArrayMapError(t *testing.T) {
+	testMarshalWithFP(t, testMarshalArrayMapError)
+}
+
+func testMarshalArrayMapError(t *testing.T) {
+	sortNoneEM, _ := EncOptions{
+		Sort: SortNone,
+	}.EncMode()
+
+	sortLengthFirstEM, _ := EncOptions{
+		Sort: SortLengthFirst,
+	}.EncMode()
+
+	c := make(chan bool)
+
+	for _, tc := range []struct {
+		name string
+		em   EncMode
+		in   any
+	}{
+		{
+			name: "[]any",
+			em:   defaultEncMode,
+			in:   []any{c},
+		},
+		{
+			name: "map[string]any with SortNone",
+			em:   sortNoneEM,
+			in:   map[string]any{"a": c, "b": c},
+		},
+		{
+			name: "map[string]any with SortLengthFirst",
+			em:   sortLengthFirstEM,
+			in:   map[string]any{"a": c, "b": c},
+		},
+		{
+			name: "map[any]any with SortNone (unsupported key)",
+			em:   sortNoneEM,
+			in:   map[any]any{c: 1, "b": 2},
+		},
+		{
+			name: "map[any]any with SortLengthFirst (unsupported key)",
+			em:   sortLengthFirstEM,
+			in:   map[any]any{c: 1, "b": 2},
+		},
+		{
+			name: "map[any]any with SortNone (unsupported value)",
+			em:   sortNoneEM,
+			in:   map[any]any{"a": c, "b": c},
+		},
+		{
+			name: "map[any]any with SortLengthFirst (unsupported value)",
+			em:   sortLengthFirstEM,
+			in:   map[any]any{"a": c, "b": c},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := tc.em.Marshal(tc.in)
+			if err == nil {
+				t.Errorf("Marshal(%v): expected *UnsupportedTypeError, got nil", tc.in)
+			} else if _, ok := err.(*UnsupportedTypeError); !ok {
+				t.Errorf("Marshal(%v) returned %T, want *UnsupportedTypeError", tc.in, err)
+			}
+		})
+	}
+}
+
+type (
+	namedSliceAny        []any
+	namedMapAnyAny       map[any]any
+	namedMapStringAny    map[string]any
+	namedMapStringString map[string]string
+)
+
+// fastPathTypes has fields whose types are encoded by the fast path.
+type fastPathTypes struct {
+	A    any                `cbor:"a"`
+	S    []any              `cbor:"b"`
+	PS   *[]any             `cbor:"c"`
+	MAA  map[any]any        `cbor:"d"`
+	PMAA *map[any]any       `cbor:"e"`
+	MSA  map[string]any     `cbor:"f"`
+	PMSA *map[string]any    `cbor:"g"`
+	MSS  map[string]string  `cbor:"h"`
+	PMSS *map[string]string `cbor:"i"`
+}
+
+// reflectPathTypes has the same fields as fastPathTypes with named types,
+// so the fields are encoded by the reflect path.  Values nested inside
+// these fields can still be encoded by the fast path.
+type reflectPathTypes struct {
+	A    namedAny              `cbor:"a"`
+	S    namedSliceAny         `cbor:"b"`
+	PS   *namedSliceAny        `cbor:"c"`
+	MAA  namedMapAnyAny        `cbor:"d"`
+	PMAA *namedMapAnyAny       `cbor:"e"`
+	MSA  namedMapStringAny     `cbor:"f"`
+	PMSA *namedMapStringAny    `cbor:"g"`
+	MSS  namedMapStringString  `cbor:"h"`
+	PMSS *namedMapStringString `cbor:"i"`
+}
+
+func newReflectPathTypes(v *fastPathTypes) reflectPathTypes {
+	return reflectPathTypes{
+		A:    v.A,
+		S:    v.S,
+		PS:   (*namedSliceAny)(v.PS),
+		MAA:  v.MAA,
+		PMAA: (*namedMapAnyAny)(v.PMAA),
+		MSA:  v.MSA,
+		PMSA: (*namedMapStringAny)(v.PMSA),
+		MSS:  v.MSS,
+		PMSS: (*namedMapStringString)(v.PMSS),
+	}
+}
+
+func TestMarshalStructWithFastPathTypes(t *testing.T) {
+	testMarshalWithFP(t, testMarshalStructWithFastPathTypes)
+}
+
+func testMarshalStructWithFastPathTypes(t *testing.T) {
+	empty := fastPathTypes{
+		A:    map[string]any{},
+		S:    []any{},
+		PS:   &[]any{},
+		MAA:  map[any]any{},
+		PMAA: &map[any]any{},
+		MSA:  map[string]any{},
+		PMSA: &map[string]any{},
+		MSS:  map[string]string{},
+		PMSS: &map[string]string{},
+	}
+
+	populated := fastPathTypes{
+		A:    map[string]any{"bb": 1, "a": []any{}},
+		S:    []any{1, "a", nil, true, -1, 1.5},
+		PS:   &[]any{[]byte{1}},
+		MAA:  map[any]any{1: "a", -1: "b", "a": 1, 1000: nil},
+		PMAA: &map[any]any{true: false},
+		MSA:  map[string]any{"c": map[any]any{"x": "y"}, "bb": -2, "a": "s"},
+		PMSA: &map[string]any{"k": []any{1}},
+		MSS:  map[string]string{"ccc": "3", "a": "1", "bb": "2"},
+		PMSS: &map[string]string{"k": "v"},
+	}
+
+	testCases := []struct {
+		name      string
+		opts      EncOptions
+		in        fastPathTypes
+		want      []byte
+		roundTrip bool
+	}{
+		{
+			name: "nil values with NilContainerAsNull",
+			opts: EncOptions{NilContainers: NilContainerAsNull},
+			in:   fastPathTypes{},
+			// {"a": null, "b": null, "c": null, "d": null, "e": null, "f": null, "g": null, "h": null, "i": null}
+			want:      mustHexDecode("a96161f66162f66163f66164f66165f66166f66167f66168f66169f6"),
+			roundTrip: true,
+		},
+		{
+			name: "nil values with NilContainerAsEmpty",
+			opts: EncOptions{NilContainers: NilContainerAsEmpty},
+			in:   fastPathTypes{},
+			// {"a": null, "b": [], "c": null, "d": {}, "e": null, "f": {}, "g": null, "h": {}, "i": null}
+			want:      mustHexDecode("a96161f66162806163f66164a06165f66166a06167f66168a06169f6"),
+			roundTrip: true,
+		},
+		{
+			name: "empty values",
+			opts: EncOptions{},
+			in:   empty,
+			// {"a": {}, "b": [], "c": [], "d": {}, "e": {}, "f": {}, "g": {}, "h": {}, "i": {}}
+			want:      mustHexDecode("a96161a06162806163806164a06165a06166a06167a06168a06169a0"),
+			roundTrip: true,
+		},
+		{
+			name: "populated values with SortLengthFirst",
+			opts: EncOptions{Sort: SortLengthFirst},
+			in:   populated,
+			// {"a": {"a": [], "bb": 1}, "b": [1, "a", null, true, -1, 1.5], "c": [h'01'], "d": {1: "a", -1: "b", "a": 1, 1000: null}, "e": {true: false}, "f": {"a": "s", "c": {"x": "y"}, "bb": -2}, "g": {"k": [1]}, "h": {"a": "1", "bb": "2", "ccc": "3"}, "i": {"k": "v"}}
+			want:      mustHexDecode("a96161a261618062626201616286016161f6f520fb3ff800000000000061638141016164a40161612061626161011903e8f66165a1f5f46166a3616161736163a161786179626262216167a1616b81016168a36161613162626261326363636361336169a1616b6176"),
+			roundTrip: true,
+		},
+		{
+			name: "populated values with SortBytewiseLexical",
+			opts: EncOptions{Sort: SortBytewiseLexical},
+			in:   populated,
+			// {"a": {"a": [], "bb": 1}, "b": [1, "a", null, true, -1, 1.5], "c": [h'01'], "d": {1: "a", 1000: null, -1: "b", "a": 1}, "e": {true: false}, "f": {"a": "s", "c": {"x": "y"}, "bb": -2}, "g": {"k": [1]}, "h": {"a": "1", "bb": "2", "ccc": "3"}, "i": {"k": "v"}}
+			want:      mustHexDecode("a96161a261618062626201616286016161f6f520fb3ff800000000000061638141016164a40161611903e8f62061626161016165a1f5f46166a3616161736163a161786179626262216167a1616b81016168a36161613162626261326363636361336169a1616b6176"),
+			roundTrip: true,
+		},
+		{
+			name: "populated values with SortLengthFirst and StringToByteString",
+			opts: EncOptions{Sort: SortLengthFirst, String: StringToByteString},
+			in:   populated,
+			// {"a": {h'61': [], h'6262': 1}, "b": [1, h'61', null, true, -1, 1.5], "c": [h'01'], "d": {1: h'61', -1: h'62', h'61': 1, 1000: null}, "e": {true: false}, "f": {h'61': h'73', h'63': {h'78': h'79'}, h'6262': -2}, "g": {h'6b': [1]}, "h": {h'61': h'31', h'6262': h'32', h'636363': h'33'}, "i": {h'6b': h'76'}}
+			want: mustHexDecode("a96161a241618042626201616286014161f6f520fb3ff800000000000061638141016164a40141612041624161011903e8f66165a1f5f46166a3416141734163a141784179426262216167a1416b81016168a34161413142626241324363636341336169a1416b4176"),
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			em, err := tc.opts.EncMode()
+			if err != nil {
+				t.Fatalf("EncMode(): unexpected error: %v", err)
+			}
+
+			// Encode struct fields that can use fast path
+			got, err := em.Marshal(tc.in)
+			if err != nil {
+				t.Fatalf("Marshal(%v): unexpected error: %v", tc.in, err)
+			}
+			if !bytes.Equal(got, tc.want) {
+				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.in, got, tc.want)
+			}
+
+			// Encode struct fields that can't use fast path
+			inWithNamedTypes := newReflectPathTypes(&tc.in)
+			got, err = em.Marshal(inWithNamedTypes)
+			if err != nil {
+				t.Fatalf("Marshal(%v): unexpected error: %v", inWithNamedTypes, err)
+			}
+			if !bytes.Equal(got, tc.want) {
+				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", inWithNamedTypes, got, tc.want)
+			}
+
+			if !tc.roundTrip {
+				return
+			}
+
+			// Round-trip fast path types
+			var fpv fastPathTypes
+			if err = Unmarshal(tc.want, &fpv); err != nil {
+				t.Fatalf("Unmarshal(0x%x): unexpected error: %v", tc.want, err)
+			}
+			got, err = em.Marshal(fpv)
+			if err != nil {
+				t.Fatalf("Marshal(%v): unexpected error: %v", fpv, err)
+			}
+			if !bytes.Equal(got, tc.want) {
+				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", fpv, got, tc.want)
+			}
+
+			// Round-trip reflect path types
+			var rpv reflectPathTypes
+			if err = Unmarshal(tc.want, &rpv); err != nil {
+				t.Fatalf("Unmarshal(0x%x): unexpected error: %v", tc.want, err)
+			}
+			got, err = em.Marshal(rpv)
+			if err != nil {
+				t.Fatalf("Marshal(%v): unexpected error: %v", rpv, err)
+			}
+			if !bytes.Equal(got, tc.want) {
+				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", rpv, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestOmitEmptyForFastPathTypes(t *testing.T) {
+	testMarshalWithFP(t, testOmitEmptyForFastPathTypes)
+}
+
+func testOmitEmptyForFastPathTypes(t *testing.T) {
+	type T struct {
+		S   []any             `cbor:"s,omitempty"`
+		MAA map[any]any       `cbor:"maa,omitempty"`
+		MSA map[string]any    `cbor:"msa,omitempty"`
+		MSS map[string]string `cbor:"mss,omitempty"`
+	}
+
+	v := T{S: []any{}, MAA: map[any]any{}, MSA: map[string]any{}, MSS: map[string]string{}}
+	want := []byte{0xa0} // {}
+
+	b, err := Marshal(v)
+	if err != nil {
+		t.Errorf("Marshal(%v): unexpected error: %v", v, err)
+	} else if !bytes.Equal(b, want) {
+		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
+	}
 }
