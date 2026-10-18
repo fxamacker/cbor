@@ -213,7 +213,7 @@ func TestDecoderUnexpectedEOFError(t *testing.T) {
 					t.Errorf("Decode() = %v (%T), want nil (no more data)", v, v)
 				}
 				if err != io.ErrUnexpectedEOF {
-					t.Errorf("Decode() returned error %v, want io.UnexpectedEOF (truncated data)", err)
+					t.Errorf("Decode() returned error %v, want io.ErrUnexpectedEOF (truncated data)", err)
 				}
 			}
 		})
@@ -1719,4 +1719,179 @@ func (r *recoverableReader) Read(b []byte) (int, error) {
 		return 0, r.recoverableErr
 	}
 	return r.nBytesReader.Read(b)
+}
+
+var streamTestReaders = []struct {
+	name      string
+	newReader func(data []byte) io.Reader
+}{
+	{"bytes.Reader", func(data []byte) io.Reader { return bytes.NewReader(data) }},
+	{"1 byte reader", func(data []byte) io.Reader { return newNBytesReader(data, 1) }},
+	{"toggled reader", func(data []byte) io.Reader { return newToggledReader(data, 1) }},
+}
+
+func TestDecoderRejectedDataItem(t *testing.T) {
+	testCases := []struct {
+		name    string
+		opts    DecOptions
+		data    []byte
+		wantErr error
+	}{
+		{
+			name:    "tags forbidden",
+			opts:    DecOptions{TagsMd: TagsForbidden},
+			data:    []byte{0xc1, 0x01}, // 1(1)
+			wantErr: (*TagsMdError)(nil),
+		},
+		{
+			name:    "indefinite-length array forbidden",
+			opts:    DecOptions{IndefLength: IndefLengthForbidden},
+			data:    []byte{0x9f, 0x01, 0xff}, // [_ 1]
+			wantErr: (*IndefiniteLengthError)(nil),
+		},
+		{
+			name:    "NaN forbidden in array",
+			opts:    DecOptions{NaN: NaNDecodeForbidden},
+			data:    []byte{0x82, 0xf9, 0x7e, 0x00, 0x01}, // [NaN, 1]
+			wantErr: (*UnacceptableDataItemError)(nil),
+		},
+	}
+
+	for _, tc := range testCases {
+		dm, err := tc.opts.DecMode()
+		if err != nil {
+			t.Fatalf("DecMode: unexpected error: %v", err)
+		}
+
+		data := append(append([]byte{}, tc.data...), 0x61, 0x61) // concatenate CBOR data item "a" after tc.data
+		want := "a"
+
+		for _, r := range streamTestReaders {
+			t.Run(tc.name+"/"+r.name, func(t *testing.T) {
+				decoder := dm.NewDecoder(r.newReader(data))
+
+				// Decoding the first data item returns an error and offset is advanced to the next data item.
+				var v1 any
+				name := fmt.Sprintf("Decode(0x%x)", tc.data)
+				err := decoder.Decode(&v1)
+				testErrorType(t, name, err, tc.wantErr)
+
+				if got := decoder.NumBytesRead(); got != len(tc.data) {
+					t.Errorf("NumBytesRead() = %d, want %d", got, len(tc.data))
+				}
+
+				// Decoding the second data item doesn't return error and offset is advanced to the end.
+				var v2 any
+				if err := decoder.Decode(&v2); err != nil {
+					t.Errorf("Decode: unexpected error: %v", err)
+				} else if v2 != want {
+					t.Errorf("Decode() = %v (%T), want %v (%T)", v2, v2, want, want)
+				}
+
+				if got := decoder.NumBytesRead(); got != len(data) {
+					t.Errorf("NumBytesRead() = %d, want %d", got, len(data))
+				}
+
+				// Skip the first data item.
+				decoder = dm.NewDecoder(r.newReader(data))
+				if err := decoder.Skip(); err != nil {
+					t.Errorf("Skip: unexpected error: %v", err)
+				}
+				if got := decoder.NumBytesRead(); got != len(tc.data) {
+					t.Errorf("NumBytesRead() = %d, want %d", got, len(tc.data))
+				}
+
+				// Skip the second data item.
+				if err := decoder.Skip(); err != nil {
+					t.Errorf("Skip: unexpected error: %v", err)
+				}
+				if got := decoder.NumBytesRead(); got != len(data) {
+					t.Errorf("NumBytesRead() = %d, want %d", got, len(data))
+				}
+			})
+		}
+	}
+}
+
+func TestDecoderRejectedDataItemNoAdvance(t *testing.T) {
+	testCases := []struct {
+		name          string
+		opts          DecOptions
+		data          []byte
+		wantDecodeErr error
+		wantSkipErr   error
+	}{
+		{
+			name:          "truncated data after forbidden NaN",
+			opts:          DecOptions{NaN: NaNDecodeForbidden},
+			data:          []byte{0x82, 0xf9, 0x7e, 0x00}, // truncated data (missing second array element after NaN)
+			wantDecodeErr: (*UnacceptableDataItemError)(nil),
+			wantSkipErr:   io.ErrUnexpectedEOF,
+		},
+		{
+			name:          "malformed data after forbidden NaN",
+			opts:          DecOptions{NaN: NaNDecodeForbidden},
+			data:          []byte{0x82, 0xf9, 0x7e, 0x00, 0xff},
+			wantDecodeErr: (*UnacceptableDataItemError)(nil),
+			wantSkipErr:   (*SyntaxError)(nil),
+		},
+		{
+			name:          "MaxNestedLevels exceeded after rejected value",
+			opts:          DecOptions{NaN: NaNDecodeForbidden, MaxNestedLevels: 4},
+			data:          []byte{0x82, 0xf9, 0x7e, 0x00, 0x81, 0x81, 0x81, 0x81, 0x01}, // [NaN, [[[[1]]]]]
+			wantDecodeErr: (*UnacceptableDataItemError)(nil),
+			wantSkipErr:   (*MaxNestedLevelError)(nil),
+		},
+	}
+
+	for _, tc := range testCases {
+		dm, err := tc.opts.DecMode()
+		if err != nil {
+			t.Fatalf("DecMode: unexpected error: %v", err)
+		}
+
+		for _, r := range streamTestReaders {
+			t.Run(tc.name+"/"+r.name, func(t *testing.T) {
+				decoder := dm.NewDecoder(r.newReader(tc.data))
+				for range 2 {
+					var v any
+					name := fmt.Sprintf("Decode(0x%x)", tc.data)
+					err := decoder.Decode(&v)
+					testErrorType(t, name, err, tc.wantDecodeErr)
+					if got := decoder.NumBytesRead(); got != 0 {
+						t.Errorf("NumBytesRead() = %d, want 0", got)
+					}
+				}
+
+				decoder = dm.NewDecoder(r.newReader(tc.data))
+				for range 2 {
+					name := fmt.Sprintf("Skip(0x%x)", tc.data)
+					err := decoder.Skip()
+					testErrorType(t, name, err, tc.wantSkipErr)
+					if got := decoder.NumBytesRead(); got != 0 {
+						t.Errorf("NumBytesRead() = %d, want 0", got)
+					}
+				}
+			})
+		}
+	}
+}
+
+// testErrorType tests if got error matches want error.
+func testErrorType(t *testing.T, call string, got, want error) {
+	t.Helper()
+	if got == nil && want == nil {
+		return
+	}
+	if want == nil {
+		t.Errorf("%s: unexpected error: %v", call, got)
+	} else if got == nil {
+		t.Errorf("%s: expected %T, got nil", call, want)
+	} else if rv := reflect.ValueOf(want); rv.Kind() != reflect.Pointer || !rv.IsNil() {
+		if !errors.Is(got, want) {
+			t.Errorf("%s error = %v, want %v", call, got, want)
+		}
+	} else if !errors.As(got, reflect.New(reflect.TypeOf(want)).Interface()) {
+		t.Errorf("%s returned %T, want %T", call, got, want)
+	}
 }

@@ -135,8 +135,8 @@ func Valid(data []byte) error {
 }
 
 // Wellformed checks whether data is a well-formed encoded CBOR data item and
-// that it complies with default restrictions such as MaxNestedLevels,
-// MaxArrayElements, MaxMapPairs, etc.
+// that it complies with default restrictions MaxNestedLevels, MaxArrayElements,
+// and MaxMapPairs.
 //
 // If there are any remaining bytes after the CBOR data item,
 // an ExtraneousDataError is returned.
@@ -1159,7 +1159,44 @@ func (opts DecOptions) decMode() (*decMode, error) { //nolint:gocritic // ignore
 		jsonUnmarshalerTranscoder: opts.JSONUnmarshalerTranscoder,
 	}
 
+	dm.wellformedSyntaxMode = newWellformedSyntaxMode(&dm)
+
 	return &dm, nil
+}
+
+// newWellformedSyntaxMode returns decMode for wellformedness syntax and
+// resource checks.  The returned decMode keeps user specified resource
+// limitations (maxNestedLevels, maxArrayElements, maxMapPairs), and
+// sets all value and serialization limitations to allowed.
+// NOTE: newWellformedSyntaxMode returns dm parameter if dm parameter
+// doesn't have any value and serialization limitations.
+func newWellformedSyntaxMode(dm *decMode) *decMode {
+	// NOTE: this function is written to be inlinable.
+	// NOTE: When adding a value or serialization restriction to wellformed(),
+	// the restriction must be allowed here.
+	if dm.nan == NaNDecodeAllowed &&
+		dm.inf == InfDecodeAllowed &&
+		dm.indefLength == IndefLengthAllowed &&
+		dm.tagsMd == TagsAllowed &&
+		dm.bignumTag == BignumTagAllowed &&
+		dm.simpleValues == defaultSimpleValues {
+		return dm
+	}
+
+	return &decMode{
+		// resource limitations
+		maxNestedLevels:  dm.maxNestedLevels,
+		maxArrayElements: dm.maxArrayElements,
+		maxMapPairs:      dm.maxMapPairs,
+		// value limitations
+		nan:          NaNDecodeAllowed,
+		inf:          InfDecodeAllowed,
+		tagsMd:       TagsAllowed,
+		bignumTag:    BignumTagAllowed,
+		simpleValues: defaultSimpleValues,
+		// serialization limitation
+		indefLength: IndefLengthAllowed,
+	}
 }
 
 // DecMode is the main interface for CBOR decoding.
@@ -1194,8 +1231,9 @@ type DecMode interface {
 	Valid(data []byte) error
 
 	// Wellformed checks whether data is a well-formed encoded CBOR data item and
-	// that it complies with configurable restrictions such as MaxNestedLevels,
-	// MaxArrayElements, MaxMapPairs, etc.
+	// that it complies with configurable restrictions: the resource limits
+	// MaxNestedLevels, MaxArrayElements, MaxMapPairs, and other decoding
+	// restrictions NaN, Inf, SimpleValues, BignumTag, TagsMd, and IndefLength.
 	//
 	// If there are any remaining bytes after the CBOR data item,
 	// an ExtraneousDataError is returned.
@@ -1238,6 +1276,14 @@ type decMode struct {
 	binaryUnmarshaler         BinaryUnmarshalerMode
 	textUnmarshaler           TextUnmarshalerMode
 	jsonUnmarshalerTranscoder Transcoder
+
+	// wellformedSyntaxMode is used for wellformedness syntax and resource limitation checks.
+	// wellformedSyntaxMode has all user configured resource limitations (maxNestedLevels,
+	// maxArrayElements, maxMapPairs) without any value and serialization limitations
+	// (nan, inf, indefLength, tagsMd, bignumTag, simpleValues).
+	// NOTE: wellformedSyntaxMode is set by DecOptions.decMode().  If decMode doesn't have
+	// any value and serialization limitation, decMode.wellformedSyntaxMode == decMode.
+	wellformedSyntaxMode *decMode
 }
 
 var defaultDecMode, _ = DecOptions{}.decMode()
@@ -1348,8 +1394,9 @@ func (dm *decMode) Valid(data []byte) error {
 }
 
 // Wellformed checks whether data is a well-formed encoded CBOR data item and
-// that it complies with configurable restrictions such as MaxNestedLevels,
-// MaxArrayElements, MaxMapPairs, etc.
+// that it complies with configurable restrictions: the resource limits
+// MaxNestedLevels, MaxArrayElements, MaxMapPairs, and other decoding
+// restrictions NaN, Inf, SimpleValues, BignumTag, TagsMd, and IndefLength.
 //
 // If there are any remaining bytes after the CBOR data item,
 // an ExtraneousDataError is returned.
