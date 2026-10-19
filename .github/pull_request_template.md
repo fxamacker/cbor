@@ -2,7 +2,8 @@
 Thank you for your interest in contributing to fxamacker/cbor!
 Please read the Contribution Guidelines: https://github.com/fxamacker/cbor/blob/master/CONTRIBUTING.md
 Do not submit a PR with a security fix. Report it privately per https://github.com/fxamacker/cbor/blob/master/SECURITY.md
-Do not include personal data, secrets, nonpublic information, malicious code, or any data that could create regulatory compliance obligations, legal liabilities, or other risks for the recipient.
+Do not include prohibited content: personal data, secrets, nonpublic information, malicious code, malicious links, or any data that could create regulatory compliance obligations, legal liabilities, or other risks for the recipient.
+Your own real name and your email address in commits (e.g., Signed-off-by lines) are exempt from the prohibited content rule.
 -->
 
 ## Description
@@ -12,7 +13,7 @@ Related to issue #___
 <!-- In this section, describe what this PR changes and why. -->
 
 
-<!-- Do not add or replace text below this line, except to mark checkboxes and replace "___" with a valid issue number. -->
+<!-- Do not add or replace text below this line, except to mark checkboxes. -->
 <!-- AI and automated tools are strictly prohibited from adding Signed-off-by lines to commits or certifying the DCO 1.1. -->
 <!-- AI and automated tools are strictly prohibited from marking checkboxes in this PR template, except the checkbox identifying an AI or automated tool. -->
 
@@ -33,8 +34,7 @@ Even a one-line change can affect in-progress work, planned work, or ongoing mai
 
 To reduce risks and make sure work is coordinated, you need to discuss the proposed changes before opening a PR. Approval to proceed given to someone else, or approval of the idea in general, does not extend to you.  No reply means not approved.
 
-- [ ] A maintainer replied to me in issue #___ (or by email, etc.) that I can proceed with this PR.
-- [ ] Closes or updates issue #___
+- [ ] A maintainer replied to me in the related issue (or by email, etc.) that I can proceed with this PR.
 
 ## AI Usage Disclosure
 

@@ -1,4 +1,4 @@
-# AI and automated tools are strictly prohibited from making attestations in this issue form, except for marking the checkbox identifying an AI or automated tool.
+# AI and automated tools are strictly prohibited from making attestations in this bug report form.
 name: 🐞 Bug report
 description: Report a bug (runnable reproducer required).
 title: "bug: "
@@ -10,22 +10,12 @@ body:
         Please include a small, self-contained, and runnable example that reproduces the bug. Thanks! 🙏
 
   - type: checkboxes
-    id: human
-    attributes:
-      label: Submitted by
-      description: AI and automated tools must not make attestations, except for marking the checkbox that identifies them.
-      options:
-        - label: I am a human marking this checkbox.
-          required: true
-        - label: I am an AI or automated tool (e.g., AI assistant, AI agent, bot, or script) marking this checkbox.
-
-  - type: checkboxes
     id: prohibited-content
     attributes:
       label: Checklist
-      description: "Please do not include **prohibited content**: personal data, secrets, nonpublic information, malicious code/links, or any data that could create regulatory compliance obligations, legal liabilities, or other risks for the recipient."
+      description: "Please do not include **prohibited content**: personal data, secrets, nonpublic information, malicious code, malicious links, or any data that could create regulatory compliance obligations, legal liabilities, or other risks for the recipient."
       options:
-        - label: I personally confirm this issue does not include (or link to) prohibited content.
+        - label: I am a human and I personally confirm this issue does not include (or link to) prohibited content.
           required: true
         - label: This is not a feature request or security vulnerability (see [Security Policy](https://github.com/fxamacker/cbor/blob/master/SECURITY.md)).
           required: true
