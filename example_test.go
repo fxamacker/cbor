@@ -569,3 +569,37 @@ func Example_webAuthn() {
 	}
 	fmt.Printf("%+v", v)
 }
+
+func ExampleDecoder_Decode_continueOnError() {
+	data, _ := hex.DecodeString("01f97e006161021c") // CBOR sequence: 1, NaN, "a", 2, malformed data item
+	dm, _ := cbor.DecOptions{NaN: cbor.NaNDecodeForbidden}.DecMode()
+	dec := dm.NewDecoder(bytes.NewReader(data))
+	for {
+		n := dec.NumBytesRead()
+
+		var v int
+		err := dec.Decode(&v)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			if dec.NumBytesRead() == n {
+				// Decoder didn't advance (e.g. the CBOR data item isn't well-formed,
+				// a resource limit is exceeded, or a read error occurred), so it can't
+				// decode the next data item.
+				fmt.Println("failed to decode (can't continue):", err)
+				break
+			}
+			// Decoder advanced past the data item, so it can decode the next data item.
+			fmt.Println("failed to decode (can continue):", err)
+			continue
+		}
+		fmt.Println("decoded:", v)
+	}
+	// Output:
+	// decoded: 1
+	// failed to decode (can continue): cbor: data item of cbor type primitives is not accepted by protocol: floating-point NaN
+	// failed to decode (can continue): cbor: cannot unmarshal UTF-8 text string into Go value of type int
+	// decoded: 2
+	// failed to decode (can't continue): cbor: invalid additional information 28 for type positive integer
+}
