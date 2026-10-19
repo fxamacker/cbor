@@ -1,0 +1,32 @@
+# AI and automated tools are strictly prohibited from making attestations in this docs issue form.
+name: 📚 Docs or wiki issue
+description: Report a problem in the docs or wiki.
+title: "docs: "
+labels: ["needs-triage"]
+body:
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      description: "Please do not include **prohibited content**: personal data, secrets, nonpublic information, malicious code, malicious links, or any data that could create regulatory compliance obligations, legal liabilities, or other risks for the recipient."
+      options:
+        - label: I am a human and I personally confirm this issue does not include (or link to) prohibited content.
+          required: true
+        - label: This is not a code bug, feature request, or security vulnerability (see [Security Policy](https://github.com/fxamacker/cbor/blob/master/SECURITY.md)).
+          required: true
+
+  - type: input
+    id: url
+    attributes:
+      label: URL
+      description: Link to the page or section that needs fixing (e.g., a README section or a pkg.go.dev page).
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is wrong, unclear, or missing? Suggest new or corrected text if you can.
+    validations:
+      required: true
