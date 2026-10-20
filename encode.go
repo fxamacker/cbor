@@ -16,7 +16,6 @@ import (
 	"reflect"
 	"slices"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -345,15 +344,20 @@ const (
 	// offset), use UTC time.Time values or TimeRFC3339NanoUTC.
 	// For fractional seconds, use other TimeMode options or a custom CBOR time format
 	// (see TimeMode and cbor.Marshaler).
+	// Marshal returns UnsupportedValueError if the year is outside 0000-9999 or the
+	// UTC offset is 24 hours or more.
 	TimeRFC3339
 
 	// TimeRFC3339Nano encodes to the text format specified by RFC 8949, with
 	// 1-nanosecond precision and the UTC offset of the time.Time.  To always encode
 	// "Z" (zero offset), use UTC time.Time values or TimeRFC3339NanoUTC.
+	// Marshal returns UnsupportedValueError if the year is outside 0000-9999 or the
+	// UTC offset is 24 hours or more.
 	TimeRFC3339Nano
 
 	// TimeRFC3339NanoUTC encodes to the text format specified by RFC 8949, with
 	// 1-nanosecond precision and the time converted to UTC ("Z").
+	// Marshal returns UnsupportedValueError if the UTC year is outside 0000-9999.
 	TimeRFC3339NanoUTC
 
 	maxTimeMode
@@ -1738,20 +1742,32 @@ func encodeTime(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 	default: // TimeRFC3339Nano
 		s = t.Format(time.RFC3339Nano)
 	}
-	if isWrongYearFromGo(t, s) {
-		return dst, &UnsupportedValueError{msg: "time.Time formatted by Go with a wrong year"}
+	if err := checkRFC3339Limits(s); err != nil {
+		return dst, err
 	}
 	return encodeString(dst, em, reflect.ValueOf(s))
 }
 
-// isWrongYearFromGo reports whether s, the text Go formatted from t, has a wrong year.
-// Go's standard library can return wrong results for times in the ~257-year range about
-// 292 billion years ago, extended by the size of any negative UTC offset.
-func isWrongYearFromGo(t time.Time, s string) bool {
-	// When t plus one week is before year 0, the text must have a '-' prefix
-	// with any time zone offset under one week.
-	const cutoff = -62167219200 - 7*24*60*60 // 0000-01-01T00:00:00Z minus one week for time zone offsets
-	return t.Unix() < cutoff && !strings.HasPrefix(s, "-")
+// checkRFC3339Limits returns an error if s, text formatted by Go using the
+// time.RFC3339 or time.RFC3339Nano layout, exceeds the limits of RFC 3339:
+// 4-digit years (0000-9999) and UTC offset hours 00-23.
+func checkRFC3339Limits(s string) error {
+	// NOTE: this function is written to be inlinable.
+	const rfc3339YearLength = len("9999")
+	const rfc3339UTCOffsetLength = len("+07:00")
+
+	if s[rfc3339YearLength] != '-' {
+		return &UnsupportedValueError{msg: "time.Time year outside of range [0,9999] for RFC 3339"}
+	}
+	if s[len(s)-1] != 'Z' {
+		// Go formats the UTC offset as "+hh:mm" or "-hh:mm", with more hour digits
+		// for offsets of 100 hours or more.
+		zone := s[len(s)-rfc3339UTCOffsetLength:]
+		if (zone[0] != '+' && zone[0] != '-') || zone[1] > '2' || (zone[1] == '2' && zone[2] >= '4') {
+			return &UnsupportedValueError{msg: "time.Time UTC offset outside of range [-23:59,+23:59] for RFC 3339"}
+		}
+	}
+	return nil
 }
 
 func encodeBigInt(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {

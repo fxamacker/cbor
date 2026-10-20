@@ -3695,11 +3695,11 @@ func testEncodeTimeUnixMicro(t *testing.T) {
 	}
 }
 
-func TestEncodeTimeRFC3339WrongYear(t *testing.T) {
-	testMarshalWithFP(t, testEncodeTimeRFC3339WrongYear)
+func TestEncodeTimeRFC3339Limits(t *testing.T) {
+	testMarshalWithFP(t, testEncodeTimeRFC3339Limits)
 }
 
-func testEncodeTimeRFC3339WrongYear(t *testing.T) {
+func testEncodeTimeRFC3339Limits(t *testing.T) {
 	timeModeNames := map[TimeMode]string{
 		TimeRFC3339:        "TimeRFC3339",
 		TimeRFC3339Nano:    "TimeRFC3339Nano",
@@ -3711,27 +3711,13 @@ func testEncodeTimeRFC3339WrongYear(t *testing.T) {
 		EncTagRequired: "EncTagRequired",
 	}
 
-	// minUnixTimeSec is the earliest Unix seconds that Go formats with correct year in Go 1.23
-	// and earlier versions.  Go 1.24 and later also format 306 days earlier with correct year,
-	// so test cases avoid [minUnixTimeSec-306 days, minUnixTimeSec) to have the same results
-	// with every Go version.
-	const minUnixTimeSec = -9223372028715321600
-
-	const day = 24 * 60 * 60
-
-	utcMinus12Offset := -12 * 60 * 60
-	utcMinus12 := time.FixedZone("UTC-12", utcMinus12Offset)
-
-	utcPlus14Offset := 14 * 60 * 60
-	utcPlus14 := time.FixedZone("UTC+14", utcPlus14Offset)
-
-	utcMinus307dOffset := -307 * day
-	utcMinus307d := time.FixedZone("UTC-307d", utcMinus307dOffset)
+	const yearRangeErrorMsg = "cbor: unsupported value: time.Time year outside of range [0,9999] for RFC 3339"
+	const offsetRangeErrorMsg = "cbor: unsupported value: time.Time UTC offset outside of range [-23:59,+23:59] for RFC 3339"
 
 	type want struct {
-		opt       TimeMode
-		wantData  []byte
-		wantError bool
+		opt          TimeMode
+		wantData     []byte
+		wantErrorMsg string
 	}
 
 	testCases := []struct {
@@ -3739,72 +3725,135 @@ func testEncodeTimeRFC3339WrongYear(t *testing.T) {
 		tm    time.Time
 		wants []want
 	}{
-		// Correct year
+		// Years
 		{
-			name: "min",
-			tm:   time.Unix(minUnixTimeSec, 0).UTC(),
+			name: "0000-01-01T00:00:00Z",
+			tm:   time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC),
 			wants: []want{
-				{opt: TimeRFC3339, wantData: []byte("\x78\x1d-292277022399-01-01T00:00:00Z")},
-				{opt: TimeRFC3339Nano, wantData: []byte("\x78\x1d-292277022399-01-01T00:00:00Z")},
-				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x78\x1d-292277022399-01-01T00:00:00Z")},
+				{opt: TimeRFC3339, wantData: []byte("\x740000-01-01T00:00:00Z")},
+				{opt: TimeRFC3339Nano, wantData: []byte("\x740000-01-01T00:00:00Z")},
+				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x740000-01-01T00:00:00Z")},
 			},
 		},
 		{
-			name: "local min in UTC-12",
-			tm:   time.Unix(minUnixTimeSec+int64(-utcMinus12Offset), 0).In(utcMinus12),
+			name: "9999-12-31T23:59:59.999999999Z",
+			tm:   time.Date(9999, 12, 31, 23, 59, 59, 999999999, time.UTC),
 			wants: []want{
-				{opt: TimeRFC3339, wantData: []byte("\x78\x22-292277022399-01-01T00:00:00-12:00")},
-				{opt: TimeRFC3339Nano, wantData: []byte("\x78\x22-292277022399-01-01T00:00:00-12:00")},
-				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x78\x1d-292277022399-01-01T12:00:00Z")},
+				{opt: TimeRFC3339, wantData: []byte("\x749999-12-31T23:59:59Z")},
+				{opt: TimeRFC3339Nano, wantData: []byte("\x78\x1e9999-12-31T23:59:59.999999999Z")},
+				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x78\x1e9999-12-31T23:59:59.999999999Z")},
 			},
 		},
 		{
-			// UTC year is negative, but local year is 0.
-			name: "-0001-12-31T23:59:59Z in UTC+14",
-			tm:   time.Unix(-62167219201, 0).In(utcPlus14),
+			name: "10000-01-01T00:00:00Z",
+			tm:   time.Date(10000, 1, 1, 0, 0, 0, 0, time.UTC),
 			wants: []want{
-				{opt: TimeRFC3339, wantData: []byte("\x78\x190000-01-01T13:59:59+14:00")},
-				{opt: TimeRFC3339Nano, wantData: []byte("\x78\x190000-01-01T13:59:59+14:00")},
-				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x75-0001-12-31T23:59:59Z")},
+				{opt: TimeRFC3339, wantErrorMsg: yearRangeErrorMsg},
+				{opt: TimeRFC3339Nano, wantErrorMsg: yearRangeErrorMsg},
+				{opt: TimeRFC3339NanoUTC, wantErrorMsg: yearRangeErrorMsg},
 			},
 		},
 		{
-			name: "MaxInt64",
-			tm:   time.Unix(math.MaxInt64, 0).UTC(),
+			name: "-0001-12-31T23:59:59.999999999Z",
+			tm:   time.Date(-1, 12, 31, 23, 59, 59, 999999999, time.UTC),
 			wants: []want{
-				{opt: TimeRFC3339, wantData: []byte("\x78\x1c292277026596-12-04T15:30:07Z")},
-				{opt: TimeRFC3339Nano, wantData: []byte("\x78\x1c292277026596-12-04T15:30:07Z")},
-				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x78\x1c292277026596-12-04T15:30:07Z")},
+				{opt: TimeRFC3339, wantErrorMsg: yearRangeErrorMsg},
+				{opt: TimeRFC3339Nano, wantErrorMsg: yearRangeErrorMsg},
+				{opt: TimeRFC3339NanoUTC, wantErrorMsg: yearRangeErrorMsg},
+			},
+		},
+		{
+			// Local year is 9999, but UTC year is 10000.
+			name: "9999-12-31T23:00:00-02:00",
+			tm:   time.Date(9999, 12, 31, 23, 0, 0, 0, time.FixedZone("", -2*60*60)),
+			wants: []want{
+				{opt: TimeRFC3339, wantData: []byte("\x78\x199999-12-31T23:00:00-02:00")},
+				{opt: TimeRFC3339Nano, wantData: []byte("\x78\x199999-12-31T23:00:00-02:00")},
+				{opt: TimeRFC3339NanoUTC, wantErrorMsg: yearRangeErrorMsg},
+			},
+		},
+		{
+			// Local year is 0, but UTC year is -1.
+			name: "0000-01-01T01:00:00+02:00",
+			tm:   time.Date(0, 1, 1, 1, 0, 0, 0, time.FixedZone("", 2*60*60)),
+			wants: []want{
+				{opt: TimeRFC3339, wantData: []byte("\x78\x190000-01-01T01:00:00+02:00")},
+				{opt: TimeRFC3339Nano, wantData: []byte("\x78\x190000-01-01T01:00:00+02:00")},
+				{opt: TimeRFC3339NanoUTC, wantErrorMsg: yearRangeErrorMsg},
 			},
 		},
 
-		// Wrong year from Go
+		// UTC offsets
 		{
-			name: "min-307d",
-			tm:   time.Unix(minUnixTimeSec-307*day, 0).UTC(),
+			name: "2026-10-18T12:00:00+23:59",
+			tm:   time.Date(2026, 10, 18, 12, 0, 0, 0, time.FixedZone("", 23*60*60+59*60)),
 			wants: []want{
-				{opt: TimeRFC3339, wantError: true},
-				{opt: TimeRFC3339Nano, wantError: true},
-				{opt: TimeRFC3339NanoUTC, wantError: true},
+				{opt: TimeRFC3339, wantData: []byte("\x78\x192026-10-18T12:00:00+23:59")},
+				{opt: TimeRFC3339Nano, wantData: []byte("\x78\x192026-10-18T12:00:00+23:59")},
+				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x742026-10-17T12:01:00Z")},
 			},
 		},
 		{
-			name: "MinInt64",
-			tm:   time.Unix(math.MinInt64, 0).UTC(),
+			name: "2026-10-18T12:00:00-23:59",
+			tm:   time.Date(2026, 10, 18, 12, 0, 0, 0, time.FixedZone("", -(23*60*60+59*60))),
 			wants: []want{
-				{opt: TimeRFC3339, wantError: true},
-				{opt: TimeRFC3339Nano, wantError: true},
-				{opt: TimeRFC3339NanoUTC, wantError: true},
+				{opt: TimeRFC3339, wantData: []byte("\x78\x192026-10-18T12:00:00-23:59")},
+				{opt: TimeRFC3339Nano, wantData: []byte("\x78\x192026-10-18T12:00:00-23:59")},
+				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x742026-10-19T11:59:00Z")},
 			},
 		},
 		{
-			// UTC year is correct, but local year is wrong.
-			name: "min in UTC-307d",
-			tm:   time.Unix(minUnixTimeSec, 0).In(utcMinus307d),
+			name: "2026-10-18T12:00:00+24:00",
+			tm:   time.Date(2026, 10, 18, 12, 0, 0, 0, time.FixedZone("", 24*60*60)),
 			wants: []want{
-				{opt: TimeRFC3339, wantError: true},
-				{opt: TimeRFC3339Nano, wantError: true},
-				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x78\x1d-292277022399-01-01T00:00:00Z")},
+				{opt: TimeRFC3339, wantErrorMsg: offsetRangeErrorMsg},
+				{opt: TimeRFC3339Nano, wantErrorMsg: offsetRangeErrorMsg},
+				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x742026-10-17T12:00:00Z")},
+			},
+		},
+		{
+			name: "2026-10-18T12:00:00-24:00",
+			tm:   time.Date(2026, 10, 18, 12, 0, 0, 0, time.FixedZone("", -24*60*60)),
+			wants: []want{
+				{opt: TimeRFC3339, wantErrorMsg: offsetRangeErrorMsg},
+				{opt: TimeRFC3339Nano, wantErrorMsg: offsetRangeErrorMsg},
+				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x742026-10-19T12:00:00Z")},
+			},
+		},
+		{
+			name: "2026-10-18T12:00:00-00:30",
+			tm:   time.Date(2026, 10, 18, 12, 0, 0, 0, time.FixedZone("", -30*60)),
+			wants: []want{
+				{opt: TimeRFC3339, wantData: []byte("\x78\x192026-10-18T12:00:00-00:30")},
+				{opt: TimeRFC3339Nano, wantData: []byte("\x78\x192026-10-18T12:00:00-00:30")},
+				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x742026-10-18T12:30:00Z")},
+			},
+		},
+		{
+			name: "2026-10-18T12:00:00+29:59",
+			tm:   time.Date(2026, 10, 18, 12, 0, 0, 0, time.FixedZone("", 29*60*60+59*60)),
+			wants: []want{
+				{opt: TimeRFC3339, wantErrorMsg: offsetRangeErrorMsg},
+				{opt: TimeRFC3339Nano, wantErrorMsg: offsetRangeErrorMsg},
+				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x742026-10-17T06:01:00Z")},
+			},
+		},
+		{
+			name: "2026-10-18T12:00:00+30:00",
+			tm:   time.Date(2026, 10, 18, 12, 0, 0, 0, time.FixedZone("", 30*60*60)),
+			wants: []want{
+				{opt: TimeRFC3339, wantErrorMsg: offsetRangeErrorMsg},
+				{opt: TimeRFC3339Nano, wantErrorMsg: offsetRangeErrorMsg},
+				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x742026-10-17T06:00:00Z")},
+			},
+		},
+		{
+			name: "2026-10-18T12:00:00+100:00",
+			tm:   time.Date(2026, 10, 18, 12, 0, 0, 0, time.FixedZone("", 100*60*60)),
+			wants: []want{
+				{opt: TimeRFC3339, wantErrorMsg: offsetRangeErrorMsg},
+				{opt: TimeRFC3339Nano, wantErrorMsg: offsetRangeErrorMsg},
+				{opt: TimeRFC3339NanoUTC, wantData: []byte("\x742026-10-14T08:00:00Z")},
 			},
 		},
 	}
@@ -3819,12 +3868,15 @@ func testEncodeTimeRFC3339WrongYear(t *testing.T) {
 						t.Fatalf("EncMode() error = %v", err)
 					}
 					b, err := em.Marshal(tc.tm)
-					if w.wantError {
+					if w.wantErrorMsg != "" {
 						if err == nil {
 							t.Fatalf("Marshal(%v) = 0x%x, want *UnsupportedValueError", tc.tm, b)
 						}
 						if _, ok := err.(*UnsupportedValueError); !ok {
 							t.Fatalf("Marshal(%v) error = %v (%T), want *UnsupportedValueError", tc.tm, err, err)
+						}
+						if err.Error() != w.wantErrorMsg {
+							t.Errorf("Marshal(%v) error %q, want %q", tc.tm, err.Error(), w.wantErrorMsg)
 						}
 					} else {
 						if err != nil {
