@@ -4,7 +4,7 @@
 package cbor
 
 import (
-	"bytes"
+	"fmt"
 	"io"
 	"reflect"
 	"strings"
@@ -264,27 +264,20 @@ func TestMarshalSimpleValue(t *testing.T) {
 		for i := range 24 {
 			wantData := []byte{byte(cborTypePrimitives) | byte(i)}
 			v := SimpleValue(i)
-
-			data, err := Marshal(v)
-			if err != nil {
-				t.Errorf("Marshal(%v) returned error %v", v, err)
-				continue
-			}
-			if !bytes.Equal(data, wantData) {
-				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, data, wantData)
-			}
+			t.Run(fmt.Sprintf("SimpleValue(%d)", i), func(t *testing.T) {
+				data, err := Marshal(v)
+				checkMarshal(t, "Marshal", data, err, wantData)
+			})
 		}
 	})
 
 	t.Run("24..31", func(t *testing.T) {
 		for i := 24; i <= 31; i++ {
 			v := SimpleValue(i)
-
-			if data, err := Marshal(v); err == nil {
-				t.Errorf("Marshal(%v) didn't return an error", data)
-			} else if _, ok := err.(*UnsupportedValueError); !ok {
-				t.Errorf("Marshal(%v) returned wrong error type %T, want (*UnsupportedValueError)", data, err)
-			}
+			t.Run(fmt.Sprintf("SimpleValue(%d)", i), func(t *testing.T) {
+				data, err := Marshal(v)
+				checkMarshalErr[*UnsupportedValueError](t, "Marshal", data, err, "")
+			})
 		}
 	})
 
@@ -292,15 +285,10 @@ func TestMarshalSimpleValue(t *testing.T) {
 		for i := 32; i <= 255; i++ {
 			wantData := []byte{byte(cborTypePrimitives) | byte(24), byte(i)}
 			v := SimpleValue(i)
-
-			data, err := Marshal(v)
-			if err != nil {
-				t.Errorf("Marshal(%v) returned error %v", v, err)
-				continue
-			}
-			if !bytes.Equal(data, wantData) {
-				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, data, wantData)
-			}
+			t.Run(fmt.Sprintf("SimpleValue(%d)", i), func(t *testing.T) {
+				data, err := Marshal(v)
+				checkMarshal(t, "Marshal", data, err, wantData)
+			})
 		}
 	})
 }

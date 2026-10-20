@@ -5136,11 +5136,8 @@ func TestBinaryUnmarshalerError(t *testing.T) { //nolint:dupl
 func TestBinaryMarshalerError(t *testing.T) {
 	wantErrorMsg := "MarshalBinary: error"
 	v := marshalBinaryError(wantErrorMsg)
-	if _, err := Marshal(v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", v, wantErrorMsg)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", v, err.Error(), wantErrorMsg)
-	}
+	b, err := Marshal(v)
+	checkMarshalErr[error](t, "Marshal", b, err, wantErrorMsg)
 }
 
 type number2 uint64
@@ -5244,11 +5241,8 @@ func TestUnmarshalerError(t *testing.T) { //nolint:dupl
 func TestMarshalerError(t *testing.T) {
 	wantErrorMsg := "MarshalCBOR: error"
 	v := marshalCBORError(wantErrorMsg)
-	if _, err := Marshal(v); err == nil {
-		t.Errorf("Marshal(%+v) didn't return an error, want error msg %q", v, wantErrorMsg)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Marshal(%+v) returned error %q, want %q", v, err.Error(), wantErrorMsg)
-	}
+	b, err := Marshal(v)
+	checkMarshalErr[error](t, "Marshal", b, err, wantErrorMsg)
 }
 
 // Found at https://github.com/oasislabs/oasis-core/blob/master/go/common/cbor/cbor_test.go
@@ -8169,11 +8163,7 @@ func TestUnmarshalToInterface(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 
 			data, err := em.Marshal(tc.v)
-			if err != nil {
-				t.Errorf("Marshal(%+v) returned error %v", tc.v, err)
-			} else if !bytes.Equal(data, tc.data) {
-				t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.v, data, tc.data)
-			}
+			checkMarshal(t, "em.Marshal", data, err, tc.data)
 
 			// Unmarshal to a value of type TestExample with uninitialized Foo interface.
 			var einterface TestExample
@@ -8226,11 +8216,7 @@ func TestUnmarshalTaggedDataToInterface(t *testing.T) {
 
 	em, _ := EncOptions{}.EncModeWithTags(tags)
 	data, err := em.Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%+v) returned error %v", v, err)
-	} else if !bytes.Equal(data, want) {
-		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, data, want)
-	}
+	checkMarshal(t, "em.Marshal", data, err, want)
 
 	dm, _ := DecOptions{}.DecModeWithTags(tags)
 
@@ -10305,12 +10291,7 @@ func TestKeyAsIntNormalizedDuplicateFields(t *testing.T) {
 	want := mustHexDecode("a0")
 
 	b, err := Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal() returned an error %v", err)
-	}
-	if !bytes.Equal(b, want) {
-		t.Errorf("Marshal() returned 0x%x, want 0x%x", b, want)
-	}
+	checkMarshal(t, "Marshal", b, err, want)
 }
 
 // TestKeyAsIntAndStringFieldsWithSameName verifies that a struct with both a
@@ -10340,12 +10321,7 @@ func TestKeyAsIntAndStringFieldsWithSameName(t *testing.T) {
 
 	// Roundtrip
 	b, err := Marshal(want)
-	if err != nil {
-		t.Errorf("Marshal returned unexpected error: %v", err)
-	}
-	if !bytes.Equal(b, data) {
-		t.Errorf("Marshal(%+v) returned 0x%x, want 0x%x", want, b, data)
-	}
+	checkMarshal(t, "Marshal", b, err, data)
 }
 
 func TestKeyAsIntAndStringFieldsWithSameNameAndEmbeddedField(t *testing.T) {
@@ -10375,12 +10351,7 @@ func TestKeyAsIntAndStringFieldsWithSameNameAndEmbeddedField(t *testing.T) {
 
 	// Roundtrip
 	b, err := Marshal(want)
-	if err != nil {
-		t.Errorf("Marshal returned unexpected error: %v", err)
-	}
-	if !bytes.Equal(b, data) {
-		t.Errorf("Marshal(%+v) returned 0x%x, want 0x%x", want, b, data)
-	}
+	checkMarshal(t, "Marshal", b, err, data)
 }
 
 // TestMapKeyOverflowStructKeyAsInt verifies that a CBOR integer map

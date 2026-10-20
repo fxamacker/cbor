@@ -4,9 +4,7 @@
 package cbor
 
 import (
-	"bytes"
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -30,19 +28,12 @@ func TestEncodeStructToIndefArrayBasic(t *testing.T) {
 		Count int
 	}
 
-	in := S{Data: []byte{0x73, 0xf7, 0x2d, 0xbe}, Count: 3}
-
 	em := allowToIndefArrayMode(t)
-	got, err := em.Marshal(in)
-	if err != nil {
-		t.Fatalf("Marshal returned error: %v", err)
-	}
+	in := S{Data: []byte{0x73, 0xf7, 0x2d, 0xbe}, Count: 3}
+	want := []byte{0x9f, 0x44, 0x73, 0xf7, 0x2d, 0xbe, 0x03, 0xff} // EDN: [_ h'73f72dbe', 3]
 
-	// EDN: [_ h'73f72dbe', 3]
-	want := []byte{0x9f, 0x44, 0x73, 0xf7, 0x2d, 0xbe, 0x03, 0xff}
-	if !bytes.Equal(got, want) {
-		t.Errorf("got %x, want %x", got, want)
-	}
+	got, err := em.Marshal(in)
+	checkMarshal(t, "em.Marshal", got, err, want)
 
 	// Roundtrip: decoder accepts both definite and indefinite arrays for
 	// toindefarray-tagged structs (the tag treats them the same way as
@@ -65,16 +56,10 @@ func TestEncodeStructToIndefArrayEmpty(t *testing.T) {
 
 	em := allowToIndefArrayMode(t)
 	in := Empty{}
-	got, err := em.Marshal(in)
-	if err != nil {
-		t.Fatalf("Marshal returned error: %v", err)
-	}
+	want := []byte{0x9f, 0xff} // EDN: [_]
 
-	// EDN: [_]
-	want := []byte{0x9f, 0xff}
-	if !bytes.Equal(got, want) {
-		t.Errorf("got %x, want %x", got, want)
-	}
+	got, err := em.Marshal(in)
+	checkMarshal(t, "em.Marshal", got, err, want)
 
 	var out Empty
 	if err := unmarshal(t, got, &out); err != nil {
@@ -99,22 +84,15 @@ func TestEncodeStructToIndefArrayNested(t *testing.T) {
 		Z     int
 	}
 
+	em := allowToIndefArrayMode(t)
 	in := Outer{
 		Inner: Inner{X: []byte{0xab, 0xcd}, Y: 42},
 		Z:     7,
 	}
+	want := []byte{0x9f, 0x9f, 0x42, 0xab, 0xcd, 0x18, 0x2a, 0xff, 0x07, 0xff} // EDN: [_ [_ h'abcd', 42], 7]
 
-	em := allowToIndefArrayMode(t)
 	got, err := em.Marshal(in)
-	if err != nil {
-		t.Fatalf("Marshal returned error: %v", err)
-	}
-
-	// EDN: [_ [_ h'abcd', 42], 7]
-	want := []byte{0x9f, 0x9f, 0x42, 0xab, 0xcd, 0x18, 0x2a, 0xff, 0x07, 0xff}
-	if !bytes.Equal(got, want) {
-		t.Errorf("got %x, want %x", got, want)
-	}
+	checkMarshal(t, "em.Marshal", got, err, want)
 
 	var out Outer
 	if err := unmarshal(t, got, &out); err != nil {
@@ -135,13 +113,8 @@ func TestEncodeStructToIndefArrayForbiddenByDefault(t *testing.T) {
 		A int
 	}
 
-	_, err := Marshal(S{A: 1})
-	if err == nil {
-		t.Fatal("expected error from default Marshal, got nil")
-	}
-	if !strings.Contains(err.Error(), "ToIndefArrayStructTag") {
-		t.Errorf("error should mention ToIndefArrayStructTag, got: %v", err)
-	}
+	b, err := Marshal(S{A: 1})
+	checkMarshalErr[error](t, "Marshal", b, err, "cbor: cannot encode struct cbor.S with `toindefarray` when ToIndefArrayStructTag is not ToIndefArrayStructTagAllowed")
 }
 
 // TestEncodeStructToIndefArrayMutuallyExclusive verifies that a struct
@@ -154,13 +127,8 @@ func TestEncodeStructToIndefArrayMutuallyExclusive(t *testing.T) {
 	}
 
 	em := allowToIndefArrayMode(t)
-	_, err := em.Marshal(Bad{A: 1})
-	if err == nil {
-		t.Fatal("expected error for struct declaring both toarray and toindefarray, got nil")
-	}
-	if !strings.Contains(err.Error(), "toarray") || !strings.Contains(err.Error(), "toindefarray") {
-		t.Errorf("error should mention both options, got: %v", err)
-	}
+	b, err := em.Marshal(Bad{A: 1})
+	checkMarshalErr[error](t, "em.Marshal", b, err, "cbor: struct cbor.Bad cannot have both \"toarray\" and \"toindefarray\" options")
 }
 
 // TestEncodeStructToIndefArrayEmbeddedField verifies that fields promoted
@@ -178,16 +146,11 @@ func TestEncodeStructToIndefArrayEmbeddedField(t *testing.T) {
 	}
 
 	em := allowToIndefArrayMode(t)
-	got, err := em.Marshal(Outer{Inner: Inner{A: 1, B: 2}, C: 3})
-	if err != nil {
-		t.Fatalf("Marshal returned error: %v", err)
-	}
+	in := Outer{Inner: Inner{A: 1, B: 2}, C: 3}
+	want := []byte{0x9f, 0x01, 0x02, 0x03, 0xff} // EDN: [_ 1, 2, 3]  (promoted A, B, then C)
 
-	// EDN: [_ 1, 2, 3]  (promoted A, B, then C)
-	want := []byte{0x9f, 0x01, 0x02, 0x03, 0xff}
-	if !bytes.Equal(got, want) {
-		t.Errorf("got %x, want %x", got, want)
-	}
+	got, err := em.Marshal(in)
+	checkMarshal(t, "em.Marshal", got, err, want)
 }
 
 // TestEncodeStructToIndefArrayParentIndefChildArray verifies that a struct
@@ -206,16 +169,11 @@ func TestEncodeStructToIndefArrayParentIndefChildArray(t *testing.T) {
 	}
 
 	em := allowToIndefArrayMode(t)
-	got, err := em.Marshal(Outer{Inner: Inner{A: 1, B: 2}, C: 3})
-	if err != nil {
-		t.Fatalf("Marshal returned error: %v", err)
-	}
+	in := Outer{Inner: Inner{A: 1, B: 2}, C: 3}
+	want := []byte{0x9f, 0x82, 0x01, 0x02, 0x03, 0xff} // EDN: [_ [1, 2], 3]
 
-	// EDN: [_ [1, 2], 3]
-	want := []byte{0x9f, 0x82, 0x01, 0x02, 0x03, 0xff}
-	if !bytes.Equal(got, want) {
-		t.Errorf("got %x, want %x", got, want)
-	}
+	got, err := em.Marshal(in)
+	checkMarshal(t, "em.Marshal", got, err, want)
 }
 
 // TestEncodeStructToIndefArrayParentArrayChildIndef verifies the symmetric
@@ -233,16 +191,11 @@ func TestEncodeStructToIndefArrayParentArrayChildIndef(t *testing.T) {
 	}
 
 	em := allowToIndefArrayMode(t)
-	got, err := em.Marshal(Outer{Inner: Inner{A: 1, B: 2}, C: 3})
-	if err != nil {
-		t.Fatalf("Marshal returned error: %v", err)
-	}
+	in := Outer{Inner: Inner{A: 1, B: 2}, C: 3}
+	want := []byte{0x82, 0x9f, 0x01, 0x02, 0xff, 0x03} // EDN: [[_ 1, 2], 3]
 
-	// EDN: [[_ 1, 2], 3]
-	want := []byte{0x82, 0x9f, 0x01, 0x02, 0xff, 0x03}
-	if !bytes.Equal(got, want) {
-		t.Errorf("got %x, want %x", got, want)
-	}
+	got, err := em.Marshal(in)
+	checkMarshal(t, "em.Marshal", got, err, want)
 }
 
 // TestEncodeStructToIndefArrayWithCBORTag verifies that a struct registered
@@ -268,15 +221,9 @@ func TestEncodeStructToIndefArrayWithCBORTag(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EncModeWithTags returned error: %v", err)
 	}
+	in := S{Field1: 1, Field2: 2}
+	want := []byte{0xd8, 0x79, 0x9f, 0x01, 0x02, 0xff} // EDN: 121([_ 1, 2])
 
-	got, err := em.Marshal(S{Field1: 1, Field2: 2})
-	if err != nil {
-		t.Fatalf("Marshal returned error: %v", err)
-	}
-
-	// EDN: 121([_ 1, 2])
-	want := []byte{0xd8, 0x79, 0x9f, 0x01, 0x02, 0xff}
-	if !bytes.Equal(got, want) {
-		t.Errorf("got %x, want %x", got, want)
-	}
+	got, err := em.Marshal(in)
+	checkMarshal(t, "em.Marshal", got, err, want)
 }

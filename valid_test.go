@@ -558,11 +558,11 @@ func TestWellformedSyntaxMode(t *testing.T) {
 
 			name := fmt.Sprintf("Wellformed(0x%x)", tc.data)
 			err = dm.Wellformed(tc.data)
-			testErrorType(t, name, err, tc.wantWellformedErr)
+			checkErrorType(t, name, err, tc.wantWellformedErr)
 
 			name = fmt.Sprintf("wellformedSyntaxMode.Wellformed(0x%x)", tc.data)
 			err = dm.(*decMode).wellformedSyntaxMode.Wellformed(tc.data)
-			testErrorType(t, name, err, tc.wantWellformedSyntaxErr)
+			checkErrorType(t, name, err, tc.wantWellformedSyntaxErr)
 		})
 	}
 }
