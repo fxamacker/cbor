@@ -8,7 +8,7 @@ body:
     id: checklist
     attributes:
       label: Checklist
-      description: "Please do not include **prohibited content**: personal data, secrets, nonpublic information, malicious code/links, or any data that could create regulatory compliance obligations, legal liabilities, or other risks for the recipient."
+      description: "Please do not include **prohibited content**: personal data, secrets, nonpublic information, malicious code, malicious links, or any data that could create regulatory compliance obligations, legal liabilities, or other risks for the recipient."
       options:
         - label: I am a human and I personally confirm this issue does not include (or link to) prohibited content.
           required: true
