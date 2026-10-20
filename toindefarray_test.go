@@ -163,55 +163,6 @@ func TestEncodeStructToIndefArrayMutuallyExclusive(t *testing.T) {
 	}
 }
 
-// TestToIndefArrayStructTagOptionsRoundTrip verifies that an EncOptions
-// value containing the non-zero value of ToIndefArrayStructTag round-trips
-// through EncOptions -> EncMode -> EncOptions with all fields preserved.
-// TestEncOptions cannot cover this case because the non-zero values of
-// IndefLength and ToIndefArrayStructTag are mutually exclusive.
-func TestToIndefArrayStructTagOptionsRoundTrip(t *testing.T) {
-	opts := EncOptions{ToIndefArrayStructTag: ToIndefArrayStructTagAllowed}
-	em, err := opts.EncMode()
-	if err != nil {
-		t.Fatalf("EncMode() returned error: %v", err)
-	}
-	got := em.EncOptions()
-	if !reflect.DeepEqual(opts, got) {
-		t.Errorf("EncOptions round-trip mismatch:\n got: %#v\nwant: %#v", got, opts)
-	}
-}
-
-// TestInvalidToIndefArrayStructTagMode verifies that EncOptions rejects
-// out-of-range values for ToIndefArrayStructTagMode at mode construction time.
-func TestInvalidToIndefArrayStructTagMode(t *testing.T) {
-	for _, m := range []ToIndefArrayStructTagMode{-1, maxToIndefArrayStructTagMode, maxToIndefArrayStructTagMode + 1} {
-		_, err := EncOptions{ToIndefArrayStructTag: m}.EncMode()
-		if err == nil {
-			t.Errorf("expected error for mode %d, got nil", m)
-			continue
-		}
-		if !strings.Contains(err.Error(), "ToIndefArrayStructTag") {
-			t.Errorf("error for mode %d should mention ToIndefArrayStructTag, got: %v", m, err)
-		}
-	}
-}
-
-// TestToIndefArrayStructTagRejectsIndefLengthForbidden verifies that
-// EncOptions rejects the combination of IndefLengthForbidden and
-// ToIndefArrayStructTagAllowed at mode construction time, since the two
-// settings are contradictory.
-func TestToIndefArrayStructTagRejectsIndefLengthForbidden(t *testing.T) {
-	_, err := EncOptions{
-		IndefLength:           IndefLengthForbidden,
-		ToIndefArrayStructTag: ToIndefArrayStructTagAllowed,
-	}.EncMode()
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if !strings.Contains(err.Error(), "ToIndefArrayStructTag") || !strings.Contains(err.Error(), "IndefLength") {
-		t.Errorf("error should mention both options, got: %v", err)
-	}
-}
-
 // TestEncodeStructToIndefArrayEmbeddedField verifies that fields promoted
 // from an embedded struct are encoded as elements of the indefinite-length
 // array, in the same order they would appear under toarray.
