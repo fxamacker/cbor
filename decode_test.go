@@ -6,7 +6,6 @@ package cbor
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -2323,80 +2322,6 @@ var unmarshalFloatTestCases = []unmarshalFloatTestCase{
 
 const invalidUTF8ErrorMsg = "cbor: invalid UTF-8 string"
 
-func mustHexDecode(s string) []byte {
-	data, err := hex.DecodeString(s)
-	if err != nil {
-		panic(err)
-	}
-	return data
-}
-
-func mustBigInt(s string) big.Int {
-	bi, ok := new(big.Int).SetString(s, 10)
-	if !ok {
-		panic("failed to convert " + s + " to big.Int")
-	}
-	return *bi
-}
-
-func sameError(a, b error) bool {
-	if a == nil || b == nil {
-		return a == nil && b == nil
-	}
-	return reflect.TypeOf(a) == reflect.TypeOf(b) && a.Error() == b.Error()
-}
-
-func unmarshal(t *testing.T, data []byte, v any) error {
-	t.Helper()
-	return unmarshalWithDM(t, defaultDecMode, data, v)
-}
-
-// unmarshalWithDM wraps DecMode.Unmarshal() to test a decoder invariant:
-// given a well-formed CBOR data item and a valid non-nil pointer destination value,
-// Unmarshal advances the data offset to the next data item on success and on error.
-func unmarshalWithDM(t *testing.T, dm DecMode, data []byte, v any) error {
-	t.Helper()
-
-	rv := reflect.ValueOf(v)
-	isValidValue := rv.IsValid() && rv.Kind() == reflect.Pointer && !rv.IsNil()
-	isZeroValue := isValidValue && rv.Elem().IsZero()
-
-	// Call Unmarshal to retain code coverage
-	err := dm.Unmarshal(data, v)
-
-	// Duplicate Unmarshal code to test d.off
-	d := decoder{data: data, dm: dm.(*decMode)}
-
-	off := d.off
-	if wellformedErr := d.wellformed(false, false); wellformedErr != nil {
-		if !sameError(wellformedErr, err) {
-			t.Errorf("wellformed(0x%x) error = %v, want %v", data, wellformedErr, err)
-		}
-		return err
-	}
-
-	if !isValidValue {
-		if _, ok := err.(*InvalidUnmarshalError); !ok {
-			t.Errorf("Unmarshal(0x%x, %T) error = %v, want *InvalidUnmarshalError", data, v, err)
-		}
-		return err
-	}
-
-	v2 := reflect.New(rv.Type().Elem())
-
-	d.off = off
-	parseErr := d.value(v2.Interface())
-	if isZeroValue && !sameError(parseErr, err) {
-		t.Errorf("value(0x%x, %T) error = %v, want %v", data, v, parseErr, err)
-	}
-
-	if d.off != len(data) {
-		t.Errorf("value(0x%x, %T) offset = %d, want %d", data, v, d.off, len(data))
-	}
-
-	return err
-}
-
 func TestUnmarshalToAny(t *testing.T) {
 	for _, tc := range unmarshalTestCases {
 		var v any
@@ -2586,22 +2511,6 @@ func testUnmarshalToIncompatibleType(t *testing.T, data []byte, wrongType reflec
 	}
 }
 
-func compareNonFloats(t *testing.T, data []byte, got any, want any) {
-	t.Helper()
-
-	switch tm := want.(type) {
-	case time.Time:
-		if vt, ok := got.(time.Time); !ok || !tm.Equal(vt) {
-			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, got, got, want, want)
-		}
-
-	default:
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, got, got, want, want)
-		}
-	}
-}
-
 func TestUnmarshalFloatToEmptyInterface(t *testing.T) {
 	for _, tc := range unmarshalFloatTestCases {
 		var v any
@@ -2633,47 +2542,6 @@ func TestUnmarshalFloatToIncompatibleTypes(t *testing.T) {
 	for _, tc := range unmarshalFloatTestCases {
 		for _, wrongType := range unmarshalFloatWrongTypes {
 			testUnmarshalToIncompatibleType(t, tc.data, wrongType)
-		}
-	}
-}
-
-func compareFloats(t *testing.T, data []byte, got any, want any, equalityThreshold float64) {
-	t.Helper()
-
-	var gotFloat64, wantFloat64 float64
-
-	switch want := want.(type) {
-	case float32:
-		f, ok := got.(float32)
-		if !ok {
-			t.Errorf("Unmarshal(0x%x) returned value of type %T, want float32", data, f)
-			return
-		}
-		gotFloat64, wantFloat64 = float64(f), float64(want)
-
-	case float64:
-		f, ok := got.(float64)
-		if !ok {
-			t.Errorf("Unmarshal(0x%x) returned value of type %T, want float64", data, f)
-			return
-		}
-		gotFloat64, wantFloat64 = f, want
-	}
-
-	switch {
-	case math.IsNaN(wantFloat64):
-		if !math.IsNaN(gotFloat64) {
-			t.Errorf("Unmarshal(0x%x) = %f, want NaN", data, gotFloat64)
-		}
-
-	case math.IsInf(wantFloat64, 0):
-		if gotFloat64 != wantFloat64 {
-			t.Errorf("Unmarshal(0x%x) = %f, want %f", data, gotFloat64, wantFloat64)
-		}
-
-	default:
-		if math.Abs(gotFloat64-wantFloat64) > equalityThreshold {
-			t.Errorf("Unmarshal(0x%x) = %.18f, want %.18f, diff %.18f > threshold %.18f", data, gotFloat64, wantFloat64, math.Abs(gotFloat64-wantFloat64), equalityThreshold)
 		}
 	}
 }
@@ -6521,33 +6389,6 @@ func TestDecOptions(t *testing.T) {
 		if !reflect.DeepEqual(opts1, opts2) {
 			t.Errorf("DecOptions->DecMode->DecOptions returned different values: %#v, %#v", opts1, opts2)
 		}
-	}
-}
-
-type roundTripTestCase struct {
-	name         string
-	obj          any
-	wantCborData []byte
-}
-
-func testRoundTrip(t *testing.T, testCases []roundTripTestCase, em EncMode, dm DecMode) {
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			b, err := em.Marshal(tc.obj)
-			if err != nil {
-				t.Errorf("Marshal(%+v) returned error %v", tc.obj, err)
-			}
-			if !bytes.Equal(b, tc.wantCborData) {
-				t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.obj, b, tc.wantCborData)
-			}
-			v := reflect.New(reflect.TypeOf(tc.obj))
-			if err := unmarshalWithDM(t, dm, b, v.Interface()); err != nil {
-				t.Errorf("Unmarshal() returned error %v", err)
-			}
-			if !reflect.DeepEqual(tc.obj, v.Elem().Interface()) {
-				t.Errorf("Marshal-Unmarshal returned different values: %v, %v", tc.obj, v.Elem().Interface())
-			}
-		})
 	}
 }
 
@@ -10512,10 +10353,6 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 			}
 		})
 	}
-}
-
-func isCBORNil(data []byte) bool {
-	return len(data) > 0 && (data[0] == 0xf6 || data[0] == 0xf7)
 }
 
 func TestDecModeInvalidTimeTagToAnyMode(t *testing.T) {

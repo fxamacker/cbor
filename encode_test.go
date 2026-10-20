@@ -465,29 +465,6 @@ var marshalTestCases = []marshalTestCase{
 	}, // [nil, nil, nil]
 }
 
-func testMarshalWithFP(t *testing.T, f func(t *testing.T)) {
-	testCases := []struct {
-		name     string
-		enableFP bool
-	}{
-		{name: "enable fast path", enableFP: true},
-		{name: "disable fast path", enableFP: false},
-	}
-	t.Cleanup(func() {
-		enableEncodingFastPath = true
-		encodeFuncCache.Clear()
-		encodingStructTypeCache.Clear()
-	})
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			enableEncodingFastPath = tc.enableFP
-			encodeFuncCache.Clear()
-			encodingStructTypeCache.Clear()
-			f(t)
-		})
-	}
-}
-
 func TestMarshal(t *testing.T) {
 	testMarshalWithFP(t, func(t *testing.T) {
 		testMarshal(t, marshalTestCases)
@@ -694,49 +671,6 @@ func testMarshalLargeMap(t *testing.T) {
 			t.Errorf("Unmarshal() = %v, want %v", m2, m1)
 		}
 	}
-}
-
-func encodeCborHeader(t cborType, n uint64) []byte {
-	if n <= maxAdditionalInformationWithoutArgument {
-		const headSize = 1
-		var b [headSize]byte
-		b[0] = byte(t) | byte(n)
-		return b[:]
-	}
-
-	if n <= math.MaxUint8 {
-		const argumentSize = 1
-		const headSize = 1 + argumentSize
-		var b [headSize]byte
-		b[0] = byte(t) | additionalInformationWith1ByteArgument
-		b[1] = byte(n)
-		return b[:]
-	}
-
-	if n <= math.MaxUint16 {
-		const argumentSize = 2
-		const headSize = 1 + argumentSize
-		var b [headSize]byte
-		b[0] = byte(t) | additionalInformationWith2ByteArgument
-		binary.BigEndian.PutUint16(b[1:], uint16(n))
-		return b[:]
-	}
-
-	if n <= math.MaxUint32 {
-		const argumentSize = 4
-		const headSize = 1 + argumentSize
-		var b [headSize]byte
-		b[0] = byte(t) | additionalInformationWith4ByteArgument
-		binary.BigEndian.PutUint32(b[1:], uint32(n))
-		return b[:]
-	}
-
-	const argumentSize = 8
-	const headSize = 1 + argumentSize
-	var b [headSize]byte
-	b[0] = byte(t) | additionalInformationWith8ByteArgument
-	binary.BigEndian.PutUint64(b[1:], n)
-	return b[:]
 }
 
 func testMarshal(t *testing.T, testCases []marshalTestCase) {
@@ -8630,14 +8564,6 @@ func TestMarshalToBufferNilBuffer(t *testing.T) {
 	if err := bem.MarshalToBuffer(42, nil); err == nil {
 		t.Error("UserBufferEncMode.MarshalToBuffer(42, nil) didn't return an error")
 	}
-}
-
-func mustParseTime(layout string, value string) time.Time {
-	tm, err := time.Parse(layout, value)
-	if err != nil {
-		panic(err)
-	}
-	return tm
 }
 
 func TestEncodedHeadLength(t *testing.T) {
