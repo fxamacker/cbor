@@ -12195,6 +12195,41 @@ func TestKeyAsIntAndStringFieldsWithSameName(t *testing.T) {
 	}
 }
 
+func TestKeyAsIntAndStringFieldsWithSameNameAndEmbeddedField(t *testing.T) {
+	type inner struct {
+		A int `cbor:"1,keyasint"`
+	}
+	type s struct {
+		ID        int `cbor:"1,keyasint"`
+		AnotherID int `cbor:"1"`
+		inner
+	}
+
+	data := mustHexDecode("a20101613102") // {1: 1, "1": 2}
+	want := s{
+		ID:        1,
+		AnotherID: 2,
+	}
+
+	var v s
+	err := unmarshal(t, data, &v)
+	if err != nil {
+		t.Errorf("Unmarshal returned unexpected error: %v", err)
+	}
+	if !reflect.DeepEqual(v, want) {
+		t.Errorf("Unmarshal(0x%x) returned %+v, want %+v", data, v, want)
+	}
+
+	// Roundtrip
+	b, err := Marshal(want)
+	if err != nil {
+		t.Errorf("Marshal returned unexpected error: %v", err)
+	}
+	if !bytes.Equal(b, data) {
+		t.Errorf("Marshal(%+v) returned 0x%x, want 0x%x", want, b, data)
+	}
+}
+
 // TestMapKeyOverflowStructKeyAsInt verifies that a CBOR integer map
 // key that is outside the range of math.MinInt64 and math.MaxInt64
 // is rejected with an UnmarshalTypeError.
