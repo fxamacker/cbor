@@ -39,12 +39,8 @@ func TestEncodeStructToIndefArrayBasic(t *testing.T) {
 	// toindefarray-tagged structs (the tag treats them the same way as
 	// `toarray` for decoding).
 	var out S
-	if err := unmarshal(t, got, &out); err != nil {
-		t.Fatalf("Unmarshal returned error: %v", err)
-	}
-	if !reflect.DeepEqual(in, out) {
-		t.Errorf("roundtrip mismatch: got %+v, want %+v", out, in)
-	}
+	err = unmarshal(t, got, &out)
+	checkUnmarshal(t, "Unmarshal", out, err, in)
 }
 
 // TestEncodeStructToIndefArrayEmpty verifies that an empty struct produces
@@ -62,12 +58,8 @@ func TestEncodeStructToIndefArrayEmpty(t *testing.T) {
 	checkMarshal(t, "em.Marshal", got, err, want)
 
 	var out Empty
-	if err := unmarshal(t, got, &out); err != nil {
-		t.Fatalf("Unmarshal returned error: %v", err)
-	}
-	if !reflect.DeepEqual(in, out) {
-		t.Errorf("roundtrip mismatch: got %+v, want %+v", out, in)
-	}
+	err = unmarshal(t, got, &out)
+	checkUnmarshal(t, "Unmarshal", out, err, in)
 }
 
 // TestEncodeStructToIndefArrayNested verifies the byte layout and roundtrip
@@ -95,12 +87,8 @@ func TestEncodeStructToIndefArrayNested(t *testing.T) {
 	checkMarshal(t, "em.Marshal", got, err, want)
 
 	var out Outer
-	if err := unmarshal(t, got, &out); err != nil {
-		t.Fatalf("Unmarshal returned error: %v", err)
-	}
-	if !reflect.DeepEqual(in, out) {
-		t.Errorf("roundtrip mismatch: got %+v, want %+v", out, in)
-	}
+	err = unmarshal(t, got, &out)
+	checkUnmarshal(t, "Unmarshal", out, err, in)
 }
 
 // TestEncodeStructToIndefArrayForbiddenByDefault verifies that the default

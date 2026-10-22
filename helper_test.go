@@ -185,15 +185,7 @@ func checkMarshal(t *testing.T, call string, b []byte, err error, want []byte) {
 // if wantErrMsg isn't empty.  Use E = error to accept any error type.
 func checkMarshalErr[E error](t *testing.T, call string, b []byte, err error, wantErrMsg string) {
 	t.Helper()
-	if err == nil {
-		t.Fatalf("%s: expected %s, got nil", call, reflect.TypeFor[E]())
-	}
-	var e E
-	if !errors.As(err, &e) {
-		t.Errorf("%s returned %T, want %s", call, err, reflect.TypeFor[E]())
-	} else if wantErrMsg != "" && err.Error() != wantErrMsg {
-		t.Errorf("%s: got %q, want %q", call, err.Error(), wantErrMsg)
-	}
+	checkError[E](t, call, err, wantErrMsg)
 	if b != nil {
 		t.Errorf("%s = 0x%x, want nil", call, b)
 	}
@@ -210,6 +202,71 @@ func checkMarshalCase[E error](t *testing.T, call string, b []byte, err error, w
 	}
 }
 
+// checkUnmarshal checks whether an unmarshal call was successful and
+// compares got value with want value.
+func checkUnmarshal(t *testing.T, call string, got any, err error, want any) {
+	t.Helper()
+	checkUnmarshalFunc(t, call, got, err, want, reflect.DeepEqual)
+}
+
+// checkUnmarshalFunc is like checkUnmarshal but compares values with equal.
+func checkUnmarshalFunc(t *testing.T, call string, got any, err error, want any, equal func(got, want any) bool) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("%s: unexpected error: %v", call, err)
+	}
+	if !equal(got, want) {
+		t.Errorf("%s = %+v (%T), want %+v (%T)", call, got, got, want, want)
+	}
+}
+
+// checkUnmarshalErr checks whether an unmarshal call failed with an error
+// matching E (see checkError), and compares got value with want value.
+func checkUnmarshalErr[E error](t *testing.T, call string, got any, err error, want any, wantErrMsg string) {
+	t.Helper()
+	checkUnmarshalErrFunc[E](t, call, got, err, want, wantErrMsg, reflect.DeepEqual)
+}
+
+// checkUnmarshalErrFunc is like checkUnmarshalErr but compares values with equal.
+func checkUnmarshalErrFunc[E error](t *testing.T, call string, got any, err error, want any, wantErrMsg string, equal func(got, want any) bool) {
+	t.Helper()
+	checkError[E](t, call, err, wantErrMsg)
+	if !equal(got, want) {
+		t.Errorf("%s = %+v (%T), want %+v (%T)", call, got, got, want, want)
+	}
+}
+
+// checkUnmarshalCase calls checkError[E] if wantErr is true, otherwise
+// checkUnmarshal.  got and want are not compared on error, and
+// wantErrMsg is ignored if wantErr is false.
+func checkUnmarshalCase[E error](t *testing.T, call string, got any, err error, want any, wantErr bool, wantErrMsg string) {
+	t.Helper()
+	checkUnmarshalCaseFunc[E](t, call, got, err, want, wantErr, wantErrMsg, reflect.DeepEqual)
+}
+
+// checkUnmarshalCaseFunc is like checkUnmarshalCase but compares values with equal.
+func checkUnmarshalCaseFunc[E error](t *testing.T, call string, got any, err error, want any, wantErr bool, wantErrMsg string, equal func(got, want any) bool) {
+	t.Helper()
+	if wantErr {
+		checkError[E](t, call, err, wantErrMsg)
+	} else {
+		checkUnmarshalFunc(t, call, got, err, want, equal)
+	}
+}
+
+// testDecoderEOF calls dec.Decode and checks whether it returns io.EOF and no value.
+func testDecoderEOF(t *testing.T, dec *Decoder) {
+	t.Helper()
+	var v any
+	err := dec.Decode(&v)
+	if !errors.Is(err, io.EOF) {
+		t.Errorf("Decoder.Decode: got error %v, want io.EOF", err)
+	}
+	if v != nil {
+		t.Errorf("Decoder.Decode = %v (%T), want nil (no more data)", v, v)
+	}
+}
+
 type roundTripTestCase struct {
 	name         string
 	obj          any
@@ -223,69 +280,48 @@ func testRoundTrip(t *testing.T, testCases []roundTripTestCase, em EncMode, dm D
 			checkMarshal(t, "em.Marshal", b, err, tc.wantCborData)
 
 			v := reflect.New(reflect.TypeOf(tc.obj))
-			if err := unmarshalWithDM(t, dm, b, v.Interface()); err != nil {
-				t.Errorf("Unmarshal() returned error %v", err)
-			}
-			if !reflect.DeepEqual(tc.obj, v.Elem().Interface()) {
-				t.Errorf("Marshal-Unmarshal returned different values: %v, %v", tc.obj, v.Elem().Interface())
-			}
+			err = unmarshalWithDM(t, dm, b, v.Interface())
+			checkUnmarshal(t, "dm.Unmarshal", v.Elem().Interface(), err, tc.obj)
 		})
 	}
 }
 
-func compareNonFloats(t *testing.T, data []byte, got any, want any) {
-	t.Helper()
-
-	switch tm := want.(type) {
-	case time.Time:
-		if vt, ok := got.(time.Time); !ok || !tm.Equal(vt) {
-			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, got, got, want, want)
-		}
-
-	default:
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, got, got, want, want)
-		}
+func nonFloatEqual(got any, want any) bool {
+	if wt, ok := want.(time.Time); ok {
+		gt, ok := got.(time.Time)
+		return ok && wt.Equal(gt)
 	}
+
+	return reflect.DeepEqual(got, want)
 }
 
-func compareFloats(t *testing.T, data []byte, got any, want any, equalityThreshold float64) {
-	t.Helper()
-
-	var gotFloat64, wantFloat64 float64
-
-	switch want := want.(type) {
-	case float32:
-		f, ok := got.(float32)
-		if !ok {
-			t.Errorf("Unmarshal(0x%x) returned value of type %T, want float32", data, f)
-			return
-		}
-		gotFloat64, wantFloat64 = float64(f), float64(want)
-
-	case float64:
-		f, ok := got.(float64)
-		if !ok {
-			t.Errorf("Unmarshal(0x%x) returned value of type %T, want float64", data, f)
-			return
-		}
-		gotFloat64, wantFloat64 = f, want
-	}
-
-	switch {
-	case math.IsNaN(wantFloat64):
-		if !math.IsNaN(gotFloat64) {
-			t.Errorf("Unmarshal(0x%x) = %f, want NaN", data, gotFloat64)
+func floatEqual(threshold float64) func(got, want any) bool {
+	return func(got, want any) bool {
+		var gotFloat64, wantFloat64 float64
+		switch want := want.(type) {
+		case float32:
+			f, ok := got.(float32)
+			if !ok {
+				return false
+			}
+			gotFloat64, wantFloat64 = float64(f), float64(want)
+		case float64:
+			f, ok := got.(float64)
+			if !ok {
+				return false
+			}
+			gotFloat64, wantFloat64 = f, want
+		default:
+			return false
 		}
 
-	case math.IsInf(wantFloat64, 0):
-		if gotFloat64 != wantFloat64 {
-			t.Errorf("Unmarshal(0x%x) = %f, want %f", data, gotFloat64, wantFloat64)
-		}
-
-	default:
-		if math.Abs(gotFloat64-wantFloat64) > equalityThreshold {
-			t.Errorf("Unmarshal(0x%x) = %.18f, want %.18f, diff %.18f > threshold %.18f", data, gotFloat64, wantFloat64, math.Abs(gotFloat64-wantFloat64), equalityThreshold)
+		switch {
+		case math.IsNaN(wantFloat64):
+			return math.IsNaN(gotFloat64)
+		case math.IsInf(wantFloat64, 0):
+			return gotFloat64 == wantFloat64
+		default:
+			return math.Abs(gotFloat64-wantFloat64) <= threshold
 		}
 	}
 }
@@ -314,6 +350,32 @@ func checkErrorType(t *testing.T, call string, got, want error) {
 	} else if !errors.As(got, reflect.New(reflect.TypeOf(want)).Interface()) {
 		t.Errorf("%s returned %T, want %T", call, got, want)
 	}
+}
+
+// checkError checks whether a call failed with an error that errors.As
+// matches to E.  The error message is checked if wantErrMsg isn't empty.
+// Use E = error to accept any error type.
+func checkError[E error](t *testing.T, call string, err error, wantErrMsg string) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("%s: expected %s, got nil", call, reflect.TypeFor[E]())
+	}
+	var e E
+	if !errors.As(err, &e) {
+		t.Errorf("%s returned %T, want %s", call, err, reflect.TypeFor[E]())
+	} else if wantErrMsg != "" && err.Error() != wantErrMsg {
+		t.Errorf("%s: got %q, want %q", call, err.Error(), wantErrMsg)
+	}
+}
+
+// derefOrNil returns the value pointed to by p, or nil if p is a nil pointer.
+// derefOrNil panics if p's dynamic type isn't a pointer.
+func derefOrNil(p any) any {
+	rv := reflect.ValueOf(p)
+	if rv.IsNil() {
+		return nil
+	}
+	return rv.Elem().Interface()
 }
 
 // nBytesReader reads at most maxBytesPerRead into b.  It also returns error at the last read.

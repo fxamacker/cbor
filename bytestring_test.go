@@ -6,7 +6,6 @@ package cbor
 import (
 	"bytes"
 	"io"
-	"strings"
 	"testing"
 )
 
@@ -187,26 +186,14 @@ func TestUnmarshalByteStringOnBadData(t *testing.T) {
 			// Test ByteString.UnmarshalCBOR(data)
 			{
 				var v ByteString
-
 				err := v.UnmarshalCBOR(tc.data)
-				if err == nil {
-					t.Errorf("UnmarshalCBOR(%x) didn't return error", tc.data)
-				}
-				if !strings.HasPrefix(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("UnmarshalCBOR(%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-				}
+				checkError[error](t, "UnmarshalCBOR", err, tc.wantErrorMsg)
 			}
 			// Test Unmarshal(data, *ByteString), which calls ByteString.unmarshalCBOR() under the hood
 			{
 				var v ByteString
-
 				err := unmarshal(t, tc.data, &v)
-				if err == nil {
-					t.Errorf("Unmarshal(%x) didn't return error", tc.data)
-				}
-				if !strings.HasPrefix(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-				}
+				checkError[error](t, "Unmarshal", err, tc.wantErrorMsg)
 			}
 		})
 	}
