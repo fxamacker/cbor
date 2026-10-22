@@ -9,19 +9,6 @@ body:
       value: |
         Please include a small, self-contained, and runnable example that reproduces the bug. Thanks! 🙏
 
-  - type: checkboxes
-    id: prohibited-content
-    attributes:
-      label: Checklist
-      description: "Please do not include **prohibited content**: personal data, secrets, nonpublic information, malicious code, malicious links, or any data that could create regulatory compliance obligations, legal liabilities, or other risks for the recipient."
-      options:
-        - label: I am a human and I personally confirm this issue does not include (or link to) prohibited content.
-          required: true
-        - label: This is not a feature request or security vulnerability (see [Security Policy](https://github.com/fxamacker/cbor/blob/master/SECURITY.md)).
-          required: true
-        - label: I personally reviewed each line of the reproducer and ran it.
-          required: true
-
   - type: input
     id: cbor-version
     attributes:
@@ -95,6 +82,19 @@ body:
         Does the bug occur with the production encoding/decoding settings or test-only settings?
         Does the bug occur without user-implemented marshalers/unmarshalers (e.g., MarshalCBOR)?
         Is there a workaround (e.g., adjusting settings or implementing an interface)?
+
+  - type: checkboxes
+    id: prohibited-content
+    attributes:
+      label: Checklist
+      description: "Please do not include **prohibited content**: personal data, secrets, nonpublic information, malicious code, malicious links, or any data that could create regulatory compliance obligations, legal liabilities, or other risks for the recipient."
+      options:
+        - label: I am a human and I personally confirm this issue does not include (or link to) prohibited content.
+          required: true
+        - label: This is not a feature request or security vulnerability (see [Security Policy](https://github.com/fxamacker/cbor/blob/master/SECURITY.md)).
+          required: true
+        - label: I personally reviewed each line of the reproducer and ran it.
+          required: true
 
   - type: markdown
     attributes:
