@@ -4,7 +4,6 @@
 package cbor
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -215,12 +214,7 @@ func TestTagStruct(t *testing.T) {
 		t.Errorf("Unmarshal() returned error %v", err)
 	}
 	b, err := em.Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%+v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, data) {
-		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, data)
-	}
+	checkMarshal(t, "em.Marshal", b, err, data)
 }
 
 func TestTagFixedLengthStruct(t *testing.T) {
@@ -244,12 +238,7 @@ func TestTagFixedLengthStruct(t *testing.T) {
 		t.Errorf("Unmarshal() returned error %v", err)
 	}
 	b, err := em.Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%+v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, data) {
-		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, data)
-	}
+	checkMarshal(t, "em.Marshal", b, err, data)
 }
 
 func TestTagToArrayStruct(t *testing.T) {
@@ -283,12 +272,7 @@ func TestTagToArrayStruct(t *testing.T) {
 		t.Errorf("Unmarshal() returned error %v", err)
 	}
 	b, err := em.Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%+v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, data) {
-		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, data)
-	}
+	checkMarshal(t, "em.Marshal", b, err, data)
 }
 
 func TestNestedTagStruct(t *testing.T) {
@@ -323,12 +307,7 @@ func TestNestedTagStruct(t *testing.T) {
 		t.Errorf("Unmarshal() returned error %v", err)
 	}
 	b, err := em.Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%+v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, data) {
-		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, data)
-	}
+	checkMarshal(t, "em.Marshal", b, err, data)
 }
 
 func TestAddTagError(t *testing.T) {
@@ -1033,12 +1012,7 @@ func TestEncodeSharedTag(t *testing.T) {
 	v := myInt(1)
 	wantCborData := mustHexDecode("d87b01")
 	b, err := em.Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, wantCborData) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, wantCborData)
-	}
+	checkMarshal(t, "em.Marshal", b, err, wantCborData)
 
 	// Unregister myInt type
 	sharedTagSet.Remove(myIntType)
@@ -1047,12 +1021,7 @@ func TestEncodeSharedTag(t *testing.T) {
 	v = myInt(2)
 	wantCborData = mustHexDecode("02")
 	b, err = em.Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, wantCborData) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, wantCborData)
-	}
+	checkMarshal(t, "em.Marshal", b, err, wantCborData)
 
 	// Register myInt type with tag number 234
 	if err = sharedTagSet.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 234); err != nil {
@@ -1063,13 +1032,7 @@ func TestEncodeSharedTag(t *testing.T) {
 	v = myInt(3)
 	wantCborData = mustHexDecode("d8ea03")
 	b, err = em.Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, wantCborData) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, wantCborData)
-	}
-
+	checkMarshal(t, "em.Marshal", b, err, wantCborData)
 }
 
 func TestDecodeSharedTag(t *testing.T) {
@@ -1228,57 +1191,34 @@ func TestTagMarshalError(t *testing.T) {
 		Number:  123,
 		Content: make(chan bool),
 	}
-	if _, err := Marshal(tag); err == nil {
-		t.Errorf("Marshal() didn't return error")
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Marshal() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	b, err := Marshal(tag)
+	checkMarshalErr[error](t, "Marshal", b, err, wantErrorMsg)
 }
 
 func TestMarshalUninitializedTag(t *testing.T) {
 	var v Tag
 	b, err := Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, []byte{cborNil}) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, cborNil)
-	}
+	checkMarshal(t, "Marshal", b, err, []byte{cborNil})
 }
 
 func TestMarshalUninitializedRawTag(t *testing.T) {
 	var v RawTag
 	b, err := Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, []byte{cborNil}) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, cborNil)
-	}
+	checkMarshal(t, "Marshal", b, err, []byte{cborNil})
 }
 
 func TestMarshalTagWithEmptyContent(t *testing.T) {
 	v := Tag{Number: 100}           // Tag.Content is empty
 	want := mustHexDecode("d864f6") // 100(null)
 	b, err := Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
-	}
+	checkMarshal(t, "Marshal", b, err, want)
 }
 
 func TestMarshalRawTagWithEmptyContent(t *testing.T) {
 	v := RawTag{Number: 100}        // RawTag.Content is empty
 	want := mustHexDecode("d864f6") // 100(null)
 	b, err := Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
-	}
+	checkMarshal(t, "Marshal", b, err, want)
 }
 
 func TestMarshalAddressableTag(t *testing.T) {
@@ -1287,12 +1227,7 @@ func TestMarshalAddressableTag(t *testing.T) {
 	v := s{T: Tag{Number: 100, Content: 1}}
 	want := []byte{0xa1, 0x61, 0x54, 0xd8, 0x64, 0x01} // {"T": 100(1)}
 	b, err := Marshal(&v)
-	if err != nil {
-		t.Fatalf("Marshal(%v): unexpected error: %v", v, err)
-	}
-	if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
-	}
+	checkMarshal(t, "Marshal", b, err, want)
 }
 
 func TestEncodeTag(t *testing.T) {
@@ -1313,21 +1248,11 @@ func TestEncodeTag(t *testing.T) {
 
 	em, _ := EncOptions{Sort: SortLengthFirst}.EncMode()
 	b, err := em.Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, lenFirstSortedCborData) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, lenFirstSortedCborData)
-	}
+	checkMarshal(t, "em.Marshal", b, err, lenFirstSortedCborData)
 
 	em, _ = EncOptions{Sort: SortBytewiseLexical}.EncMode()
 	b, err = em.Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, bytewiseSortedCborData) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, bytewiseSortedCborData)
-	}
+	checkMarshal(t, "em.Marshal", b, err, bytewiseSortedCborData)
 }
 
 func TestDecodeTagToEmptyIface(t *testing.T) {
@@ -1479,11 +1404,7 @@ func TestDecodeRegisterTagForUnmarshaler(t *testing.T) {
 		t.Errorf("Unmarshal() returned different values: %v (%T), %v (%T)", wantObj, wantObj, v1, v1)
 	}
 	b, err := em.Marshal(v1)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v1, err)
-	} else if !bytes.Equal(b, data) {
-		t.Errorf("Marshal(%v) returned %v, want %v", v1, b, data)
-	}
+	checkMarshal(t, "em.Marshal", b, err, data)
 
 	// Decode to registered type.
 	var v2 number3
@@ -1494,11 +1415,7 @@ func TestDecodeRegisterTagForUnmarshaler(t *testing.T) {
 		t.Errorf("Unmarshal() returned different values: %v, %v", wantObj, v2)
 	}
 	b, err = em.Marshal(v2)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v2, err)
-	} else if !bytes.Equal(b, data) {
-		t.Errorf("Marshal(%v) returned %v, want %v", v2, b, data)
-	}
+	checkMarshal(t, "em.Marshal", b, err, data)
 }
 
 func TestMarshalRawTagContainingMalformedCBORData(t *testing.T) {
@@ -1533,16 +1450,7 @@ func TestMarshalRawTagContainingMalformedCBORData(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			b, err := Marshal(tc.value)
-			if err == nil {
-				t.Errorf("Marshal(%v) didn't return an error, want error %q", tc.value, tc.wantErrorMsg)
-			} else if _, ok := err.(*MarshalerError); !ok {
-				t.Errorf("Marshal(%v) error type %T, want *MarshalerError", tc.value, err)
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Marshal(%v) error %q, want %q", tc.value, err.Error(), tc.wantErrorMsg)
-			}
-			if b != nil {
-				t.Errorf("Marshal(%v) = 0x%x, want nil", tc.value, b)
-			}
+			checkMarshalErr[*MarshalerError](t, "Marshal", b, err, tc.wantErrorMsg)
 		})
 	}
 }
@@ -1583,13 +1491,7 @@ func TestEncodeBuiltinTag(t *testing.T) {
 			}
 
 			got, err := em.Marshal(tc.tag)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if !bytes.Equal(got, tc.want) {
-				t.Errorf("unexpected difference\ngot: 0x%x\nwant: 0x%x", got, tc.want)
-			}
+			checkMarshal(t, "em.Marshal", got, err, tc.want)
 		})
 	}
 }

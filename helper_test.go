@@ -169,6 +169,47 @@ func testMarshalWithFP(t *testing.T, f func(t *testing.T)) {
 
 // Other helper functions
 
+// checkMarshal checks whether a marshal call was successful.
+func checkMarshal(t *testing.T, call string, b []byte, err error, want []byte) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("%s: unexpected error: %v", call, err)
+	}
+	if !bytes.Equal(b, want) {
+		t.Errorf("%s = 0x%x, want 0x%x", call, b, want)
+	}
+}
+
+// checkMarshalErr checks whether a marshal call failed with an error
+// that errors.As matches to E, and no data.  The error message is checked
+// if wantErrMsg isn't empty.  Use E = error to accept any error type.
+func checkMarshalErr[E error](t *testing.T, call string, b []byte, err error, wantErrMsg string) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("%s: expected %s, got nil", call, reflect.TypeFor[E]())
+	}
+	var e E
+	if !errors.As(err, &e) {
+		t.Errorf("%s returned %T, want %s", call, err, reflect.TypeFor[E]())
+	} else if wantErrMsg != "" && err.Error() != wantErrMsg {
+		t.Errorf("%s: got %q, want %q", call, err.Error(), wantErrMsg)
+	}
+	if b != nil {
+		t.Errorf("%s = 0x%x, want nil", call, b)
+	}
+}
+
+// checkMarshalCase calls checkMarshalErr[E] if wantErr is true, otherwise
+// checkMarshal.  wantErrMsg is ignored if wantErr is false.
+func checkMarshalCase[E error](t *testing.T, call string, b []byte, err error, want []byte, wantErr bool, wantErrMsg string) {
+	t.Helper()
+	if wantErr {
+		checkMarshalErr[E](t, call, b, err, wantErrMsg)
+	} else {
+		checkMarshal(t, call, b, err, want)
+	}
+}
+
 type roundTripTestCase struct {
 	name         string
 	obj          any
@@ -179,12 +220,8 @@ func testRoundTrip(t *testing.T, testCases []roundTripTestCase, em EncMode, dm D
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			b, err := em.Marshal(tc.obj)
-			if err != nil {
-				t.Errorf("Marshal(%+v) returned error %v", tc.obj, err)
-			}
-			if !bytes.Equal(b, tc.wantCborData) {
-				t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.obj, b, tc.wantCborData)
-			}
+			checkMarshal(t, "em.Marshal", b, err, tc.wantCborData)
+
 			v := reflect.New(reflect.TypeOf(tc.obj))
 			if err := unmarshalWithDM(t, dm, b, v.Interface()); err != nil {
 				t.Errorf("Unmarshal() returned error %v", err)
@@ -260,8 +297,8 @@ func sameError(a, b error) bool {
 	return reflect.TypeOf(a) == reflect.TypeOf(b) && a.Error() == b.Error()
 }
 
-// testErrorType tests if got error matches want error.
-func testErrorType(t *testing.T, call string, got, want error) {
+// checkErrorType checks if got error matches want error.
+func checkErrorType(t *testing.T, call string, got, want error) {
 	t.Helper()
 	if got == nil && want == nil {
 		return

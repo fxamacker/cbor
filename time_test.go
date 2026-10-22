@@ -1447,22 +1447,14 @@ func testEncodeTime(t *testing.T) {
 
 				// Marshal time.Time
 				b, err := em.Marshal(tc.tm)
-				if err != nil {
-					t.Errorf("Marshal(%+v) returned error %v", tc.tm, err)
-				} else if !bytes.Equal(b, convert.wantCborData) {
-					t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", tc.tm, b, convert.wantCborData)
-				}
+				checkMarshal(t, "em.Marshal", b, err, convert.wantCborData)
 
 				// Marshal *struct{time.Time}
 				v := s{T: tc.tm}
 				want := append([]byte(nil), wantStructPrefix...)
 				want = append(want, convert.wantCborData...)
 				b, err = em.Marshal(&v)
-				if err != nil {
-					t.Errorf("Marshal(%+v) returned error %v", v, err)
-				} else if !bytes.Equal(b, want) {
-					t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, want)
-				}
+				checkMarshal(t, "em.Marshal", b, err, want)
 
 				var tm time.Time
 				err = unmarshal(t, convert.wantCborData, &tm)
@@ -1602,11 +1594,7 @@ func testEncodeTimeUnixMicro(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			b, err := em.Marshal(tc.tm)
-			if err != nil {
-				t.Fatalf("Marshal(%v) returned error %v", tc.tm, err)
-			} else if !bytes.Equal(b, tc.wantData) {
-				t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.tm, b, tc.wantData)
-			}
+			checkMarshal(t, "em.Marshal", b, err, tc.wantData)
 
 			if !tc.skipRoundTrip {
 				var got time.Time
@@ -1813,34 +1801,17 @@ func testEncodeTimeRFC3339Limits(t *testing.T) {
 		for _, w := range tc.wants {
 			for _, tagMode := range []EncTagMode{EncTagNone, EncTagRequired} {
 				name := tc.name + " with " + timeModeNames[w.opt] + " and " + encTagModeNames[tagMode] + " options"
+				wantData := w.wantData
+				if tagMode == EncTagRequired {
+					wantData = append([]byte{0xc0}, w.wantData...)
+				}
 				t.Run(name, func(t *testing.T) {
 					em, err := EncOptions{Time: w.opt, TimeTag: tagMode}.EncMode()
 					if err != nil {
 						t.Fatalf("EncMode() error = %v", err)
 					}
 					b, err := em.Marshal(tc.tm)
-					if w.wantErrorMsg != "" {
-						if err == nil {
-							t.Fatalf("Marshal(%v) = 0x%x, want *UnsupportedValueError", tc.tm, b)
-						}
-						if _, ok := err.(*UnsupportedValueError); !ok {
-							t.Fatalf("Marshal(%v) error = %v (%T), want *UnsupportedValueError", tc.tm, err, err)
-						}
-						if err.Error() != w.wantErrorMsg {
-							t.Errorf("Marshal(%v) error %q, want %q", tc.tm, err.Error(), w.wantErrorMsg)
-						}
-					} else {
-						if err != nil {
-							t.Fatalf("Marshal(%v) error = %v", tc.tm, err)
-						}
-						wantData := w.wantData
-						if tagMode == EncTagRequired {
-							wantData = append([]byte{0xc0}, w.wantData...)
-						}
-						if !bytes.Equal(b, wantData) {
-							t.Errorf("Marshal(%v) = 0x%x, want 0x%x", tc.tm, b, wantData)
-						}
-					}
+					checkMarshalCase[*UnsupportedValueError](t, "em.Marshal", b, err, wantData, w.wantErrorMsg != "", w.wantErrorMsg)
 				})
 			}
 		}

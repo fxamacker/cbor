@@ -1562,12 +1562,7 @@ func TestRawMessage(t *testing.T) {
 		t.Errorf("Unmarshal(0x%x) returned v %v, want %v", data, v, want)
 	}
 	b, err := Marshal(v)
-	if err != nil {
-		t.Fatalf("Marshal(%+v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, data) {
-		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, data)
-	}
+	checkMarshal(t, "Marshal", b, err, data)
 
 	addr := fmt.Sprintf("%p", *v.B)
 	if err := unmarshal(t, v.A, v.B); err != nil {
@@ -1588,24 +1583,14 @@ func TestNullRawMessage(t *testing.T) {
 	r := RawMessage(nil)
 	wantCborData := []byte{0xf6}
 	b, err := Marshal(r)
-	if err != nil {
-		t.Errorf("Marshal(%+v) returned error %v", r, err)
-	}
-	if !bytes.Equal(b, wantCborData) {
-		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", r, b, wantCborData)
-	}
+	checkMarshal(t, "Marshal", b, err, wantCborData)
 }
 
 func TestEmptyRawMessage(t *testing.T) {
 	var r RawMessage
 	wantCborData := []byte{0xf6}
 	b, err := Marshal(r)
-	if err != nil {
-		t.Errorf("Marshal(%+v) returned error %v", r, err)
-	}
-	if !bytes.Equal(b, wantCborData) {
-		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", r, b, wantCborData)
-	}
+	checkMarshal(t, "Marshal", b, err, wantCborData)
 }
 
 func TestNilRawMessageUnmarshalCBORError(t *testing.T) {
@@ -1672,7 +1657,7 @@ func TestDecoderRejectedDataItem(t *testing.T) {
 				var v1 any
 				name := fmt.Sprintf("Decode(0x%x)", tc.data)
 				err := decoder.Decode(&v1)
-				testErrorType(t, name, err, tc.wantErr)
+				checkErrorType(t, name, err, tc.wantErr)
 
 				if got := decoder.NumBytesRead(); got != len(tc.data) {
 					t.Errorf("NumBytesRead() = %d, want %d", got, len(tc.data))
@@ -1755,7 +1740,7 @@ func TestDecoderRejectedDataItemNoAdvance(t *testing.T) {
 					var v any
 					name := fmt.Sprintf("Decode(0x%x)", tc.data)
 					err := decoder.Decode(&v)
-					testErrorType(t, name, err, tc.wantDecodeErr)
+					checkErrorType(t, name, err, tc.wantDecodeErr)
 					if got := decoder.NumBytesRead(); got != 0 {
 						t.Errorf("NumBytesRead() = %d, want 0", got)
 					}
@@ -1765,7 +1750,7 @@ func TestDecoderRejectedDataItemNoAdvance(t *testing.T) {
 				for range 2 {
 					name := fmt.Sprintf("Skip(0x%x)", tc.data)
 					err := decoder.Skip()
-					testErrorType(t, name, err, tc.wantSkipErr)
+					checkErrorType(t, name, err, tc.wantSkipErr)
 					if got := decoder.NumBytesRead(); got != 0 {
 						t.Errorf("NumBytesRead() = %d, want 0", got)
 					}
