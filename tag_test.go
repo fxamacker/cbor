@@ -58,9 +58,7 @@ func TestTagNewTypeWithBuiltinUnderlyingType(t *testing.T) {
 	tags := NewTagSet()
 	for i, typ := range types {
 		tagNum := uint64(100 + i)
-		if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, tagNum); err != nil {
-			t.Fatalf("TagSet.Add(%s, %d) returned error %v", typ, tagNum, err)
-		}
+		mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, tagNum)
 	}
 
 	em := mustEncModeWithTags(t, EncOptions{Sort: SortCanonical}, tags)
@@ -167,12 +165,8 @@ func TestTagBinaryMarshalerUnmarshaler(t *testing.T) {
 	t2 := reflect.TypeFor[stru]()
 
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 123); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d) returned error %v", t1, 123, err)
-	}
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t2, 124); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d) returned error %v", t2, 124, err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 123)
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t2, 124)
 
 	em := mustEncModeWithTags(t, EncOptions{}, tags)
 	dm := mustDecModeWithTags(t, DecOptions{}, tags)
@@ -201,9 +195,7 @@ func TestTagStruct(t *testing.T) {
 	t1 := reflect.TypeFor[T]()
 
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 100); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d) returned error %v", t1, 100, err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 100)
 
 	em := mustEncModeWithTags(t, EncOptions{}, tags)
 	dm := mustDecModeWithTags(t, DecOptions{}, tags)
@@ -225,9 +217,7 @@ func TestTagFixedLengthStruct(t *testing.T) {
 	t1 := reflect.TypeFor[T]()
 
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 100); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d) returned error %v", t1, 100, err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 100)
 
 	em := mustEncModeWithTags(t, EncOptions{}, tags)
 	dm := mustDecModeWithTags(t, DecOptions{}, tags)
@@ -258,9 +248,7 @@ func TestTagToArrayStruct(t *testing.T) {
 	t1 := reflect.TypeFor[signedCWT]()
 
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 18); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d) returned error %v", t1, 18, err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 18)
 
 	em := mustEncModeWithTags(t, EncOptions{}, tags)
 	dm := mustDecModeWithTags(t, DecOptions{}, tags)
@@ -293,9 +281,7 @@ func TestNestedTagStruct(t *testing.T) {
 
 	// Register tag CBOR Web Token (CWT) 61 and COSE_Mac0 17 with macedCOSE type
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 61, 17); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d, %v) returned error %v", t1, 61, 17, err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 61, 17)
 
 	em := mustEncModeWithTags(t, EncOptions{}, tags)
 	dm := mustDecModeWithTags(t, DecOptions{}, tags)
@@ -459,9 +445,7 @@ func TestAddDuplicateTagContentTypeError(t *testing.T) {
 
 	tags := NewTagSet()
 	// Add myIntType and 100 to tags
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100); err != nil {
-		t.Errorf("TagSet.Add(%s, %d) returned error %v", myIntType.String(), 100, err)
-	}
+	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100)
 	// Add myIntType and 101 to tags
 	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 101); err == nil {
 		t.Errorf("TagSet.Add(%s, %d) didn't return an error", myIntType.String(), 101)
@@ -480,9 +464,7 @@ func TestAddDuplicateTagNumError(t *testing.T) {
 	tags := NewTagSet()
 
 	// Add myIntType and 100 to tags
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100); err != nil {
-		t.Errorf("TagSet.Add(%s, %d) returned error %v", myIntType.String(), 100, err)
-	}
+	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100)
 	// Add myBoolType and 100 to tags
 	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myBoolType, 100); err == nil {
 		t.Errorf("TagSet.Add(%s, %d) didn't return an error", myBoolType.String(), 100)
@@ -501,9 +483,7 @@ func TestAddDuplicateTagNumsError(t *testing.T) {
 	tags := NewTagSet()
 
 	// Add myIntType and [100, 101] to tags
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100, 101); err != nil {
-		t.Errorf("TagSet.Add(%s, %d, %d) returned error %v", myIntType.String(), 100, 101, err)
-	}
+	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100, 101)
 	// Add myBoolType and [100, 101] to tags
 	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myBoolType, 100, 101); err == nil {
 		t.Errorf("TagSet.Add(%s, %d, %d) didn't return an error", myBoolType.String(), 100, 101)
@@ -522,12 +502,8 @@ func TestAddRemoveTag(t *testing.T) {
 
 	tags := NewTagSet()
 	stags := tags.(*syncTagSet)
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100); err != nil {
-		t.Errorf("TagSet.Add(%s, %d) returned error %v", myIntType.String(), 100, err)
-	}
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myFloatType, 101); err != nil {
-		t.Errorf("TagSet.Add(%s, %d) returned error %v", myFloatType.String(), 101, err)
-	}
+	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100)
+	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myFloatType, 101)
 	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, pMyIntType, 102); err == nil {
 		t.Errorf("TagSet.Add(%s, %d) didn't return an error", pMyIntType.String(), 102)
 	}
@@ -562,9 +538,7 @@ func TestTagSetRemoveNil(t *testing.T) {
 		t.Errorf("TagSet len is %d, want %d", len(stags.t), 0)
 	}
 
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100); err != nil {
-		t.Errorf("TagSet.Add(%s, %d) returned error %v", myIntType.String(), 100, err)
-	}
+	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100)
 	if len(stags.t) != 1 {
 		t.Errorf("TagSet len is %d, want %d", len(stags.t), 1)
 	}
@@ -740,15 +714,9 @@ func TestDecodeTagData(t *testing.T) {
 	tagsDecOptional := NewTagSet()
 	tagsDecIgnored := NewTagSet()
 	for _, tag := range tagInfos {
-		if err := tagsDecRequired.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
-			t.Fatalf("TagSet.Add(%s, %v) returned error %v", tag.t, tag.n, err)
-		}
-		if err := tagsDecOptional.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagOptional}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
-			t.Fatalf("TagSet.Add(%s, %v) returned error %v", tag.t, tag.n, err)
-		}
-		if err := tagsDecIgnored.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagIgnored}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
-			t.Fatalf("TagSet.Add(%s, %v) returned error %v", tag.t, tag.n, err)
-		}
+		mustAddTag(t, tagsDecRequired, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, tag.t, tag.n[0], tag.n[1:]...)
+		mustAddTag(t, tagsDecOptional, TagOptions{EncTag: EncTagRequired, DecTag: DecTagOptional}, tag.t, tag.n[0], tag.n[1:]...)
+		mustAddTag(t, tagsDecIgnored, TagOptions{EncTag: EncTagRequired, DecTag: DecTagIgnored}, tag.t, tag.n[0], tag.n[1:]...)
 	}
 
 	type tag struct {
@@ -815,12 +783,8 @@ func TestDecodeNoTagData(t *testing.T) {
 	tagsDecRequired := NewTagSet()
 	tagsDecOptional := NewTagSet()
 	for _, tag := range tagInfos {
-		if err := tagsDecRequired.Add(TagOptions{EncTag: EncTagNone, DecTag: DecTagRequired}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
-			t.Fatalf("TagSet.Add(%s, %v) returned error %v", tag.t, tag.n, err)
-		}
-		if err := tagsDecOptional.Add(TagOptions{EncTag: EncTagNone, DecTag: DecTagOptional}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
-			t.Fatalf("TagSet.Add(%s, %v) returned error %v", tag.t, tag.n, err)
-		}
+		mustAddTag(t, tagsDecRequired, TagOptions{EncTag: EncTagNone, DecTag: DecTagRequired}, tag.t, tag.n[0], tag.n[1:]...)
+		mustAddTag(t, tagsDecOptional, TagOptions{EncTag: EncTagNone, DecTag: DecTagOptional}, tag.t, tag.n[0], tag.n[1:]...)
 	}
 
 	type tag struct {
@@ -901,15 +865,9 @@ func TestDecodeWrongTag(t *testing.T) {
 	tagsDecOptional := NewTagSet()
 	tagsDecIgnored := NewTagSet()
 	for _, tag := range tagInfos {
-		if err := tagsDecRequired.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
-			t.Fatalf("TagSet.Add(%s, %v) returned error %v", tag.t, tag.n, err)
-		}
-		if err := tagsDecOptional.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagOptional}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
-			t.Fatalf("TagSet.Add(%s, %v) returned error %v", tag.t, tag.n, err)
-		}
-		if err := tagsDecIgnored.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagIgnored}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
-			t.Fatalf("TagSet.Add(%s, %v) returned error %v", tag.t, tag.n, err)
-		}
+		mustAddTag(t, tagsDecRequired, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, tag.t, tag.n[0], tag.n[1:]...)
+		mustAddTag(t, tagsDecOptional, TagOptions{EncTag: EncTagRequired, DecTag: DecTagOptional}, tag.t, tag.n[0], tag.n[1:]...)
+		mustAddTag(t, tagsDecIgnored, TagOptions{EncTag: EncTagRequired, DecTag: DecTagIgnored}, tag.t, tag.n[0], tag.n[1:]...)
 	}
 	type tag struct {
 		name   string
@@ -989,9 +947,7 @@ func TestEncodeSharedTag(t *testing.T) {
 	}
 
 	// Register myInt type with tag number 123
-	if err = sharedTagSet.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 123); err != nil {
-		t.Fatalf("TagSet.Add(%s, %v) returned error %v", myIntType, 100, err)
-	}
+	mustAddTag(t, sharedTagSet, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 123)
 
 	// Encode myInt with tag number 123
 	v := myInt(1)
@@ -1009,9 +965,7 @@ func TestEncodeSharedTag(t *testing.T) {
 	checkMarshal(t, "em.Marshal", b, err, wantCborData)
 
 	// Register myInt type with tag number 234
-	if err = sharedTagSet.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 234); err != nil {
-		t.Fatalf("TagSet.Add(%s, %v) returned error %v", myIntType, 100, err)
-	}
+	mustAddTag(t, sharedTagSet, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 234)
 
 	// Encode myInt with tag number 234
 	v = myInt(3)
@@ -1033,9 +987,7 @@ func TestDecodeSharedTag(t *testing.T) {
 	}
 
 	// Register myInt type with tag number 123
-	if err = sharedTagSet.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 123); err != nil {
-		t.Fatalf("TagSet.Add(%s, %v) returned error %v", myIntType, 100, err)
-	}
+	mustAddTag(t, sharedTagSet, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 123)
 
 	// Decode myInt with tag number 123
 	var v myInt
@@ -1054,9 +1006,7 @@ func TestDecodeSharedTag(t *testing.T) {
 	checkUnmarshal(t, "dm.Unmarshal", v, err, wantV)
 
 	// Register myInt type with tag number 234
-	if err = sharedTagSet.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 234); err != nil {
-		t.Fatalf("TagSet.Add(%s, %v) returned error %v", myIntType, 100, err)
-	}
+	mustAddTag(t, sharedTagSet, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 234)
 
 	// Decode myInt with tag number 234
 	wantV = myInt(3)
@@ -1233,12 +1183,8 @@ func TestDecodeTagToEmptyIface(t *testing.T) {
 	typeMyUint := reflect.TypeFor[myUint]()
 
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typeMyBool, 100); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d) returned error %v", typeMyBool, 100, err)
-	}
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typeMyUint, 101, 102); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d, %d) returned error %v", typeMyUint, 101, 102, err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typeMyBool, 100)
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typeMyUint, 101, 102)
 
 	dm := mustDecModeWithTags(t, DecOptions{}, tags)
 	dmSharedTags, _ := DecOptions{}.DecModeWithSharedTags(tags)
@@ -1294,9 +1240,7 @@ func TestDecodeRegisteredTagToEmptyIfaceError(t *testing.T) {
 	typeMyInt := reflect.TypeFor[myInt]()
 
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typeMyInt, 101, 102); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d, %d) returned error %v", typeMyInt, 101, 102, err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typeMyInt, 101, 102)
 
 	dm := mustDecModeWithTags(t, DecOptions{}, tags)
 
@@ -1342,9 +1286,7 @@ func TestDecodeRegisterTagForUnmarshaler(t *testing.T) {
 	typ := reflect.TypeFor[number3]()
 
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 100); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d) returned error %v", typ, 100, err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 100)
 
 	data := mustHexDecode("d864a1636e756d01") // 100({"num": 1})
 	wantObj := number3(1)

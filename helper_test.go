@@ -212,6 +212,14 @@ func mustDecModeWithTags(t *testing.T, opts DecOptions, tags TagSet) DecMode { /
 	return dm
 }
 
+func mustAddTag(t *testing.T, tags TagSet, opts TagOptions, contentType reflect.Type, num uint64, nestedNum ...uint64) {
+	t.Helper()
+	err := tags.Add(opts, contentType, num, nestedNum...)
+	if err != nil {
+		t.Fatalf("TagSet.Add: unexpected error: %v", err)
+	}
+}
+
 // Other helper functions
 
 // checkMarshal checks whether a marshal call was successful.

@@ -453,9 +453,7 @@ func TestWellformedSyntaxMode(t *testing.T) {
 
 	type taggedFloat float64
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, reflect.TypeFor[taggedFloat](), 100); err != nil {
-		t.Fatalf("TagSet.Add: unexpected error: %v", err)
-	}
+	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, reflect.TypeFor[taggedFloat](), 100)
 
 	testCases := []struct {
 		name                    string

@@ -4137,18 +4137,18 @@ func TestRegisteredMapKeyHashable(t *testing.T) {
 
 	tagOpts := TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}
 	tags := NewTagSet()
-	_ = tags.Add(tagOpts, reflect.TypeFor[intArray](), 128)
-	_ = tags.Add(tagOpts, reflect.TypeFor[sliceArray](), 129)
-	_ = tags.Add(tagOpts, reflect.TypeFor[anyArray](), 130)
-	_ = tags.Add(tagOpts, reflect.TypeFor[intStruct](), 131)
-	_ = tags.Add(tagOpts, reflect.TypeFor[sliceStruct](), 132)
-	_ = tags.Add(tagOpts, reflect.TypeFor[anyStruct](), 133)
-	_ = tags.Add(tagOpts, reflect.TypeFor[intStructArray](), 134)
-	_ = tags.Add(tagOpts, reflect.TypeFor[sliceStructArray](), 135)
-	_ = tags.Add(tagOpts, reflect.TypeFor[anyStructArray](), 136)
-	_ = tags.Add(tagOpts, reflect.TypeFor[zeroIntArray](), 137)
-	_ = tags.Add(tagOpts, reflect.TypeFor[zeroSliceStructArray](), 138)
-	_ = tags.Add(tagOpts, reflect.TypeFor[intSlice](), 139)
+	mustAddTag(t, tags, tagOpts, reflect.TypeFor[intArray](), 128)
+	mustAddTag(t, tags, tagOpts, reflect.TypeFor[sliceArray](), 129)
+	mustAddTag(t, tags, tagOpts, reflect.TypeFor[anyArray](), 130)
+	mustAddTag(t, tags, tagOpts, reflect.TypeFor[intStruct](), 131)
+	mustAddTag(t, tags, tagOpts, reflect.TypeFor[sliceStruct](), 132)
+	mustAddTag(t, tags, tagOpts, reflect.TypeFor[anyStruct](), 133)
+	mustAddTag(t, tags, tagOpts, reflect.TypeFor[intStructArray](), 134)
+	mustAddTag(t, tags, tagOpts, reflect.TypeFor[sliceStructArray](), 135)
+	mustAddTag(t, tags, tagOpts, reflect.TypeFor[anyStructArray](), 136)
+	mustAddTag(t, tags, tagOpts, reflect.TypeFor[zeroIntArray](), 137)
+	mustAddTag(t, tags, tagOpts, reflect.TypeFor[zeroSliceStructArray](), 138)
+	mustAddTag(t, tags, tagOpts, reflect.TypeFor[intSlice](), 139)
 
 	dm := mustDecModeWithTags(t, DecOptions{}, tags)
 
@@ -6645,9 +6645,7 @@ func TestUnmarshalTagNum55799EnclosingRegisteredTagToInterface(t *testing.T) {
 	// Tag number 55799 enclosing a registered tag has no effect when decoding to an
 	// interface implemented by the registered type (RFC 8949 Section 3.4.6).
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired}, reflect.TypeOf(StringFoo("")), 100); err != nil {
-		t.Fatalf("TagSet.Add(): unexpected error: %v", err)
-	}
+	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired}, reflect.TypeFor[StringFoo](), 100)
 	dm := mustDecModeWithTags(t, DecOptions{}, tags)
 
 	for _, data := range [][]byte{
@@ -6693,9 +6691,7 @@ func TestUnmarshalTagNum55799ToRegisteredGoType(t *testing.T) {
 	typ := reflect.TypeFor[myInt]()
 
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 125); err != nil {
-		t.Fatalf("TagSet.Add(%s, %v) returned error %v", typ, 125, err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 125)
 
 	dm := mustDecModeWithTags(t, DecOptions{}, tags)
 
@@ -6768,9 +6764,7 @@ func TestUnmarshalNestedTagNum55799ToRegisteredGoType(t *testing.T) {
 	typ := reflect.TypeFor[myInt]()
 
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 125); err != nil {
-		t.Fatalf("TagSet.Add(%s, %v) returned error %v", typ, 125, err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 125)
 
 	dm := mustDecModeWithTags(t, DecOptions{}, tags)
 
@@ -7170,14 +7164,11 @@ type FooStruct struct {
 func TestUnmarshalTaggedDataToInterface(t *testing.T) {
 
 	var tags = NewTagSet()
-	err := tags.Add(
+	mustAddTag(t, tags,
 		TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired},
 		reflect.TypeFor[*Bar](),
 		4,
 	)
-	if err != nil {
-		t.Error(err)
-	}
 
 	v := &FooStruct{
 		Foos: []Foo{&Bar{1}},
@@ -7229,16 +7220,9 @@ type A2 struct {
 }
 
 func TestUnmarshalRegisteredTagToInterface(t *testing.T) {
-	var err error
 	tags := NewTagSet()
-	err = tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeFor[C](), 279)
-	if err != nil {
-		t.Error(err)
-	}
-	err = tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeFor[D](), 280)
-	if err != nil {
-		t.Error(err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeFor[C](), 279)
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeFor[D](), 280)
 
 	em := mustEncModeWithTags(t, PreferredUnsortedEncOptions(), tags)
 	dm := mustDecModeWithTags(t, DecOptions{}, tags)
@@ -7789,9 +7773,7 @@ func TestUnmarshalWithUnrecognizedTagToAnyModeForSharedTag(t *testing.T) {
 	typ := reflect.TypeFor[myInt]()
 
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 125); err != nil {
-		t.Fatalf("TagSet.Add(%s, %v) returned error %v", typ, 125, err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 125)
 
 	for _, tc := range []struct {
 		name string

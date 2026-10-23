@@ -193,13 +193,11 @@ func TestEncodeStructToIndefArrayWithCBORTag(t *testing.T) {
 	}
 
 	tags := NewTagSet()
-	if err := tags.Add(
+	mustAddTag(t, tags,
 		TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired},
 		reflect.TypeFor[S](),
 		121,
-	); err != nil {
-		t.Fatalf("TagSet.Add returned error: %v", err)
-	}
+	)
 
 	em := mustEncModeWithTags(t, EncOptions{ToIndefArrayStructTag: ToIndefArrayStructTagAllowed}, tags)
 	in := S{Field1: 1, Field2: 2}

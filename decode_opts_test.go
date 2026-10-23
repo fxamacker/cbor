@@ -785,87 +785,67 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 	for _, tc := range []struct {
 		name         string
 		opts         DecOptions
-		tags         func(TagSet) error
+		tagNum       uint64
 		wantErrorMsg string
 	}{
 		{
-			name: "base64url encoding tag ignored by default",
-			opts: DecOptions{},
-			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 21)
-			},
+			name:         "base64url encoding tag ignored by default",
+			opts:         DecOptions{},
+			tagNum:       21,
 			wantErrorMsg: "",
 		},
 		{
-			name: "base64url encoding tag conflicts in ByteStringToStringAllowedWithExpectedLaterEncoding mode",
-			opts: DecOptions{ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding},
-			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 21)
-			},
+			name:         "base64url encoding tag conflicts in ByteStringToStringAllowedWithExpectedLaterEncoding mode",
+			opts:         DecOptions{ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding},
+			tagNum:       21,
 			wantErrorMsg: "cbor: DecMode with ByteStringToString set to ByteStringToStringAllowedWithExpectedLaterEncoding or non-default ByteStringExpectedFormat treats tag 21 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
 		{
-			name: "base64url encoding tag conflicts with non-default ByteSliceExpectedEncoding option",
-			opts: DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
-			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 21)
-			},
+			name:         "base64url encoding tag conflicts with non-default ByteSliceExpectedEncoding option",
+			opts:         DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
+			tagNum:       21,
 			wantErrorMsg: "cbor: DecMode with ByteStringToString set to ByteStringToStringAllowedWithExpectedLaterEncoding or non-default ByteStringExpectedFormat treats tag 21 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
 		{
-			name: "base64 encoding tag ignored by default",
-			opts: DecOptions{},
-			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 22)
-			},
+			name:         "base64 encoding tag ignored by default",
+			opts:         DecOptions{},
+			tagNum:       22,
 			wantErrorMsg: "",
 		},
 		{
-			name: "base64 encoding tag conflicts in ByteStringToStringAllowedWithExpectedLaterEncoding mode",
-			opts: DecOptions{ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding},
-			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 22)
-			},
+			name:         "base64 encoding tag conflicts in ByteStringToStringAllowedWithExpectedLaterEncoding mode",
+			opts:         DecOptions{ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding},
+			tagNum:       22,
 			wantErrorMsg: "cbor: DecMode with ByteStringToString set to ByteStringToStringAllowedWithExpectedLaterEncoding or non-default ByteStringExpectedFormat treats tag 22 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
 		{
-			name: "base64 encoding tag conflicts with non-default ByteSliceExpectedEncoding option",
-			opts: DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
-			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 22)
-			},
+			name:         "base64 encoding tag conflicts with non-default ByteSliceExpectedEncoding option",
+			opts:         DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
+			tagNum:       22,
 			wantErrorMsg: "cbor: DecMode with ByteStringToString set to ByteStringToStringAllowedWithExpectedLaterEncoding or non-default ByteStringExpectedFormat treats tag 22 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
 		{
-			name: "base16 encoding tag ignored by default",
-			opts: DecOptions{},
-			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 23)
-			},
+			name:         "base16 encoding tag ignored by default",
+			opts:         DecOptions{},
+			tagNum:       23,
 			wantErrorMsg: "",
 		},
 		{
-			name: "base16 encoding tag conflicts in ByteStringToStringAllowedWithExpectedLaterEncoding mode",
-			opts: DecOptions{ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding},
-			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 23)
-			},
+			name:         "base16 encoding tag conflicts in ByteStringToStringAllowedWithExpectedLaterEncoding mode",
+			opts:         DecOptions{ByteStringToString: ByteStringToStringAllowedWithExpectedLaterEncoding},
+			tagNum:       23,
 			wantErrorMsg: "cbor: DecMode with ByteStringToString set to ByteStringToStringAllowedWithExpectedLaterEncoding or non-default ByteStringExpectedFormat treats tag 23 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
 		{
-			name: "base16 encoding tag conflicts with non-default ByteSliceExpectedEncoding option",
-			opts: DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
-			tags: func(tags TagSet) error {
-				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 23)
-			},
+			name:         "base16 encoding tag conflicts with non-default ByteSliceExpectedEncoding option",
+			opts:         DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
+			tagNum:       23,
 			wantErrorMsg: "cbor: DecMode with ByteStringToString set to ByteStringToStringAllowedWithExpectedLaterEncoding or non-default ByteStringExpectedFormat treats tag 23 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			tags := NewTagSet()
-			if err := tc.tags(tags); err != nil {
-				t.Fatal(err)
-			}
+			mustAddTag(t, tags, TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), tc.tagNum)
 
 			if _, err := tc.opts.DecModeWithTags(tags); err == nil {
 				if tc.wantErrorMsg != "" {

@@ -5210,10 +5210,8 @@ func TestMarshalByteSliceMode(t *testing.T) {
 
 func testMarshalByteSliceMode(t *testing.T) {
 	type namedByteSlice []byte
-	ts := NewTagSet()
-	if err := ts.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeFor[namedByteSlice](), 0xcc); err != nil {
-		t.Fatal(err)
-	}
+	tags := NewTagSet()
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired}, reflect.TypeFor[namedByteSlice](), 0xcc)
 
 	for _, tc := range []struct {
 		name string
@@ -5254,28 +5252,28 @@ func testMarshalByteSliceMode(t *testing.T) {
 		},
 		{
 			name: "user-registered tag numbers are encoded with no expected encoding tag",
-			tags: ts,
+			tags: tags,
 			opts: EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatNone},
 			in:   namedByteSlice{0xbb},
 			want: []byte{0xd8, 0xcc, 0x41, 0xbb},
 		},
 		{
 			name: "user-registered tag numbers are encoded after base64url expected encoding tag",
-			tags: ts,
+			tags: tags,
 			opts: EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64URL},
 			in:   namedByteSlice{0xbb},
 			want: []byte{0xd5, 0xd8, 0xcc, 0x41, 0xbb},
 		},
 		{
 			name: "user-registered tag numbers are encoded after base64 expected encoding tag",
-			tags: ts,
+			tags: tags,
 			opts: EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64},
 			in:   namedByteSlice{0xbb},
 			want: []byte{0xd6, 0xd8, 0xcc, 0x41, 0xbb},
 		},
 		{
 			name: "user-registered tag numbers are encoded after base16 expected encoding tag",
-			tags: ts,
+			tags: tags,
 			opts: EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase16},
 			in:   namedByteSlice{0xbb},
 			want: []byte{0xd7, 0xd8, 0xcc, 0x41, 0xbb},
@@ -5528,10 +5526,8 @@ func TestTextMarshalerMode(t *testing.T) {
 }
 
 func testTextMarshalerMode(t *testing.T) {
-	testTags := NewTagSet()
-	if err := testTags.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeFor[testTextMarshaler](), 9999); err != nil {
-		t.Fatal(err)
-	}
+	tags := NewTagSet()
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired}, reflect.TypeFor[testTextMarshaler](), 9999)
 
 	for _, tc := range []struct {
 		name string
@@ -5555,7 +5551,7 @@ func testTextMarshalerMode(t *testing.T) {
 		{
 			name: "struct implementing TextMarshaler is encoded as MarshalText's output in a text string with TextMarshalerTextString",
 			opts: EncOptions{TextMarshaler: TextMarshalerTextString},
-			tags: testTags,
+			tags: tags,
 			in:   testTextMarshaler{String: "z"},
 			want: []byte{0xd9, 0x27, 0x0f, 0x61, 'z'}, // 9999("z")
 		},
@@ -5683,11 +5679,6 @@ func TestTextMarshalerModeError(t *testing.T) {
 }
 
 func testTextMarshalerModeError(t *testing.T) {
-	testTags := NewTagSet()
-	if err := testTags.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeFor[testTextMarshaler](), 9999); err != nil {
-		t.Fatal(err)
-	}
-
 	for _, tc := range []struct {
 		name string
 		opts EncOptions
@@ -5810,10 +5801,8 @@ func TestJSONMarshalerTranscoder(t *testing.T) {
 }
 
 func testJSONMarshalerTranscoder(t *testing.T) {
-	testTags := NewTagSet()
-	if err := testTags.Add(TagOptions{EncTag: EncTagRequired}, reflect.TypeFor[stubJSONMarshaler](), 9999); err != nil {
-		t.Fatal(err)
-	}
+	tags := NewTagSet()
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired}, reflect.TypeFor[stubJSONMarshaler](), 9999)
 
 	for _, tc := range []struct {
 		name  string
@@ -5889,7 +5878,7 @@ func testJSONMarshalerTranscoder(t *testing.T) {
 		},
 		{
 			name:            "value-receiver marshaler with registered tag",
-			tags:            testTags,
+			tags:            tags,
 			value:           stubJSONMarshaler{JSON: `"a"`},
 			transcodeInput:  []byte(`"a"`),
 			transcodeOutput: []byte{0x61, 'a'},                   // "a"
