@@ -12,11 +12,7 @@ import (
 // option allowed. It is a small helper to keep tests focused on behavior.
 func allowToIndefArrayMode(t *testing.T) EncMode {
 	t.Helper()
-	em, err := EncOptions{ToIndefArrayStructTag: ToIndefArrayStructTagAllowed}.EncMode()
-	if err != nil {
-		t.Fatalf("EncMode() returned error: %v", err)
-	}
-	return em
+	return mustEncMode(t, EncOptions{ToIndefArrayStructTag: ToIndefArrayStructTagAllowed})
 }
 
 // TestEncodeStructToIndefArrayBasic verifies the encoded bytes for a
@@ -205,10 +201,7 @@ func TestEncodeStructToIndefArrayWithCBORTag(t *testing.T) {
 		t.Fatalf("TagSet.Add returned error: %v", err)
 	}
 
-	em, err := EncOptions{ToIndefArrayStructTag: ToIndefArrayStructTagAllowed}.EncModeWithTags(tags)
-	if err != nil {
-		t.Fatalf("EncModeWithTags returned error: %v", err)
-	}
+	em := mustEncModeWithTags(t, EncOptions{ToIndefArrayStructTag: ToIndefArrayStructTagAllowed}, tags)
 	in := S{Field1: 1, Field2: 2}
 	want := []byte{0xd8, 0x79, 0x9f, 0x01, 0x02, 0xff} // EDN: 121([_ 1, 2])
 

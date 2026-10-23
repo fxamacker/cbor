@@ -692,10 +692,7 @@ func TestDecoderBuffered(t *testing.T) {
 func TestEncoder(t *testing.T) {
 	var want bytes.Buffer
 	var w bytes.Buffer
-	em, err := CanonicalEncOptions().EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	}
+	em := mustEncMode(t, CanonicalEncOptions())
 	encoder := em.NewEncoder(&w)
 	for _, tc := range marshalTestCases {
 		for _, value := range tc.values {
@@ -845,10 +842,7 @@ func TestIndefiniteByteStringWithInvalidChunk(t *testing.T) { //nolint:gocyclo
 	t.Run("byte slice with ByteSliceLaterFormat option", func(t *testing.T) {
 		expectedErrorMsg := "cbor: cannot encode item type slice for indefinite-length byte string"
 
-		em, err := EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64}.EncMode()
-		if err != nil {
-			t.Fatalf("EncMode() returned error %v", err)
-		}
+		em := mustEncMode(t, EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64})
 
 		var w bytes.Buffer
 		encoder := em.NewEncoder(&w)
@@ -865,10 +859,7 @@ func TestIndefiniteByteStringWithInvalidChunk(t *testing.T) { //nolint:gocyclo
 	t.Run("nil byte slice with NilContainerAsNull (default) option", func(t *testing.T) {
 		expectedErrorMsg := "cbor: cannot encode item type slice for indefinite-length byte string"
 
-		em, err := EncOptions{NilContainers: NilContainerAsNull}.EncMode() // NilContainerAsNull is the default option
-		if err != nil {
-			t.Fatalf("EncMode() returned error %v", err)
-		}
+		em := mustEncMode(t, EncOptions{NilContainers: NilContainerAsNull}) // NilContainerAsNull is the default option
 
 		var w bytes.Buffer
 		encoder := em.NewEncoder(&w)
@@ -1055,10 +1046,7 @@ func TestIndefiniteTextStringWithInvalidChunk(t *testing.T) {
 	t.Run("string with StringToByteString option", func(t *testing.T) {
 		expectedErrorMsg := "cbor: cannot encode item type string for indefinite-length UTF-8 text string"
 
-		em, err := EncOptions{String: StringToByteString}.EncMode()
-		if err != nil {
-			t.Fatalf("EncMode() returned error %v", err)
-		}
+		em := mustEncMode(t, EncOptions{String: StringToByteString})
 		var w bytes.Buffer
 		encoder := em.NewEncoder(&w)
 		if err := encoder.StartIndefiniteTextString(); err != nil {
@@ -1209,10 +1197,7 @@ func TestIndefiniteArrayWithNilElement(t *testing.T) {
 func TestIndefiniteMap(t *testing.T) {
 	want := mustHexDecode("bf61610161629f0203ffff")
 	var w bytes.Buffer
-	em, err := EncOptions{Sort: SortCanonical}.EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	}
+	em := mustEncMode(t, EncOptions{Sort: SortCanonical})
 	encoder := em.NewEncoder(&w)
 	if err := encoder.StartIndefiniteMap(); err != nil {
 		t.Fatalf("StartIndefiniteMap() returned error %v", err)
@@ -1546,10 +1531,7 @@ func TestDecoderRejectedDataItem(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		dm, err := tc.opts.DecMode()
-		if err != nil {
-			t.Fatalf("DecMode: unexpected error: %v", err)
-		}
+		dm := mustDecMode(t, tc.opts)
 
 		data := append(append([]byte{}, tc.data...), 0x61, 0x61) // concatenate CBOR data item "a" after tc.data
 		want := "a"
@@ -1630,10 +1612,7 @@ func TestDecoderRejectedDataItemNoAdvance(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		dm, err := tc.opts.DecMode()
-		if err != nil {
-			t.Fatalf("DecMode: unexpected error: %v", err)
-		}
+		dm := mustDecMode(t, tc.opts)
 
 		for _, r := range streamTestReaders {
 			t.Run(tc.name+"/"+r.name, func(t *testing.T) {

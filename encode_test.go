@@ -525,10 +525,7 @@ func testInvalidTypeMarshal(t *testing.T) {
 			wantErrorMsg: "cbor: unsupported type: complex128",
 		},
 	}
-	em, err := EncOptions{Sort: SortCanonical}.EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	}
+	em := mustEncMode(t, EncOptions{Sort: SortCanonical})
 	for _, tc := range marshalErrorTestCases {
 		t.Run(tc.name, func(t *testing.T) {
 			v := tc.value
@@ -655,14 +652,9 @@ func testMarshalLargeMap(t *testing.T) {
 func testMarshal(t *testing.T, testCases []marshalTestCase) {
 	t.Helper()
 
-	em, err := EncOptions{Sort: SortCanonical}.EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	}
-	bem, err := EncOptions{Sort: SortCanonical}.UserBufferEncMode()
-	if err != nil {
-		t.Errorf("UserBufferEncMode() returned an error %v", err)
-	}
+	em := mustEncMode(t, EncOptions{Sort: SortCanonical})
+	bem := mustUserBufferEncMode(t, EncOptions{Sort: SortCanonical})
+
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("0x%.16x", tc.wantData), func(t *testing.T) {
 			for _, value := range tc.values {
@@ -874,11 +866,8 @@ func testMarshalStructCanonical(t *testing.T) {
 	binary.BigEndian.PutUint32(b, uint32(1000000))
 	data.Write(b)
 
-	em, err := EncOptions{Sort: SortCanonical}.EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %q", err)
-	}
-	b, err = em.Marshal(v)
+	em := mustEncMode(t, EncOptions{Sort: SortCanonical})
+	b, err := em.Marshal(v)
 	checkMarshal(t, "em.Marshal", b, err, data.Bytes())
 }
 
@@ -1235,8 +1224,8 @@ func testOmitAndRenameStructField(t *testing.T) {
 		0x62, 0x49, 0x6f, 0x02,
 		0x69, 0x6f, 0x6d, 0x69, 0x74, 0x65, 0x6d, 0x70, 0x74, 0x79, 0x03}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testCases := []roundTripTestCase{
 		{"default values", v1, want1},
 		{"non-default values", v2, want2}}
@@ -1283,8 +1272,8 @@ func testOmitEmptyForBuiltinType(t *testing.T) {
 		0x64, 0x69, 0x6e, 0x74, 0x66, 0xf6,
 	}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
@@ -1301,8 +1290,8 @@ func testOmitEmptyForAnonymousStruct(t *testing.T) {
 	v := T{}
 	want := []byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0xa0} // {"str": {}}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
@@ -1330,8 +1319,8 @@ func testOmitEmptyForStruct1(t *testing.T) {
 	v := T{}
 	want := []byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0xa0} // {"str": {}}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
@@ -1358,8 +1347,8 @@ func testOmitEmptyForStruct2(t *testing.T) {
 	v := T{}
 	want := []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0xa1, 0x65, 0x69, 0x6e, 0x74, 0x66, 0x6f, 0xf6} // {"stro": {intfo: nil}}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, []roundTripTestCase{{"non-default values", v, want}}, em, dm)
 }
 
@@ -1425,9 +1414,9 @@ func testOmitEmptyMode(t *testing.T) {
 		0x63, 0x73, 0x74, 0x72, 0xa0,
 	}
 
-	emOmitEmptyGoValue, _ := EncOptions{OmitEmpty: OmitEmptyGoValue}.EncMode()
-	emOmitEmptyCBORValue, _ := EncOptions{OmitEmpty: OmitEmptyCBORValue}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	emOmitEmptyGoValue := mustEncMode(t, EncOptions{OmitEmpty: OmitEmptyGoValue})
+	emOmitEmptyCBORValue := mustEncMode(t, EncOptions{OmitEmpty: OmitEmptyCBORValue})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, []roundTripTestCase{{"OmitEmptyGoValue (default)", v, wantDataWithOmitEmptyGoValue}}, emOmitEmptyGoValue, dm)
 	testRoundTrip(t, []roundTripTestCase{{"OmitEmptyCBORValue", v, wantDataWithOmitEmptyCBORValue}}, emOmitEmptyCBORValue, dm)
 }
@@ -1459,8 +1448,8 @@ func testOmitEmptyForNestedStruct(t *testing.T) {
 	v := T{}
 	want := []byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0xa0} // {"str": {}}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
@@ -1492,8 +1481,8 @@ func testOmitEmptyForToArrayStruct1(t *testing.T) {
 	}
 	want := []byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0x80} // {"str": []}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, []roundTripTestCase{{"no exportable fields", v, want}}, em, dm)
 }
 
@@ -1522,8 +1511,8 @@ func testOmitEmptyForToArrayStruct2(t *testing.T) {
 	// {"stro": [false, 0, 0, 0.0, "", [], {}, nil, nil]}
 	want := []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0x89, 0xf4, 0x00, 0x00, 0xfb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60, 0xf6, 0xf6, 0xf6, 0xf6}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, []roundTripTestCase{{"has exportable fields", v, want}}, em, dm)
 }
 
@@ -1669,8 +1658,8 @@ func testOmitEmptyForBinaryMarshaler1(t *testing.T) {
 		},
 	}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, testCases, em, dm)
 }
 
@@ -1700,8 +1689,8 @@ func testOmitEmptyForBinaryMarshaler2(t *testing.T) {
 		},
 	}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, testCases, em, dm)
 }
 
@@ -1718,8 +1707,8 @@ func testOmitEmptyForTime(t *testing.T) {
 	v := T{}
 	want := []byte{0xa1, 0x61, 0x74, 0xf6} // {"t": nil}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
@@ -1736,8 +1725,8 @@ func testOmitEmptyForBigInt(t *testing.T) {
 	v := T{}
 	want := []byte{0xa1, 0x62, 0x62, 0x69, 0xc2, 0x40} // {"bi": 2([])}
 
-	em, _ := EncOptions{BigIntConvert: BigIntConvertNone}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{BigIntConvert: BigIntConvertNone})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
@@ -1781,8 +1770,8 @@ func testOmitZeroForBuiltinType(t *testing.T) {
 		0x64, 0x69, 0x6e, 0x74, 0x66, 0xf6,
 	}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
@@ -1799,8 +1788,8 @@ func testOmitZeroForAnonymousStruct(t *testing.T) {
 	v := T{}
 	want := []byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0xa0} // {"str": {}}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
@@ -1828,8 +1817,8 @@ func testOmitZeroForStruct1(t *testing.T) {
 	v := T{}
 	want := []byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0xa0} // {"str": {}}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
@@ -1856,8 +1845,8 @@ func testOmitZeroForStruct2(t *testing.T) {
 	v := T{}
 	want := []byte{0xa0} // {}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, []roundTripTestCase{{"non-default values", v, want}}, em, dm)
 }
 
@@ -1888,8 +1877,8 @@ func testOmitZeroForNestedStruct(t *testing.T) {
 	v := T{}
 	want := []byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0xa0} // {"str": {}}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
@@ -1921,8 +1910,8 @@ func testOmitZeroForToArrayStruct1(t *testing.T) {
 	}
 	want := []byte{0xa1, 0x63, 0x73, 0x74, 0x72, 0x80} // {"str": []}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, []roundTripTestCase{{"no exportable fields", v, want}}, em, dm)
 }
 
@@ -1951,8 +1940,8 @@ func testOmitZeroForToArrayStruct2(t *testing.T) {
 	// {"stro": [false, 0, 0, 0.0, "", [], {}, nil, nil]}
 	want := []byte{0xa1, 0x64, 0x73, 0x74, 0x72, 0x6f, 0x89, 0xf4, 0x00, 0x00, 0xfb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60, 0xf6, 0xf6, 0xf6, 0xf6}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, []roundTripTestCase{{"has exportable fields", v, want}}, em, dm)
 }
 
@@ -2098,8 +2087,8 @@ func testOmitZeroForBinaryMarshaler1(t *testing.T) {
 		},
 	}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, testCases, em, dm)
 }
 
@@ -2129,8 +2118,8 @@ func testOmitZeroForBinaryMarshaler2(t *testing.T) {
 		},
 	}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, testCases, em, dm)
 }
 
@@ -2146,8 +2135,8 @@ func testOmitZeroForTime(t *testing.T) {
 	v := T{}
 	want := []byte{0xa0} // {}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
@@ -2163,8 +2152,8 @@ func testOmitZeroForBigInt(t *testing.T) {
 	v := T{}
 	want := []byte{0xa0} // {}
 
-	em, _ := EncOptions{BigIntConvert: BigIntConvertNone}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{BigIntConvert: BigIntConvertNone})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
 }
 
@@ -2497,8 +2486,8 @@ func testJSONStdlibOmitZero(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			em, _ := EncOptions{}.EncMode()
-			dm, _ := DecOptions{}.DecMode()
+			em := mustEncMode(t, EncOptions{})
+			dm := mustDecMode(t, DecOptions{})
 			testRoundTrip(t, []roundTripTestCase{{tc.name, tc.obj, tc.want}}, em, dm)
 		})
 	}
@@ -3045,10 +3034,7 @@ func testMarshalUnmarshalStructKeyAsInt(t *testing.T) {
 			wantCborData: mustHexDecode("a301012203613202"), // {1: 1, -3: 3, "2": 2}
 		},
 	}
-	em, err := EncOptions{Sort: SortCanonical}.EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned error %v", err)
-	}
+	em := mustEncMode(t, EncOptions{Sort: SortCanonical})
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			b, err := em.Marshal(tc.obj)
@@ -3153,10 +3139,7 @@ func testMarshalUnmarshalStructToArray(t *testing.T) {
 			checkMarshal(t, "Marshal", b, err, tc.wantCborData)
 
 			// SortMode should be ignored for struct to array encoding
-			em, err := EncOptions{Sort: SortCanonical}.EncMode()
-			if err != nil {
-				t.Errorf("EncMode() returned error %v", err)
-			}
+			em := mustEncMode(t, EncOptions{Sort: SortCanonical})
 			b, err = em.Marshal(tc.obj)
 			checkMarshal(t, "em.Marshal", b, err, tc.wantCborData)
 
@@ -3234,10 +3217,7 @@ func testMapSort(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			em, err := tc.opts.EncMode()
-			if err != nil {
-				t.Errorf("EncMode() returned error %v", err)
-			}
+			em := mustEncMode(t, tc.opts)
 			b, err := em.Marshal(m)
 			checkMarshal(t, "em.Marshal", b, err, tc.wantCborData)
 		})
@@ -3305,10 +3285,7 @@ func testStructSort(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			em, err := tc.opts.EncMode()
-			if err != nil {
-				t.Errorf("EncMode() returned error %v", err)
-			}
+			em := mustEncMode(t, tc.opts)
 			b, err := em.Marshal(v)
 			checkMarshal(t, "em.Marshal", b, err, tc.wantCborData)
 		})
@@ -3431,14 +3408,8 @@ func testTypeAlias(t *testing.T) {
 			wantCborData: mustHexDecode("a201020304"),
 		},
 	}
-	em, err := EncOptions{Sort: SortCanonical}.EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	}
-	dm, err := DecOptions{}.DecMode()
-	if err != nil {
-		t.Errorf("DecMode() returned an error %v", err)
-	}
+	em := mustEncMode(t, EncOptions{Sort: SortCanonical})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, testCases, em, dm)
 }
 
@@ -3558,14 +3529,8 @@ func testNewTypeWithBuiltinUnderlyingType(t *testing.T) { //nolint:dupl
 			wantCborData: mustHexDecode("a201020304"),
 		},
 	}
-	em, err := EncOptions{Sort: SortCanonical}.EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	}
-	dm, err := DecOptions{}.DecMode()
-	if err != nil {
-		t.Errorf("DecMode() returned an error %v", err)
-	}
+	em := mustEncMode(t, EncOptions{Sort: SortCanonical})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, testCases, em, dm)
 }
 
@@ -3656,10 +3621,7 @@ func testShortestFloat16(t *testing.T) {
 			wantCborData: mustHexDecode("fb7e37e43c8800759c"),
 		},
 	}
-	em, err := EncOptions{ShortestFloat: ShortestFloat16}.EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	}
+	em := mustEncMode(t, EncOptions{ShortestFloat: ShortestFloat16})
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			b, err := em.Marshal(tc.f64)
@@ -3822,10 +3784,7 @@ func testShortestFloatNone(t *testing.T) {
 			wantCborData: mustHexDecode("fb7e37e43c8800759c"),
 		},
 	}
-	em, err := EncOptions{ShortestFloat: ShortestFloatNone}.EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	}
+	em := mustEncMode(t, EncOptions{ShortestFloat: ShortestFloatNone})
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			b, err := em.Marshal(tc.f)
@@ -3907,10 +3866,7 @@ func testInfConvert(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			em, err := tc.opts.EncMode()
-			if err != nil {
-				t.Fatalf("EncMode() returned an error %v", err)
-			}
+			em := mustEncMode(t, tc.opts)
 			b, err := em.Marshal(tc.v)
 			checkMarshal(t, "em.Marshal", b, err, tc.wantCborData)
 		})
@@ -3922,10 +3878,7 @@ func testInfConvert(t *testing.T) {
 			vName = fmt.Sprintf("0x%x", math.Float64bits(v))
 		}
 		t.Run("reject inf "+vName, func(t *testing.T) {
-			em, err := EncOptions{InfConvert: InfConvertReject}.EncMode()
-			if err != nil {
-				t.Fatalf("EncMode() returned an error %v", err)
-			}
+			em := mustEncMode(t, EncOptions{InfConvert: InfConvertReject})
 			want := &UnsupportedValueError{msg: "floating-point infinity"}
 			b, got := em.Marshal(tc.v)
 			checkMarshalErr[*UnsupportedValueError](t, "em.Marshal", b, got, want.Error())
@@ -3986,10 +3939,7 @@ func testNilContainers(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			em, err := tc.opts.EncMode()
-			if err != nil {
-				t.Errorf("EncMode() returned an error %v", err)
-			}
+			em := mustEncMode(t, tc.opts)
 			b, err := em.Marshal(tc.v)
 			checkMarshal(t, "em.Marshal", b, err, tc.wantCborData)
 		})
@@ -4532,20 +4482,14 @@ func testNaNConvert(t *testing.T) {
 			}
 			name := convertName + "_" + vName
 			t.Run(name, func(t *testing.T) {
-				em, err := convert.opt.EncMode()
-				if err != nil {
-					t.Fatalf("EncMode() returned an error %v", err)
-				}
+				em := mustEncMode(t, convert.opt)
 				b, err := em.Marshal(tc.v)
 				checkMarshal(t, "em.Marshal", b, err, convert.wantCborData)
 			})
 		}
 
 		t.Run("ConvertReject_"+vName, func(t *testing.T) {
-			em, err := EncOptions{NaNConvert: NaNConvertReject}.EncMode()
-			if err != nil {
-				t.Fatalf("EncMode() returned an error %v", err)
-			}
+			em := mustEncMode(t, EncOptions{NaNConvert: NaNConvertReject})
 			want := &UnsupportedValueError{msg: "floating-point NaN"}
 			b, got := em.Marshal(tc.v)
 			checkMarshalErr[*UnsupportedValueError](t, "em.Marshal", b, got, want.Error())
@@ -4580,10 +4524,7 @@ func testMarshalSenML(t *testing.T) {
 			if err := unmarshal(t, data, &v); err != nil {
 				t.Errorf("Marshal() returned error %v", err)
 			}
-			em, err := tc.opts.EncMode()
-			if err != nil {
-				t.Errorf("EncMode() returned an error %v", err)
-			}
+			em := mustEncMode(t, tc.opts)
 			b, err := em.Marshal(v)
 			if err != nil {
 				t.Errorf("Unmarshal() returned error %v ", err)
@@ -4632,7 +4573,7 @@ func TestEncIndefiniteLengthOption(t *testing.T) {
 	// StartIndefiniteXXX returns error when IndefLength = IndefLengthForbidden
 	t.Run("forbid indefinite length", func(t *testing.T) {
 		var buf bytes.Buffer
-		em, _ := EncOptions{IndefLength: IndefLengthForbidden}.EncMode()
+		em := mustEncMode(t, EncOptions{IndefLength: IndefLengthForbidden})
 		enc := em.NewEncoder(&buf)
 		wantErrorMsg := "cbor: indefinite-length byte string isn't allowed"
 		if err := enc.StartIndefiniteByteString(); err == nil {
@@ -4710,7 +4651,7 @@ func testEncTagsMdOption(t *testing.T) {
 
 	// Encoding Tag and TagsForbidden option returns error
 	wantErrorMsg = "cbor: cannot encode cbor.Tag when TagsMd is TagsForbidden"
-	em, _ := EncOptions{TagsMd: TagsForbidden}.EncMode()
+	em := mustEncMode(t, EncOptions{TagsMd: TagsForbidden})
 	b, err := em.Marshal(&tag)
 	checkMarshalErr[error](t, "em.Marshal", b, err, wantErrorMsg)
 
@@ -4770,18 +4711,9 @@ func testMarshalPosBigInt(t *testing.T) {
 		},
 	}
 
-	dmShortest, err := EncOptions{}.EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	}
-	dmShortestWithTagsForbidden, err := EncOptions{TagsMd: TagsForbidden}.EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	}
-	dmBigInt, err := EncOptions{BigIntConvert: BigIntConvertNone}.EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	}
+	emShortest := mustEncMode(t, EncOptions{})
+	emShortestWithTagsForbidden := mustEncMode(t, EncOptions{TagsMd: TagsForbidden})
+	emBigInt := mustEncMode(t, EncOptions{BigIntConvert: BigIntConvertNone})
 
 	tagsForbiddenErrorMsg := "cbor: cannot encode big.Int outside CBOR integer range when TagsMd is TagsForbidden"
 
@@ -4790,21 +4722,21 @@ func testMarshalPosBigInt(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			b, err := dmShortest.Marshal(tc.value)
-			checkMarshal(t, "dmShortest.Marshal", b, err, tc.cborDataShortest)
+			b, err := emShortest.Marshal(tc.value)
+			checkMarshal(t, "emShortest.Marshal", b, err, tc.cborDataShortest)
 
-			b, err = dmBigInt.Marshal(tc.value)
-			checkMarshal(t, "dmBigInt.Marshal", b, err, tc.cborDataBigInt)
+			b, err = emBigInt.Marshal(tc.value)
+			checkMarshal(t, "emBigInt.Marshal", b, err, tc.cborDataBigInt)
 
-			b, err = dmShortestWithTagsForbidden.Marshal(tc.value)
-			checkMarshalCase[error](t, "dmShortestWithTagsForbidden.Marshal", b, err, tc.cborDataShortest,
+			b, err = emShortestWithTagsForbidden.Marshal(tc.value)
+			checkMarshalCase[error](t, "emShortestWithTagsForbidden.Marshal", b, err, tc.cborDataShortest,
 				bytes.Equal(tc.cborDataShortest, tc.cborDataBigInt), tagsForbiddenErrorMsg)
 
 			v := s{B: tc.value}
 			want := append([]byte(nil), wantStructPrefix...)
 			want = append(want, tc.cborDataBigInt...)
-			b, err = dmBigInt.Marshal(&v)
-			checkMarshal(t, "dmBigInt.Marshal", b, err, want)
+			b, err = emBigInt.Marshal(&v)
+			checkMarshal(t, "emBigInt.Marshal", b, err, want)
 		})
 	}
 }
@@ -4870,31 +4802,22 @@ func testMarshalNegBigInt(t *testing.T) {
 		},
 	}
 
-	dmShortest, err := EncOptions{}.EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	}
-	dmShortestWithTagsForbidden, err := EncOptions{TagsMd: TagsForbidden}.EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	}
-	dmBigInt, err := EncOptions{BigIntConvert: BigIntConvertNone}.EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	}
+	emShortest := mustEncMode(t, EncOptions{})
+	emShortestWithTagsForbidden := mustEncMode(t, EncOptions{TagsMd: TagsForbidden})
+	emBigInt := mustEncMode(t, EncOptions{BigIntConvert: BigIntConvertNone})
 
 	tagsForbiddenErrorMsg := "cbor: cannot encode big.Int outside CBOR integer range when TagsMd is TagsForbidden"
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			b, err := dmShortest.Marshal(tc.value)
-			checkMarshal(t, "dmShortest.Marshal", b, err, tc.cborDataShortest)
+			b, err := emShortest.Marshal(tc.value)
+			checkMarshal(t, "emShortest.Marshal", b, err, tc.cborDataShortest)
 
-			b, err = dmBigInt.Marshal(tc.value)
-			checkMarshal(t, "dmBigInt.Marshal", b, err, tc.cborDataBigInt)
+			b, err = emBigInt.Marshal(tc.value)
+			checkMarshal(t, "emBigInt.Marshal", b, err, tc.cborDataBigInt)
 
-			b, err = dmShortestWithTagsForbidden.Marshal(tc.value)
-			checkMarshalCase[error](t, "dmShortestWithTagsForbidden.Marshal", b, err, tc.cborDataShortest,
+			b, err = emShortestWithTagsForbidden.Marshal(tc.value)
+			checkMarshalCase[error](t, "emShortestWithTagsForbidden.Marshal", b, err, tc.cborDataShortest,
 				bytes.Equal(tc.cborDataShortest, tc.cborDataBigInt), tagsForbiddenErrorMsg)
 		})
 	}
@@ -4920,8 +4843,8 @@ func testStructWithSimpleValueFields(t *testing.T) {
 		0x63, 0x53, 0x56, 0x32, 0xf8, 0xff,
 	}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testCases := []roundTripTestCase{
 		{"default values", v1, want1},
 		{"non-default values", v2, want2}}
@@ -4938,26 +4861,20 @@ func testMapWithSimpleValueKey(t *testing.T) {
 	// Decode CBOR map with positive integer 0 and simple value 0 as keys.
 	// No map key duplication is detected because keys are of different CBOR types.
 	// RFC 8949 Section 5.6.1 says "a simple value 2 is not equivalent to an integer 2".
-	decOpts := DecOptions{
-		DupMapKey: DupMapKeyEnforcedAPF, // duplicated key not allowed
-	}
-	decMode, _ := decOpts.DecMode()
+	dm := mustDecMode(t, DecOptions{DupMapKey: DupMapKeyEnforcedAPF})
 
 	var v map[any]any
-	err := unmarshalWithDM(t, decMode, data, &v)
+	err := unmarshalWithDM(t, dm, data, &v)
 	if err != nil {
 		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
 	}
 
 	// Encode decoded Go map.
-	encOpts := EncOptions{
-		Sort: SortBytewiseLexical,
-	}
-	encMode, _ := encOpts.EncMode()
+	em := mustEncMode(t, EncOptions{Sort: SortBytewiseLexical})
 
 	// Test roundtrip produces identical CBOR data.
-	encodedData, err := encMode.Marshal(v)
-	checkMarshal(t, "encMode.Marshal", encodedData, err, data)
+	encodedData, err := em.Marshal(v)
+	checkMarshal(t, "em.Marshal", encodedData, err, data)
 }
 
 func TestMarshalStringType(t *testing.T) {
@@ -4985,11 +4902,7 @@ func testMarshalStringType(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			em, err := tc.opts.EncMode()
-			if err != nil {
-				t.Fatal(err)
-			}
-
+			em := mustEncMode(t, tc.opts)
 			got, err := em.Marshal(tc.in)
 			checkMarshal(t, "em.Marshal", got, err, tc.want)
 		})
@@ -5049,11 +4962,7 @@ func testMarshalFieldNameType(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			em, err := tc.opts.EncMode()
-			if err != nil {
-				t.Fatal(err)
-			}
-
+			em := mustEncMode(t, tc.opts)
 			got, err := em.Marshal(tc.in)
 			checkMarshal(t, "em.Marshal", got, err, tc.want)
 		})
@@ -5188,11 +5097,7 @@ func testMarshalerReturnsDisallowedCBORData(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			em, err := tc.encOpts.EncMode()
-			if err != nil {
-				t.Fatal(err)
-			}
-
+			em := mustEncMode(t, tc.encOpts)
 			b, err := em.Marshal(tc.value)
 			checkMarshalCase[*MarshalerError](t, "em.Marshal", b, err, tc.value.(marshaler).data, tc.wantErrorMsg != "", tc.wantErrorMsg)
 		})
@@ -5204,10 +5109,7 @@ func TestSortModeFastShuffle(t *testing.T) {
 }
 
 func testSortModeFastShuffle(t *testing.T) {
-	em, err := EncOptions{Sort: SortFastShuffle}.EncMode()
-	if err != nil {
-		t.Fatal(err)
-	}
+	em := mustEncMode(t, EncOptions{Sort: SortFastShuffle})
 
 	// These cases are based on the assumption that even a constant-time shuffle algorithm can
 	// give an unbiased permutation of the keys when there are exactly 2 keys, so each trial
@@ -5258,10 +5160,7 @@ func TestSortModeFastShuffleEmptyStruct(t *testing.T) {
 }
 
 func testSortModeFastShuffleEmptyStruct(t *testing.T) {
-	em, err := EncOptions{Sort: SortFastShuffle}.EncMode()
-	if err != nil {
-		t.Fatal(err)
-	}
+	em := mustEncMode(t, EncOptions{Sort: SortFastShuffle})
 	want := []byte{0xa0}
 	got, err := em.Marshal(struct{}{})
 	checkMarshal(t, "em.Marshal", got, err, want)
@@ -5298,11 +5197,7 @@ func testMarshalByteArrayMode(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			em, err := tc.opts.EncMode()
-			if err != nil {
-				t.Fatal(err)
-			}
-
+			em := mustEncMode(t, tc.opts)
 			out, err := em.Marshal(tc.in)
 			checkMarshal(t, "em.Marshal", out, err, tc.want)
 		})
@@ -5389,17 +5284,10 @@ func testMarshalByteSliceMode(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var em EncMode
 			if tc.tags != nil {
-				var err error
-				if em, err = tc.opts.EncModeWithTags(tc.tags); err != nil {
-					t.Fatal(err)
-				}
+				em = mustEncModeWithTags(t, tc.opts, tc.tags)
 			} else {
-				var err error
-				if em, err = tc.opts.EncMode(); err != nil {
-					t.Fatal(err)
-				}
+				em = mustEncMode(t, tc.opts)
 			}
-
 			out, err := em.Marshal(tc.in)
 			checkMarshal(t, "em.Marshal", out, err, tc.want)
 		})
@@ -5411,10 +5299,7 @@ func TestBigIntConvertReject(t *testing.T) {
 }
 
 func testBigIntConvertReject(t *testing.T) {
-	em, err := EncOptions{BigIntConvert: BigIntConvertReject}.EncMode()
-	if err != nil {
-		t.Fatal(err)
-	}
+	em := mustEncMode(t, EncOptions{BigIntConvert: BigIntConvertReject})
 
 	want := &UnsupportedTypeError{Type: typeBigInt}
 
@@ -5523,11 +5408,7 @@ func testBinaryMarshalerMode(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			em, err := tc.opts.EncMode()
-			if err != nil {
-				t.Fatal(err)
-			}
-
+			em := mustEncMode(t, tc.opts)
 			got, err := em.Marshal(tc.in)
 			checkMarshal(t, "em.Marshal", got, err, tc.want)
 		})
@@ -5626,11 +5507,7 @@ func testBinaryMarshalerModeWithUnsupportedType(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			em, err := tc.opts.EncMode()
-			if err != nil {
-				t.Fatalf("EncMode(): unexpected error: %v", err)
-			}
-
+			em := mustEncMode(t, tc.opts)
 			got, err := em.Marshal(tc.in)
 			checkMarshalCase[*UnsupportedTypeError](t, "em.Marshal", got, err, tc.want, tc.wantError, "")
 		})
@@ -5704,22 +5581,14 @@ func testTextMarshalerMode(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			var (
-				enc EncMode
-				err error
-			)
-
+			var em EncMode
 			if tc.tags != nil {
-				enc, err = tc.opts.EncModeWithTags(tc.tags)
+				em = mustEncModeWithTags(t, tc.opts, tc.tags)
 			} else {
-				enc, err = tc.opts.EncMode()
+				em = mustEncMode(t, tc.opts)
 			}
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			got, err := enc.Marshal(tc.in)
-			checkMarshal(t, "enc.Marshal", got, err, tc.want)
+			got, err := em.Marshal(tc.in)
+			checkMarshal(t, "em.Marshal", got, err, tc.want)
 		})
 	}
 }
@@ -5802,11 +5671,7 @@ func testTextMarshalerModeWithUnsupportedType(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			em, err := tc.opts.EncMode()
-			if err != nil {
-				t.Fatalf("EncMode(): unexpected error: %v", err)
-			}
-
+			em := mustEncMode(t, tc.opts)
 			got, err := em.Marshal(tc.in)
 			checkMarshalCase[*UnsupportedTypeError](t, "em.Marshal", got, err, tc.want, tc.wantError, "")
 		})
@@ -5847,13 +5712,9 @@ func testTextMarshalerModeError(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			enc, err := tc.opts.EncMode()
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			b, err := enc.Marshal(tc.in)
-			checkMarshalErr[error](t, "enc.Marshal", b, err, tc.want)
+			em := mustEncMode(t, tc.opts)
+			b, err := em.Marshal(tc.in)
+			checkMarshalErr[error](t, "em.Marshal", b, err, tc.want)
 		})
 	}
 }
@@ -5892,58 +5753,55 @@ func TestJSONMarshalerTranscoderNil(t *testing.T) {
 }
 
 func testJSONMarshalerTranscoderNil(t *testing.T) {
-	enc, err := EncOptions{}.EncMode()
-	if err != nil {
-		t.Fatal(err)
-	}
+	em := mustEncMode(t, EncOptions{})
 
 	{
 		want := []byte{0xa1, 0x64, 'J', 'S', 'O', 'N', 0x61, 'z'}
 
 		// default encode behavior of underlying type
-		got, err := enc.Marshal(&stubJSONMarshalerPointerReceiver{JSON: "z"})
-		checkMarshal(t, "enc.Marshal", got, err, want)
+		got, err := em.Marshal(&stubJSONMarshalerPointerReceiver{JSON: "z"})
+		checkMarshal(t, "em.Marshal", got, err, want)
 	}
 
 	{
 		want := []byte{0xa1, 0x61, 'm', 0xa1, 0x64, 'J', 'S', 'O', 'N', 0x60}
 
 		// default empty condition of underlying type
-		got, err := enc.Marshal(struct {
+		got, err := em.Marshal(struct {
 			M stubJSONMarshalerPointerReceiver `cbor:"m,omitempty"`
 		}{})
-		checkMarshal(t, "enc.Marshal", got, err, want)
+		checkMarshal(t, "em.Marshal", got, err, want)
 	}
 
 	{
 		// default encode behavior of underlying unsupported type
 		value := jsonMarshalerWithUnsupportedType{}
-		b, err := enc.Marshal(value)
-		checkMarshalErr[*UnsupportedTypeError](t, "enc.Marshal", b, err, "")
+		b, err := em.Marshal(value)
+		checkMarshalErr[*UnsupportedTypeError](t, "em.Marshal", b, err, "")
 	}
 	{
 		// default encode behavior of struct with underlying unsupported type
 		value := struct {
 			M jsonMarshalerWithUnsupportedType
 		}{}
-		b, err := enc.Marshal(value)
-		checkMarshalErr[*UnsupportedTypeError](t, "enc.Marshal", b, err, "")
+		b, err := em.Marshal(value)
+		checkMarshalErr[*UnsupportedTypeError](t, "em.Marshal", b, err, "")
 	}
 	{
 		// default empty condition of underlying unsupported type
 		value := struct {
 			M jsonMarshalerWithUnsupportedType `cbor:",omitempty"`
 		}{}
-		b, err := enc.Marshal(value)
-		checkMarshalErr[*UnsupportedTypeError](t, "enc.Marshal", b, err, "")
+		b, err := em.Marshal(value)
+		checkMarshalErr[*UnsupportedTypeError](t, "em.Marshal", b, err, "")
 	}
 	{
 		// default zero condition of underlying unsupported type
 		value := struct {
 			M jsonMarshalerWithUnsupportedType `cbor:",omitzero"`
 		}{}
-		b, err := enc.Marshal(value)
-		checkMarshalErr[*UnsupportedTypeError](t, "enc.Marshal", b, err, "")
+		b, err := em.Marshal(value)
+		checkMarshalErr[*UnsupportedTypeError](t, "em.Marshal", b, err, "")
 	}
 }
 
@@ -6089,21 +5947,15 @@ func testJSONMarshalerTranscoder(t *testing.T) {
 					return err
 				}),
 			}
-			var (
-				enc EncMode
-				err error
-			)
+			var em EncMode
 			if tc.tags != nil {
-				enc, err = opts.EncModeWithTags(tc.tags)
+				em = mustEncModeWithTags(t, opts, tc.tags)
 			} else {
-				enc, err = opts.EncMode()
-			}
-			if err != nil {
-				t.Fatal(err)
+				em = mustEncMode(t, opts)
 			}
 
-			b, err := enc.Marshal(tc.value)
-			checkMarshalCase[error](t, "enc.Marshal", b, err, tc.wantCborData, tc.wantErrorMsg != "", tc.wantErrorMsg)
+			b, err := em.Marshal(tc.value)
+			checkMarshalCase[error](t, "em.Marshal", b, err, tc.wantCborData, tc.wantErrorMsg != "", tc.wantErrorMsg)
 		})
 	}
 }
@@ -6349,11 +6201,7 @@ func testOmitZeroWithMultipleMarshalers(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			em, err := tc.opts.EncMode()
-			if err != nil {
-				t.Fatalf("EncMode(): unexpected error: %v", err)
-			}
-
+			em := mustEncMode(t, tc.opts)
 			got, err := em.Marshal(tc.in)
 			checkMarshalCase[*UnsupportedTypeError](t, "em.Marshal", got, err, tc.want, tc.wantError, "")
 		})
@@ -6408,10 +6256,7 @@ func TestMarshalToBufferNilBuffer(t *testing.T) {
 	}
 
 	// Test UserBufferEncMode method
-	bem, err := EncOptions{}.UserBufferEncMode()
-	if err != nil {
-		t.Fatal(err)
-	}
+	bem := mustUserBufferEncMode(t, EncOptions{})
 	if err := bem.MarshalToBuffer(42, nil); err == nil {
 		t.Error("UserBufferEncMode.MarshalToBuffer(42, nil) didn't return an error")
 	}
@@ -6633,7 +6478,7 @@ func TestMarshalAddressableMarshaler(t *testing.T) {
 }
 
 func testMarshalAddressableMarshaler(t *testing.T) {
-	em, err := EncOptions{
+	em := mustEncMode(t, EncOptions{
 		TextMarshaler: TextMarshalerTextString,
 		JSONMarshalerTranscoder: transcodeFunc(func(w io.Writer, r io.Reader) error {
 			b, err := io.ReadAll(r)
@@ -6649,10 +6494,7 @@ func testMarshalAddressableMarshaler(t *testing.T) {
 			}
 			return err
 		}),
-	}.EncMode()
-	if err != nil {
-		t.Fatal(err)
-	}
+	})
 
 	t.Run("Marshaler", func(t *testing.T) {
 		v := struct {
@@ -6722,13 +6564,8 @@ func testMarshalNilByteStringArrayAndMap(t *testing.T) {
 		M map[string]any
 	}
 
-	nilContainersAsNullEM, _ := EncOptions{
-		NilContainers: NilContainerAsNull,
-	}.EncMode()
-
-	nilContainersAsEmptyEM, _ := EncOptions{
-		NilContainers: NilContainerAsEmpty,
-	}.EncMode()
+	emNilContainersAsNull := mustEncMode(t, EncOptions{NilContainers: NilContainerAsNull})
+	emNilContainersAsEmpty := mustEncMode(t, EncOptions{NilContainers: NilContainerAsEmpty})
 
 	for _, tc := range []struct {
 		name string
@@ -6738,73 +6575,73 @@ func testMarshalNilByteStringArrayAndMap(t *testing.T) {
 	}{
 		{
 			name: "[]byte(nil) with NilContainerAsNull opt",
-			em:   nilContainersAsNullEM,
+			em:   emNilContainersAsNull,
 			in:   []byte(nil),
 			want: []byte{0xf6}, // null
 		},
 		{
 			name: "[]byte(nil) with NilContainerAsEmpty opt",
-			em:   nilContainersAsEmptyEM,
+			em:   emNilContainersAsEmpty,
 			in:   []byte(nil),
 			want: []byte{0x40}, // h''
 		},
 		{
 			name: "struct{[]byte(nil)} with NilContainerAsNull opt",
-			em:   nilContainersAsNullEM,
+			em:   emNilContainersAsNull,
 			in:   s1{B: []byte(nil)},
 			want: []byte{0xa1, 0x61, 0x42, 0xf6}, // {"B": null}
 		},
 		{
 			name: "struct{[]byte(nil)} with NilContainerAsEmpty opt",
-			em:   nilContainersAsEmptyEM,
+			em:   emNilContainersAsEmpty,
 			in:   s1{B: []byte(nil)},
 			want: []byte{0xa1, 0x61, 0x42, 0x40}, // {"B": h''}
 		},
 		{
 			name: "[]any(nil) with NilContainerAsNull opt",
-			em:   nilContainersAsNullEM,
+			em:   emNilContainersAsNull,
 			in:   []any(nil),
 			want: []byte{0xf6}, // null
 		},
 		{
 			name: "[]any(nil) with NilContainerAsEmpty opt",
-			em:   nilContainersAsEmptyEM,
+			em:   emNilContainersAsEmpty,
 			in:   []any(nil),
 			want: []byte{0x80}, // []
 		},
 		{
 			name: "struct{[]any(nil)} with NilContainerAsNull opt",
-			em:   nilContainersAsNullEM,
+			em:   emNilContainersAsNull,
 			in:   s2{A: []any(nil)},
 			want: []byte{0xa1, 0x61, 0x41, 0xf6}, // {"A": null}
 		},
 		{
 			name: "struct{[]any(nil)} with NilContainerAsEmpty opt",
-			em:   nilContainersAsEmptyEM,
+			em:   emNilContainersAsEmpty,
 			in:   s2{A: []any(nil)},
 			want: []byte{0xa1, 0x61, 0x41, 0x80}, // {"A": []}
 		},
 		{
 			name: "map[string]any(nil) with NilContainerAsNull opt",
-			em:   nilContainersAsNullEM,
+			em:   emNilContainersAsNull,
 			in:   map[string]any(nil),
 			want: []byte{0xf6}, // null
 		},
 		{
 			name: "map[string]any(nil) with NilContainerAsEmpty opt",
-			em:   nilContainersAsEmptyEM,
+			em:   emNilContainersAsEmpty,
 			in:   map[string]any(nil),
 			want: []byte{0xa0}, // {}
 		},
 		{
 			name: "struct{map[string]any(nil)} with NilContainerAsNull opt",
-			em:   nilContainersAsNullEM,
+			em:   emNilContainersAsNull,
 			in:   s3{M: map[string]any(nil)},
 			want: []byte{0xa1, 0x61, 0x4d, 0xf6}, // {"M": null}
 		},
 		{
 			name: "struct{map[string]any(nil)} with NilContainerAsEmpty opt",
-			em:   nilContainersAsEmptyEM,
+			em:   emNilContainersAsEmpty,
 			in:   s3{M: map[string]any(nil)},
 			want: []byte{0xa1, 0x61, 0x4d, 0xa0}, // {"M": {}}
 		},
@@ -6837,13 +6674,8 @@ func TestMarshalArrayMapError(t *testing.T) {
 }
 
 func testMarshalArrayMapError(t *testing.T) {
-	sortNoneEM, _ := EncOptions{
-		Sort: SortNone,
-	}.EncMode()
-
-	sortLengthFirstEM, _ := EncOptions{
-		Sort: SortLengthFirst,
-	}.EncMode()
+	emSortNone := mustEncMode(t, EncOptions{Sort: SortNone})
+	emSortLengthFirst := mustEncMode(t, EncOptions{Sort: SortLengthFirst})
 
 	c := make(chan bool)
 
@@ -6859,32 +6691,32 @@ func testMarshalArrayMapError(t *testing.T) {
 		},
 		{
 			name: "map[string]any with SortNone",
-			em:   sortNoneEM,
+			em:   emSortNone,
 			in:   map[string]any{"a": c, "b": c},
 		},
 		{
 			name: "map[string]any with SortLengthFirst",
-			em:   sortLengthFirstEM,
+			em:   emSortLengthFirst,
 			in:   map[string]any{"a": c, "b": c},
 		},
 		{
 			name: "map[any]any with SortNone (unsupported key)",
-			em:   sortNoneEM,
+			em:   emSortNone,
 			in:   map[any]any{c: 1, "b": 2},
 		},
 		{
 			name: "map[any]any with SortLengthFirst (unsupported key)",
-			em:   sortLengthFirstEM,
+			em:   emSortLengthFirst,
 			in:   map[any]any{c: 1, "b": 2},
 		},
 		{
 			name: "map[any]any with SortNone (unsupported value)",
-			em:   sortNoneEM,
+			em:   emSortNone,
 			in:   map[any]any{"a": c, "b": c},
 		},
 		{
 			name: "map[any]any with SortLengthFirst (unsupported value)",
-			em:   sortLengthFirstEM,
+			em:   emSortLengthFirst,
 			in:   map[any]any{"a": c, "b": c},
 		},
 	} {
@@ -7030,10 +6862,7 @@ func testMarshalStructWithFastPathTypes(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			em, err := tc.opts.EncMode()
-			if err != nil {
-				t.Fatalf("EncMode(): unexpected error: %v", err)
-			}
+			em := mustEncMode(t, tc.opts)
 
 			// Encode struct fields that can use fast path
 			got, err := em.Marshal(tc.in)

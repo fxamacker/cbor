@@ -167,6 +167,51 @@ func testMarshalWithFP(t *testing.T, f func(t *testing.T)) {
 	}
 }
 
+func mustEncMode(t *testing.T, opts EncOptions) EncMode { //nolint:gocritic // ignore hugeParam
+	t.Helper()
+	em, err := opts.EncMode()
+	if err != nil {
+		t.Fatalf("EncMode: unexpected error: %v", err)
+	}
+	return em
+}
+
+func mustEncModeWithTags(t *testing.T, opts EncOptions, tags TagSet) EncMode { //nolint:gocritic // ignore hugeParam
+	t.Helper()
+	em, err := opts.EncModeWithTags(tags)
+	if err != nil {
+		t.Fatalf("EncModeWithTags: unexpected error: %v", err)
+	}
+	return em
+}
+
+func mustUserBufferEncMode(t *testing.T, opts EncOptions) UserBufferEncMode { //nolint:gocritic // ignore hugeParam
+	t.Helper()
+	em, err := opts.UserBufferEncMode()
+	if err != nil {
+		t.Fatalf("UserBufferEncMode: unexpected error: %v", err)
+	}
+	return em
+}
+
+func mustDecMode(t *testing.T, opts DecOptions) DecMode { //nolint:gocritic // ignore hugeParam
+	t.Helper()
+	dm, err := opts.DecMode()
+	if err != nil {
+		t.Fatalf("DecMode: unexpected error: %v", err)
+	}
+	return dm
+}
+
+func mustDecModeWithTags(t *testing.T, opts DecOptions, tags TagSet) DecMode { //nolint:gocritic // ignore hugeParam
+	t.Helper()
+	dm, err := opts.DecModeWithTags(tags)
+	if err != nil {
+		t.Fatalf("DecModeWithTags: unexpected error: %v", err)
+	}
+	return dm
+}
+
 // Other helper functions
 
 // checkMarshal checks whether a marshal call was successful.

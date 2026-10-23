@@ -99,8 +99,8 @@ func TestByteString(t *testing.T) {
 		},
 	}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
 	testRoundTrip(t, testCases, em, dm)
 }
 

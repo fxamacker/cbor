@@ -552,10 +552,7 @@ func TestToIndefArrayStructTagRejectsIndefLengthForbidden(t *testing.T) {
 // IndefLength and ToIndefArrayStructTag are mutually exclusive.
 func TestToIndefArrayStructTagOptionsRoundTrip(t *testing.T) {
 	opts := EncOptions{ToIndefArrayStructTag: ToIndefArrayStructTagAllowed}
-	em, err := opts.EncMode()
-	if err != nil {
-		t.Fatalf("EncMode() returned error: %v", err)
-	}
+	em := mustEncMode(t, opts)
 	got := em.EncOptions()
 	if !reflect.DeepEqual(opts, got) {
 		t.Errorf("EncOptions round-trip mismatch:\n got: %#v\nwant: %#v", got, opts)
@@ -568,14 +565,10 @@ func TestEncOptionsTagsForbidden(t *testing.T) {
 	opts1 := EncOptions{
 		TagsMd: TagsForbidden,
 	}
-	em, err := opts1.EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	} else {
-		opts2 := em.EncOptions()
-		if !reflect.DeepEqual(opts1, opts2) {
-			t.Errorf("EncOptions->EncMode->EncOptions returned different values: %#v, %#v", opts1, opts2)
-		}
+	em := mustEncMode(t, opts1)
+	opts2 := em.EncOptions()
+	if !reflect.DeepEqual(opts1, opts2) {
+		t.Errorf("EncOptions->EncMode->EncOptions returned different values: %#v, %#v", opts1, opts2)
 	}
 }
 
@@ -585,10 +578,7 @@ func TestCanonicalEncOptions(t *testing.T) { //nolint:dupl
 	wantNaNConvert := NaNConvert7e00
 	wantInfConvert := InfConvertFloat16
 	wantErrorMsg := "cbor: indefinite-length array isn't allowed"
-	em, err := CanonicalEncOptions().EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	}
+	em := mustEncMode(t, CanonicalEncOptions())
 	opts := em.EncOptions()
 	if opts.Sort != wantSortMode {
 		t.Errorf("CanonicalEncOptions() returned EncOptions with Sort %d, want %d", opts.Sort, wantSortMode)
@@ -616,10 +606,7 @@ func TestCTAP2EncOptions(t *testing.T) { //nolint:dupl
 	wantNaNConvert := NaNConvertNone
 	wantInfConvert := InfConvertNone
 	wantErrorMsg := "cbor: indefinite-length array isn't allowed"
-	em, err := CTAP2EncOptions().EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	}
+	em := mustEncMode(t, CTAP2EncOptions())
 	opts := em.EncOptions()
 	if opts.Sort != wantSortMode {
 		t.Errorf("CTAP2EncOptions() returned EncOptions with Sort %d, want %d", opts.Sort, wantSortMode)
@@ -647,10 +634,7 @@ func TestCoreDetEncOptions(t *testing.T) { //nolint:dupl
 	wantNaNConvert := NaNConvert7e00
 	wantInfConvert := InfConvertFloat16
 	wantErrorMsg := "cbor: indefinite-length array isn't allowed"
-	em, err := CoreDetEncOptions().EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	}
+	em := mustEncMode(t, CoreDetEncOptions())
 	opts := em.EncOptions()
 	if opts.Sort != wantSortMode {
 		t.Errorf("CoreDetEncOptions() returned EncOptions with Sort %d, want %d", opts.Sort, wantSortMode)
@@ -677,10 +661,7 @@ func TestPreferredUnsortedEncOptions(t *testing.T) {
 	wantShortestFloat := ShortestFloat16
 	wantNaNConvert := NaNConvert7e00
 	wantInfConvert := InfConvertFloat16
-	em, err := PreferredUnsortedEncOptions().EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	}
+	em := mustEncMode(t, PreferredUnsortedEncOptions())
 	opts := em.EncOptions()
 	if opts.Sort != wantSortMode {
 		t.Errorf("PreferredUnsortedEncOptions() returned EncOptions with Sort %d, want %d", opts.Sort, wantSortMode)
@@ -748,13 +729,9 @@ func TestEncOptions(t *testing.T) {
 			t.Errorf("options field %q is unset or set to the zero value for its type", fn)
 		}
 	}
-	em, err := opts1.EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned an error %v", err)
-	} else {
-		opts2 := em.EncOptions()
-		if !reflect.DeepEqual(opts1, opts2) {
-			t.Errorf("EncOptions->EncMode->EncOptions returned different values: %#v, %#v", opts1, opts2)
-		}
+	em := mustEncMode(t, opts1)
+	opts2 := em.EncOptions()
+	if !reflect.DeepEqual(opts1, opts2) {
+		t.Errorf("EncOptions->EncMode->EncOptions returned different values: %#v, %#v", opts1, opts2)
 	}
 }

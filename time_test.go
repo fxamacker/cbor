@@ -188,12 +188,9 @@ func TestDecodeTimeError(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			dm, err := tc.opts.DecMode()
-			if err != nil {
-				t.Fatal(err)
-			}
+			dm := mustDecMode(t, tc.opts)
 			tm := time.Now()
-			err = unmarshalWithDM(t, dm, tc.data, &tm)
+			err := unmarshalWithDM(t, dm, tc.data, &tm)
 			checkError[error](t, "dm.Unmarshal", err, tc.wantErrorMsg)
 		})
 	}
@@ -275,7 +272,7 @@ func TestDecodeInvalidTagTime(t *testing.T) {
 			wantErrorMsg:  "cbor: tag number 1 must be followed by integer or floating-point number, got UTF-8 text string",
 		},
 	}
-	dm, _ := DecOptions{TimeTag: DecTagOptional}.DecMode()
+	dm := mustDecMode(t, DecOptions{TimeTag: DecTagOptional})
 	for _, tc := range testCases {
 		for _, decodeToType := range tc.decodeToTypes {
 			t.Run(tc.name+" decode to "+decodeToType.String(), func(t *testing.T) {
@@ -291,17 +288,17 @@ func TestDecodeTag0Error(t *testing.T) {
 	data := mustHexDecode("c01a514b67b0") // 0(1363896240)
 	wantErrorMsg := "cbor: tag number 0 must be followed by text string, got positive integer"
 
-	timeTagIgnoredDM, _ := DecOptions{TimeTag: DecTagIgnored}.DecMode()
-	timeTagOptionalDM, _ := DecOptions{TimeTag: DecTagOptional}.DecMode()
-	timeTagRequiredDM, _ := DecOptions{TimeTag: DecTagRequired}.DecMode()
+	dmTimeTagIgnored := mustDecMode(t, DecOptions{TimeTag: DecTagIgnored})
+	dmTimeTagOptional := mustDecMode(t, DecOptions{TimeTag: DecTagOptional})
+	dmTimeTagRequired := mustDecMode(t, DecOptions{TimeTag: DecTagRequired})
 
 	testCases := []struct {
 		name string
 		dm   DecMode
 	}{
-		{name: "DecTagIgnored", dm: timeTagIgnoredDM},
-		{name: "DecTagOptional", dm: timeTagOptionalDM},
-		{name: "DecTagRequired", dm: timeTagRequiredDM},
+		{name: "DecTagIgnored", dm: dmTimeTagIgnored},
+		{name: "DecTagOptional", dm: dmTimeTagOptional},
+		{name: "DecTagRequired", dm: dmTimeTagRequired},
 	}
 
 	for _, tc := range testCases {
@@ -328,17 +325,17 @@ func TestDecodeTag1Error(t *testing.T) {
 	data := mustHexDecode("c174323031332d30332d32315432303a30343a30305a") // 1("2013-03-21T20:04:00Z")
 	wantErrorMsg := "cbor: tag number 1 must be followed by integer or floating-point number, got UTF-8 text string"
 
-	timeTagIgnoredDM, _ := DecOptions{TimeTag: DecTagIgnored}.DecMode()
-	timeTagOptionalDM, _ := DecOptions{TimeTag: DecTagOptional}.DecMode()
-	timeTagRequiredDM, _ := DecOptions{TimeTag: DecTagRequired}.DecMode()
+	dmTimeTagIgnored := mustDecMode(t, DecOptions{TimeTag: DecTagIgnored})
+	dmTimeTagOptional := mustDecMode(t, DecOptions{TimeTag: DecTagOptional})
+	dmTimeTagRequired := mustDecMode(t, DecOptions{TimeTag: DecTagRequired})
 
 	testCases := []struct {
 		name string
 		dm   DecMode
 	}{
-		{name: "DecTagIgnored", dm: timeTagIgnoredDM},
-		{name: "DecTagOptional", dm: timeTagOptionalDM},
-		{name: "DecTagRequired", dm: timeTagRequiredDM},
+		{name: "DecTagIgnored", dm: dmTimeTagIgnored},
+		{name: "DecTagOptional", dm: dmTimeTagOptional},
+		{name: "DecTagRequired", dm: dmTimeTagRequired},
 	}
 
 	for _, tc := range testCases {
@@ -406,7 +403,7 @@ func TestDecodeTimeStreaming(t *testing.T) {
 	for _, tc := range testCases {
 		data = append(data, tc.data...)
 	}
-	dm, _ := DecOptions{TimeTag: DecTagOptional}.DecMode()
+	dm := mustDecMode(t, DecOptions{TimeTag: DecTagOptional})
 	dec := dm.NewDecoder(bytes.NewReader(data))
 	for _, tc := range testCases {
 		var v any
@@ -422,15 +419,15 @@ func TestDecodeTimeStreaming(t *testing.T) {
 }
 
 func TestDecTimeTagOption(t *testing.T) {
-	timeTagIgnoredDecMode, _ := DecOptions{TimeTag: DecTagIgnored}.DecMode()
-	timeTagOptionalDecMode, _ := DecOptions{TimeTag: DecTagOptional}.DecMode()
-	timeTagRequiredDecMode, _ := DecOptions{TimeTag: DecTagRequired}.DecMode()
+	dmTimeTagIgnored := mustDecMode(t, DecOptions{TimeTag: DecTagIgnored})
+	dmTimeTagOptional := mustDecMode(t, DecOptions{TimeTag: DecTagOptional})
+	dmTimeTagRequired := mustDecMode(t, DecOptions{TimeTag: DecTagRequired})
 
 	testCases := []struct {
 		name                string
 		cborRFC3339Time     []byte
 		cborUnixTime        []byte
-		decMode             DecMode
+		dm                  DecMode
 		wantTime            time.Time
 		wantErrorMsg        string
 		wantErrorMsgPartial bool
@@ -440,21 +437,21 @@ func TestDecTimeTagOption(t *testing.T) {
 			name:            "not-tagged data with DecTagIgnored option",
 			cborRFC3339Time: mustHexDecode("74323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("1a514b67b0"),
-			decMode:         timeTagIgnoredDecMode,
+			dm:              dmTimeTagIgnored,
 			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
 			name:            "not-tagged data with timeTagOptionalDecMode option",
 			cborRFC3339Time: mustHexDecode("74323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("1a514b67b0"),
-			decMode:         timeTagOptionalDecMode,
+			dm:              dmTimeTagOptional,
 			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
 			name:                "not-tagged data with timeTagRequiredDecMode option",
 			cborRFC3339Time:     mustHexDecode("74323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:        mustHexDecode("1a514b67b0"),
-			decMode:             timeTagRequiredDecMode,
+			dm:                  dmTimeTagRequired,
 			wantErrorMsg:        "(expect CBOR tag value)",
 			wantErrorMsgPartial: true,
 		},
@@ -463,21 +460,21 @@ func TestDecTimeTagOption(t *testing.T) {
 			name:            "tagged data with timeTagIgnoredDecMode option",
 			cborRFC3339Time: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c11a514b67b0"),
-			decMode:         timeTagIgnoredDecMode,
+			dm:              dmTimeTagIgnored,
 			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
 			name:            "tagged data with timeTagOptionalDecMode option",
 			cborRFC3339Time: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c11a514b67b0"),
-			decMode:         timeTagOptionalDecMode,
+			dm:              dmTimeTagOptional,
 			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
 			name:            "tagged data with timeTagRequiredDecMode option",
 			cborRFC3339Time: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c11a514b67b0"),
-			decMode:         timeTagRequiredDecMode,
+			dm:              dmTimeTagRequired,
 			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		// mis-tagged time CBOR data
@@ -485,28 +482,28 @@ func TestDecTimeTagOption(t *testing.T) {
 			name:            "mis-tagged data with timeTagIgnoredDecMode option",
 			cborRFC3339Time: mustHexDecode("c8c974323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c8c91a514b67b0"),
-			decMode:         timeTagIgnoredDecMode,
+			dm:              dmTimeTagIgnored,
 			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
 			name:            "mis-tagged data with timeTagOptionalDecMode option",
 			cborRFC3339Time: mustHexDecode("c8c974323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c8c91a514b67b0"),
-			decMode:         timeTagOptionalDecMode,
+			dm:              dmTimeTagOptional,
 			wantErrorMsg:    "cbor: wrong tag number for time.Time, got 8, expect 0 or 1",
 		},
 		{
 			name:            "mis-tagged data with timeTagRequiredDecMode option",
 			cborRFC3339Time: mustHexDecode("c8c974323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c8c91a514b67b0"),
-			decMode:         timeTagRequiredDecMode,
+			dm:              dmTimeTagRequired,
 			wantErrorMsg:    "cbor: wrong tag number for time.Time, got 8, expect 0 or 1",
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			tm := time.Now()
-			err := unmarshalWithDM(t, tc.decMode, tc.cborRFC3339Time, &tm)
+			err := unmarshalWithDM(t, tc.dm, tc.cborRFC3339Time, &tm)
 			if tc.wantErrorMsgPartial {
 				checkUnmarshalCaseFunc[error](t, "dm.Unmarshal", tm, err, tc.wantTime, tc.wantErrorMsg != "", "", nonFloatEqual)
 				if !strings.Contains(err.Error(), tc.wantErrorMsg) {
@@ -517,7 +514,7 @@ func TestDecTimeTagOption(t *testing.T) {
 			}
 
 			tm = time.Now()
-			err = unmarshalWithDM(t, tc.decMode, tc.cborUnixTime, &tm)
+			err = unmarshalWithDM(t, tc.dm, tc.cborUnixTime, &tm)
 			if tc.wantErrorMsgPartial {
 				checkUnmarshalCaseFunc[error](t, "dm.Unmarshal", tm, err, tc.wantTime, tc.wantErrorMsg != "", "", nonFloatEqual)
 				if !strings.Contains(err.Error(), tc.wantErrorMsg) {
@@ -600,13 +597,9 @@ func TestDecModeTimeTagToAny(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			dm, err := tc.opts.DecMode()
-			if err != nil {
-				t.Fatal(err)
-			}
-
+			dm := mustDecMode(t, tc.opts)
 			var got any
-			err = unmarshalWithDM(t, dm, tc.data, &got)
+			err := unmarshalWithDM(t, dm, tc.data, &got)
 			if tc.wantErrorMsg != "" {
 				checkUnmarshalErr[error](t, "dm.Unmarshal", got, err, tc.want, tc.wantErrorMsg)
 			} else {
@@ -656,13 +649,9 @@ func TestDecModeByteStringToTime(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			dm, err := tc.opts.DecMode()
-			if err != nil {
-				t.Fatal(err)
-			}
-
+			dm := mustDecMode(t, tc.opts)
 			var got time.Time
-			err = unmarshalWithDM(t, dm, tc.data, &got)
+			err := unmarshalWithDM(t, dm, tc.data, &got)
 			checkUnmarshalCaseFunc[error](t, "dm.Unmarshal", got, err, tc.want, tc.wantErrorMsg != "", tc.wantErrorMsg, nonFloatEqual)
 		})
 	}
@@ -1339,10 +1328,7 @@ func testEncodeTime(t *testing.T) {
 		for _, convert := range tc.convert {
 			name := tc.name + " with " + convert.opt.name + " option"
 			t.Run(name, func(t *testing.T) {
-				em, err := convert.opt.opt.EncMode()
-				if err != nil {
-					t.Errorf("EncMode() returned error %v", err)
-				}
+				em := mustEncMode(t, convert.opt.opt)
 
 				// Marshal time.Time
 				b, err := em.Marshal(tc.tm)
@@ -1377,10 +1363,7 @@ func TestEncodeTimeUnixMicro(t *testing.T) {
 }
 
 func testEncodeTimeUnixMicro(t *testing.T) {
-	em, err := EncOptions{Time: TimeUnixMicro}.EncMode()
-	if err != nil {
-		t.Fatalf("EncMode() returned error %v", err)
-	}
+	em := mustEncMode(t, EncOptions{Time: TimeUnixMicro})
 
 	testCases := []struct {
 		name          string
@@ -1705,10 +1688,7 @@ func testEncodeTimeRFC3339Limits(t *testing.T) {
 					wantData = append([]byte{0xc0}, w.wantData...)
 				}
 				t.Run(name, func(t *testing.T) {
-					em, err := EncOptions{Time: w.opt, TimeTag: tagMode}.EncMode()
-					if err != nil {
-						t.Fatalf("EncMode() error = %v", err)
-					}
+					em := mustEncMode(t, EncOptions{Time: w.opt, TimeTag: tagMode})
 					b, err := em.Marshal(tc.tm)
 					checkMarshalCase[*UnsupportedValueError](t, "em.Marshal", b, err, wantData, w.wantErrorMsg != "", w.wantErrorMsg)
 				})

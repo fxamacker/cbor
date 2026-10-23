@@ -65,14 +65,10 @@ func TestDecModeInvalidTimeTag(t *testing.T) {
 }
 
 func TestDecModeDefaultMaxNestedLevel(t *testing.T) {
-	dm, err := DecOptions{}.DecMode()
-	if err != nil {
-		t.Errorf("DecMode() returned error %v", err)
-	} else {
-		maxNestedLevels := dm.DecOptions().MaxNestedLevels
-		if maxNestedLevels != 32 {
-			t.Errorf("DecOptions().MaxNestedLevels = %d, want %v", maxNestedLevels, 32)
-		}
+	dm := mustDecMode(t, DecOptions{})
+	maxNestedLevels := dm.DecOptions().MaxNestedLevels
+	if maxNestedLevels != 32 {
+		t.Errorf("DecOptions().MaxNestedLevels = %d, want %v", maxNestedLevels, 32)
 	}
 }
 
@@ -106,14 +102,10 @@ func TestDecModeInvalidMaxNestedLevel(t *testing.T) {
 }
 
 func TestDecModeDefaultMaxArrayElements(t *testing.T) {
-	dm, err := DecOptions{}.DecMode()
-	if err != nil {
-		t.Errorf("DecMode() returned error %v", err)
-	} else {
-		maxArrayElements := dm.DecOptions().MaxArrayElements
-		if maxArrayElements != defaultMaxArrayElements {
-			t.Errorf("DecOptions().MaxArrayElementsr = %d, want %v", maxArrayElements, defaultMaxArrayElements)
-		}
+	dm := mustDecMode(t, DecOptions{})
+	maxArrayElements := dm.DecOptions().MaxArrayElements
+	if maxArrayElements != defaultMaxArrayElements {
+		t.Errorf("DecOptions().MaxArrayElementsr = %d, want %v", maxArrayElements, defaultMaxArrayElements)
 	}
 }
 
@@ -147,14 +139,10 @@ func TestDecModeInvalidMaxArrayElements(t *testing.T) {
 }
 
 func TestDecModeDefaultMaxMapPairs(t *testing.T) {
-	dm, err := DecOptions{}.DecMode()
-	if err != nil {
-		t.Errorf("DecMode() returned error %v", err)
-	} else {
-		maxMapPairs := dm.DecOptions().MaxMapPairs
-		if maxMapPairs != defaultMaxMapPairs {
-			t.Errorf("DecOptions().MaxMapPairs = %d, want %v", maxMapPairs, defaultMaxMapPairs)
-		}
+	dm := mustDecMode(t, DecOptions{})
+	maxMapPairs := dm.DecOptions().MaxMapPairs
+	if maxMapPairs != defaultMaxMapPairs {
+		t.Errorf("DecOptions().MaxMapPairs = %d, want %v", maxMapPairs, defaultMaxMapPairs)
 	}
 }
 
@@ -949,13 +937,9 @@ func TestDecOptions(t *testing.T) {
 			t.Errorf("options field %q is unset or set to the zero value for its type", ov.Type().Field(i).Name)
 		}
 	}
-	dm, err := opts1.DecMode()
-	if err != nil {
-		t.Errorf("DecMode() returned an error %v", err)
-	} else {
-		opts2 := dm.DecOptions()
-		if !reflect.DeepEqual(opts1, opts2) {
-			t.Errorf("DecOptions->DecMode->DecOptions returned different values: %#v, %#v", opts1, opts2)
-		}
+	dm := mustDecMode(t, opts1)
+	opts2 := dm.DecOptions()
+	if !reflect.DeepEqual(opts1, opts2) {
+		t.Errorf("DecOptions->DecMode->DecOptions returned different values: %#v, %#v", opts1, opts2)
 	}
 }
