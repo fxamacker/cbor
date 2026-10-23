@@ -321,22 +321,27 @@ func testDecoderEOF(t *testing.T, dec *Decoder) {
 }
 
 type roundTripTestCase struct {
-	name         string
-	obj          any
-	wantCborData []byte
+	name string
+	v    any
+	data []byte
 }
 
-func testRoundTrip(t *testing.T, testCases []roundTripTestCase, em EncMode, dm DecMode) {
+func testRoundTripCases(t *testing.T, testCases []roundTripTestCase, em EncMode, dm DecMode) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			b, err := em.Marshal(tc.obj)
-			checkMarshal(t, "em.Marshal", b, err, tc.wantCborData)
-
-			v := reflect.New(reflect.TypeOf(tc.obj))
-			err = unmarshalWithDM(t, dm, b, v.Interface())
-			checkUnmarshal(t, "dm.Unmarshal", v.Elem().Interface(), err, tc.obj)
+			testRoundTripCase(t, tc.v, tc.data, em, dm)
 		})
 	}
+}
+
+func testRoundTripCase(t *testing.T, v any, data []byte, em EncMode, dm DecMode) {
+	t.Helper()
+	b, err := em.Marshal(v)
+	checkMarshal(t, "em.Marshal", b, err, data)
+
+	rv := reflect.New(reflect.TypeOf(v))
+	err = unmarshalWithDM(t, dm, b, rv.Interface())
+	checkUnmarshal(t, "dm.Unmarshal", rv.Elem().Interface(), err, v)
 }
 
 func nonFloatEqual(got any, want any) bool {

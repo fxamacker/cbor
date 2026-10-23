@@ -4758,19 +4758,19 @@ func (n marshalBinaryError) MarshalBinary() (data []byte, err error) {
 func TestBinaryMarshalerUnmarshaler(t *testing.T) {
 	testCases := []roundTripTestCase{
 		{
-			name:         "primitive obj",
-			obj:          number(1234567890),
-			wantCborData: mustHexDecode("4800000000499602d2"),
+			name: "primitive obj",
+			v:    number(1234567890),
+			data: mustHexDecode("4800000000499602d2"),
 		},
 		{
-			name:         "struct obj",
-			obj:          stru{a: "a", b: "b", c: "c"},
-			wantCborData: mustHexDecode("45612C622C63"),
+			name: "struct obj",
+			v:    stru{a: "a", b: "b", c: "c"},
+			data: mustHexDecode("45612C622C63"),
 		},
 	}
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, testCases, em, dm)
+	testRoundTripCases(t, testCases, em, dm)
 }
 
 func TestBinaryUnmarshalerError(t *testing.T) { //nolint:dupl
@@ -4860,19 +4860,19 @@ func (n marshalCBORError) MarshalCBOR() (data []byte, err error) {
 func TestMarshalerUnmarshaler(t *testing.T) {
 	testCases := []roundTripTestCase{
 		{
-			name:         "primitive obj",
-			obj:          number2(1),
-			wantCborData: mustHexDecode("a1636e756d01"),
+			name: "primitive obj",
+			v:    number2(1),
+			data: mustHexDecode("a1636e756d01"),
 		},
 		{
-			name:         "struct obj",
-			obj:          stru2{a: "a", b: "b", c: "c"},
-			wantCborData: mustHexDecode("83616161626163"),
+			name: "struct obj",
+			v:    stru2{a: "a", b: "b", c: "c"},
+			data: mustHexDecode("83616161626163"),
 		},
 	}
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, testCases, em, dm)
+	testRoundTripCases(t, testCases, em, dm)
 }
 
 func TestUnmarshalerError(t *testing.T) { //nolint:dupl

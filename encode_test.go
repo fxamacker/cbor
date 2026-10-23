@@ -991,12 +991,9 @@ func testAnonymousFields4(t *testing.T) {
 	)
 	v := T{5}
 	want := []byte{0xa1, 0x65, 0x4d, 0x79, 0x49, 0x6e, 0x74, 0x05} // {MyInt: 5}
-	b, err := Marshal(v)
-	checkMarshal(t, "Marshal", b, err, want)
-
-	var v2 T
-	err = unmarshal(t, b, &v2)
-	checkUnmarshal(t, "Unmarshal", v2, err, v)
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestAnonymousFields5(t *testing.T) {
@@ -1033,12 +1030,9 @@ func testAnonymousFields6(t *testing.T) {
 	v := T{new(MyInt)}
 	*v.MyInt = 5
 	want := []byte{0xa1, 0x65, 0x4d, 0x79, 0x49, 0x6e, 0x74, 0x05} // {MyInt: 5}
-	b, err := Marshal(v)
-	checkMarshal(t, "Marshal", b, err, want)
-
-	var v2 T
-	err = unmarshal(t, b, &v2)
-	checkUnmarshal(t, "Unmarshal", v2, err, v)
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestAnonymousFields7(t *testing.T) {
@@ -1229,7 +1223,7 @@ func testOmitAndRenameStructField(t *testing.T) {
 	testCases := []roundTripTestCase{
 		{"default values", v1, want1},
 		{"non-default values", v2, want2}}
-	testRoundTrip(t, testCases, em, dm)
+	testRoundTripCases(t, testCases, em, dm)
 }
 
 func TestOmitEmptyForBuiltinType(t *testing.T) {
@@ -1274,7 +1268,7 @@ func testOmitEmptyForBuiltinType(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestOmitEmptyForAnonymousStruct(t *testing.T) {
@@ -1292,7 +1286,7 @@ func testOmitEmptyForAnonymousStruct(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestOmitEmptyForStruct1(t *testing.T) {
@@ -1321,7 +1315,7 @@ func testOmitEmptyForStruct1(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestOmitEmptyForStruct2(t *testing.T) {
@@ -1349,7 +1343,7 @@ func testOmitEmptyForStruct2(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, []roundTripTestCase{{"non-default values", v, want}}, em, dm)
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestOmitEmptyMode(t *testing.T) {
@@ -1417,8 +1411,8 @@ func testOmitEmptyMode(t *testing.T) {
 	emOmitEmptyGoValue := mustEncMode(t, EncOptions{OmitEmpty: OmitEmptyGoValue})
 	emOmitEmptyCBORValue := mustEncMode(t, EncOptions{OmitEmpty: OmitEmptyCBORValue})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, []roundTripTestCase{{"OmitEmptyGoValue (default)", v, wantDataWithOmitEmptyGoValue}}, emOmitEmptyGoValue, dm)
-	testRoundTrip(t, []roundTripTestCase{{"OmitEmptyCBORValue", v, wantDataWithOmitEmptyCBORValue}}, emOmitEmptyCBORValue, dm)
+	testRoundTripCases(t, []roundTripTestCase{{"OmitEmptyGoValue (default)", v, wantDataWithOmitEmptyGoValue}}, emOmitEmptyGoValue, dm)
+	testRoundTripCases(t, []roundTripTestCase{{"OmitEmptyCBORValue", v, wantDataWithOmitEmptyCBORValue}}, emOmitEmptyCBORValue, dm)
 }
 
 func TestOmitEmptyForNestedStruct(t *testing.T) {
@@ -1450,7 +1444,7 @@ func testOmitEmptyForNestedStruct(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestOmitEmptyForToArrayStruct1(t *testing.T) {
@@ -1483,7 +1477,7 @@ func testOmitEmptyForToArrayStruct1(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, []roundTripTestCase{{"no exportable fields", v, want}}, em, dm)
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestOmitEmptyForToArrayStruct2(t *testing.T) {
@@ -1513,7 +1507,7 @@ func testOmitEmptyForToArrayStruct2(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, []roundTripTestCase{{"has exportable fields", v, want}}, em, dm)
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestOmitEmptyForStructWithPtrToAnonymousField(t *testing.T) {
@@ -1660,7 +1654,7 @@ func testOmitEmptyForBinaryMarshaler1(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, testCases, em, dm)
+	testRoundTripCases(t, testCases, em, dm)
 }
 
 func TestOmitEmptyForBinaryMarshaler2(t *testing.T) {
@@ -1691,7 +1685,7 @@ func testOmitEmptyForBinaryMarshaler2(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, testCases, em, dm)
+	testRoundTripCases(t, testCases, em, dm)
 }
 
 // omitempty is a no-op for time.Time.
@@ -1709,7 +1703,7 @@ func testOmitEmptyForTime(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 // omitempty is a no-op for big.Int.
@@ -1727,7 +1721,7 @@ func testOmitEmptyForBigInt(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{BigIntConvert: BigIntConvertNone})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestOmitZeroForBuiltinType(t *testing.T) {
@@ -1772,7 +1766,7 @@ func testOmitZeroForBuiltinType(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestOmitZeroForAnonymousStruct(t *testing.T) {
@@ -1790,7 +1784,7 @@ func testOmitZeroForAnonymousStruct(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestOmitZeroForStruct1(t *testing.T) {
@@ -1819,7 +1813,7 @@ func testOmitZeroForStruct1(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestOmitZeroForStruct2(t *testing.T) {
@@ -1847,7 +1841,7 @@ func testOmitZeroForStruct2(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, []roundTripTestCase{{"non-default values", v, want}}, em, dm)
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestOmitZeroForNestedStruct(t *testing.T) {
@@ -1879,7 +1873,7 @@ func testOmitZeroForNestedStruct(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestOmitZeroForToArrayStruct1(t *testing.T) {
@@ -1912,7 +1906,7 @@ func testOmitZeroForToArrayStruct1(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, []roundTripTestCase{{"no exportable fields", v, want}}, em, dm)
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestOmitZeroForToArrayStruct2(t *testing.T) {
@@ -1942,7 +1936,7 @@ func testOmitZeroForToArrayStruct2(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, []roundTripTestCase{{"has exportable fields", v, want}}, em, dm)
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestOmitZeroForStructWithPtrToAnonymousField(t *testing.T) {
@@ -2089,7 +2083,7 @@ func testOmitZeroForBinaryMarshaler1(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, testCases, em, dm)
+	testRoundTripCases(t, testCases, em, dm)
 }
 
 func TestOmitZeroForBinaryMarshaler2(t *testing.T) {
@@ -2120,7 +2114,7 @@ func testOmitZeroForBinaryMarshaler2(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, testCases, em, dm)
+	testRoundTripCases(t, testCases, em, dm)
 }
 
 func TestOmitZeroForTime(t *testing.T) {
@@ -2137,7 +2131,7 @@ func testOmitZeroForTime(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestOmitZeroForBigInt(t *testing.T) {
@@ -2154,7 +2148,7 @@ func testOmitZeroForBigInt(t *testing.T) {
 
 	em := mustEncMode(t, EncOptions{BigIntConvert: BigIntConvertNone})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, []roundTripTestCase{{"default values", v, want}}, em, dm)
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestIsZero(t *testing.T) {
@@ -2467,30 +2461,22 @@ func testJSONStdlibOmitZero(t *testing.T) {
 		S string `json:"s,omitzero"`
 	}
 
-	testCases := []struct {
-		name string
-		obj  any
-		want []byte
-	}{
+	testCases := []roundTripTestCase{
 		{
 			name: "cbor tag",
-			obj:  CBOR{},
-			want: []byte{0xa0}, // {}
+			v:    CBOR{},
+			data: []byte{0xa0}, // {}
 		},
 		{
 			name: "json stag",
-			obj:  JSON{},
-			want: []byte{0xa0}, // {}
+			v:    JSON{},
+			data: []byte{0xa0}, // {}
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			em := mustEncMode(t, EncOptions{})
-			dm := mustDecMode(t, DecOptions{})
-			testRoundTrip(t, []roundTripTestCase{{tc.name, tc.obj, tc.want}}, em, dm)
-		})
-	}
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
+	testRoundTripCases(t, testCases, em, dm)
 }
 
 func TestTaggedField(t *testing.T) {
@@ -2586,13 +2572,9 @@ func testTaggedAnonymousField(t *testing.T) {
 	)
 	v := T{X: 1, T1: T1{X: 2}}
 	want := []byte{0xa2, 0x61, 0x58, 0x01, 0x62, 0x54, 0x31, 0xa1, 0x61, 0x58, 0x02} // {X: 1, T1: {X:2}}
-	b, err := Marshal(v)
-	checkMarshal(t, "Marshal", b, err, want)
-
-	var v2 T
-	unmarshalWant := T{X: 1, T1: T1{X: 2}}
-	err = unmarshal(t, b, &v2)
-	checkUnmarshal(t, "Unmarshal", v2, err, unmarshalWant)
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
+	testRoundTripCase(t, v, want, em, dm)
 }
 
 func TestAnonymousInterfaceField(t *testing.T) {
@@ -2998,14 +2980,11 @@ func testCyclicDataStructure(t *testing.T) {
 		V int   `cbor:"v"`
 		N *Node `cbor:"n,omitempty"`
 	}
-	v := Node{1, &Node{2, &Node{3, nil}}}                                                                                  // linked list: 1, 2, 3
-	wantCborData := []byte{0xa2, 0x61, 0x76, 0x01, 0x61, 0x6e, 0xa2, 0x61, 0x76, 0x02, 0x61, 0x6e, 0xa1, 0x61, 0x76, 0x03} // {v: 1, n: {v: 2, n: {v: 3}}}
-	data, err := Marshal(v)
-	checkMarshal(t, "Marshal", data, err, wantCborData)
-
-	var v1 Node
-	err = unmarshal(t, data, &v1)
-	checkUnmarshal(t, "Unmarshal", v1, err, v)
+	v := Node{1, &Node{2, &Node{3, nil}}}                                                                          // linked list: 1, 2, 3
+	data := []byte{0xa2, 0x61, 0x76, 0x01, 0x61, 0x6e, 0xa2, 0x61, 0x76, 0x02, 0x61, 0x6e, 0xa1, 0x61, 0x76, 0x03} // {v: 1, n: {v: 2, n: {v: 3}}}
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
+	testRoundTripCase(t, v, data, em, dm)
 }
 
 func TestMarshalUnmarshalStructKeyAsInt(t *testing.T) {
@@ -3018,33 +2997,21 @@ func testMarshalUnmarshalStructKeyAsInt(t *testing.T) {
 		F2 int `cbor:"2,omitempty"`
 		F3 int `cbor:"-3,omitempty,keyasint"`
 	}
-	testCases := []struct {
-		name         string
-		obj          any
-		wantCborData []byte
-	}{
+	testCases := []roundTripTestCase{
 		{
-			name:         "zero value struct",
-			obj:          T{},
-			wantCborData: mustHexDecode("a0"), // {}
+			name: "zero value struct",
+			v:    T{},
+			data: mustHexDecode("a0"), // {}
 		},
 		{
-			name:         "initialized value struct",
-			obj:          T{F1: 1, F2: 2, F3: 3},
-			wantCborData: mustHexDecode("a301012203613202"), // {1: 1, -3: 3, "2": 2}
+			name: "initialized value struct",
+			v:    T{F1: 1, F2: 2, F3: 3},
+			data: mustHexDecode("a301012203613202"), // {1: 1, -3: 3, "2": 2}
 		},
 	}
 	em := mustEncMode(t, EncOptions{Sort: SortCanonical})
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			b, err := em.Marshal(tc.obj)
-			checkMarshal(t, "em.Marshal", b, err, tc.wantCborData)
-
-			var v2 T
-			err = unmarshal(t, b, &v2)
-			checkUnmarshal(t, "Unmarshal", v2, err, tc.obj)
-		})
-	}
+	dm := mustDecMode(t, DecOptions{})
+	testRoundTripCases(t, testCases, em, dm)
 }
 
 func TestMarshalStructKeyAsIntNumError(t *testing.T) {
@@ -3318,99 +3285,99 @@ func testTypeAlias(t *testing.T) {
 
 	testCases := []roundTripTestCase{
 		{
-			name:         "bool alias",
-			obj:          myBool(true),
-			wantCborData: mustHexDecode("f5"),
+			name: "bool alias",
+			v:    myBool(true),
+			data: mustHexDecode("f5"),
 		},
 		{
-			name:         "uint alias",
-			obj:          myUint(0),
-			wantCborData: mustHexDecode("00"),
+			name: "uint alias",
+			v:    myUint(0),
+			data: mustHexDecode("00"),
 		},
 		{
-			name:         "uint8 alias",
-			obj:          myUint8(0),
-			wantCborData: mustHexDecode("00"),
+			name: "uint8 alias",
+			v:    myUint8(0),
+			data: mustHexDecode("00"),
 		},
 		{
-			name:         "uint16 alias",
-			obj:          myUint16(1000),
-			wantCborData: mustHexDecode("1903e8"),
+			name: "uint16 alias",
+			v:    myUint16(1000),
+			data: mustHexDecode("1903e8"),
 		},
 		{
-			name:         "uint32 alias",
-			obj:          myUint32(1000000),
-			wantCborData: mustHexDecode("1a000f4240"),
+			name: "uint32 alias",
+			v:    myUint32(1000000),
+			data: mustHexDecode("1a000f4240"),
 		},
 		{
-			name:         "uint64 alias",
-			obj:          myUint64(1000000000000),
-			wantCborData: mustHexDecode("1b000000e8d4a51000"),
+			name: "uint64 alias",
+			v:    myUint64(1000000000000),
+			data: mustHexDecode("1b000000e8d4a51000"),
 		},
 		{
-			name:         "int alias",
-			obj:          myInt(-1),
-			wantCborData: mustHexDecode("20"),
+			name: "int alias",
+			v:    myInt(-1),
+			data: mustHexDecode("20"),
 		},
 		{
-			name:         "int8 alias",
-			obj:          myInt8(-1),
-			wantCborData: mustHexDecode("20"),
+			name: "int8 alias",
+			v:    myInt8(-1),
+			data: mustHexDecode("20"),
 		},
 		{
-			name:         "int16 alias",
-			obj:          myInt16(-1000),
-			wantCborData: mustHexDecode("3903e7"),
+			name: "int16 alias",
+			v:    myInt16(-1000),
+			data: mustHexDecode("3903e7"),
 		},
 		{
-			name:         "int32 alias",
-			obj:          myInt32(-1000),
-			wantCborData: mustHexDecode("3903e7"),
+			name: "int32 alias",
+			v:    myInt32(-1000),
+			data: mustHexDecode("3903e7"),
 		},
 		{
-			name:         "int64 alias",
-			obj:          myInt64(-1000),
-			wantCborData: mustHexDecode("3903e7"),
+			name: "int64 alias",
+			v:    myInt64(-1000),
+			data: mustHexDecode("3903e7"),
 		},
 		{
-			name:         "float32 alias",
-			obj:          myFloat32(100000.0),
-			wantCborData: mustHexDecode("fa47c35000"),
+			name: "float32 alias",
+			v:    myFloat32(100000.0),
+			data: mustHexDecode("fa47c35000"),
 		},
 		{
-			name:         "float64 alias",
-			obj:          myFloat64(1.1),
-			wantCborData: mustHexDecode("fb3ff199999999999a"),
+			name: "float64 alias",
+			v:    myFloat64(1.1),
+			data: mustHexDecode("fb3ff199999999999a"),
 		},
 		{
-			name:         "string alias",
-			obj:          myString("a"),
-			wantCborData: mustHexDecode("6161"),
+			name: "string alias",
+			v:    myString("a"),
+			data: mustHexDecode("6161"),
 		},
 		{
-			name:         "[]byte alias",
-			obj:          myByteSlice([]byte{1, 2, 3, 4}), //nolint:unconvert
-			wantCborData: mustHexDecode("4401020304"),
+			name: "[]byte alias",
+			v:    myByteSlice([]byte{1, 2, 3, 4}), //nolint:unconvert
+			data: mustHexDecode("4401020304"),
 		},
 		{
-			name:         "[]int alias",
-			obj:          myIntSlice([]int{1, 2, 3, 4}), //nolint:unconvert
-			wantCborData: mustHexDecode("8401020304"),
+			name: "[]int alias",
+			v:    myIntSlice([]int{1, 2, 3, 4}), //nolint:unconvert
+			data: mustHexDecode("8401020304"),
 		},
 		{
-			name:         "[4]int alias",
-			obj:          myIntArray([...]int{1, 2, 3, 4}), //nolint:unconvert
-			wantCborData: mustHexDecode("8401020304"),
+			name: "[4]int alias",
+			v:    myIntArray([...]int{1, 2, 3, 4}), //nolint:unconvert
+			data: mustHexDecode("8401020304"),
 		},
 		{
-			name:         "map[int]int alias",
-			obj:          myMapIntInt(map[int]int{1: 2, 3: 4}), //nolint:unconvert
-			wantCborData: mustHexDecode("a201020304"),
+			name: "map[int]int alias",
+			v:    myMapIntInt(map[int]int{1: 2, 3: 4}), //nolint:unconvert
+			data: mustHexDecode("a201020304"),
 		},
 	}
 	em := mustEncMode(t, EncOptions{Sort: SortCanonical})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, testCases, em, dm)
+	testRoundTripCases(t, testCases, em, dm)
 }
 
 func TestNewTypeWithBuiltinUnderlyingType(t *testing.T) {
@@ -3439,99 +3406,99 @@ func testNewTypeWithBuiltinUnderlyingType(t *testing.T) { //nolint:dupl
 
 	testCases := []roundTripTestCase{
 		{
-			name:         "bool alias",
-			obj:          myBool(true),
-			wantCborData: mustHexDecode("f5"),
+			name: "bool alias",
+			v:    myBool(true),
+			data: mustHexDecode("f5"),
 		},
 		{
-			name:         "uint alias",
-			obj:          myUint(0),
-			wantCborData: mustHexDecode("00"),
+			name: "uint alias",
+			v:    myUint(0),
+			data: mustHexDecode("00"),
 		},
 		{
-			name:         "uint8 alias",
-			obj:          myUint8(0),
-			wantCborData: mustHexDecode("00"),
+			name: "uint8 alias",
+			v:    myUint8(0),
+			data: mustHexDecode("00"),
 		},
 		{
-			name:         "uint16 alias",
-			obj:          myUint16(1000),
-			wantCborData: mustHexDecode("1903e8"),
+			name: "uint16 alias",
+			v:    myUint16(1000),
+			data: mustHexDecode("1903e8"),
 		},
 		{
-			name:         "uint32 alias",
-			obj:          myUint32(1000000),
-			wantCborData: mustHexDecode("1a000f4240"),
+			name: "uint32 alias",
+			v:    myUint32(1000000),
+			data: mustHexDecode("1a000f4240"),
 		},
 		{
-			name:         "uint64 alias",
-			obj:          myUint64(1000000000000),
-			wantCborData: mustHexDecode("1b000000e8d4a51000"),
+			name: "uint64 alias",
+			v:    myUint64(1000000000000),
+			data: mustHexDecode("1b000000e8d4a51000"),
 		},
 		{
-			name:         "int alias",
-			obj:          myInt(-1),
-			wantCborData: mustHexDecode("20"),
+			name: "int alias",
+			v:    myInt(-1),
+			data: mustHexDecode("20"),
 		},
 		{
-			name:         "int8 alias",
-			obj:          myInt8(-1),
-			wantCborData: mustHexDecode("20"),
+			name: "int8 alias",
+			v:    myInt8(-1),
+			data: mustHexDecode("20"),
 		},
 		{
-			name:         "int16 alias",
-			obj:          myInt16(-1000),
-			wantCborData: mustHexDecode("3903e7"),
+			name: "int16 alias",
+			v:    myInt16(-1000),
+			data: mustHexDecode("3903e7"),
 		},
 		{
-			name:         "int32 alias",
-			obj:          myInt32(-1000),
-			wantCborData: mustHexDecode("3903e7"),
+			name: "int32 alias",
+			v:    myInt32(-1000),
+			data: mustHexDecode("3903e7"),
 		},
 		{
-			name:         "int64 alias",
-			obj:          myInt64(-1000),
-			wantCborData: mustHexDecode("3903e7"),
+			name: "int64 alias",
+			v:    myInt64(-1000),
+			data: mustHexDecode("3903e7"),
 		},
 		{
-			name:         "float32 alias",
-			obj:          myFloat32(100000.0),
-			wantCborData: mustHexDecode("fa47c35000"),
+			name: "float32 alias",
+			v:    myFloat32(100000.0),
+			data: mustHexDecode("fa47c35000"),
 		},
 		{
-			name:         "float64 alias",
-			obj:          myFloat64(1.1),
-			wantCborData: mustHexDecode("fb3ff199999999999a"),
+			name: "float64 alias",
+			v:    myFloat64(1.1),
+			data: mustHexDecode("fb3ff199999999999a"),
 		},
 		{
-			name:         "string alias",
-			obj:          myString("a"),
-			wantCborData: mustHexDecode("6161"),
+			name: "string alias",
+			v:    myString("a"),
+			data: mustHexDecode("6161"),
 		},
 		{
-			name:         "[]byte alias",
-			obj:          myByteSlice([]byte{1, 2, 3, 4}),
-			wantCborData: mustHexDecode("4401020304"),
+			name: "[]byte alias",
+			v:    myByteSlice([]byte{1, 2, 3, 4}),
+			data: mustHexDecode("4401020304"),
 		},
 		{
-			name:         "[]int alias",
-			obj:          myIntSlice([]int{1, 2, 3, 4}),
-			wantCborData: mustHexDecode("8401020304"),
+			name: "[]int alias",
+			v:    myIntSlice([]int{1, 2, 3, 4}),
+			data: mustHexDecode("8401020304"),
 		},
 		{
-			name:         "[4]int alias",
-			obj:          myIntArray([...]int{1, 2, 3, 4}),
-			wantCborData: mustHexDecode("8401020304"),
+			name: "[4]int alias",
+			v:    myIntArray([...]int{1, 2, 3, 4}),
+			data: mustHexDecode("8401020304"),
 		},
 		{
-			name:         "map[int]int alias",
-			obj:          myMapIntInt(map[int]int{1: 2, 3: 4}),
-			wantCborData: mustHexDecode("a201020304"),
+			name: "map[int]int alias",
+			v:    myMapIntInt(map[int]int{1: 2, 3: 4}),
+			data: mustHexDecode("a201020304"),
 		},
 	}
 	em := mustEncMode(t, EncOptions{Sort: SortCanonical})
 	dm := mustDecMode(t, DecOptions{})
-	testRoundTrip(t, testCases, em, dm)
+	testRoundTripCases(t, testCases, em, dm)
 }
 
 func TestShortestFloat16(t *testing.T) {
@@ -3539,98 +3506,87 @@ func TestShortestFloat16(t *testing.T) {
 }
 
 func testShortestFloat16(t *testing.T) {
-	testCases := []struct {
-		name         string
-		f64          float64
-		wantCborData []byte
-	}{
+	testCases := []roundTripTestCase{
 		// Data from RFC 7049 appendix A
 		{
-			name:         "shrink to float16",
-			f64:          0.0,
-			wantCborData: mustHexDecode("f90000"),
+			name: "shrink to float16",
+			v:    0.0,
+			data: mustHexDecode("f90000"),
 		},
 		{
-			name:         "shrink to float16",
-			f64:          1.0,
-			wantCborData: mustHexDecode("f93c00"),
+			name: "shrink to float16",
+			v:    1.0,
+			data: mustHexDecode("f93c00"),
 		},
 		{
-			name:         "shrink to float16",
-			f64:          1.5,
-			wantCborData: mustHexDecode("f93e00"),
+			name: "shrink to float16",
+			v:    1.5,
+			data: mustHexDecode("f93e00"),
 		},
 		{
-			name:         "shrink to float16",
-			f64:          65504.0,
-			wantCborData: mustHexDecode("f97bff"),
+			name: "shrink to float16",
+			v:    65504.0,
+			data: mustHexDecode("f97bff"),
 		},
 		{
-			name:         "shrink to float16",
-			f64:          5.960464477539063e-08,
-			wantCborData: mustHexDecode("f90001"),
+			name: "shrink to float16",
+			v:    5.960464477539063e-08,
+			data: mustHexDecode("f90001"),
 		},
 		{
-			name:         "shrink to float16",
-			f64:          6.103515625e-05,
-			wantCborData: mustHexDecode("f90400"),
+			name: "shrink to float16",
+			v:    6.103515625e-05,
+			data: mustHexDecode("f90400"),
 		},
 		{
-			name:         "shrink to float16",
-			f64:          -4.0,
-			wantCborData: mustHexDecode("f9c400"),
+			name: "shrink to float16",
+			v:    -4.0,
+			data: mustHexDecode("f9c400"),
 		},
 		// Data from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
 		{
-			name:         "shrink to float16",
-			f64:          0.333251953125,
-			wantCborData: mustHexDecode("f93555"),
+			name: "shrink to float16",
+			v:    0.333251953125,
+			data: mustHexDecode("f93555"),
 		},
 		// Data from 7049bis 4.2.1 and 5.5
 		{
-			name:         "shrink to float16",
-			f64:          5.5,
-			wantCborData: mustHexDecode("f94580"),
+			name: "shrink to float16",
+			v:    5.5,
+			data: mustHexDecode("f94580"),
 		},
 		// Data from RFC 7049 appendix A
 		{
-			name:         "shrink to float32",
-			f64:          100000.0,
-			wantCborData: mustHexDecode("fa47c35000"),
+			name: "shrink to float32",
+			v:    100000.0,
+			data: mustHexDecode("fa47c35000"),
 		},
 		{
-			name:         "shrink to float32",
-			f64:          3.4028234663852886e+38,
-			wantCborData: mustHexDecode("fa7f7fffff"),
+			name: "shrink to float32",
+			v:    3.4028234663852886e+38,
+			data: mustHexDecode("fa7f7fffff"),
 		},
 		// Data from 7049bis 4.2.1 and 5.5
 		{
-			name:         "shrink to float32",
-			f64:          5555.5,
-			wantCborData: mustHexDecode("fa45ad9c00"),
+			name: "shrink to float32",
+			v:    5555.5,
+			data: mustHexDecode("fa45ad9c00"),
 		},
 		{
-			name:         "shrink to float32",
-			f64:          1000000.5,
-			wantCborData: mustHexDecode("fa49742408"),
+			name: "shrink to float32",
+			v:    1000000.5,
+			data: mustHexDecode("fa49742408"),
 		},
 		// Data from RFC 7049 appendix A
 		{
-			name:         "shrink to float64",
-			f64:          1.0e+300,
-			wantCborData: mustHexDecode("fb7e37e43c8800759c"),
+			name: "shrink to float64",
+			v:    1.0e+300,
+			data: mustHexDecode("fb7e37e43c8800759c"),
 		},
 	}
 	em := mustEncMode(t, EncOptions{ShortestFloat: ShortestFloat16})
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			b, err := em.Marshal(tc.f64)
-			checkMarshal(t, "em.Marshal", b, err, tc.wantCborData)
-			var f64 float64
-			err = unmarshal(t, b, &f64)
-			checkUnmarshal(t, "Unmarshal", f64, err, tc.f64)
-		})
-	}
+	dm := mustDecMode(t, DecOptions{})
+	testRoundTripCases(t, testCases, em, dm)
 }
 
 func TestShortestFloatNone(t *testing.T) {
@@ -3638,168 +3594,151 @@ func TestShortestFloatNone(t *testing.T) {
 }
 
 func testShortestFloatNone(t *testing.T) {
-	testCases := []struct {
-		name         string
-		f            any
-		wantCborData []byte
-	}{
+	testCases := []roundTripTestCase{
 		// Data from RFC 7049 appendix A
 		{
-			name:         "float32",
-			f:            float32(0.0),
-			wantCborData: mustHexDecode("fa00000000"),
+			name: "float32",
+			v:    float32(0.0),
+			data: mustHexDecode("fa00000000"),
 		},
 		{
-			name:         "float64",
-			f:            float64(0.0),
-			wantCborData: mustHexDecode("fb0000000000000000"),
+			name: "float64",
+			v:    float64(0.0),
+			data: mustHexDecode("fb0000000000000000"),
 		},
 		{
-			name:         "float32",
-			f:            float32(1.0),
-			wantCborData: mustHexDecode("fa3f800000"),
+			name: "float32",
+			v:    float32(1.0),
+			data: mustHexDecode("fa3f800000"),
 		},
 		{
-			name:         "float64",
-			f:            float64(1.0),
-			wantCborData: mustHexDecode("fb3ff0000000000000"),
+			name: "float64",
+			v:    float64(1.0),
+			data: mustHexDecode("fb3ff0000000000000"),
 		},
 		{
-			name:         "float32",
-			f:            float32(1.5),
-			wantCborData: mustHexDecode("fa3fc00000"),
+			name: "float32",
+			v:    float32(1.5),
+			data: mustHexDecode("fa3fc00000"),
 		},
 		{
-			name:         "float64",
-			f:            float64(1.5),
-			wantCborData: mustHexDecode("fb3ff8000000000000"),
+			name: "float64",
+			v:    float64(1.5),
+			data: mustHexDecode("fb3ff8000000000000"),
 		},
 		{
-			name:         "float32",
-			f:            float32(65504.0),
-			wantCborData: mustHexDecode("fa477fe000"),
+			name: "float32",
+			v:    float32(65504.0),
+			data: mustHexDecode("fa477fe000"),
 		},
 		{
-			name:         "float64",
-			f:            float64(65504.0),
-			wantCborData: mustHexDecode("fb40effc0000000000"),
+			name: "float64",
+			v:    float64(65504.0),
+			data: mustHexDecode("fb40effc0000000000"),
 		},
 		{
-			name:         "float32",
-			f:            float32(5.960464477539063e-08),
-			wantCborData: mustHexDecode("fa33800000"),
+			name: "float32",
+			v:    float32(5.960464477539063e-08),
+			data: mustHexDecode("fa33800000"),
 		},
 		{
-			name:         "float64",
-			f:            float64(5.960464477539063e-08),
-			wantCborData: mustHexDecode("fb3e70000000000000"),
+			name: "float64",
+			v:    float64(5.960464477539063e-08),
+			data: mustHexDecode("fb3e70000000000000"),
 		},
 		{
-			name:         "float32",
-			f:            float32(6.103515625e-05),
-			wantCborData: mustHexDecode("fa38800000"),
+			name: "float32",
+			v:    float32(6.103515625e-05),
+			data: mustHexDecode("fa38800000"),
 		},
 		{
-			name:         "float64",
-			f:            float64(6.103515625e-05),
-			wantCborData: mustHexDecode("fb3f10000000000000"),
+			name: "float64",
+			v:    float64(6.103515625e-05),
+			data: mustHexDecode("fb3f10000000000000"),
 		},
 		{
-			name:         "float32",
-			f:            float32(-4.0),
-			wantCborData: mustHexDecode("fac0800000"),
+			name: "float32",
+			v:    float32(-4.0),
+			data: mustHexDecode("fac0800000"),
 		},
 		{
-			name:         "float64",
-			f:            float64(-4.0),
-			wantCborData: mustHexDecode("fbc010000000000000"),
+			name: "float64",
+			v:    float64(-4.0),
+			data: mustHexDecode("fbc010000000000000"),
 		},
 		// Data from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
 		{
-			name:         "float32",
-			f:            float32(0.333251953125),
-			wantCborData: mustHexDecode("fa3eaaa000"),
+			name: "float32",
+			v:    float32(0.333251953125),
+			data: mustHexDecode("fa3eaaa000"),
 		},
 		{
-			name:         "float64",
-			f:            float64(0.333251953125),
-			wantCborData: mustHexDecode("fb3fd5540000000000"),
+			name: "float64",
+			v:    float64(0.333251953125),
+			data: mustHexDecode("fb3fd5540000000000"),
 		},
 		// Data from 7049bis 4.2.1 and 5.5
 		{
-			name:         "float32",
-			f:            float32(5.5),
-			wantCborData: mustHexDecode("fa40b00000"),
+			name: "float32",
+			v:    float32(5.5),
+			data: mustHexDecode("fa40b00000"),
 		},
 		{
-			name:         "float64",
-			f:            float64(5.5),
-			wantCborData: mustHexDecode("fb4016000000000000"),
+			name: "float64",
+			v:    float64(5.5),
+			data: mustHexDecode("fb4016000000000000"),
 		},
 		// Data from RFC 7049 appendix A
 		{
-			name:         "float32",
-			f:            float32(100000.0),
-			wantCborData: mustHexDecode("fa47c35000"),
+			name: "float32",
+			v:    float32(100000.0),
+			data: mustHexDecode("fa47c35000"),
 		},
 		{
-			name:         "float64",
-			f:            float64(100000.0),
-			wantCborData: mustHexDecode("fb40f86a0000000000"),
+			name: "float64",
+			v:    float64(100000.0),
+			data: mustHexDecode("fb40f86a0000000000"),
 		},
 		{
-			name:         "float32",
-			f:            float32(3.4028234663852886e+38),
-			wantCborData: mustHexDecode("fa7f7fffff"),
+			name: "float32",
+			v:    float32(3.4028234663852886e+38),
+			data: mustHexDecode("fa7f7fffff"),
 		},
 		{
-			name:         "float64",
-			f:            float64(3.4028234663852886e+38),
-			wantCborData: mustHexDecode("fb47efffffe0000000"),
+			name: "float64",
+			v:    float64(3.4028234663852886e+38),
+			data: mustHexDecode("fb47efffffe0000000"),
 		},
 		// Data from 7049bis 4.2.1 and 5.5
 		{
-			name:         "float32",
-			f:            float32(5555.5),
-			wantCborData: mustHexDecode("fa45ad9c00"),
+			name: "float32",
+			v:    float32(5555.5),
+			data: mustHexDecode("fa45ad9c00"),
 		},
 		{
-			name:         "float64",
-			f:            float64(5555.5),
-			wantCborData: mustHexDecode("fb40b5b38000000000"),
+			name: "float64",
+			v:    float64(5555.5),
+			data: mustHexDecode("fb40b5b38000000000"),
 		},
 		{
-			name:         "float32",
-			f:            float32(1000000.5),
-			wantCborData: mustHexDecode("fa49742408"),
+			name: "float32",
+			v:    float32(1000000.5),
+			data: mustHexDecode("fa49742408"),
 		},
 		{
-			name:         "float64",
-			f:            float64(1000000.5),
-			wantCborData: mustHexDecode("fb412e848100000000"),
+			name: "float64",
+			v:    float64(1000000.5),
+			data: mustHexDecode("fb412e848100000000"),
 		},
 		{
-			name:         "float64",
-			f:            float64(1.0e+300),
-			wantCborData: mustHexDecode("fb7e37e43c8800759c"),
+			name: "float64",
+			v:    float64(1.0e+300),
+			data: mustHexDecode("fb7e37e43c8800759c"),
 		},
 	}
 	em := mustEncMode(t, EncOptions{ShortestFloat: ShortestFloatNone})
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			b, err := em.Marshal(tc.f)
-			checkMarshal(t, "em.Marshal", b, err, tc.wantCborData)
-			if reflect.ValueOf(tc.f).Kind() == reflect.Float32 {
-				var f32 float32
-				err = unmarshal(t, b, &f32)
-				checkUnmarshal(t, "Unmarshal", f32, err, tc.f)
-			} else {
-				var f64 float64
-				err = unmarshal(t, b, &f64)
-				checkUnmarshal(t, "Unmarshal", f64, err, tc.f)
-			}
-		})
-	}
+	dm := mustDecMode(t, DecOptions{})
+	testRoundTripCases(t, testCases, em, dm)
 }
 
 func TestInfConvert(t *testing.T) {
@@ -4848,7 +4787,7 @@ func testStructWithSimpleValueFields(t *testing.T) {
 	testCases := []roundTripTestCase{
 		{"default values", v1, want1},
 		{"non-default values", v2, want2}}
-	testRoundTrip(t, testCases, em, dm)
+	testRoundTripCases(t, testCases, em, dm)
 }
 
 func TestMapWithSimpleValueKey(t *testing.T) {
@@ -4856,25 +4795,15 @@ func TestMapWithSimpleValueKey(t *testing.T) {
 }
 
 func testMapWithSimpleValueKey(t *testing.T) {
+	v := map[any]any{uint64(0): uint64(0), SimpleValue(0): uint64(0)}
 	data := []byte{0xa2, 0x00, 0x00, 0xe0, 0x00} // {0: 0, simple(0): 0}
 
 	// Decode CBOR map with positive integer 0 and simple value 0 as keys.
 	// No map key duplication is detected because keys are of different CBOR types.
 	// RFC 8949 Section 5.6.1 says "a simple value 2 is not equivalent to an integer 2".
 	dm := mustDecMode(t, DecOptions{DupMapKey: DupMapKeyEnforcedAPF})
-
-	var v map[any]any
-	err := unmarshalWithDM(t, dm, data, &v)
-	if err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-
-	// Encode decoded Go map.
 	em := mustEncMode(t, EncOptions{Sort: SortBytewiseLexical})
-
-	// Test roundtrip produces identical CBOR data.
-	encodedData, err := em.Marshal(v)
-	checkMarshal(t, "em.Marshal", encodedData, err, data)
+	testRoundTripCase(t, v, data, em, dm)
 }
 
 func TestMarshalStringType(t *testing.T) {

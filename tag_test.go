@@ -66,98 +66,98 @@ func TestTagNewTypeWithBuiltinUnderlyingType(t *testing.T) {
 
 	testCases := []roundTripTestCase{
 		{
-			name:         "bool",
-			obj:          myBool(true),
-			wantCborData: mustHexDecode("d864f5"),
+			name: "bool",
+			v:    myBool(true),
+			data: mustHexDecode("d864f5"),
 		},
 		{
-			name:         "uint",
-			obj:          myUint(0),
-			wantCborData: mustHexDecode("d86500"),
+			name: "uint",
+			v:    myUint(0),
+			data: mustHexDecode("d86500"),
 		},
 		{
-			name:         "uint8",
-			obj:          myUint8(0),
-			wantCborData: mustHexDecode("d86600"),
+			name: "uint8",
+			v:    myUint8(0),
+			data: mustHexDecode("d86600"),
 		},
 		{
-			name:         "uint16",
-			obj:          myUint16(1000),
-			wantCborData: mustHexDecode("d8671903e8"),
+			name: "uint16",
+			v:    myUint16(1000),
+			data: mustHexDecode("d8671903e8"),
 		},
 		{
-			name:         "uint32",
-			obj:          myUint32(1000000),
-			wantCborData: mustHexDecode("d8681a000f4240"),
+			name: "uint32",
+			v:    myUint32(1000000),
+			data: mustHexDecode("d8681a000f4240"),
 		},
 		{
-			name:         "uint64",
-			obj:          myUint64(1000000000000),
-			wantCborData: mustHexDecode("d8691b000000e8d4a51000"),
+			name: "uint64",
+			v:    myUint64(1000000000000),
+			data: mustHexDecode("d8691b000000e8d4a51000"),
 		},
 		{
-			name:         "int",
-			obj:          myInt(-1),
-			wantCborData: mustHexDecode("d86a20"),
+			name: "int",
+			v:    myInt(-1),
+			data: mustHexDecode("d86a20"),
 		},
 		{
-			name:         "int8",
-			obj:          myInt8(-1),
-			wantCborData: mustHexDecode("d86b20"),
+			name: "int8",
+			v:    myInt8(-1),
+			data: mustHexDecode("d86b20"),
 		},
 		{
-			name:         "int16",
-			obj:          myInt16(-1000),
-			wantCborData: mustHexDecode("d86c3903e7"),
+			name: "int16",
+			v:    myInt16(-1000),
+			data: mustHexDecode("d86c3903e7"),
 		},
 		{
-			name:         "int32",
-			obj:          myInt32(-1000),
-			wantCborData: mustHexDecode("d86d3903e7"),
+			name: "int32",
+			v:    myInt32(-1000),
+			data: mustHexDecode("d86d3903e7"),
 		},
 		{
-			name:         "int64",
-			obj:          myInt64(-1000),
-			wantCborData: mustHexDecode("d86e3903e7"),
+			name: "int64",
+			v:    myInt64(-1000),
+			data: mustHexDecode("d86e3903e7"),
 		},
 		{
-			name:         "float32",
-			obj:          myFloat32(100000.0),
-			wantCborData: mustHexDecode("d86ffa47c35000"),
+			name: "float32",
+			v:    myFloat32(100000.0),
+			data: mustHexDecode("d86ffa47c35000"),
 		},
 		{
-			name:         "float64",
-			obj:          myFloat64(1.1),
-			wantCborData: mustHexDecode("d870fb3ff199999999999a"),
+			name: "float64",
+			v:    myFloat64(1.1),
+			data: mustHexDecode("d870fb3ff199999999999a"),
 		},
 		{
-			name:         "string",
-			obj:          myString("a"),
-			wantCborData: mustHexDecode("d8716161"),
+			name: "string",
+			v:    myString("a"),
+			data: mustHexDecode("d8716161"),
 		},
 		{
-			name:         "[]byte",
-			obj:          myByteSlice([]byte{1, 2, 3, 4}),
-			wantCborData: mustHexDecode("d8724401020304"),
+			name: "[]byte",
+			v:    myByteSlice([]byte{1, 2, 3, 4}),
+			data: mustHexDecode("d8724401020304"),
 		},
 		{
-			name:         "[]int",
-			obj:          myIntSlice([]int{1, 2, 3, 4}),
-			wantCborData: mustHexDecode("d8738401020304"),
+			name: "[]int",
+			v:    myIntSlice([]int{1, 2, 3, 4}),
+			data: mustHexDecode("d8738401020304"),
 		},
 		{
-			name:         "[4]int",
-			obj:          myIntArray([...]int{1, 2, 3, 4}),
-			wantCborData: mustHexDecode("d8748401020304"),
+			name: "[4]int",
+			v:    myIntArray([...]int{1, 2, 3, 4}),
+			data: mustHexDecode("d8748401020304"),
 		},
 		{
-			name:         "map[int]int",
-			obj:          myMapIntInt(map[int]int{1: 2, 3: 4}),
-			wantCborData: mustHexDecode("d875a201020304"),
+			name: "map[int]int",
+			v:    myMapIntInt(map[int]int{1: 2, 3: 4}),
+			data: mustHexDecode("d875a201020304"),
 		},
 	}
 
-	testRoundTrip(t, testCases, em, dm)
+	testRoundTripCases(t, testCases, em, dm)
 }
 
 func TestTagBinaryMarshalerUnmarshaler(t *testing.T) {
@@ -173,18 +173,18 @@ func TestTagBinaryMarshalerUnmarshaler(t *testing.T) {
 
 	testCases := []roundTripTestCase{
 		{
-			name:         "primitive obj",
-			obj:          number(1234567890),
-			wantCborData: mustHexDecode("d87b4800000000499602d2"),
+			name: "primitive obj",
+			v:    number(1234567890),
+			data: mustHexDecode("d87b4800000000499602d2"),
 		},
 		{
-			name:         "struct obj",
-			obj:          stru{a: "a", b: "b", c: "c"},
-			wantCborData: mustHexDecode("d87c45612C622C63"),
+			name: "struct obj",
+			v:    stru{a: "a", b: "b", c: "c"},
+			data: mustHexDecode("d87c45612C622C63"),
 		},
 	}
 
-	testRoundTrip(t, testCases, em, dm)
+	testRoundTripCases(t, testCases, em, dm)
 }
 
 func TestTagStruct(t *testing.T) {
@@ -731,31 +731,31 @@ func TestDecodeTagData(t *testing.T) {
 
 	testCases := []roundTripTestCase{
 		{
-			name:         "BinaryMarshaler non-struct",
-			obj:          number(1234567890),
-			wantCborData: mustHexDecode("d87b4800000000499602d2"),
+			name: "BinaryMarshaler non-struct",
+			v:    number(1234567890),
+			data: mustHexDecode("d87b4800000000499602d2"),
 		},
 		{
-			name:         "BinaryMarshaler struct",
-			obj:          stru{a: "a", b: "b", c: "c"},
-			wantCborData: mustHexDecode("d87c45612C622C63"),
+			name: "BinaryMarshaler struct",
+			v:    stru{a: "a", b: "b", c: "c"},
+			data: mustHexDecode("d87c45612C622C63"),
 		},
 		{
-			name:         "non-struct",
-			obj:          myInt(1),
-			wantCborData: mustHexDecode("d87d01"),
+			name: "non-struct",
+			v:    myInt(1),
+			data: mustHexDecode("d87d01"),
 		},
 		{
-			name:         "struct",
-			obj:          s{A: "A", B: "B", C: "C"},
-			wantCborData: mustHexDecode("d87ea3616161416162614261636143"), // {"a":"A", "b":"B", "c":"C"}
+			name: "struct",
+			v:    s{A: "A", B: "B", C: "C"},
+			data: mustHexDecode("d87ea3616161416162614261636143"), // {"a":"A", "b":"B", "c":"C"}
 		},
 	}
 	for _, tag := range tags {
 		t.Run(tag.name, func(t *testing.T) {
 			em := mustEncModeWithTags(t, EncOptions{}, tag.tagSet)
 			dm := mustDecModeWithTags(t, DecOptions{}, tag.tagSet)
-			testRoundTrip(t, testCases, em, dm)
+			testRoundTripCases(t, testCases, em, dm)
 		})
 	}
 }
@@ -797,24 +797,24 @@ func TestDecodeNoTagData(t *testing.T) {
 
 	testCases := []roundTripTestCase{
 		{
-			name:         "BinaryMarshaler non-struct",
-			obj:          number(1234567890),
-			wantCborData: mustHexDecode("4800000000499602d2"),
+			name: "BinaryMarshaler non-struct",
+			v:    number(1234567890),
+			data: mustHexDecode("4800000000499602d2"),
 		},
 		{
-			name:         "BinaryMarshaler struct",
-			obj:          stru{a: "a", b: "b", c: "c"},
-			wantCborData: mustHexDecode("45612C622C63"),
+			name: "BinaryMarshaler struct",
+			v:    stru{a: "a", b: "b", c: "c"},
+			data: mustHexDecode("45612C622C63"),
 		},
 		{
-			name:         "non-struct",
-			obj:          myInt(1),
-			wantCborData: mustHexDecode("01"),
+			name: "non-struct",
+			v:    myInt(1),
+			data: mustHexDecode("01"),
 		},
 		{
-			name:         "struct",
-			obj:          s{A: "A", B: "B", C: "C"},
-			wantCborData: mustHexDecode("a3616161416162614261636143"), // {"a":"A", "b":"B", "c":"C"}
+			name: "struct",
+			v:    s{A: "A", B: "B", C: "C"},
+			data: mustHexDecode("a3616161416162614261636143"), // {"a":"A", "b":"B", "c":"C"}
 		},
 	}
 
@@ -822,7 +822,7 @@ func TestDecodeNoTagData(t *testing.T) {
 		t.Run(tag.name, func(t *testing.T) {
 			em := mustEncModeWithTags(t, EncOptions{}, tag.tagSet)
 			dm := mustDecModeWithTags(t, DecOptions{}, tag.tagSet)
-			testRoundTrip(t, testCases, em, dm)
+			testRoundTripCases(t, testCases, em, dm)
 		})
 	}
 
@@ -831,8 +831,8 @@ func TestDecodeNoTagData(t *testing.T) {
 		name := "EncTagIgnored_DecTagRequired " + tc.name
 		t.Run(name, func(t *testing.T) {
 			dm := mustDecModeWithTags(t, DecOptions{}, tagsDecRequired)
-			v := reflect.New(reflect.TypeOf(tc.obj))
-			err := unmarshalWithDM(t, dm, tc.wantCborData, v.Interface())
+			rv := reflect.New(reflect.TypeOf(tc.v))
+			err := unmarshalWithDM(t, dm, tc.data, rv.Interface())
 			checkError[*UnmarshalTypeError](t, "dm.Unmarshal", err, "")
 			if !strings.Contains(err.Error(), "expect CBOR tag value") {
 				t.Errorf("dm.Unmarshal: got %q, want substring %q", err.Error(), "expect CBOR tag value")
