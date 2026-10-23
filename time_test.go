@@ -5,7 +5,6 @@ package cbor
 
 import (
 	"bytes"
-	"errors"
 	"math"
 	"reflect"
 	"strings"
@@ -83,17 +82,12 @@ func TestDecodeTime(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			tm := unmodified
-			if err := unmarshal(t, tc.cborRFC3339Time, &tm); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborRFC3339Time, err)
-			} else if !tc.wantTime.Equal(tm) {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborRFC3339Time, tm, tm, tc.wantTime, tc.wantTime)
-			}
+			err := unmarshal(t, tc.cborRFC3339Time, &tm)
+			checkUnmarshalFunc(t, "Unmarshal", tm, err, tc.wantTime, nonFloatEqual)
+
 			tm = unmodified
-			if err := unmarshal(t, tc.cborUnixTime, &tm); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborUnixTime, err)
-			} else if !tc.wantTime.Equal(tm) {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborUnixTime, tm, tm, tc.wantTime, tc.wantTime)
-			}
+			err = unmarshal(t, tc.cborUnixTime, &tm)
+			checkUnmarshalFunc(t, "Unmarshal", tm, err, tc.wantTime, nonFloatEqual)
 		})
 	}
 }
@@ -127,30 +121,20 @@ func TestDecodeTimeWithTag(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			tm := time.Now()
-			if err := unmarshal(t, tc.cborRFC3339Time, &tm); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborRFC3339Time, err)
-			} else if !tc.wantTime.Equal(tm) {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborRFC3339Time, tm, tm, tc.wantTime, tc.wantTime)
-			}
+			err := unmarshal(t, tc.cborRFC3339Time, &tm)
+			checkUnmarshalFunc(t, "Unmarshal", tm, err, tc.wantTime, nonFloatEqual)
+
 			tm = time.Now()
-			if err := unmarshal(t, tc.cborUnixTime, &tm); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborUnixTime, err)
-			} else if !tc.wantTime.Equal(tm) {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborUnixTime, tm, tm, tc.wantTime, tc.wantTime)
-			}
+			err = unmarshal(t, tc.cborUnixTime, &tm)
+			checkUnmarshalFunc(t, "Unmarshal", tm, err, tc.wantTime, nonFloatEqual)
 
 			var v any
-			if err := unmarshal(t, tc.cborRFC3339Time, &v); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborRFC3339Time, err)
-			} else if tm, ok := v.(time.Time); !ok || !tc.wantTime.Equal(tm) {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborRFC3339Time, v, v, tc.wantTime, tc.wantTime)
-			}
+			err = unmarshal(t, tc.cborRFC3339Time, &v)
+			checkUnmarshalFunc(t, "Unmarshal", v, err, tc.wantTime, nonFloatEqual)
+
 			v = nil
-			if err := unmarshal(t, tc.cborUnixTime, &v); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.cborUnixTime, err)
-			} else if tm, ok := v.(time.Time); !ok || !tc.wantTime.Equal(tm) {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborUnixTime, v, v, tc.wantTime, tc.wantTime)
-			}
+			err = unmarshal(t, tc.cborUnixTime, &v)
+			checkUnmarshalFunc(t, "Unmarshal", v, err, tc.wantTime, nonFloatEqual)
 		})
 	}
 }
@@ -165,7 +149,7 @@ func TestDecodeTimeError(t *testing.T) {
 		{
 			name:         "invalid RFC3339 time string",
 			data:         mustHexDecode("7f657374726561646d696e67ff"),
-			wantErrorMsg: "cbor: cannot set streaming for time.Time",
+			wantErrorMsg: "cbor: cannot set streaming for time.Time: parsing time \"streaming\" as \"2006-01-02T15:04:05Z07:00\": cannot parse \"streaming\" as \"2006\"",
 		},
 		{
 			name:         "byte string data cannot be decoded into time.Time",
@@ -185,7 +169,7 @@ func TestDecodeTimeError(t *testing.T) {
 		{
 			name:         "negative integer overflow",
 			data:         mustHexDecode("3bffffffffffffffff"),
-			wantErrorMsg: "cbor: cannot unmarshal negative integer into Go value of type time.Time",
+			wantErrorMsg: "cbor: cannot unmarshal negative integer into Go value of type time.Time (-18446744073709551616 overflows Go's int64)",
 		},
 		{
 			name: "untagged byte string content cannot be decoded into time.Time with DefaultByteStringType string",
@@ -209,11 +193,8 @@ func TestDecodeTimeError(t *testing.T) {
 				t.Fatal(err)
 			}
 			tm := time.Now()
-			if err := unmarshalWithDM(t, dm, tc.data, &tm); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.data, tc.wantErrorMsg)
-			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-			}
+			err = unmarshalWithDM(t, dm, tc.data, &tm)
+			checkError[error](t, "dm.Unmarshal", err, tc.wantErrorMsg)
 		})
 	}
 }
@@ -231,7 +212,7 @@ func TestDecodeInvalidTagTime(t *testing.T) {
 			name:          "tag 0 with invalid RFC3339 time string",
 			data:          mustHexDecode("c07f657374726561646d696e67ff"),
 			decodeToTypes: []reflect.Type{typeAny, typeTime},
-			wantErrorMsg:  "cbor: cannot set streaming for time.Time",
+			wantErrorMsg:  "cbor: cannot set streaming for time.Time: parsing time \"streaming\" as \"2006-01-02T15:04:05Z07:00\": cannot parse \"streaming\" as \"2006\"",
 		},
 		{
 			name:          "tag 0 with invalid UTF-8 string",
@@ -267,13 +248,13 @@ func TestDecodeInvalidTagTime(t *testing.T) {
 			name:          "tag 1 with positive float64 overflow",
 			data:          mustHexDecode("c1fb4415af1d78b58c40"), // 1(1e+20)
 			decodeToTypes: []reflect.Type{typeAny, typeTime},
-			wantErrorMsg:  "overflows Go's int64",
+			wantErrorMsg:  "cbor: cannot unmarshal primitives into Go value of type time.Time (1e+20 overflows Go's int64)",
 		},
 		{
 			name:          "tag 1 with negative float64 overflow",
 			data:          mustHexDecode("c1fbc415af1d78b58c40"), // 1(-1e+20)
 			decodeToTypes: []reflect.Type{typeAny, typeTime},
-			wantErrorMsg:  "overflows Go's int64",
+			wantErrorMsg:  "cbor: cannot unmarshal primitives into Go value of type time.Time (-1e+20 overflows Go's int64)",
 		},
 		{
 			name:          "tag 1 with string content",
@@ -285,7 +266,7 @@ func TestDecodeInvalidTagTime(t *testing.T) {
 			name:          "tag 1 with simple value",
 			data:          mustHexDecode("d801f6"), // 1(null)
 			decodeToTypes: []reflect.Type{typeAny, typeTime},
-			wantErrorMsg:  "cbor: tag number 1 must be followed by integer or floating-point number, got primitive",
+			wantErrorMsg:  "cbor: tag number 1 must be followed by integer or floating-point number, got primitives",
 		},
 		{
 			name:          "tag 1 with string content as array element",
@@ -299,11 +280,8 @@ func TestDecodeInvalidTagTime(t *testing.T) {
 		for _, decodeToType := range tc.decodeToTypes {
 			t.Run(tc.name+" decode to "+decodeToType.String(), func(t *testing.T) {
 				v := reflect.New(decodeToType)
-				if err := unmarshalWithDM(t, dm, tc.data, v.Interface()); err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.data, tc.wantErrorMsg)
-				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err, tc.wantErrorMsg)
-				}
+				err := unmarshalWithDM(t, dm, tc.data, v.Interface())
+				checkError[error](t, "dm.Unmarshal", err, tc.wantErrorMsg)
 			})
 		}
 	}
@@ -330,27 +308,18 @@ func TestDecodeTag0Error(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Decode to a value of type any.
 			var v any
-			if err := unmarshalWithDM(t, tc.dm, data, &v); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", data, wantErrorMsg)
-			} else if !strings.Contains(err.Error(), wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err, wantErrorMsg)
-			}
+			err := unmarshalWithDM(t, tc.dm, data, &v)
+			checkError[error](t, "dm.Unmarshal", err, wantErrorMsg)
 
 			// Decode to time.Time
 			var tm time.Time
-			if err := unmarshalWithDM(t, tc.dm, data, &tm); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", data, wantErrorMsg)
-			} else if !strings.Contains(err.Error(), wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err, wantErrorMsg)
-			}
+			err = unmarshalWithDM(t, tc.dm, data, &tm)
+			checkError[error](t, "dm.Unmarshal", err, wantErrorMsg)
 
 			// Decode to uint64
 			var ui uint64
-			if err := unmarshalWithDM(t, tc.dm, data, &ui); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", data, wantErrorMsg)
-			} else if !strings.Contains(err.Error(), wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err, wantErrorMsg)
-			}
+			err = unmarshalWithDM(t, tc.dm, data, &ui)
+			checkError[error](t, "dm.Unmarshal", err, wantErrorMsg)
 		})
 	}
 }
@@ -376,27 +345,18 @@ func TestDecodeTag1Error(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Decode to a value of type any.
 			var v any
-			if err := unmarshalWithDM(t, tc.dm, data, &v); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", data, wantErrorMsg)
-			} else if !strings.Contains(err.Error(), wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err, wantErrorMsg)
-			}
+			err := unmarshalWithDM(t, tc.dm, data, &v)
+			checkError[error](t, "dm.Unmarshal", err, wantErrorMsg)
 
 			// Decode to time.Time
 			var tm time.Time
-			if err := unmarshalWithDM(t, tc.dm, data, &tm); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", data, wantErrorMsg)
-			} else if !strings.Contains(err.Error(), wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err, wantErrorMsg)
-			}
+			err = unmarshalWithDM(t, tc.dm, data, &tm)
+			checkError[error](t, "dm.Unmarshal", err, wantErrorMsg)
 
 			// Decode to string
 			var s string
-			if err := unmarshalWithDM(t, tc.dm, data, &s); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", data, wantErrorMsg)
-			} else if !strings.Contains(err.Error(), wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err, wantErrorMsg)
-			}
+			err = unmarshalWithDM(t, tc.dm, data, &s)
+			checkError[error](t, "dm.Unmarshal", err, wantErrorMsg)
 		})
 	}
 }
@@ -434,7 +394,7 @@ func TestDecodeTimeStreaming(t *testing.T) {
 		},
 		{
 			data:         mustHexDecode("c174323031332d30332d32315432303a30343a30305a"),
-			wantErrorMsg: "tag number 1 must be followed by integer or floating-point number, got UTF-8 text string",
+			wantErrorMsg: "cbor: tag number 1 must be followed by integer or floating-point number, got UTF-8 text string",
 		},
 		{
 			data:    mustHexDecode("c11a514b67b0"),
@@ -451,37 +411,13 @@ func TestDecodeTimeStreaming(t *testing.T) {
 	for _, tc := range testCases {
 		var v any
 		err := dec.Decode(&v)
-		if tc.wantErrorMsg != "" {
-			if err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.data, tc.wantErrorMsg)
-			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error msg %q, want %q", tc.data, err, tc.wantErrorMsg)
-			}
-		} else {
-			tm, ok := v.(time.Time)
-			if !ok {
-				t.Errorf("Unmarshal(0x%x) returned %s (%T), want time.Time", tc.data, v, v)
-			}
-			if !tc.wantObj.Equal(tm) {
-				t.Errorf("Unmarshal(0x%x) returned %s, want %s", tc.data, tm, tc.wantObj)
-			}
-		}
+		checkUnmarshalCaseFunc[error](t, "Decoder.Decode", v, err, tc.wantObj, tc.wantErrorMsg != "", tc.wantErrorMsg, nonFloatEqual)
 	}
 	dec = dm.NewDecoder(bytes.NewReader(data))
 	for _, tc := range testCases {
 		var tm time.Time
 		err := dec.Decode(&tm)
-		if tc.wantErrorMsg != "" {
-			if err == nil {
-				t.Errorf("Unmarshal(0x%x) did't return error, want error msg %q", tc.data, tc.wantErrorMsg)
-			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error msg %q, want %q", tc.data, err, tc.wantErrorMsg)
-			}
-		} else {
-			if !tc.wantObj.Equal(tm) {
-				t.Errorf("Unmarshal(0x%x) returned %s, want %s", tc.data, tm, tc.wantObj)
-			}
-		}
+		checkUnmarshalCaseFunc[error](t, "Decoder.Decode", tm, err, tc.wantObj, tc.wantErrorMsg != "", tc.wantErrorMsg, nonFloatEqual)
 	}
 }
 
@@ -491,12 +427,13 @@ func TestDecTimeTagOption(t *testing.T) {
 	timeTagRequiredDecMode, _ := DecOptions{TimeTag: DecTagRequired}.DecMode()
 
 	testCases := []struct {
-		name            string
-		cborRFC3339Time []byte
-		cborUnixTime    []byte
-		decMode         DecMode
-		wantTime        time.Time
-		wantErrorMsg    string
+		name                string
+		cborRFC3339Time     []byte
+		cborUnixTime        []byte
+		decMode             DecMode
+		wantTime            time.Time
+		wantErrorMsg        string
+		wantErrorMsgPartial bool
 	}{
 		// not-tagged time CBOR data
 		{
@@ -514,11 +451,12 @@ func TestDecTimeTagOption(t *testing.T) {
 			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
-			name:            "not-tagged data with timeTagRequiredDecMode option",
-			cborRFC3339Time: mustHexDecode("74323031332d30332d32315432303a30343a30305a"),
-			cborUnixTime:    mustHexDecode("1a514b67b0"),
-			decMode:         timeTagRequiredDecMode,
-			wantErrorMsg:    "expect CBOR tag value",
+			name:                "not-tagged data with timeTagRequiredDecMode option",
+			cborRFC3339Time:     mustHexDecode("74323031332d30332d32315432303a30343a30305a"),
+			cborUnixTime:        mustHexDecode("1a514b67b0"),
+			decMode:             timeTagRequiredDecMode,
+			wantErrorMsg:        "(expect CBOR tag value)",
+			wantErrorMsgPartial: true,
 		},
 		// tagged time CBOR data
 		{
@@ -569,30 +507,24 @@ func TestDecTimeTagOption(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tm := time.Now()
 			err := unmarshalWithDM(t, tc.decMode, tc.cborRFC3339Time, &tm)
-			if tc.wantErrorMsg != "" {
-				if err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborRFC3339Time)
-				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+			if tc.wantErrorMsgPartial {
+				checkUnmarshalCaseFunc[error](t, "dm.Unmarshal", tm, err, tc.wantTime, tc.wantErrorMsg != "", "", nonFloatEqual)
+				if !strings.Contains(err.Error(), tc.wantErrorMsg) {
 					t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborRFC3339Time, err.Error(), tc.wantErrorMsg)
 				}
 			} else {
-				if !tc.wantTime.Equal(tm) {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborRFC3339Time, tm, tm, tc.wantTime, tc.wantTime)
-				}
+				checkUnmarshalCaseFunc[error](t, "dm.Unmarshal", tm, err, tc.wantTime, tc.wantErrorMsg != "", tc.wantErrorMsg, nonFloatEqual)
 			}
 
 			tm = time.Now()
 			err = unmarshalWithDM(t, tc.decMode, tc.cborUnixTime, &tm)
-			if tc.wantErrorMsg != "" {
-				if err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return an error", tc.cborRFC3339Time)
-				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
+			if tc.wantErrorMsgPartial {
+				checkUnmarshalCaseFunc[error](t, "dm.Unmarshal", tm, err, tc.wantTime, tc.wantErrorMsg != "", "", nonFloatEqual)
+				if !strings.Contains(err.Error(), tc.wantErrorMsg) {
 					t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborRFC3339Time, err.Error(), tc.wantErrorMsg)
 				}
 			} else {
-				if !tc.wantTime.Equal(tm) {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.cborRFC3339Time, tm, tm, tc.wantTime, tc.wantTime)
-				}
+				checkUnmarshalCaseFunc[error](t, "dm.Unmarshal", tm, err, tc.wantTime, tc.wantErrorMsg != "", tc.wantErrorMsg, nonFloatEqual)
 			}
 		})
 	}
@@ -674,18 +606,12 @@ func TestDecModeTimeTagToAny(t *testing.T) {
 			}
 
 			var got any
-			if err := unmarshalWithDM(t, dm, tc.data, &got); err != nil {
-				if tc.wantErrorMsg == "" {
-					t.Fatalf("unexpected error: %v", err)
-				} else if gotErrMessage := err.Error(); tc.wantErrorMsg != gotErrMessage {
-					t.Fatalf("want error %q, got %q", tc.wantErrorMsg, gotErrMessage)
-				}
-			} else if tc.wantErrorMsg != "" {
-				t.Fatalf("got nil error, want %q", tc.wantErrorMsg)
+			err = unmarshalWithDM(t, dm, tc.data, &got)
+			if tc.wantErrorMsg != "" {
+				checkUnmarshalErr[error](t, "dm.Unmarshal", got, err, tc.want, tc.wantErrorMsg)
+			} else {
+				checkUnmarshalFunc(t, "dm.Unmarshal", got, err, tc.want, nonFloatEqual)
 			}
-
-			compareNonFloats(t, tc.data, got, tc.want)
-
 		})
 	}
 }
@@ -736,13 +662,8 @@ func TestDecModeByteStringToTime(t *testing.T) {
 			}
 
 			var got time.Time
-			if err := unmarshalWithDM(t, dm, tc.data, &got); err != nil {
-				if tc.wantErrorMsg != err.Error() {
-					t.Errorf("unexpected error: got %v want %v", err, tc.wantErrorMsg)
-				}
-			} else {
-				compareNonFloats(t, tc.data, got, tc.want)
-			}
+			err = unmarshalWithDM(t, dm, tc.data, &got)
+			checkUnmarshalCaseFunc[error](t, "dm.Unmarshal", got, err, tc.want, tc.wantErrorMsg != "", tc.wantErrorMsg, nonFloatEqual)
 		})
 	}
 }
@@ -787,14 +708,7 @@ func TestParseToTimeConsumeDataOnError(t *testing.T) {
 
 				var v structWithTime
 				err := unmarshal(t, data, &v)
-
-				var typeError *UnmarshalTypeError
-				if !errors.As(err, &typeError) {
-					t.Errorf("Unmarshal(0x%x) error = %v (%T), want *cbor.UnmarshalTypeError", data, err, err)
-				}
-				if v.Z != 7 {
-					t.Errorf("Unmarshal(0x%x) Z = %d, want 7", data, v.Z)
-				}
+				checkUnmarshalErr[*UnmarshalTypeError](t, "Unmarshal", v, err, structWithTime{Z: 7}, "")
 			})
 		}
 	}
@@ -826,14 +740,7 @@ func TestParseToTimeConsumeDataOnError(t *testing.T) {
 
 				var v structWithTimeToArray
 				err := unmarshal(t, data, &v)
-
-				var typeError *UnmarshalTypeError
-				if !errors.As(err, &typeError) {
-					t.Errorf("Unmarshal(0x%x) error = %v (%T), want *cbor.UnmarshalTypeError", data, err, err)
-				}
-				if v.Z != 7 {
-					t.Errorf("Unmarshal(0x%x) Z = %d, want 7", data, v.Z)
-				}
+				checkUnmarshalErr[*UnmarshalTypeError](t, "Unmarshal", v, err, structWithTimeToArray{Z: 7}, "")
 			})
 		}
 	}
@@ -855,19 +762,11 @@ func TestStreamDecodeToTimeAndInt(t *testing.T) {
 
 			var tm time.Time
 			err := dec.Decode(&tm)
-
-			var typeError *UnmarshalTypeError
-			if !errors.As(err, &typeError) {
-				t.Errorf("Decode(0x%x) first item error = %v (%T), want *cbor.UnmarshalTypeError", tc.data, err, err)
-			}
+			checkError[*UnmarshalTypeError](t, "Decoder.Decode", err, "")
 
 			var v int
-			if err := dec.Decode(&v); err != nil {
-				t.Errorf("Decode(0x%x) second item error = %v, want nil", tc.data, err)
-			}
-			if v != 7 {
-				t.Errorf("Decode(0x%x) second item = %d, want 7", tc.data, v)
-			}
+			err = dec.Decode(&v)
+			checkUnmarshal(t, "Decoder.Decode", v, err, 7)
 		})
 	}
 }

@@ -2324,19 +2324,15 @@ const invalidUTF8ErrorMsg = "cbor: invalid UTF-8 string"
 
 func TestUnmarshalToAny(t *testing.T) {
 	for _, tc := range unmarshalTestCases {
-		var v any
-		if err := unmarshal(t, tc.data, &v); err != nil {
-			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-		} else {
-			compareNonFloats(t, tc.data, v, tc.wantInterfaceValue)
-		}
+		t.Run(fmt.Sprintf("0x%x", tc.data), func(t *testing.T) {
+			var v any
+			err := unmarshal(t, tc.data, &v)
+			checkUnmarshalFunc(t, "Unmarshal", v, err, tc.wantInterfaceValue, nonFloatEqual)
 
-		var nv namedAny
-		if err := unmarshal(t, tc.data, &nv); err != nil {
-			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-		} else {
-			compareNonFloats(t, tc.data, nv, tc.wantInterfaceValue)
-		}
+			var nv namedAny
+			err = unmarshal(t, tc.data, &nv)
+			checkUnmarshalFunc(t, "Unmarshal", nv, err, tc.wantInterfaceValue, nonFloatEqual)
+		})
 	}
 }
 
@@ -2353,57 +2349,40 @@ func testUnmarshalToRawMessage(t *testing.T, data []byte) {
 
 	// Decode to RawMessage
 	var r RawMessage
-	if err := unmarshal(t, data, &r); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	} else if !bytes.Equal(r, data) {
-		t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", data, r, data)
-	}
+	err := unmarshal(t, data, &r)
+	checkUnmarshal(t, "Unmarshal", r, err, RawMessage(data))
 
 	// Decode to *RawMesage (pr is nil)
 	var pr *RawMessage
-	if err := unmarshal(t, data, &pr); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
+	err = unmarshal(t, data, &pr)
+	if cborNil {
+		checkUnmarshal(t, "Unmarshal", pr, err, (*RawMessage)(nil))
 	} else {
-		if cborNil {
-			if pr != nil {
-				t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want nil *RawMessage", data, *pr)
-			}
-		} else {
-			if !bytes.Equal(*pr, data) {
-				t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", data, *pr, data)
-			}
-		}
+		checkUnmarshal(t, "Unmarshal", derefOrNil(pr), err, RawMessage(data))
 	}
 
 	// Decode to *RawMessage (pr is not nil)
 	var ir RawMessage
 	pr = &ir
-	if err := unmarshal(t, data, &pr); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
+	err = unmarshal(t, data, &pr)
+	if cborNil {
+		checkUnmarshal(t, "Unmarshal", pr, err, (*RawMessage)(nil))
 	} else {
-		if cborNil {
-			if pr != nil {
-				t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want nil *RawMessage", data, *pr)
-			}
-		} else {
-			if !bytes.Equal(*pr, data) {
-				t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", data, *pr, data)
-			}
-		}
+		checkUnmarshal(t, "Unmarshal", ir, err, RawMessage(data))
 	}
 }
 
 func TestUnmarshalToCompatibleTypes(t *testing.T) {
 	for _, tc := range unmarshalTestCases {
 		for _, wantValue := range tc.wantValues {
-			testUnmarshalToCompatibleType(t, tc.data, wantValue, func(gotValue any) {
-				compareNonFloats(t, tc.data, gotValue, wantValue)
+			t.Run(fmt.Sprintf("0x%x to %T", tc.data, wantValue), func(t *testing.T) {
+				testUnmarshalToCompatibleType(t, tc.data, wantValue, nonFloatEqual)
 			})
 		}
 	}
 }
 
-func testUnmarshalToCompatibleType(t *testing.T, data []byte, wantValue any, compare func(gotValue any)) {
+func testUnmarshalToCompatibleType(t *testing.T, data []byte, wantValue any, equal func(got, want any) bool) {
 	t.Helper()
 
 	var rv reflect.Value
@@ -2416,27 +2395,19 @@ func testUnmarshalToCompatibleType(t *testing.T, data []byte, wantValue any, com
 	//     Unmarshal(tc.data, &v)
 
 	rv = reflect.New(wantType)
-	if err := unmarshal(t, data, rv.Interface()); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-		return
-	}
-	compare(rv.Elem().Interface())
+	err := unmarshal(t, data, rv.Interface())
+	checkUnmarshalFunc(t, "Unmarshal", rv.Elem().Interface(), err, wantValue, equal)
 
 	// Decode to *wantType (pv is nil), same as:
 	//     var pv *wantType
 	//     Unmarshal(tc.data, &pv)
 
 	rv = reflect.New(reflect.PointerTo(wantType))
-	if err := unmarshal(t, data, rv.Interface()); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-		return
-	}
+	err = unmarshal(t, data, rv.Interface())
 	if cborNil {
-		if !rv.Elem().IsNil() {
-			t.Errorf("Unmarshal(0x%x) = %v (%T), want nil", data, rv.Elem().Interface(), rv.Elem().Interface())
-		}
+		checkUnmarshal(t, "Unmarshal", rv.Elem().Interface(), err, reflect.Zero(rv.Elem().Type()).Interface())
 	} else {
-		compare(rv.Elem().Elem().Interface())
+		checkUnmarshalFunc(t, "Unmarshal", derefOrNil(rv.Elem().Interface()), err, wantValue, equal)
 	}
 
 	// Decode to *wantType (pv is not nil), same as:
@@ -2447,16 +2418,11 @@ func testUnmarshalToCompatibleType(t *testing.T, data []byte, wantValue any, com
 	irv := reflect.New(wantType)
 	rv = reflect.New(reflect.PointerTo(wantType))
 	rv.Elem().Set(irv)
-	if err := unmarshal(t, data, rv.Interface()); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-		return
-	}
+	err = unmarshal(t, data, rv.Interface())
 	if cborNil {
-		if !rv.Elem().IsNil() {
-			t.Errorf("Unmarshal(0x%x) = %v (%T), want nil", data, rv.Elem().Interface(), rv.Elem().Interface())
-		}
+		checkUnmarshal(t, "Unmarshal", rv.Elem().Interface(), err, reflect.Zero(rv.Elem().Type()).Interface())
 	} else {
-		compare(rv.Elem().Elem().Interface())
+		checkUnmarshalFunc(t, "Unmarshal", derefOrNil(rv.Elem().Interface()), err, wantValue, equal)
 	}
 }
 
@@ -2478,22 +2444,16 @@ func testUnmarshalToIncompatibleType(t *testing.T, data []byte, wrongType reflec
 	//     Unmarshal(tc.data, &v)
 
 	rv = reflect.New(wrongType)
-	if err := unmarshal(t, data, rv.Interface()); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
-	}
+	err := unmarshal(t, data, rv.Interface())
+	checkError[*UnmarshalTypeError](t, "Unmarshal", err, "")
 
 	// Decode to *wrongType (pv is nil), same as:
 	//     var pv *wrongType
 	//     Unmarshal(tc.data, &pv)
 
 	rv = reflect.New(reflect.PointerTo(wrongType))
-	if err := unmarshal(t, data, rv.Interface()); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
-	}
+	err = unmarshal(t, data, rv.Interface())
+	checkError[*UnmarshalTypeError](t, "Unmarshal", err, "")
 
 	// Decode to *wrongType (pv is not nil), same as:
 	//     var v wrongType
@@ -2504,21 +2464,17 @@ func testUnmarshalToIncompatibleType(t *testing.T, data []byte, wrongType reflec
 	rv = reflect.New(reflect.PointerTo(wrongType))
 	rv.Elem().Set(irv)
 
-	if err := unmarshal(t, data, rv.Interface()); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
-	}
+	err = unmarshal(t, data, rv.Interface())
+	checkError[*UnmarshalTypeError](t, "Unmarshal", err, "")
 }
 
 func TestUnmarshalFloatToEmptyInterface(t *testing.T) {
 	for _, tc := range unmarshalFloatTestCases {
-		var v any
-		if err := unmarshal(t, tc.data, &v); err != nil {
-			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-			continue
-		}
-		compareFloats(t, tc.data, v, tc.wantInterfaceValue, tc.equalityThreshold)
+		t.Run(fmt.Sprintf("0x%x", tc.data), func(t *testing.T) {
+			var v any
+			err := unmarshal(t, tc.data, &v)
+			checkUnmarshalFunc(t, "Unmarshal", v, err, tc.wantInterfaceValue, floatEqual(tc.equalityThreshold))
+		})
 	}
 }
 
@@ -2531,8 +2487,8 @@ func TestUnmarshalFloatToRawMessage(t *testing.T) {
 func TestUnmarshalFloatToCompatibleTypes(t *testing.T) {
 	for _, tc := range unmarshalFloatTestCases {
 		for _, wantValue := range tc.wantValues {
-			testUnmarshalToCompatibleType(t, tc.data, wantValue, func(gotValue any) {
-				compareFloats(t, tc.data, gotValue, wantValue, tc.equalityThreshold)
+			t.Run(fmt.Sprintf("0x%x to %T", tc.data, wantValue), func(t *testing.T) {
+				testUnmarshalToCompatibleType(t, tc.data, wantValue, floatEqual(tc.equalityThreshold))
 			})
 		}
 	}
@@ -2552,29 +2508,18 @@ func TestNegIntOverflow(t *testing.T) {
 	// Decode CBOR neg int that overflows Go int64 to a value of type any.
 	var v1 any
 	wantObj := mustBigInt("-18446744073709551616")
-	if err := unmarshal(t, data, &v1); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %+v", data, err)
-	} else if !reflect.DeepEqual(v1, wantObj) {
-		t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", data, v1, v1, wantObj, wantObj)
-	}
+	err := unmarshal(t, data, &v1)
+	checkUnmarshal(t, "Unmarshal", v1, err, wantObj)
 
 	// Decode CBOR neg int that overflows Go int64 to big.Int
 	var v2 big.Int
-	if err := unmarshal(t, data, &v2); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %+v", data, err)
-	} else if !reflect.DeepEqual(v2, wantObj) {
-		t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", data, v2, v2, wantObj, wantObj)
-	}
+	err = unmarshal(t, data, &v2)
+	checkUnmarshal(t, "Unmarshal", v2, err, wantObj)
 
 	// Decode CBOR neg int that overflows Go int64 to int64
 	var v3 int64
-	if err := unmarshal(t, data, &v3); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
-	} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), "cannot unmarshal")
-	}
+	err = unmarshal(t, data, &v3)
+	checkError[*UnmarshalTypeError](t, "Unmarshal", err, "")
 }
 
 func TestUnmarshalIntoPtrPrimitives(t *testing.T) {
@@ -2601,43 +2546,28 @@ func TestUnmarshalIntoPtrPrimitives(t *testing.T) {
 	ppr := &pr
 
 	// Unmarshal CBOR integer into a non-nil pointer.
-	if err := unmarshal(t, cborDataInt, &ppi); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborDataInt, err)
-	} else if i != wantInt {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %d", cborDataInt, i, i, wantInt)
-	}
+	err := unmarshal(t, cborDataInt, &ppi)
+	checkUnmarshal(t, "Unmarshal", i, err, wantInt)
+
 	// Unmarshal CBOR integer into a nil pointer.
-	if err := unmarshal(t, cborDataInt, &p1); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborDataInt, err)
-	} else if *p1 != wantInt {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %d", cborDataInt, *pi, pi, wantInt)
-	}
+	err = unmarshal(t, cborDataInt, &p1)
+	checkUnmarshal(t, "Unmarshal", derefOrNil(p1), err, wantInt)
 
 	// Unmarshal CBOR string into a non-nil pointer.
-	if err := unmarshal(t, cborDataString, &pps); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborDataString, err)
-	} else if s != wantString {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborDataString, s, s, wantString)
-	}
+	err = unmarshal(t, cborDataString, &pps)
+	checkUnmarshal(t, "Unmarshal", s, err, wantString)
+
 	// Unmarshal CBOR string into a nil pointer.
-	if err := unmarshal(t, cborDataString, &p2); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborDataString, err)
-	} else if *p2 != wantString {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborDataString, *p2, p2, wantString)
-	}
+	err = unmarshal(t, cborDataString, &p2)
+	checkUnmarshal(t, "Unmarshal", derefOrNil(p2), err, wantString)
 
 	// Unmarshal CBOR string into a non-nil RawMessage.
-	if err := unmarshal(t, cborDataString, &ppr); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborDataString, err)
-	} else if !bytes.Equal(r, cborDataString) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborDataString, r, r, cborDataString)
-	}
+	err = unmarshal(t, cborDataString, &ppr)
+	checkUnmarshal(t, "Unmarshal", r, err, RawMessage(cborDataString))
+
 	// Unmarshal CBOR string into a nil pointer to RawMessage.
-	if err := unmarshal(t, cborDataString, &p3); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", cborDataString, err)
-	} else if !bytes.Equal(*p3, cborDataString) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", cborDataString, *p3, p3, cborDataString)
-	}
+	err = unmarshal(t, cborDataString, &p3)
+	checkUnmarshal(t, "Unmarshal", derefOrNil(p3), err, RawMessage(cborDataString))
 }
 
 func TestUnmarshalIntoPtrArrayPtrElem(t *testing.T) {
@@ -2654,17 +2584,12 @@ func TestUnmarshalIntoPtrArrayPtrElem(t *testing.T) {
 	ppslc := &pslc
 
 	// Unmarshal CBOR array into a non-nil pointer.
-	if err := unmarshal(t, data, &ppslc); err != nil {
-		t.Errorf("Unmarshal(0x%x, %s) returned error %v", data, reflect.TypeFor[**[]*int](), err)
-	} else if !reflect.DeepEqual(slc, wantArray) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", data, slc, slc, wantArray)
-	}
+	err := unmarshal(t, data, &ppslc)
+	checkUnmarshal(t, "Unmarshal", **ppslc, err, wantArray)
+
 	// Unmarshal CBOR array into a nil pointer.
-	if err := unmarshal(t, data, &p); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	} else if !reflect.DeepEqual(*p, wantArray) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", data, *p, p, wantArray)
-	}
+	err = unmarshal(t, data, &p)
+	checkUnmarshal(t, "Unmarshal", derefOrNil(p), err, wantArray)
 }
 
 func TestUnmarshalIntoPtrMapPtrElem(t *testing.T) {
@@ -2681,17 +2606,12 @@ func TestUnmarshalIntoPtrMapPtrElem(t *testing.T) {
 	ppm := &pm
 
 	// Unmarshal CBOR map into a non-nil pointer.
-	if err := unmarshal(t, data, &ppm); err != nil {
-		t.Errorf("Unmarshal(0x%x, %s) returned error %v", data, reflect.TypeFor[**map[int]*int](), err)
-	} else if !reflect.DeepEqual(m, wantMap) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", data, m, m, wantMap)
-	}
+	err := unmarshal(t, data, &ppm)
+	checkUnmarshal(t, "Unmarshal", **ppm, err, wantMap)
+
 	// Unmarshal CBOR map into a nil pointer.
-	if err := unmarshal(t, data, &p); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	} else if !reflect.DeepEqual(*p, wantMap) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", data, *p, p, wantMap)
-	}
+	err = unmarshal(t, data, &p)
+	checkUnmarshal(t, "Unmarshal", derefOrNil(p), err, wantMap)
 }
 
 func TestUnmarshalIntoPtrStructPtrElem(t *testing.T) {
@@ -2715,17 +2635,12 @@ func TestUnmarshalIntoPtrStructPtrElem(t *testing.T) {
 	pps := &ps
 
 	// Unmarshal CBOR map into a non-nil pointer.
-	if err := unmarshal(t, data, &pps); err != nil {
-		t.Errorf("Unmarshal(0x%x, %s) returned error %v", data, reflect.TypeFor[**s1](), err)
-	} else if !reflect.DeepEqual(s, wantObj) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", data, s, s, wantObj)
-	}
+	err := unmarshal(t, data, &pps)
+	checkUnmarshal(t, "Unmarshal", **pps, err, wantObj)
+
 	// Unmarshal CBOR map into a nil pointer.
-	if err := unmarshal(t, data, &p); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	} else if !reflect.DeepEqual(*p, wantObj) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v", data, *p, p, wantObj)
-	}
+	err = unmarshal(t, data, &p)
+	checkUnmarshal(t, "Unmarshal", derefOrNil(p), err, wantObj)
 }
 
 func TestUnmarshalIntoArray(t *testing.T) {
@@ -2733,27 +2648,18 @@ func TestUnmarshalIntoArray(t *testing.T) {
 
 	// Unmarshal CBOR array into Go array.
 	var arr1 [3]int
-	if err := unmarshal(t, data, &arr1); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	} else if arr1 != [3]int{1, 2, 3} {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want [3]int{1, 2, 3}", data, arr1, arr1)
-	}
+	err := unmarshal(t, data, &arr1)
+	checkUnmarshal(t, "Unmarshal", arr1, err, [3]int{1, 2, 3})
 
 	// Unmarshal CBOR array into Go array with more elements.
 	var arr2 [5]int
-	if err := unmarshal(t, data, &arr2); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	} else if arr2 != [5]int{1, 2, 3, 0, 0} {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want [5]int{1, 2, 3, 0, 0}", data, arr2, arr2)
-	}
+	err = unmarshal(t, data, &arr2)
+	checkUnmarshal(t, "Unmarshal", arr2, err, [5]int{1, 2, 3, 0, 0})
 
 	// Unmarshal CBOR array into Go array with less elements.
 	var arr3 [1]int
-	if err := unmarshal(t, data, &arr3); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	} else if arr3 != [1]int{1} {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want [0]int{1}", data, arr3, arr3)
-	}
+	err = unmarshal(t, data, &arr3)
+	checkUnmarshal(t, "Unmarshal", arr3, err, [1]int{1})
 }
 
 type nilUnmarshaler string
@@ -2938,11 +2844,8 @@ func TestUnmarshalNull(t *testing.T) {
 				v := reflect.New(reflect.TypeOf(tc.value))
 				v.Elem().Set(reflect.ValueOf(tc.value))
 
-				if err := unmarshal(t, data, v.Interface()); err != nil {
-					t.Errorf("Unmarshal(0x%x) to %T returned error %v", data, v.Elem().Interface(), err)
-				} else if !reflect.DeepEqual(v.Elem().Interface(), tc.wantValue) {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v.Elem().Interface(), v.Elem().Interface(), tc.wantValue, tc.wantValue)
-				}
+				err := unmarshal(t, data, v.Interface())
+				checkUnmarshal(t, "Unmarshal", v.Elem().Interface(), err, tc.wantValue)
 			}
 		})
 	}
@@ -3057,11 +2960,8 @@ func TestUnmarshalNullToInterface(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, data := range data {
 				v := tc.value()
-				if err := unmarshal(t, data, &v); err != nil {
-					t.Errorf("Unmarshal(0x%x): unexpected error: %v", data, err)
-				} else if v != nil {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want nil", data, v, v)
-				}
+				err := unmarshal(t, data, &v)
+				checkUnmarshal(t, "Unmarshal", v, err, nil)
 			}
 		})
 	}
@@ -3107,27 +3007,26 @@ func TestUnmarshalNullToPointer(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, data := range data {
-				p := tc.value()
-				v := reflect.New(reflect.TypeOf(p))
-				v.Elem().Set(reflect.ValueOf(p))
+				t.Run(fmt.Sprintf("0x%x", data), func(t *testing.T) {
+					p := tc.value()
+					v := reflect.New(reflect.TypeOf(p))
+					v.Elem().Set(reflect.ValueOf(p))
 
-				if err := unmarshal(t, data, v.Interface()); err != nil {
-					t.Errorf("Unmarshal(0x%x): unexpected error: %v", data, err)
-				} else if !v.Elem().IsNil() {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want nil", data, v.Elem().Interface(), v.Elem().Interface())
-				}
+					err := unmarshal(t, data, v.Interface())
+					checkUnmarshal(t, "Unmarshal", v.Elem().Interface(), err,
+						reflect.Zero(v.Elem().Type()).Interface())
+				})
 			}
 		})
 	}
 
 	t.Run("empty interface", func(t *testing.T) {
 		for _, data := range data {
-			var v any = "hello world"
-			if err := unmarshal(t, data, &v); err != nil {
-				t.Errorf("Unmarshal(0x%x): unexpected error: %v", data, err)
-			} else if v != nil {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want nil", data, v, v)
-			}
+			t.Run(fmt.Sprintf("0x%x", data), func(t *testing.T) {
+				var v any = "hello world"
+				err := unmarshal(t, data, &v)
+				checkUnmarshal(t, "Unmarshal", v, err, nil)
+			})
 		}
 	})
 
@@ -3136,13 +3035,12 @@ func TestUnmarshalNullToPointer(t *testing.T) {
 			mustHexDecode("a16150f6"),       // {"P": null}
 			mustHexDecode("a16150d9d9f7f6"), // {"P": 55799(null)}
 		} {
-			one := 1
-			v := struct{ P *int }{P: &one}
-			if err := unmarshal(t, data, &v); err != nil {
-				t.Errorf("Unmarshal(0x%x): unexpected error: %v", data, err)
-			} else if v.P != nil {
-				t.Errorf("Unmarshal(0x%x) = %+v, want P nil", data, v)
-			}
+			t.Run(fmt.Sprintf("0x%x", data), func(t *testing.T) {
+				one := 1
+				v := struct{ P *int }{P: &one}
+				err := unmarshal(t, data, &v)
+				checkUnmarshal(t, "Unmarshal", v, err, struct{ P *int }{})
+			})
 		}
 	})
 }
@@ -3175,13 +3073,7 @@ func TestInvalidUnmarshal(t *testing.T) {
 	for _, tc := range invalidUnmarshalTestCases {
 		t.Run(tc.name, func(t *testing.T) {
 			err := unmarshal(t, data, tc.v)
-			if err == nil {
-				t.Errorf("Unmarshal(0x%x, %v) didn't return an error", data, tc.v)
-			} else if _, ok := err.(*InvalidUnmarshalError); !ok {
-				t.Errorf("Unmarshal(0x%x, %v) error type %T, want *InvalidUnmarshalError", data, tc.v, err)
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%x, %v) error %q, want %q", data, tc.v, err.Error(), tc.wantErrorMsg)
-			}
+			checkError[*InvalidUnmarshalError](t, "Unmarshal", err, tc.wantErrorMsg)
 		})
 	}
 }
@@ -3704,11 +3596,7 @@ func TestInvalidCBORUnmarshal(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var i any
 			err := unmarshal(t, tc.data, &i)
-			if err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-			}
+			checkError[error](t, "Unmarshal", err, tc.wantErrorMsg)
 
 			// Test wellformedHead and tryWellformedSmallHead
 			d := &decoder{data: tc.data, dm: defaultDecMode}
@@ -3772,22 +3660,12 @@ func TestValidUTF8String(t *testing.T) {
 			// Decode to a value of type any.
 			var i any
 			err = unmarshalWithDM(t, tc.dm, tc.data, &i)
-			if err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
-			}
-			if !reflect.DeepEqual(i, tc.wantObj) {
-				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, i, i, tc.wantObj, tc.wantObj)
-			}
+			checkUnmarshal(t, "dm.Unmarshal", i, err, tc.wantObj)
 
 			// Decode to string
 			var v string
 			err = unmarshalWithDM(t, tc.dm, tc.data, &v)
-			if err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
-			}
-			if !reflect.DeepEqual(v, tc.wantObj) {
-				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, v, v, tc.wantObj, tc.wantObj)
-			}
+			checkUnmarshal(t, "dm.Unmarshal", v, err, tc.wantObj)
 		})
 	}
 }
@@ -3864,38 +3742,12 @@ func TestInvalidUTF8String(t *testing.T) {
 			// Decode to a value of type any.
 			var v any
 			err = unmarshalWithDM(t, tc.dm, tc.data, &v)
-			if tc.wantErrorMsg != "" {
-				if err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
-				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-				}
-			} else {
-				if err != nil {
-					t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
-				}
-				if !reflect.DeepEqual(v, tc.wantObj) {
-					t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, v, v, tc.wantObj, tc.wantObj)
-				}
-			}
+			checkUnmarshalCase[error](t, "dm.Unmarshal", v, err, tc.wantObj, tc.wantErrorMsg != "", tc.wantErrorMsg)
 
 			// Decode to string
 			var s string
 			err = unmarshalWithDM(t, tc.dm, tc.data, &s)
-			if tc.wantErrorMsg != "" {
-				if err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
-				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-				}
-			} else {
-				if err != nil {
-					t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
-				}
-				if !reflect.DeepEqual(s, tc.wantObj) {
-					t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, s, s, tc.wantObj, tc.wantObj)
-				}
-			}
+			checkUnmarshalCase[error](t, "dm.Unmarshal", s, err, tc.wantObj, tc.wantErrorMsg != "", tc.wantErrorMsg)
 		})
 	}
 
@@ -3904,30 +3756,18 @@ func TestInvalidUTF8String(t *testing.T) {
 	data := mustHexDecode("7f62e6b061b4ff7f657374726561646d696e67ff")
 	dec := NewDecoder(bytes.NewReader(data))
 	var s string
-	if err := dec.Decode(&s); err == nil {
-		t.Errorf("Decode() didn't return an error")
-	} else if s != "" {
-		t.Errorf("Decode() returned %q, want %q", s, "")
-	}
-	if err := dec.Decode(&s); err != nil {
-		t.Errorf("Decode() returned error %v", err)
-	} else if s != "streaming" {
-		t.Errorf("Decode() returned %q, want %q", s, "streaming")
-	}
+	err = dec.Decode(&s)
+	checkUnmarshalErr[error](t, "Decoder.Decode", s, err, "", invalidUTF8ErrorMsg)
+	err = dec.Decode(&s)
+	checkUnmarshal(t, "Decoder.Decode", s, err, "streaming")
 
 	// Test decoding of mixed invalid text string and valid text string
 	// with UTF8DecodeInvalid option
 	dec = dmDecodeInvalidUTF8.NewDecoder(bytes.NewReader(data))
-	if err := dec.Decode(&s); err != nil {
-		t.Errorf("Decode() returned error %q", err)
-	} else if s != string([]byte{0xe6, 0xb0, 0xb4}) {
-		t.Errorf("Decode() returned %q, want %q", s, string([]byte{0xe6, 0xb0, 0xb4}))
-	}
-	if err := dec.Decode(&s); err != nil {
-		t.Errorf("Decode() returned error %v", err)
-	} else if s != "streaming" {
-		t.Errorf("Decode() returned %q, want %q", s, "streaming")
-	}
+	err = dec.Decode(&s)
+	checkUnmarshal(t, "Decoder.Decode", s, err, string([]byte{0xe6, 0xb0, 0xb4}))
+	err = dec.Decode(&s)
+	checkUnmarshal(t, "Decoder.Decode", s, err, "streaming")
 }
 
 func TestUnmarshalStruct(t *testing.T) {
@@ -3962,11 +3802,8 @@ func TestUnmarshalStruct(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v outer
-			if err := unmarshal(t, tc.data, &v); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-			} else if !reflect.DeepEqual(v, want) {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, want, want)
-			}
+			err := unmarshal(t, tc.data, &v)
+			checkUnmarshal(t, "Unmarshal", v, err, want)
 		})
 	}
 }
@@ -3996,35 +3833,11 @@ func TestUnmarshalStructError1(t *testing.T) {
 	}
 
 	data := mustHexDecode("a868496e744669656c64187b6a466c6f61744669656c64fa47c3500069426f6f6c4669656c64f56b537472696e674669656c6464746573746f42797465537472696e674669656c64430103056a41727261794669656c64826568656c6c6f65776f726c64684d61704669656c64a2676d6f726e696e67f56961667465726e6f6f6ef4714e65737465645374727563744669656c64a261581903e861591a000f4240")
-	wantCBORType := "UTF-8 text string"
-	wantGoType := "int"
-	wantStructFieldName := "cbor.outer2.ArrayField"
-	wantErrorMsg := "cannot unmarshal UTF-8 text string into Go struct field cbor.outer2.ArrayField of type int"
+	wantErrorMsg := "cbor: cannot unmarshal UTF-8 text string into Go struct field cbor.outer2.ArrayField of type int"
 
 	var v outer2
-	if err := unmarshal(t, data, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else {
-		if typeError, ok := err.(*UnmarshalTypeError); !ok {
-			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*UnmarshalTypeError)", data, err)
-		} else {
-			if typeError.CBORType != wantCBORType {
-				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).CBORType %s, want %s", data, typeError.CBORType, wantCBORType)
-			}
-			if typeError.GoType != wantGoType {
-				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).GoType %s, want %s", data, typeError.GoType, wantGoType)
-			}
-			if typeError.StructFieldName != wantStructFieldName {
-				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).StructFieldName %s, want %s", data, typeError.StructFieldName, wantStructFieldName)
-			}
-			if !strings.Contains(err.Error(), wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-			}
-		}
-	}
-	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, want, want)
-	}
+	err := unmarshal(t, data, &v)
+	checkUnmarshalErr[*UnmarshalTypeError](t, "Unmarshal", v, err, want, wantErrorMsg)
 }
 
 func TestUnmarshalStructError2(t *testing.T) {
@@ -4040,72 +3853,31 @@ func TestUnmarshalStructError2(t *testing.T) {
 
 	// Unmarshal returns first error encountered, which is *UnmarshalTypeError (failed to unmarshal int into Go string)
 	data := mustHexDecode("a3fa47c35000026161614161fe6142") // {100000.0:2, "a":"A", 0xfe: B}
-	wantCBORType := "primitives"
-	wantGoType := "string"
-	wantErrorMsg := "cannot unmarshal primitives into Go value of type string"
+	wantErrorMsg := "cbor: cannot unmarshal primitives into Go value of type string (map key is of type primitives and cannot be used to match struct field name)"
 
 	v := strc{}
-	if err := unmarshal(t, data, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else {
-		if typeError, ok := err.(*UnmarshalTypeError); !ok {
-			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*UnmarshalTypeError)", data, err)
-		} else {
-			if typeError.CBORType != wantCBORType {
-				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).CBORType %s, want %s", data, typeError.CBORType, wantCBORType)
-			}
-			if typeError.GoType != wantGoType {
-				t.Errorf("Unmarshal(0x%x) returned (*UnmarshalTypeError).GoType %s, want %s", data, typeError.GoType, wantGoType)
-			}
-			if !strings.Contains(err.Error(), wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-			}
-		}
-	}
-	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, want, want)
-	}
+	err := unmarshal(t, data, &v)
+	checkUnmarshalErr[*UnmarshalTypeError](t, "Unmarshal", v, err, want, wantErrorMsg)
 
 	// Unmarshal returns first error encountered, which is *cbor.SemanticError (invalid UTF8 string)
 	data = mustHexDecode("a361fe6142010261616141") // {0xfe: B, 1:2, "a":"A"}
 	v = strc{}
-	if err := unmarshal(t, data, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else {
-		if _, ok := err.(*SemanticError); !ok {
-			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*SemanticError)", data, err)
-		} else if err.Error() != invalidUTF8ErrorMsg {
-			t.Errorf("Unmarshal(0x%x) returned error %q, want error %q", data, err.Error(), invalidUTF8ErrorMsg)
-		}
-	}
-	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, want, want)
-	}
+	err = unmarshal(t, data, &v)
+	checkUnmarshalErr[*SemanticError](t, "Unmarshal", v, err, want, invalidUTF8ErrorMsg)
 
 	// Unmarshal returns first error encountered, which is *cbor.SemanticError (invalid UTF8 string)
 	data = mustHexDecode("a3616261fe010261616141") // {"b": 0xfe, 1:2, "a":"A"}
 	v = strc{}
-	if err := unmarshal(t, data, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else {
-		if _, ok := err.(*SemanticError); !ok {
-			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*SemanticError)", data, err)
-		} else if err.Error() != invalidUTF8ErrorMsg {
-			t.Errorf("Unmarshal(0x%x) returned error %q, want error %q", data, err.Error(), invalidUTF8ErrorMsg)
-		}
-	}
-	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, want, want)
-	}
+	err = unmarshal(t, data, &v)
+	checkUnmarshalErr[*SemanticError](t, "Unmarshal", v, err, want, invalidUTF8ErrorMsg)
 }
 
 func TestUnmarshalPrefilledArray(t *testing.T) {
 	prefilledArr := []int{1, 2, 3, 4, 5}
 	want := []int{10, 11, 3, 4, 5}
 	data := mustHexDecode("820a0b") // []int{10, 11}
-	if err := unmarshal(t, data, &prefilledArr); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
+	err := unmarshal(t, data, &prefilledArr)
+	checkUnmarshal(t, "Unmarshal", prefilledArr, err, []int{10, 11})
 	if len(prefilledArr) != 2 || cap(prefilledArr) != 5 {
 		t.Errorf("Unmarshal(0x%x) = %v (len %d, cap %d), want len == 2, cap == 5", data, prefilledArr, len(prefilledArr), cap(prefilledArr))
 	}
@@ -4114,9 +3886,8 @@ func TestUnmarshalPrefilledArray(t *testing.T) {
 	}
 
 	data = mustHexDecode("80") // empty array
-	if err := unmarshal(t, data, &prefilledArr); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
+	err = unmarshal(t, data, &prefilledArr)
+	checkUnmarshal(t, "Unmarshal", prefilledArr, err, []int{})
 	if len(prefilledArr) != 0 || cap(prefilledArr) != 0 {
 		t.Errorf("Unmarshal(0x%x) = %v (len %d, cap %d), want len == 0, cap == 0", data, prefilledArr, len(prefilledArr), cap(prefilledArr))
 	}
@@ -4126,22 +3897,14 @@ func TestUnmarshalPrefilledMap(t *testing.T) {
 	prefilledMap := map[string]string{"key": "value", "a": "1"}
 	want := map[string]string{"key": "value", "a": "A", "b": "B", "c": "C", "d": "D", "e": "E"}
 	data := mustHexDecode("a56161614161626142616361436164614461656145") // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E"}
-	if err := unmarshal(t, data, &prefilledMap); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(prefilledMap, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, prefilledMap, prefilledMap, want, want)
-	}
+	err := unmarshal(t, data, &prefilledMap)
+	checkUnmarshal(t, "Unmarshal", prefilledMap, err, want)
 
 	prefilledMap = map[string]string{"key": "value"}
 	want = map[string]string{"key": "value"}
 	data = mustHexDecode("a0") // map[string]string{}
-	if err := unmarshal(t, data, &prefilledMap); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(prefilledMap, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, prefilledMap, prefilledMap, want, want)
-	}
+	err = unmarshal(t, data, &prefilledMap)
+	checkUnmarshal(t, "Unmarshal", prefilledMap, err, want)
 }
 
 func TestUnmarshalPrefilledStruct(t *testing.T) {
@@ -4153,12 +3916,8 @@ func TestUnmarshalPrefilledStruct(t *testing.T) {
 	prefilledStruct := s{a: 100, B: []int{200, 300, 400, 500}, C: true}
 	want := s{a: 100, B: []int{2, 3}, C: true}
 	data := mustHexDecode("a26161016162820203") // map[string]any {"a": 1, "b": []int{2, 3}}
-	if err := unmarshal(t, data, &prefilledStruct); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(prefilledStruct, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, prefilledStruct, prefilledStruct, want, want)
-	}
+	err := unmarshal(t, data, &prefilledStruct)
+	checkUnmarshal(t, "Unmarshal", prefilledStruct, err, want)
 	if len(prefilledStruct.B) != 2 || cap(prefilledStruct.B) != 4 {
 		t.Errorf("Unmarshal(0x%x) = %v (len %d, cap %d), want len == 2, cap == 5", data, prefilledStruct.B, len(prefilledStruct.B), cap(prefilledStruct.B))
 	}
@@ -4180,28 +3939,26 @@ func TestStructFieldNil(t *testing.T) {
 	}
 	var struc2 TestStruct
 	err = unmarshal(t, data, &struc2)
-	if err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	} else if !reflect.DeepEqual(struc, struc2) {
-		t.Errorf("Unmarshal(0x%x) returned %+v, want %+v", data, struc2, struc)
-	}
+	checkUnmarshal(t, "Unmarshal", struc2, err, struc)
 }
 
 func TestLengthOverflowsInt(t *testing.T) {
 	// Data is generating by go-fuzz.
 	// string/slice/map length in uint64 cast to int causes integer overflow.
-	data := [][]byte{
-		mustHexDecode("bbcf30303030303030cfd697829782"),
-		mustHexDecode("5bcf30303030303030cfd697829782"),
+	testCases := []struct {
+		name         string
+		data         []byte
+		wantErrorMsg string
+	}{
+		{name: "map length", data: mustHexDecode("bbcf30303030303030cfd697829782"), wantErrorMsg: "cbor: map length 14929485748258222128 is too large, it would cause integer overflow"},
+		{name: "byte string length", data: mustHexDecode("5bcf30303030303030cfd697829782"), wantErrorMsg: "cbor: byte string length 14929485748258222128 is too large, causing integer overflow"},
 	}
-	wantErrorMsg := "is too large"
-	for _, data := range data {
-		var intf any
-		if err := unmarshal(t, data, &intf); err == nil {
-			t.Errorf("Unmarshal(0x%x) didn't return an error, want error containing substring %q", data, wantErrorMsg)
-		} else if !strings.Contains(err.Error(), wantErrorMsg) {
-			t.Errorf("Unmarshal(0x%x) returned error %q, want error containing substring %q", data, err.Error(), wantErrorMsg)
-		}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var intf any
+			err := unmarshal(t, tc.data, &intf)
+			checkError[error](t, "Unmarshal", err, tc.wantErrorMsg)
+		})
 	}
 }
 
@@ -4249,18 +4006,18 @@ func TestMapKeyHashable(t *testing.T) {
 			name: "{}",
 			data: mustHexDecode("a1a002"), // {{}: 2}
 			wantErrorMsgs: map[reflect.Type]string{
-				typeAny:            "cbor: invalid map key type: map",
-				typeMapAnyAny:      "cbor: invalid map key type: map",
-				typeMapNamedAnyAny: "cbor: invalid map key type: map",
+				typeAny:            "cbor: invalid map key type: map[interface {}]interface {}",
+				typeMapAnyAny:      "cbor: invalid map key type: map[interface {}]interface {}",
+				typeMapNamedAnyAny: "cbor: invalid map key type: map[interface {}]interface {}",
 			},
 		},
 		{
 			name: "{1:2}",
 			data: mustHexDecode("a1a1010203"), // {{1:2}: 2}
 			wantErrorMsgs: map[reflect.Type]string{
-				typeAny:            "cbor: invalid map key type: map",
-				typeMapAnyAny:      "cbor: invalid map key type: map",
-				typeMapNamedAnyAny: "cbor: invalid map key type: map",
+				typeAny:            "cbor: invalid map key type: map[interface {}]interface {}",
+				typeMapAnyAny:      "cbor: invalid map key type: map[interface {}]interface {}",
+				typeMapNamedAnyAny: "cbor: invalid map key type: map[interface {}]interface {}",
 			},
 		},
 		{
@@ -4358,11 +4115,7 @@ func TestMapKeyHashable(t *testing.T) {
 			t.Run(name(typ, tc.name), func(t *testing.T) {
 				v := reflect.New(typ)
 				err := unmarshal(t, tc.data, v.Interface())
-				if err != nil {
-					t.Errorf("Unmarshal(0x%x, %s): unexpected error: %q", tc.data, typ, err.Error())
-				} else if got := v.Elem().Interface(); !reflect.DeepEqual(got, wantObj) {
-					t.Errorf("Unmarshal(0x%x, %s) = %v (%T), want %v (%T)", tc.data, typ, got, got, wantObj, wantObj)
-				}
+				checkUnmarshal(t, "Unmarshal", v.Elem().Interface(), err, wantObj)
 			})
 		}
 
@@ -4370,11 +4123,7 @@ func TestMapKeyHashable(t *testing.T) {
 			t.Run(name(typ, tc.name), func(t *testing.T) {
 				v := reflect.New(typ)
 				err := unmarshal(t, tc.data, v.Interface())
-				if err == nil {
-					t.Errorf("Unmarshal(0x%x, %s): expected error containing %q, got nil", tc.data, typ, wantErrorMsg)
-				} else if !strings.Contains(err.Error(), wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x, %s): got %q, want substring %q", tc.data, typ, err.Error(), wantErrorMsg)
-				}
+				checkError[error](t, "Unmarshal", err, wantErrorMsg)
 			})
 		}
 	}
@@ -4540,23 +4289,7 @@ func TestRegisteredMapKeyHashable(t *testing.T) {
 			for _, typ := range destinationTypes {
 				v := reflect.New(typ)
 				err := unmarshalWithDM(t, dm, tc.data, v.Interface())
-				if err == nil {
-					got := v.Elem().Interface()
-
-					if tc.wantErrorMsg != "" {
-						t.Errorf("Unmarshal(0x%x, %s): expected error containing %q, got nil", tc.data, typ, tc.wantErrorMsg)
-					} else if wantObj, found := tc.wantObjs[typ]; !found {
-						t.Errorf("Unmarshal(0x%x, %s): no wantObjs entry for the destination type", tc.data, typ)
-					} else if !reflect.DeepEqual(got, wantObj) {
-						t.Errorf("Unmarshal(0x%x, %s) = %v (%T), want %v (%T)", tc.data, typ, got, got, wantObj, wantObj)
-					}
-				} else {
-					if tc.wantErrorMsg == "" {
-						t.Errorf("Unmarshal(0x%x, %s): unexpected error: %q", tc.data, typ, err.Error())
-					} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-						t.Errorf("Unmarshal(0x%x, %s): got %q, want substring %q", tc.data, typ, err.Error(), tc.wantErrorMsg)
-					}
-				}
+				checkUnmarshalCase[error](t, "dm.Unmarshal", v.Elem().Interface(), err, tc.wantObjs[typ], tc.wantErrorMsg != "", tc.wantErrorMsg)
 			}
 		})
 	}
@@ -4582,12 +4315,9 @@ func TestUnmarshalUndefinedElement(t *testing.T) {
 	// Data is generating by go-fuzz.
 	data := mustHexDecode("bfd1a388f730303030303030303030303030ff") // {17({[undefined, -17, -17, -17, -17, -17, -17, -17]: -17, -17: -17}): -17}
 	var intf any
-	wantErrorMsg := "invalid map key type"
-	if err := unmarshal(t, data, &intf); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error, want error containing substring %q", data, wantErrorMsg)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing substring %q", data, err.Error(), wantErrorMsg)
-	}
+	wantErrorMsg := "cbor: invalid map key type: []interface {}"
+	err := unmarshal(t, data, &intf)
+	checkError[error](t, "Unmarshal", err, wantErrorMsg)
 }
 
 func TestMapKeyNil(t *testing.T) {
@@ -4684,11 +4414,8 @@ func TestMapKeyNil(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			v := reflect.New(tc.decodeToType)
-			if err := unmarshal(t, tc.data, v.Interface()); err != nil {
-				t.Fatalf("Unmarshal(0x%x): unexpected error: %v", tc.data, err)
-			} else if !reflect.DeepEqual(v.Elem().Interface(), tc.want) {
-				t.Errorf("Unmarshal(0x%x) = %+v, want %+v", tc.data, v.Elem().Interface(), tc.want)
-			}
+			err := unmarshal(t, tc.data, v.Interface())
+			checkUnmarshal(t, "Unmarshal", v.Elem().Interface(), err, tc.want)
 		})
 	}
 }
@@ -4780,21 +4507,7 @@ func TestMapKeyDuplicateNil(t *testing.T) {
 
 			v := reflect.New(tc.decodeToType)
 			err := unmarshalWithDM(t, dm, tc.data, v.Interface())
-			if tc.wantErrorMsg == "" {
-				if err != nil {
-					t.Fatalf("Unmarshal(0x%x): unexpected error: %v", tc.data, err)
-				} else if !reflect.DeepEqual(v.Elem().Interface(), tc.want) {
-					t.Errorf("Unmarshal(0x%x) = %+v, want %+v", tc.data, v.Elem().Interface(), tc.want)
-				}
-			} else {
-				if err == nil {
-					t.Fatalf("Unmarshal(0x%x): expected *DupMapKeyError, got nil", tc.data)
-				} else if _, ok := err.(*DupMapKeyError); !ok {
-					t.Errorf("Unmarshal(0x%x) returned %T, want *DupMapKeyError", tc.data, err)
-				} else if err.Error() != tc.wantErrorMsg {
-					t.Errorf("Unmarshal(0x%x): got %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-				}
-			}
+			checkUnmarshalCase[*DupMapKeyError](t, "dm.Unmarshal", v.Elem().Interface(), err, tc.want, tc.wantErrorMsg != "", tc.wantErrorMsg)
 		})
 	}
 }
@@ -4887,11 +4600,8 @@ func TestMapValueNil(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			v := reflect.New(tc.decodeToType)
-			if err := unmarshal(t, tc.data, v.Interface()); err != nil {
-				t.Fatalf("Unmarshal(0x%x): unexpected error: %v", tc.data, err)
-			} else if !reflect.DeepEqual(v.Elem().Interface(), tc.want) {
-				t.Errorf("Unmarshal(0x%x) = %+v, want %+v", tc.data, v.Elem().Interface(), tc.want)
-			}
+			err := unmarshal(t, tc.data, v.Interface())
+			checkUnmarshal(t, "Unmarshal", v.Elem().Interface(), err, tc.want)
 		})
 	}
 }
@@ -4934,11 +4644,8 @@ func TestMapEntryWithNoOpOnEmptyDataUnmarshaler(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			v := reflect.New(tc.decodeToType)
-			if err := unmarshal(t, tc.data, v.Interface()); err != nil {
-				t.Fatalf("Unmarshal(0x%x): unexpected error: %v", tc.data, err)
-			} else if !reflect.DeepEqual(v.Elem().Interface(), tc.want) {
-				t.Errorf("Unmarshal(0x%x) = %+v, want %+v", tc.data, v.Elem().Interface(), tc.want)
-			}
+			err := unmarshal(t, tc.data, v.Interface())
+			checkUnmarshal(t, "Unmarshal", v.Elem().Interface(), err, tc.want)
 		})
 	}
 }
@@ -4957,12 +4664,8 @@ func TestUnmarshalStructTag1(t *testing.T) {
 	data := mustHexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
 
 	var v strc
-	if err := unmarshal(t, data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, want, want)
-	}
+	err := unmarshal(t, data, &v)
+	checkUnmarshal(t, "Unmarshal", v, err, want)
 }
 
 func TestUnmarshalStructTag2(t *testing.T) {
@@ -4979,12 +4682,8 @@ func TestUnmarshalStructTag2(t *testing.T) {
 	data := mustHexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
 
 	var v strc
-	if err := unmarshal(t, data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, want, want)
-	}
+	err := unmarshal(t, data, &v)
+	checkUnmarshal(t, "Unmarshal", v, err, want)
 }
 
 func TestUnmarshalStructTag3(t *testing.T) {
@@ -5001,12 +4700,8 @@ func TestUnmarshalStructTag3(t *testing.T) {
 	data := mustHexDecode("a36161614161626142617a6143") // {"a":"A", "b":"B", "z":"C"}
 
 	var v strc
-	if err := unmarshal(t, data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, v, v, want, want)
-	}
+	err := unmarshal(t, data, &v)
+	checkUnmarshal(t, "Unmarshal", v, err, want)
 }
 
 func TestUnmarshalStructTag4(t *testing.T) {
@@ -5022,12 +4717,8 @@ func TestUnmarshalStructTag4(t *testing.T) {
 	data := mustHexDecode("a3616161416162614261636143") // {"a":"A", "b":"B", "c":"C"}
 
 	var v strc
-	if err := unmarshal(t, data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, v, v, want, want)
-	}
+	err := unmarshal(t, data, &v)
+	checkUnmarshal(t, "Unmarshal", v, err, want)
 }
 
 type number uint64
@@ -5124,11 +4815,8 @@ func TestBinaryUnmarshalerError(t *testing.T) { //nolint:dupl
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			v := reflect.New(tc.typ)
-			if err := unmarshal(t, tc.data, v.Interface()); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.data, tc.wantErrorMsg)
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-			}
+			err := unmarshal(t, tc.data, v.Interface())
+			checkError[error](t, "Unmarshal", err, tc.wantErrorMsg)
 		})
 	}
 }
@@ -5229,11 +4917,8 @@ func TestUnmarshalerError(t *testing.T) { //nolint:dupl
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			v := reflect.New(tc.typ)
-			if err := unmarshal(t, tc.data, v.Interface()); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.data, tc.wantErrorMsg)
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-			}
+			err := unmarshal(t, tc.data, v.Interface())
+			checkError[error](t, "Unmarshal", err, tc.wantErrorMsg)
 		})
 	}
 }
@@ -5249,18 +4934,16 @@ func TestMarshalerError(t *testing.T) {
 func TestOutOfMem1(t *testing.T) {
 	data := []byte("\x9b\x00\x00000000")
 	var f []byte
-	if err := unmarshal(t, data, &f); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	}
+	err := unmarshal(t, data, &f)
+	checkUnmarshalErr[error](t, "Unmarshal", f, err, []byte(nil), "")
 }
 
 // Found at https://github.com/oasislabs/oasis-core/blob/master/go/common/cbor/cbor_test.go
 func TestOutOfMem2(t *testing.T) {
 	data := []byte("\x9b\x00\x00\x81112233")
 	var f []byte
-	if err := unmarshal(t, data, &f); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	}
+	err := unmarshal(t, data, &f)
+	checkUnmarshalErr[error](t, "Unmarshal", f, err, []byte(nil), "")
 }
 
 // Found at https://github.com/cose-wg/Examples/tree/master/RFC8152
@@ -5298,13 +4981,8 @@ func TestUnmarshalStructKeyAsIntError(t *testing.T) {
 	}
 	data := mustHexDecode("a13bffffffffffffffff01") // {1: -18446744073709551616}
 	var v T1
-	if err := unmarshal(t, data, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
-	} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), "cannot unmarshal")
-	}
+	err := unmarshal(t, data, &v)
+	checkError[*UnmarshalTypeError](t, "Unmarshal", err, "")
 }
 
 func TestUnmarshalArrayToStruct(t *testing.T) {
@@ -5347,24 +5025,13 @@ func TestUnmarshalArrayToStructNoToArrayOptionError(t *testing.T) {
 	var v1 T
 	wantT := T{}
 	dec := NewDecoder(bytes.NewReader(data))
-	if err := dec.Decode(&v1); err == nil {
-		t.Errorf("Decode(%+v) didn't return an error", v1)
-	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Decode(%+v) returned wrong error type %T, want (*UnmarshalTypeError)", v1, err)
-	} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-		t.Errorf("Decode(%+v) returned error %q, want error containing %q", v1, err.Error(), "cannot unmarshal")
-	}
-	if !reflect.DeepEqual(v1, wantT) {
-		t.Errorf("Decode() = %+v (%T), want %+v (%T)", v1, v1, wantT, wantT)
-	}
+	err := dec.Decode(&v1)
+	checkUnmarshalErr[*UnmarshalTypeError](t, "Decoder.Decode", v1, err, wantT, "")
+
 	var v2 []int
 	want := []int{1, 2, 3}
-	if err := dec.Decode(&v2); err != nil {
-		t.Errorf("Decode() returned error %v", err)
-	}
-	if !reflect.DeepEqual(v2, want) {
-		t.Errorf("Decode() = %+v (%T), want %+v (%T)", v2, v2, want, want)
-	}
+	err = dec.Decode(&v2)
+	checkUnmarshal(t, "Decoder.Decode", v2, err, want)
 }
 
 func TestUnmarshalNonArrayDataToStructToArray(t *testing.T) {
@@ -5408,20 +5075,11 @@ func TestUnmarshalNonArrayDataToStructToArray(t *testing.T) {
 		}, // 3.4028234663852886e+38
 	}
 	wantT := T{}
-	wantErrorMsg := "cannot unmarshal"
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v T
-			if err := unmarshal(t, tc.data, &v); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
-			} else if _, ok := err.(*UnmarshalTypeError); !ok {
-				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.data, err)
-			} else if !strings.Contains(err.Error(), wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.data, err.Error(), wantErrorMsg)
-			}
-			if !reflect.DeepEqual(v, wantT) {
-				t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", tc.data, v, v, wantT, wantT)
-			}
+			err := unmarshal(t, tc.data, &v)
+			checkUnmarshalErr[*UnmarshalTypeError](t, "Unmarshal", v, err, wantT, "")
 		})
 	}
 }
@@ -5436,24 +5094,13 @@ func TestUnmarshalArrayToStructWrongSizeError(t *testing.T) {
 	var v1 T
 	wantT := T{}
 	dec := NewDecoder(bytes.NewReader(data))
-	if err := dec.Decode(&v1); err == nil {
-		t.Errorf("Decode(%+v) didn't return an error", v1)
-	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Decode(%+v) returned wrong error type %T, want (*UnmarshalTypeError)", v1, err)
-	} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-		t.Errorf("Decode(%+v) returned error %q, want error containing %q", v1, err.Error(), "cannot unmarshal")
-	}
-	if !reflect.DeepEqual(v1, wantT) {
-		t.Errorf("Decode() = %+v (%T), want %+v (%T)", v1, v1, wantT, wantT)
-	}
+	err := dec.Decode(&v1)
+	checkUnmarshalErr[*UnmarshalTypeError](t, "Decoder.Decode", v1, err, wantT, "")
+
 	var v2 []int
 	want := []int{1, 2, 3}
-	if err := dec.Decode(&v2); err != nil {
-		t.Errorf("Decode() returned error %v", err)
-	}
-	if !reflect.DeepEqual(v2, want) {
-		t.Errorf("Decode() = %+v (%T), want %+v (%T)", v2, v2, want, want)
-	}
+	err = dec.Decode(&v2)
+	checkUnmarshal(t, "Decoder.Decode", v2, err, want)
 }
 
 func TestUnmarshalArrayToStructWrongFieldTypeError(t *testing.T) {
@@ -5473,7 +5120,7 @@ func TestUnmarshalArrayToStructWrongFieldTypeError(t *testing.T) {
 		{
 			name:         "wrong field type",
 			data:         mustHexDecode("83010203"),
-			wantErrorMsg: "cannot unmarshal",
+			wantErrorMsg: "cbor: cannot unmarshal positive integer into Go struct field cbor.T.B of type string",
 			wantV:        T{A: 1, C: 3},
 		},
 		// [1, 0xfe, 3]
@@ -5487,14 +5134,8 @@ func TestUnmarshalArrayToStructWrongFieldTypeError(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v T
-			if err := unmarshal(t, tc.data, &v); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
-			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.data, err.Error(), tc.wantErrorMsg)
-			}
-			if !reflect.DeepEqual(v, tc.wantV) {
-				t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", tc.data, v, v, tc.wantV, tc.wantV)
-			}
+			err := unmarshal(t, tc.data, &v)
+			checkUnmarshalErr[error](t, "Unmarshal", v, err, tc.wantV, tc.wantErrorMsg)
 		})
 	}
 }
@@ -5516,18 +5157,11 @@ func TestUnmarshalArrayToStructCannotSetEmbeddedPointerError(t *testing.T) {
 		}
 	)
 	data := []byte{0x82, 0x02, 0x04} // [2, 4]
-	const wantErrorMsg = "cannot set embedded pointer to unexported struct"
+	const wantErrorMsg = "cbor: cannot set embedded pointer to unexported struct: *cbor.s1"
 	wantV := S{S2: &S2{Y: 4}}
 	var v S
 	err := unmarshal(t, data, &v)
-	if err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error, want error %q", data, wantErrorMsg)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(v, wantV) {
-		t.Errorf("Decode() = %+v (%T), want %+v (%T)", v, v, wantV, wantV)
-	}
+	checkUnmarshalErr[error](t, "Unmarshal", v, err, wantV, wantErrorMsg)
 }
 
 func TestUnmarshalIntoSliceError(t *testing.T) {
@@ -5538,50 +5172,26 @@ func TestUnmarshalIntoSliceError(t *testing.T) {
 	// Unmarshal CBOR array into a value of type any.
 	var v1 any
 	want = []any{"a", any(nil), "b"}
-	if err := unmarshal(t, data, &v1); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(v1, want) {
-		t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v1, want)
-	}
+	err := unmarshal(t, data, &v1)
+	checkUnmarshalErr[error](t, "Unmarshal", v1, err, want, wantErrorMsg)
 
 	// Unmarshal CBOR array into Go slice.
 	var v2 []string
 	want = []string{"a", "", "b"}
-	if err := unmarshal(t, data, &v2); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(v2, want) {
-		t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v2, want)
-	}
+	err = unmarshal(t, data, &v2)
+	checkUnmarshalErr[error](t, "Unmarshal", v2, err, want, wantErrorMsg)
 
 	// Unmarshal CBOR array into Go array.
 	var v3 [3]string
 	want = [3]string{"a", "", "b"}
-	if err := unmarshal(t, data, &v3); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(v3, want) {
-		t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v3, want)
-	}
+	err = unmarshal(t, data, &v3)
+	checkUnmarshalErr[error](t, "Unmarshal", v3, err, want, wantErrorMsg)
 
 	// Unmarshal CBOR array into populated Go slice.
 	v4 := []string{"hello", "to", "you"}
 	want = []string{"a", "to", "b"}
-	if err := unmarshal(t, data, &v4); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(v4, want) {
-		t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v4, want)
-	}
+	err = unmarshal(t, data, &v4)
+	checkUnmarshalErr[error](t, "Unmarshal", v4, err, want, wantErrorMsg)
 }
 
 func TestUnmarshalIntoMapError(t *testing.T) {
@@ -5596,50 +5206,26 @@ func TestUnmarshalIntoMapError(t *testing.T) {
 		// Unmarshal CBOR map into a value of type any.
 		var v1 any
 		want = map[any]any{"a": "A", "b": "B"}
-		if err := unmarshal(t, data, &v1); err == nil {
-			t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
-		} else if err.Error() != wantErrorMsg {
-			t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
-		}
-		if !reflect.DeepEqual(v1, want) {
-			t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v1, want)
-		}
+		err := unmarshal(t, data, &v1)
+		checkUnmarshalErr[error](t, "Unmarshal", v1, err, want, wantErrorMsg)
 
 		// Unmarshal CBOR map into Go map[any]any.
 		var v2 map[any]any
 		want = map[any]any{"a": "A", "b": "B"}
-		if err := unmarshal(t, data, &v2); err == nil {
-			t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
-		} else if err.Error() != wantErrorMsg {
-			t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
-		}
-		if !reflect.DeepEqual(v2, want) {
-			t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v2, want)
-		}
+		err = unmarshal(t, data, &v2)
+		checkUnmarshalErr[error](t, "Unmarshal", v2, err, want, wantErrorMsg)
 
 		// Unmarshal CBOR array into Go map[string]string.
 		var v3 map[string]string
 		want = map[string]string{"a": "A", "b": "B"}
-		if err := unmarshal(t, data, &v3); err == nil {
-			t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
-		} else if err.Error() != wantErrorMsg {
-			t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
-		}
-		if !reflect.DeepEqual(v3, want) {
-			t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v3, want)
-		}
+		err = unmarshal(t, data, &v3)
+		checkUnmarshalErr[error](t, "Unmarshal", v3, err, want, wantErrorMsg)
 
 		// Unmarshal CBOR array into populated Go map[string]string.
 		v4 := map[string]string{"c": "D"}
 		want = map[string]string{"a": "A", "b": "B", "c": "D"}
-		if err := unmarshal(t, data, &v4); err == nil {
-			t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
-		} else if err.Error() != wantErrorMsg {
-			t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
-		}
-		if !reflect.DeepEqual(v4, want) {
-			t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v4, want)
-		}
+		err = unmarshal(t, data, &v4)
+		checkUnmarshalErr[error](t, "Unmarshal", v4, err, want, wantErrorMsg)
 	}
 }
 
@@ -5672,13 +5258,7 @@ func TestUnmarshalDeepNesting(t *testing.T) {
 	}
 	var readback TestNode
 	err = unmarshalWithDM(t, dm, data, &readback)
-	if err != nil {
-		t.Errorf("Unmarshal() of deeply nested object returned error: %v", err)
-	}
-	if !reflect.DeepEqual(root, &readback) {
-		t.Errorf("Unmarshal() of deeply nested object did not match\nGot: %#v\n Want: %#v\n",
-			&readback, root)
-	}
+	checkUnmarshal(t, "dm.Unmarshal", readback, err, *root)
 }
 
 func TestStructToArrayError(t *testing.T) {
@@ -5703,11 +5283,8 @@ func TestStructToArrayError(t *testing.T) {
 		{mustHexDecode("9f9fff9fff9f65933030303030ffff"), "cbor: cannot unmarshal array into Go struct field cbor.nestedCWT.Unprotected of type cbor.coseHeader (cannot decode CBOR array to struct without toarray option)"},
 	} {
 		var v nestedCWT
-		if err := unmarshal(t, tc.data, &v); err == nil {
-			t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, tc.wantErrorMsg)
-		} else if err.Error() != tc.wantErrorMsg {
-			t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-		}
+		err := unmarshal(t, tc.data, &v)
+		checkError[error](t, "Unmarshal", err, tc.wantErrorMsg)
 	}
 }
 
@@ -5725,14 +5302,8 @@ func TestStructKeyAsIntError(t *testing.T) {
 	wantErrorMsg := invalidUTF8ErrorMsg
 	wantV := claims{Cti: []byte{6, 0, 0}}
 	var v claims
-	if err := unmarshal(t, data, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", data, wantErrorMsg)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(v, wantV) {
-		t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v, wantV)
-	}
+	err := unmarshal(t, data, &v)
+	checkUnmarshalErr[error](t, "Unmarshal", v, err, wantV, wantErrorMsg)
 }
 
 func TestUnmarshalToNotNilInterface(t *testing.T) {
@@ -5740,11 +5311,9 @@ func TestUnmarshalToNotNilInterface(t *testing.T) {
 	s := "hello"
 	var v any = s // Unmarshal() sees v as a value of type any and sets CBOR data as default Go type.  s is unmodified.  Same behavior as encoding/json.
 	wantV := []any{uint64(1), uint64(2), uint64(3)}
-	if err := unmarshal(t, data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	} else if !reflect.DeepEqual(v, wantV) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantV, wantV)
-	} else if s != "hello" {
+	err := unmarshal(t, data, &v)
+	checkUnmarshal(t, "Unmarshal", v, err, wantV)
+	if s != "hello" {
 		t.Errorf("Unmarshal(0x%x) modified s %q", data, s)
 	}
 }
@@ -5769,36 +5338,32 @@ func TestUnmarshalStructKeyAsIntNumError(t *testing.T) {
 			name:         "string as key",
 			data:         mustHexDecode("a1616101"),
 			obj:          T1{},
-			wantErrorMsg: "cbor: failed to parse field name \"a\" to int",
+			wantErrorMsg: "cbor: failed to parse field name \"a\" to int (strconv.Atoi: parsing \"a\": invalid syntax)",
 		},
 		{
 			name:         "int key < math.MinInt",
 			data:         mustHexDecode("a13bffffffffffffffff01"),
 			obj:          T2{},
-			wantErrorMsg: "cbor: failed to parse field name \"-18446744073709551616\" to int",
+			wantErrorMsg: "cbor: failed to parse field name \"-18446744073709551616\" to int (strconv.Atoi: parsing \"-18446744073709551616\": value out of range)",
 		},
 		{
 			name:         "int key > math.MaxInt",
 			data:         mustHexDecode("a10001"),
 			obj:          T3{},
-			wantErrorMsg: "cbor: failed to parse field name \"99999999999999999999\" to int",
+			wantErrorMsg: "cbor: failed to parse field name \"99999999999999999999\" to int (strconv.Atoi: parsing \"99999999999999999999\": value out of range)",
 		},
 		{
 			name:         "CBOR array to struct",
 			data:         mustHexDecode("8101"), // [1]
 			obj:          T1{},
-			wantErrorMsg: "cbor: failed to parse field name \"a\" to int",
+			wantErrorMsg: "cbor: failed to parse field name \"a\" to int (strconv.Atoi: parsing \"a\": invalid syntax)",
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			v := reflect.New(reflect.TypeOf(tc.obj))
 			err := unmarshal(t, tc.data, v.Interface())
-			if err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error, want error %q", tc.data, tc.wantErrorMsg)
-			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-				t.Errorf("Unmarshal(0x%x) error %v, want %v", tc.data, err.Error(), tc.wantErrorMsg)
-			}
+			checkError[error](t, "Unmarshal", err, tc.wantErrorMsg)
 		})
 	}
 }
@@ -5829,12 +5394,8 @@ func TestUnmarshalEmptyMapWithDupMapKeyOpt(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v any
-			if err := unmarshalWithDM(t, dm, tc.data, &v); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-			}
-			if !reflect.DeepEqual(v, tc.wantV) {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.wantV, tc.wantV)
-			}
+			err := unmarshalWithDM(t, dm, tc.data, &v)
+			checkUnmarshal(t, "dm.Unmarshal", v, err, tc.wantV)
 		})
 	}
 }
@@ -5845,28 +5406,16 @@ func TestUnmarshalDupMapKeyToEmptyInterface(t *testing.T) {
 	// Duplicate key overwrites previous value (default).
 	wantV := map[any]any{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
 	var v any
-	if err := unmarshal(t, data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(v, wantV) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantV, wantV)
-	}
+	err := unmarshal(t, data, &v)
+	checkUnmarshal(t, "dm.Unmarshal", v, err, wantV)
 
 	// Duplicate key triggers error.
 	wantV = map[any]any{"a": nil, "b": "B", "c": "C"}
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var v2 any
-	if err := unmarshalWithDM(t, dm, data, &v2); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if _, ok := err.(*DupMapKeyError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(v2, wantV) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v2, v2, wantV, wantV)
-	}
+	err = unmarshalWithDM(t, dm, data, &v2)
+	checkUnmarshalErr[*DupMapKeyError](t, "dm.Unmarshal", v2, err, wantV, wantErrorMsg)
 }
 
 func TestStreamDupMapKeyToEmptyInterface(t *testing.T) {
@@ -5882,17 +5431,10 @@ func TestStreamDupMapKeyToEmptyInterface(t *testing.T) {
 	dec := NewDecoder(bytes.NewReader(b))
 	for range 3 {
 		var v1 any
-		if err := dec.Decode(&v1); err != nil {
-			t.Errorf("Decode() returned error %v", err)
-		}
-		if !reflect.DeepEqual(v1, wantV) {
-			t.Errorf("Decode() = %v (%T), want %v (%T)", v1, v1, wantV, wantV)
-		}
+		err := dec.Decode(&v1)
+		checkUnmarshal(t, "Decoder.Decode", v1, err, wantV)
 	}
-	var v any
-	if err := dec.Decode(&v); err != io.EOF {
-		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
-	}
+	testDecoderEOF(t, dec)
 
 	// Duplicate key triggers error.
 	wantV = map[any]any{"a": nil, "b": "B", "c": "C"}
@@ -5901,20 +5443,10 @@ func TestStreamDupMapKeyToEmptyInterface(t *testing.T) {
 	dec = dm.NewDecoder(bytes.NewReader(b))
 	for range 3 {
 		var v2 any
-		if err := dec.Decode(&v2); err == nil {
-			t.Errorf("Decode() didn't return an error")
-		} else if _, ok := err.(*DupMapKeyError); !ok {
-			t.Errorf("Decode() returned wrong error type %T, want (*DupMapKeyError)", err)
-		} else if err.Error() != wantErrorMsg {
-			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
-		}
-		if !reflect.DeepEqual(v2, wantV) {
-			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v2, v2, wantV, wantV)
-		}
+		err := dec.Decode(&v2)
+		checkUnmarshalErr[*DupMapKeyError](t, "Decoder.Decode", v2, err, wantV, wantErrorMsg)
 	}
-	if err := dec.Decode(&v); err != io.EOF {
-		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
-	}
+	testDecoderEOF(t, dec)
 }
 
 func TestUnmarshalDupMapKeyToEmptyMap(t *testing.T) {
@@ -5923,28 +5455,16 @@ func TestUnmarshalDupMapKeyToEmptyMap(t *testing.T) {
 	// Duplicate key overwrites previous value (default).
 	wantM := map[string]string{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E"}
 	var m map[string]string
-	if err := unmarshal(t, data, &m); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(m, wantM) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, m, m, wantM, wantM)
-	}
+	err := unmarshal(t, data, &m)
+	checkUnmarshal(t, "Unmarshal", m, err, wantM)
 
 	// Duplicate key triggers error.
 	wantM = map[string]string{"a": "", "b": "B", "c": "C"}
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var m2 map[string]string
-	if err := unmarshalWithDM(t, dm, data, &m2); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if _, ok := err.(*DupMapKeyError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(m2, wantM) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, m2, m2, wantM, wantM)
-	}
+	err = unmarshalWithDM(t, dm, data, &m2)
+	checkUnmarshalErr[*DupMapKeyError](t, "Unmarshal", m2, err, wantM, wantErrorMsg)
 }
 
 func TestStreamDupMapKeyToEmptyMap(t *testing.T) {
@@ -5960,17 +5480,10 @@ func TestStreamDupMapKeyToEmptyMap(t *testing.T) {
 	dec := NewDecoder(bytes.NewReader(b))
 	for range 3 {
 		var m1 map[string]string
-		if err := dec.Decode(&m1); err != nil {
-			t.Errorf("Decode() returned error %v", err)
-		}
-		if !reflect.DeepEqual(m1, wantM) {
-			t.Errorf("Decode() = %v (%T), want %v (%T)", m1, m1, wantM, wantM)
-		}
+		err := dec.Decode(&m1)
+		checkUnmarshal(t, "Decoder.Decode", m1, err, wantM)
 	}
-	var v any
-	if err := dec.Decode(&v); err != io.EOF {
-		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
-	}
+	testDecoderEOF(t, dec)
 
 	// Duplicate key triggers error.
 	wantM = map[string]string{"a": "", "b": "B", "c": "C"}
@@ -5979,20 +5492,10 @@ func TestStreamDupMapKeyToEmptyMap(t *testing.T) {
 	dec = dm.NewDecoder(bytes.NewReader(b))
 	for range 3 {
 		var m2 map[string]string
-		if err := dec.Decode(&m2); err == nil {
-			t.Errorf("Decode() didn't return an error")
-		} else if _, ok := err.(*DupMapKeyError); !ok {
-			t.Errorf("Decode() returned wrong error type %T, want (*DupMapKeyError)", err)
-		} else if err.Error() != wantErrorMsg {
-			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
-		}
-		if !reflect.DeepEqual(m2, wantM) {
-			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, m2, m2, wantM, wantM)
-		}
+		err := dec.Decode(&m2)
+		checkUnmarshalErr[*DupMapKeyError](t, "Decoder.Decode", m2, err, wantM, wantErrorMsg)
 	}
-	if err := dec.Decode(&v); err != io.EOF {
-		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
-	}
+	testDecoderEOF(t, dec)
 }
 
 func TestUnmarshalDupMapKeyToNotEmptyMap(t *testing.T) {
@@ -6001,28 +5504,16 @@ func TestUnmarshalDupMapKeyToNotEmptyMap(t *testing.T) {
 	// Duplicate key overwrites previous value (default).
 	m := map[string]string{"a": "Z", "b": "Z", "c": "Z", "d": "Z", "e": "Z", "f": "Z"}
 	wantM := map[string]string{"a": "F", "b": "B", "c": "C", "d": "D", "e": "E", "f": "Z"}
-	if err := unmarshal(t, data, &m); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(m, wantM) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, m, m, wantM, wantM)
-	}
+	err := unmarshal(t, data, &m)
+	checkUnmarshal(t, "Unmarshal", m, err, wantM)
 
 	// Duplicate key triggers error.
 	m2 := map[string]string{"a": "Z", "b": "Z", "c": "Z", "d": "Z", "e": "Z", "f": "Z"}
 	wantM = map[string]string{"a": "", "b": "B", "c": "C", "d": "Z", "e": "Z", "f": "Z"}
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
-	if err := unmarshalWithDM(t, dm, data, &m2); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if _, ok := err.(*DupMapKeyError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(m2, wantM) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, m2, m2, wantM, wantM)
-	}
+	err = unmarshalWithDM(t, dm, data, &m2)
+	checkUnmarshalErr[*DupMapKeyError](t, "dm.Unmarshal", m2, err, wantM, wantErrorMsg)
 }
 
 func TestStreamDupMapKeyToNotEmptyMap(t *testing.T) {
@@ -6038,17 +5529,10 @@ func TestStreamDupMapKeyToNotEmptyMap(t *testing.T) {
 	dec := NewDecoder(bytes.NewReader(b))
 	for range 3 {
 		m1 := map[string]string{"a": "Z", "b": "Z", "c": "Z", "d": "Z", "e": "Z", "f": "Z"}
-		if err := dec.Decode(&m1); err != nil {
-			t.Errorf("Decode() returned error %v", err)
-		}
-		if !reflect.DeepEqual(m1, wantM) {
-			t.Errorf("Decode() = %v (%T), want %v (%T)", m1, m1, wantM, wantM)
-		}
+		err := dec.Decode(&m1)
+		checkUnmarshal(t, "Decoder.Decode", m1, err, wantM)
 	}
-	var v any
-	if err := dec.Decode(&v); err != io.EOF {
-		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
-	}
+	testDecoderEOF(t, dec)
 
 	// Duplicate key triggers error.
 	wantM = map[string]string{"a": "", "b": "B", "c": "C", "d": "Z", "e": "Z", "f": "Z"}
@@ -6057,20 +5541,10 @@ func TestStreamDupMapKeyToNotEmptyMap(t *testing.T) {
 	dec = dm.NewDecoder(bytes.NewReader(b))
 	for range 3 {
 		m2 := map[string]string{"a": "Z", "b": "Z", "c": "Z", "d": "Z", "e": "Z", "f": "Z"}
-		if err := dec.Decode(&m2); err == nil {
-			t.Errorf("Decode() didn't return an error")
-		} else if _, ok := err.(*DupMapKeyError); !ok {
-			t.Errorf("Decode() returned wrong error type %T, want (*DupMapKeyError)", err)
-		} else if err.Error() != wantErrorMsg {
-			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
-		}
-		if !reflect.DeepEqual(m2, wantM) {
-			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, m2, m2, wantM, wantM)
-		}
+		err := dec.Decode(&m2)
+		checkUnmarshalErr[*DupMapKeyError](t, "Decoder.Decode", m2, err, wantM, wantErrorMsg)
 	}
-	if err := dec.Decode(&v); err != io.EOF {
-		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
-	}
+	testDecoderEOF(t, dec)
 }
 
 func TestUnmarshalDupMapKeyToStruct(t *testing.T) {
@@ -6085,11 +5559,11 @@ func TestUnmarshalDupMapKeyToStruct(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		name    string
-		opts    DecOptions
-		data    []byte
-		want    s
-		wantErr *DupMapKeyError
+		name         string
+		opts         DecOptions
+		data         []byte
+		want         s
+		wantErrorMsg string
 	}{
 		{
 			name: "duplicate key does not overwrite previous value",
@@ -6097,18 +5571,18 @@ func TestUnmarshalDupMapKeyToStruct(t *testing.T) {
 			want: s{A: "A", B: "B", C: "C", D: "D", E: "E"},
 		},
 		{
-			name:    "duplicate key triggers error",
-			opts:    DecOptions{DupMapKey: DupMapKeyEnforcedAPF},
-			data:    mustHexDecode("a6616161416162614261636143616161466164614461656145"), // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
-			want:    s{A: "A", B: "B", C: "C"},
-			wantErr: &DupMapKeyError{Key: "a", Index: 3},
+			name:         "duplicate key triggers error",
+			opts:         DecOptions{DupMapKey: DupMapKeyEnforcedAPF},
+			data:         mustHexDecode("a6616161416162614261636143616161466164614461656145"), // {"a": "A", "b": "B", "c": "C", "a": "F", "d": "D", "e": "E"}
+			want:         s{A: "A", B: "B", C: "C"},
+			wantErrorMsg: (&DupMapKeyError{Key: "a", Index: 3}).Error(),
 		},
 		{
-			name:    "duplicate keys of comparable but disallowed cbor types skips remaining entries and returns error",
-			opts:    DecOptions{DupMapKey: DupMapKeyEnforcedAPF},
-			data:    mustHexDecode("a7616161416162614261636143d903e70100d903e701016164614461656145"), // {"a": "A", "b": "B", "c": "C", 999(1): 0, 999(1): 1, "d": "D", "e": "E"}
-			want:    s{A: "A", B: "B", C: "C"},
-			wantErr: &DupMapKeyError{Key: Tag{Number: 999, Content: uint64(1)}, Index: 4},
+			name:         "duplicate keys of comparable but disallowed cbor types skips remaining entries and returns error",
+			opts:         DecOptions{DupMapKey: DupMapKeyEnforcedAPF},
+			data:         mustHexDecode("a7616161416162614261636143d903e70100d903e701016164614461656145"), // {"a": "A", "b": "B", "c": "C", 999(1): 0, 999(1): 1, "d": "D", "e": "E"}
+			want:         s{A: "A", B: "B", C: "C"},
+			wantErrorMsg: (&DupMapKeyError{Key: Tag{Number: 999, Content: uint64(1)}, Index: 4}).Error(),
 		},
 		{
 			name: "mixed-case duplicate key does not overwrite previous value",
@@ -6116,11 +5590,11 @@ func TestUnmarshalDupMapKeyToStruct(t *testing.T) {
 			want: s{A: "A", B: "B", C: "C", D: "D", E: "E"},
 		},
 		{
-			name:    "mixed-case duplicate key triggers error",
-			opts:    DecOptions{DupMapKey: DupMapKeyEnforcedAPF},
-			data:    mustHexDecode("a6616161416162614261636143614161466164614461656145"), // {"a": "A", "b": "B", "c": "C", "A": "F", "d": "D", "e": "E"}
-			want:    s{A: "A", B: "B", C: "C"},
-			wantErr: &DupMapKeyError{Key: "A", Index: 3},
+			name:         "mixed-case duplicate key triggers error",
+			opts:         DecOptions{DupMapKey: DupMapKeyEnforcedAPF},
+			data:         mustHexDecode("a6616161416162614261636143614161466164614461656145"), // {"a": "A", "b": "B", "c": "C", "A": "F", "d": "D", "e": "E"}
+			want:         s{A: "A", B: "B", C: "C"},
+			wantErrorMsg: (&DupMapKeyError{Key: "A", Index: 3}).Error(),
 		},
 		{
 			name: "keyasint duplicate key does not overwrite previous value",
@@ -6128,11 +5602,11 @@ func TestUnmarshalDupMapKeyToStruct(t *testing.T) {
 			want: s{I: "i", A: "A"},
 		},
 		{
-			name:    "keyasint duplicate key triggers error",
-			opts:    DecOptions{DupMapKey: DupMapKeyEnforcedAPF},
-			data:    mustHexDecode("a301616901614961616141"), // {1: "i", 1: "I", "a": "A"}
-			want:    s{I: "i"},
-			wantErr: &DupMapKeyError{Key: int64(1), Index: 1},
+			name:         "keyasint duplicate key triggers error",
+			opts:         DecOptions{DupMapKey: DupMapKeyEnforcedAPF},
+			data:         mustHexDecode("a301616901614961616141"), // {1: "i", 1: "I", "a": "A"}
+			want:         s{I: "i"},
+			wantErrorMsg: (&DupMapKeyError{Key: int64(1), Index: 1}).Error(),
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -6142,18 +5616,11 @@ func TestUnmarshalDupMapKeyToStruct(t *testing.T) {
 			}
 
 			var s1 s
-			if err := unmarshalWithDM(t, dm, tc.data, &s1); err != nil {
-				if !reflect.DeepEqual(err, tc.wantErr) {
-					t.Errorf("got error: %v, wanted: %v", err, tc.wantErr)
-				}
+			err = unmarshalWithDM(t, dm, tc.data, &s1)
+			if tc.wantErrorMsg != "" {
+				checkUnmarshalErr[*DupMapKeyError](t, "dm.Unmarshal", s1, err, tc.want, tc.wantErrorMsg)
 			} else {
-				if tc.wantErr != nil {
-					t.Errorf("got nil error, wanted: %v", tc.wantErr)
-				}
-			}
-
-			if !reflect.DeepEqual(s1, tc.want) {
-				t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", tc.data, s1, s1, tc.want, tc.want)
+				checkUnmarshal(t, "dm.Unmarshal", s1, err, tc.want)
 			}
 		})
 	}
@@ -6179,17 +5646,10 @@ func TestStreamDupMapKeyToStruct(t *testing.T) {
 	dec := NewDecoder(bytes.NewReader(b))
 	for range 3 {
 		var s1 s
-		if err := dec.Decode(&s1); err != nil {
-			t.Errorf("Decode() returned error %v", err)
-		}
-		if !reflect.DeepEqual(s1, wantS) {
-			t.Errorf("Decode() = %v (%T), want %v (%T)", s1, s1, wantS, wantS)
-		}
+		err := dec.Decode(&s1)
+		checkUnmarshal(t, "Decoder.Decode", s1, err, wantS)
 	}
-	var v any
-	if err := dec.Decode(&v); err != io.EOF {
-		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
-	}
+	testDecoderEOF(t, dec)
 
 	// Duplicate key triggers error.
 	wantS = s{A: "A", B: "B", C: "C"}
@@ -6198,20 +5658,10 @@ func TestStreamDupMapKeyToStruct(t *testing.T) {
 	dec = dm.NewDecoder(bytes.NewReader(b))
 	for range 3 {
 		var s2 s
-		if err := dec.Decode(&s2); err == nil {
-			t.Errorf("Decode() didn't return an error")
-		} else if _, ok := err.(*DupMapKeyError); !ok {
-			t.Errorf("Decode() returned wrong error type %T, want (*DupMapKeyError)", err)
-		} else if err.Error() != wantErrorMsg {
-			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
-		}
-		if !reflect.DeepEqual(s2, wantS) {
-			t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
-		}
+		err := dec.Decode(&s2)
+		checkUnmarshalErr[*DupMapKeyError](t, "Decoder.Decode", s2, err, wantS, wantErrorMsg)
 	}
-	if err := dec.Decode(&v); err != io.EOF {
-		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
-	}
+	testDecoderEOF(t, dec)
 }
 
 // dupl map key is a struct field
@@ -6226,28 +5676,16 @@ func TestUnmarshalDupMapKeyToStructKeyAsInt(t *testing.T) {
 	// Duplicate key doesn't overwrite previous value (default).
 	wantS := s{A: 2, B: 4, C: 6}
 	var s1 s
-	if err := unmarshal(t, data, &s1); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
-	}
+	err := unmarshal(t, data, &s1)
+	checkUnmarshal(t, "Unmarshal", s1, err, wantS)
 
 	// Duplicate key triggers error.
 	wantS = s{A: 2, B: 4}
 	wantErrorMsg := "cbor: found duplicate map key 1 at map element index 2"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
-	if err := unmarshalWithDM(t, dm, data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
-	} else if _, ok := err.(*DupMapKeyError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
-	}
+	err = unmarshalWithDM(t, dm, data, &s2)
+	checkUnmarshalErr[*DupMapKeyError](t, "dm.Unmarshal", s2, err, wantS, wantErrorMsg)
 }
 
 func TestStreamDupMapKeyToStructKeyAsInt(t *testing.T) {
@@ -6268,17 +5706,10 @@ func TestStreamDupMapKeyToStructKeyAsInt(t *testing.T) {
 	dec := NewDecoder(bytes.NewReader(b))
 	for range 3 {
 		var s1 s
-		if err := dec.Decode(&s1); err != nil {
-			t.Errorf("Decode() returned error %v", err)
-		}
-		if !reflect.DeepEqual(s1, wantS) {
-			t.Errorf("Decode() = %v (%T), want %v (%T)", s1, s1, wantS, wantS)
-		}
+		err := dec.Decode(&s1)
+		checkUnmarshal(t, "Decoder.Decode", s1, err, wantS)
 	}
-	var v any
-	if err := dec.Decode(&v); err != io.EOF {
-		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
-	}
+	testDecoderEOF(t, dec)
 
 	// Duplicate key triggers error.
 	wantS = s{A: 2, B: 4}
@@ -6287,20 +5718,10 @@ func TestStreamDupMapKeyToStructKeyAsInt(t *testing.T) {
 	dec = dm.NewDecoder(bytes.NewReader(b))
 	for range 3 {
 		var s2 s
-		if err := dec.Decode(&s2); err == nil {
-			t.Errorf("Decode() didn't return an error")
-		} else if _, ok := err.(*DupMapKeyError); !ok {
-			t.Errorf("Decode() returned wrong error type %T, want (*DupMapKeyError)", err)
-		} else if err.Error() != wantErrorMsg {
-			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
-		}
-		if !reflect.DeepEqual(s2, wantS) {
-			t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
-		}
+		err := dec.Decode(&s2)
+		checkUnmarshalErr[*DupMapKeyError](t, "Decoder.Decode", s2, err, wantS, wantErrorMsg)
 	}
-	if err := dec.Decode(&v); err != io.EOF {
-		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
-	}
+	testDecoderEOF(t, dec)
 }
 
 func TestUnmarshalDupMapKeyToStructNoMatchingField(t *testing.T) {
@@ -6314,28 +5735,16 @@ func TestUnmarshalDupMapKeyToStructNoMatchingField(t *testing.T) {
 
 	wantS := s{B: "B", C: "C", D: "D", E: "E"}
 	var s1 s
-	if err := unmarshal(t, data, &s1); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
-	}
+	err := unmarshal(t, data, &s1)
+	checkUnmarshal(t, "Unmarshal", s1, err, wantS)
 
 	// Duplicate key triggers error even though map key "a" doesn't have a corresponding struct field.
 	wantS = s{B: "B", C: "C"}
 	wantErrorMsg := "cbor: found duplicate map key \"a\" at map element index 3"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
-	if err := unmarshalWithDM(t, dm, data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
-	} else if _, ok := err.(*DupMapKeyError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
-	}
+	err = unmarshalWithDM(t, dm, data, &s2)
+	checkUnmarshalErr[*DupMapKeyError](t, "dm.Unmarshal", s2, err, wantS, wantErrorMsg)
 }
 
 func TestStreamDupMapKeyToStructNoMatchingField(t *testing.T) {
@@ -6357,17 +5766,10 @@ func TestStreamDupMapKeyToStructNoMatchingField(t *testing.T) {
 	dec := NewDecoder(bytes.NewReader(b))
 	for range 3 {
 		var s1 s
-		if err := dec.Decode(&s1); err != nil {
-			t.Errorf("Decode() returned error %v", err)
-		}
-		if !reflect.DeepEqual(s1, wantS) {
-			t.Errorf("Decode() = %v (%T), want %v (%T)", s1, s1, wantS, wantS)
-		}
+		err := dec.Decode(&s1)
+		checkUnmarshal(t, "Decoder.Decode", s1, err, wantS)
 	}
-	var v any
-	if err := dec.Decode(&v); err != io.EOF {
-		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
-	}
+	testDecoderEOF(t, dec)
 
 	// Duplicate key triggers error.
 	wantS = s{B: "B", C: "C"}
@@ -6376,20 +5778,10 @@ func TestStreamDupMapKeyToStructNoMatchingField(t *testing.T) {
 	dec = dm.NewDecoder(bytes.NewReader(b))
 	for range 3 {
 		var s2 s
-		if err := dec.Decode(&s2); err == nil {
-			t.Errorf("Decode() didn't return an error")
-		} else if _, ok := err.(*DupMapKeyError); !ok {
-			t.Errorf("Decode() returned wrong error type %T, want (*DupMapKeyError)", err)
-		} else if err.Error() != wantErrorMsg {
-			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
-		}
-		if !reflect.DeepEqual(s2, wantS) {
-			t.Errorf("Decode() = %v (%T), want %v (%T)", s2, s2, wantS, wantS)
-		}
+		err := dec.Decode(&s2)
+		checkUnmarshalErr[*DupMapKeyError](t, "Decoder.Decode", s2, err, wantS, wantErrorMsg)
 	}
-	if err := dec.Decode(&v); err != io.EOF {
-		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
-	}
+	testDecoderEOF(t, dec)
 }
 
 func TestUnmarshalDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
@@ -6401,28 +5793,16 @@ func TestUnmarshalDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
 
 	wantS := s{B: 4, C: 6}
 	var s1 s
-	if err := unmarshal(t, data, &s1); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
-	}
+	err := unmarshal(t, data, &s1)
+	checkUnmarshal(t, "Unmarshal", s1, err, wantS)
 
 	// Duplicate key triggers error even though map key "a" doesn't have a corresponding struct field.
 	wantS = s{B: 4}
 	wantErrorMsg := "cbor: found duplicate map key 1 at map element index 2"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
-	if err := unmarshalWithDM(t, dm, data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
-	} else if _, ok := err.(*DupMapKeyError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
-	}
+	err = unmarshalWithDM(t, dm, data, &s2)
+	checkUnmarshalErr[*DupMapKeyError](t, "dm.Unmarshal", s2, err, wantS, wantErrorMsg)
 }
 
 func TestStreamDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
@@ -6442,17 +5822,10 @@ func TestStreamDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
 	dec := NewDecoder(bytes.NewReader(b))
 	for range 3 {
 		var s1 s
-		if err := dec.Decode(&s1); err != nil {
-			t.Errorf("Decode() returned error %v", err)
-		}
-		if !reflect.DeepEqual(s1, wantS) {
-			t.Errorf("Decode() = %v (%T), want %v (%T)", s1, s1, wantS, wantS)
-		}
+		err := dec.Decode(&s1)
+		checkUnmarshal(t, "Decoder.Decode", s1, err, wantS)
 	}
-	var v any
-	if err := dec.Decode(&v); err != io.EOF {
-		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
-	}
+	testDecoderEOF(t, dec)
 
 	// Duplicate key triggers error.
 	wantS = s{B: 4}
@@ -6461,20 +5834,10 @@ func TestStreamDupMapKeyToStructKeyAsIntNoMatchingField(t *testing.T) {
 	dec = dm.NewDecoder(bytes.NewReader(b))
 	for range 3 {
 		var s2 s
-		if err := dec.Decode(&s2); err == nil {
-			t.Errorf("Decode() didn't return an error")
-		} else if _, ok := err.(*DupMapKeyError); !ok {
-			t.Errorf("Decode() returned wrong error type %T, want (*DupMapKeyError)", err)
-		} else if err.Error() != wantErrorMsg {
-			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
-		}
-		if !reflect.DeepEqual(s2, wantS) {
-			t.Errorf("Decode() = %v (%T), want %v (%T)", s2, s2, wantS, wantS)
-		}
+		err := dec.Decode(&s2)
+		checkUnmarshalErr[*DupMapKeyError](t, "Decoder.Decode", s2, err, wantS, wantErrorMsg)
 	}
-	if err := dec.Decode(&v); err != io.EOF {
-		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
-	}
+	testDecoderEOF(t, dec)
 }
 
 func TestUnmarshalDupMapKeyToStructWrongType(t *testing.T) {
@@ -6489,32 +5852,15 @@ func TestUnmarshalDupMapKeyToStructWrongType(t *testing.T) {
 
 	var s1 s
 	wantS := s{A: "A", B: "B", C: "C", D: "D", E: "E"}
-	wantErrorMsg := "cbor: cannot unmarshal"
-	if err := unmarshal(t, data, &s1); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
-	}
+	err := unmarshal(t, data, &s1)
+	checkUnmarshalErr[*UnmarshalTypeError](t, "Unmarshal", s1, err, wantS, "")
 
 	wantS = s{A: "A", B: "B", C: "C"}
-	wantErrorMsg = "cbor: found duplicate map key 100000 at map element index 4"
+	wantErrorMsg := "cbor: found duplicate map key 100000 at map element index 4"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
-	if err := unmarshalWithDM(t, dm, data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
-	} else if _, ok := err.(*DupMapKeyError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*DupMapKeyError)", data, err)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
-	}
+	err = unmarshalWithDM(t, dm, data, &s2)
+	checkUnmarshalErr[*DupMapKeyError](t, "Unmarshal", s2, err, wantS, wantErrorMsg)
 }
 
 func TestStreamDupMapKeyToStructWrongType(t *testing.T) {
@@ -6533,47 +5879,25 @@ func TestStreamDupMapKeyToStructWrongType(t *testing.T) {
 	}
 
 	wantS := s{A: "A", B: "B", C: "C", D: "D", E: "E"}
-	wantErrorMsg := "cbor: cannot unmarshal"
 	dec := NewDecoder(bytes.NewReader(b))
 	for range 3 {
 		var s1 s
-		if err := dec.Decode(&s1); err == nil {
-			t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-		} else if _, ok := err.(*UnmarshalTypeError); !ok {
-			t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
-		} else if !strings.Contains(err.Error(), wantErrorMsg) {
-			t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-		}
-		if !reflect.DeepEqual(s1, wantS) {
-			t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
-		}
+		err := dec.Decode(&s1)
+		checkUnmarshalErr[*UnmarshalTypeError](t, "Decoder.Decode", s1, err, wantS, "")
 	}
-	var v any
-	if err := dec.Decode(&v); err != io.EOF {
-		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
-	}
+	testDecoderEOF(t, dec)
 
 	// Duplicate key triggers error.
 	wantS = s{A: "A", B: "B", C: "C"}
-	wantErrorMsg = "cbor: found duplicate map key 100000 at map element index 4"
+	wantErrorMsg := "cbor: found duplicate map key 100000 at map element index 4"
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	dec = dm.NewDecoder(bytes.NewReader(b))
 	for range 3 {
 		var s2 s
-		if err := dec.Decode(&s2); err == nil {
-			t.Errorf("Decode() didn't return an error")
-		} else if _, ok := err.(*DupMapKeyError); !ok {
-			t.Errorf("Decode() returned wrong error type %T, want (*DupMapKeyError)", err)
-		} else if err.Error() != wantErrorMsg {
-			t.Errorf("Decode() returned error %q, want error containing %q", err.Error(), wantErrorMsg)
-		}
-		if !reflect.DeepEqual(s2, wantS) {
-			t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
-		}
+		err := dec.Decode(&s2)
+		checkUnmarshalErr[*DupMapKeyError](t, "Decoder.Decode", s2, err, wantS, wantErrorMsg)
 	}
-	if err := dec.Decode(&v); err != io.EOF {
-		t.Errorf("Decode() returned error %v, want %v", err, io.EOF)
-	}
+	testDecoderEOF(t, dec)
 }
 
 func TestUnmarshalDupMapKeyToStructStringParseError(t *testing.T) {
@@ -6586,34 +5910,17 @@ func TestUnmarshalDupMapKeyToStructStringParseError(t *testing.T) {
 	}
 	data := mustHexDecode("a661fe6141616261426163614361fe61466164614461656145") // {"\xFE": "A", "b": "B", "c": "C", "\xFE": "F", "d": "D", "e": "E"}
 	wantS := s{A: "", B: "B", C: "C", D: "D", E: "E"}
-	wantErrorMsg := "cbor: invalid UTF-8 string"
 
 	// Duplicate key doesn't overwrite previous value (default).
 	var s1 s
-	if err := unmarshal(t, data, &s1); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if _, ok := err.(*SemanticError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*SemanticError)", data, err)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
-	}
+	err := unmarshal(t, data, &s1)
+	checkUnmarshalErr[*SemanticError](t, "Decoder.Decode", s1, err, wantS, invalidUTF8ErrorMsg)
 
 	// Duplicate key triggers error.
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
-	if err := unmarshalWithDM(t, dm, data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
-	} else if _, ok := err.(*SemanticError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*SemanticError)", data, err)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
-	}
+	err = unmarshalWithDM(t, dm, data, &s2)
+	checkUnmarshalErr[*SemanticError](t, "Decoder.Decode", s2, err, wantS, invalidUTF8ErrorMsg)
 }
 
 func TestUnmarshalDupMapKeyToStructIntParseError(t *testing.T) {
@@ -6626,32 +5933,15 @@ func TestUnmarshalDupMapKeyToStructIntParseError(t *testing.T) {
 
 	// Duplicate key doesn't overwrite previous value (default).
 	wantS := s{B: 4, C: 6}
-	wantErrorMsg := "cbor: cannot unmarshal"
 	var s1 s
-	if err := unmarshal(t, data, &s1); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
-	}
+	err := unmarshal(t, data, &s1)
+	checkUnmarshalErr[*UnmarshalTypeError](t, "Unmarshal", s1, err, wantS, "")
 
 	// Duplicate key triggers error.
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
-	if err := unmarshalWithDM(t, dm, data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
-	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
-	}
+	err = unmarshalWithDM(t, dm, data, &s2)
+	checkUnmarshalErr[*UnmarshalTypeError](t, "dm.Unmarshal", s2, err, wantS, "")
 }
 
 func TestUnmarshalDupMapKeyToStructWrongTypeParseError(t *testing.T) {
@@ -6666,32 +5956,15 @@ func TestUnmarshalDupMapKeyToStructWrongTypeParseError(t *testing.T) {
 
 	// Duplicate key doesn't overwrite previous value (default).
 	wantS := s{A: "", B: "B", C: "C", D: "D", E: "E"}
-	wantErrorMsg := "cbor: cannot unmarshal"
 	var s1 s
-	if err := unmarshal(t, data, &s1); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
-	}
+	err := unmarshal(t, data, &s1)
+	checkUnmarshalErr[*UnmarshalTypeError](t, "Unmarshal", s1, err, wantS, "")
 
 	// Duplicate key triggers error.
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
-	if err := unmarshalWithDM(t, dm, data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
-	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
-	}
+	err = unmarshalWithDM(t, dm, data, &s2)
+	checkUnmarshalErr[*UnmarshalTypeError](t, "dm.Unmarshal", s2, err, wantS, "")
 }
 
 func TestUnmarshalDupMapKeyToStructWrongTypeUnhashableError(t *testing.T) {
@@ -6706,32 +5979,15 @@ func TestUnmarshalDupMapKeyToStructWrongTypeUnhashableError(t *testing.T) {
 	wantS := s{A: "", B: "B", C: "C", D: "D", E: "E"}
 
 	// Duplicate key doesn't overwrite previous value (default).
-	wantErrorMsg := "cbor: cannot unmarshal"
 	var s1 s
-	if err := unmarshal(t, data, &s1); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
-	}
+	err := unmarshal(t, data, &s1)
+	checkUnmarshalErr[*UnmarshalTypeError](t, "Unmarshal", s1, err, wantS, "")
 
 	// Duplicate key triggers error.
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
-	if err := unmarshalWithDM(t, dm, data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
-	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
-	}
+	err = unmarshalWithDM(t, dm, data, &s2)
+	checkUnmarshalErr[*UnmarshalTypeError](t, "dm.Unmarshal", s2, err, wantS, "")
 }
 
 func TestUnmarshalDupMapKeyToStructTagTypeError(t *testing.T) {
@@ -6746,32 +6002,15 @@ func TestUnmarshalDupMapKeyToStructTagTypeError(t *testing.T) {
 	wantS := s{A: "", B: "B", C: "C", D: "D", E: "E"}
 
 	// Duplicate key doesn't overwrite previous value (default).
-	wantErrorMsg := "cbor: cannot unmarshal"
 	var s1 s
-	if err := unmarshal(t, data, &s1); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(s1, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s1, s1, wantS, wantS)
-	}
+	err := unmarshal(t, data, &s1)
+	checkUnmarshalErr[*UnmarshalTypeError](t, "Unmarshal", s1, err, wantS, "")
 
 	// Duplicate key triggers error.
 	dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
 	var s2 s
-	if err := unmarshalWithDM(t, dm, data, &s2); err == nil {
-		t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, reflect.TypeFor[s]())
-	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(s2, wantS) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", data, s2, s2, wantS, wantS)
-	}
+	err = unmarshalWithDM(t, dm, data, &s2)
+	checkUnmarshalErr[*UnmarshalTypeError](t, "dm.Unmarshal", s2, err, wantS, "")
 }
 
 func TestIndefiniteLengthArrayToArray(t *testing.T) {
@@ -6800,12 +6039,8 @@ func TestIndefiniteLengthArrayToArray(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			v := reflect.New(reflect.TypeOf(tc.wantV))
-			if err := unmarshal(t, tc.data, v.Interface()); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-			}
-			if !reflect.DeepEqual(v.Elem().Interface(), tc.wantV) {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v.Elem().Interface(), v.Elem().Interface(), tc.wantV, tc.wantV)
-			}
+			err := unmarshal(t, tc.data, v.Interface())
+			checkUnmarshal(t, "Unmarshal", v.Elem().Interface(), err, tc.wantV)
 		})
 	}
 }
@@ -6834,11 +6069,8 @@ func TestExceedMaxArrayElements(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, _ := tc.opts.DecMode()
 			var v any
-			if err := unmarshalWithDM(t, dm, tc.data, &v); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-			}
+			err := unmarshalWithDM(t, dm, tc.data, &v)
+			checkError[error](t, "dm.Unmarshal", err, tc.wantErrorMsg)
 		})
 	}
 }
@@ -6867,11 +6099,8 @@ func TestExceedMaxMapPairs(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, _ := tc.opts.DecMode()
 			var v any
-			if err := unmarshalWithDM(t, dm, tc.data, &v); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-			}
+			err := unmarshalWithDM(t, dm, tc.data, &v)
+			checkError[error](t, "dm.Unmarshal", err, tc.wantErrorMsg)
 		})
 	}
 }
@@ -6912,16 +6141,14 @@ func TestDecIndefiniteLengthOption(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Default option allows indefinite-length items
 			var v any
-			if err := unmarshal(t, tc.data, &v); err != nil {
+			err := unmarshal(t, tc.data, &v)
+			if err != nil {
 				t.Errorf("Unmarshal(0x%x) returned an error %v", tc.data, err)
 			}
 
 			dm, _ := tc.opts.DecMode()
-			if err := unmarshalWithDM(t, dm, tc.data, &v); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-			}
+			err = unmarshalWithDM(t, dm, tc.data, &v)
+			checkError[error](t, "dm.Unmarshal", err, tc.wantErrorMsg)
 		})
 	}
 }
@@ -6938,16 +6165,13 @@ func TestDecTagsMdOption(t *testing.T) {
 
 	// Decoding CBOR tags with TagsForbidden option returns error
 	dm, _ := DecOptions{TagsMd: TagsForbidden}.DecMode()
-	if err := unmarshalWithDM(t, dm, data, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), wantErrorMsg)
-	}
+	err := unmarshalWithDM(t, dm, data, &v)
+	checkError[error](t, "dm.Unmarshal", err, wantErrorMsg)
 
 	// Create DecMode with TagSet and TagsForbidden option returns error
 	wantErrorMsg = "cbor: cannot create DecMode with TagSet when TagsMd is TagsForbidden"
 	tags := NewTagSet()
-	_, err := DecOptions{TagsMd: TagsForbidden}.DecModeWithTags(tags)
+	_, err = DecOptions{TagsMd: TagsForbidden}.DecModeWithTags(tags)
 	if err == nil {
 		t.Errorf("DecModeWithTags() didn't return an error")
 	} else if err.Error() != wantErrorMsg {
@@ -7000,13 +6224,7 @@ func TestIntDecConvertNone(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var v any
 			err := unmarshalWithDM(t, dm, tc.data, &v)
-			if err == nil {
-				if !reflect.DeepEqual(v, tc.wantObj) {
-					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.data, v, v, tc.wantObj, tc.wantObj)
-				}
-			} else {
-				t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
-			}
+			checkUnmarshal(t, "Unmarshal", v, err, tc.wantObj)
 		})
 	}
 }
@@ -7034,7 +6252,7 @@ func TestIntDecConvertSigned(t *testing.T) {
 		{
 			name:         "CBOR pos int overflows int64",
 			data:         mustHexDecode("1b8000000000000000"), // math.MaxInt64+1
-			wantErrorMsg: "9223372036854775808 overflows Go's int64",
+			wantErrorMsg: "cbor: cannot unmarshal positive integer into Go value of type int64 (9223372036854775808 overflows Go's int64)",
 		},
 		{
 			name:    "CBOR neg int",
@@ -7051,19 +6269,7 @@ func TestIntDecConvertSigned(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var v any
 			err := unmarshalWithDM(t, dm, tc.data, &v)
-			if err == nil {
-				if tc.wantErrorMsg != "" {
-					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, tc.wantErrorMsg)
-				} else if !reflect.DeepEqual(v, tc.wantObj) {
-					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.data, v, v, tc.wantObj, tc.wantObj)
-				}
-			} else {
-				if tc.wantErrorMsg == "" {
-					t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
-				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-				}
-			}
+			checkUnmarshalCase[error](t, "dm.Unmarshal", v, err, tc.wantObj, tc.wantErrorMsg != "", tc.wantErrorMsg)
 		})
 	}
 }
@@ -7107,13 +6313,7 @@ func TestIntDecConvertSignedOrBigInt(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var v any
 			err := unmarshalWithDM(t, dm, tc.data, &v)
-			if err == nil {
-				if !reflect.DeepEqual(v, tc.wantObj) {
-					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.data, v, v, tc.wantObj, tc.wantObj)
-				}
-			} else {
-				t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
-			}
+			checkUnmarshal(t, "dm.Unmarshal", v, err, tc.wantObj)
 		})
 	}
 }
@@ -7141,7 +6341,7 @@ func TestIntDecConvertSignedOrError(t *testing.T) {
 		{
 			name:         "CBOR pos int overflows int64",
 			data:         mustHexDecode("1b8000000000000000"), // math.MaxInt64+1
-			wantErrorMsg: "9223372036854775808 overflows Go's int64",
+			wantErrorMsg: "cbor: cannot unmarshal positive integer into Go value of type int64 (9223372036854775808 overflows Go's int64)",
 		},
 		{
 			name:    "CBOR neg int",
@@ -7151,26 +6351,14 @@ func TestIntDecConvertSignedOrError(t *testing.T) {
 		{
 			name:         "CBOR neg int overflows int64",
 			data:         mustHexDecode("3b8000000000000000"), // math.MinInt64-1
-			wantErrorMsg: "-9223372036854775809 overflows Go's int64",
+			wantErrorMsg: "cbor: cannot unmarshal negative integer into Go value of type int64 (-9223372036854775809 overflows Go's int64)",
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v any
 			err := unmarshalWithDM(t, dm, tc.data, &v)
-			if err == nil {
-				if tc.wantErrorMsg != "" {
-					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, tc.wantErrorMsg)
-				} else if !reflect.DeepEqual(v, tc.wantObj) {
-					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.data, v, v, tc.wantObj, tc.wantObj)
-				}
-			} else {
-				if tc.wantErrorMsg == "" {
-					t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
-				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-				}
-			}
+			checkUnmarshalCase[error](t, "dm.Unmarshal", v, err, tc.wantObj, tc.wantErrorMsg != "", tc.wantErrorMsg)
 		})
 	}
 }
@@ -7275,22 +6463,14 @@ func TestMapKeyByteString(t *testing.T) {
 				v := reflect.New(typ)
 				vPtr := v.Interface()
 				err = unmarshalWithDM(t, tc.dm, tc.data, vPtr)
-				if err != nil {
-					t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
-				} else if !reflect.DeepEqual(v.Elem().Interface(), wantObj) {
-					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.data, v.Elem().Interface(), v.Elem().Interface(), wantObj, wantObj)
-				}
+				checkUnmarshal(t, "dm.Unmarshal", v.Elem().Interface(), err, wantObj)
 			}
 
 			for typ, wantErrorMsg := range tc.wantErrorMsgs {
 				v := reflect.New(typ)
 				vPtr := v.Interface()
 				err = unmarshalWithDM(t, tc.dm, tc.data, vPtr)
-				if err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, wantErrorMsg)
-				} else if !strings.Contains(err.Error(), wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), wantErrorMsg)
-				}
+				checkError[error](t, "dm.Unmarshal", err, wantErrorMsg)
 			}
 		})
 	}
@@ -7360,19 +6540,7 @@ func TestExtraErrorCondUnknownField(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var v s
 			err := unmarshalWithDM(t, tc.dm, tc.data, &v)
-			if err == nil {
-				if tc.wantErrorMsg != "" {
-					t.Errorf("Unmarshal(0x%x) didn't return an error, want %q", tc.data, tc.wantErrorMsg)
-				} else if !reflect.DeepEqual(v, tc.wantObj) {
-					t.Errorf("Unmarshal(0x%x) return %v (%T), want %v (%T)", tc.data, v, v, tc.wantObj, tc.wantObj)
-				}
-			} else {
-				if tc.wantErrorMsg == "" {
-					t.Errorf("Unmarshal(0x%x) returned error %q", tc.data, err)
-				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-				}
-			}
+			checkUnmarshalCase[error](t, "dm.Unmarshal", v, err, tc.wantObj, tc.wantErrorMsg != "", tc.wantErrorMsg)
 		})
 	}
 }
@@ -7393,19 +6561,11 @@ func TestStreamExtraErrorCondUnknownField(t *testing.T) {
 
 	var v1 s
 	err := dec.Decode(&v1)
-	if err == nil {
-		t.Errorf("Decode() didn't return an error, want %q", wantErrorMsg)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Decode() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "Decoder.Decode", err, wantErrorMsg)
 
 	var v2 s
 	err = dec.Decode(&v2)
-	if err != nil {
-		t.Errorf("Decode() returned an error %v", err)
-	} else if !reflect.DeepEqual(v2, wantObj) {
-		t.Errorf("Decode() return %v (%T), want %v (%T)", v2, v2, wantObj, wantObj)
-	}
+	checkUnmarshal(t, "Decoder.Decode", v2, err, wantObj)
 }
 
 // TestUnmarshalTagNum55799 is identical to TestUnmarshal,
@@ -7414,63 +6574,41 @@ func TestUnmarshalTagNum55799(t *testing.T) {
 	tagNum55799 := mustHexDecode("d9d9f7")
 
 	for _, tc := range unmarshalTestCases {
-		// Prefix tag number 55799 to CBOR test data
-		data := make([]byte, len(tc.data)+6)
-		copy(data, tagNum55799)
-		copy(data[3:], tagNum55799)
-		copy(data[6:], tc.data)
+		t.Run(fmt.Sprintf("0x%x", tc.data), func(t *testing.T) {
+			// Prefix tag number 55799 to CBOR test data
+			data := make([]byte, len(tc.data)+6)
+			copy(data, tagNum55799)
+			copy(data[3:], tagNum55799)
+			copy(data[6:], tc.data)
 
-		// Test unmarshaling CBOR into a value of type any.
-		var v any
-		if err := unmarshal(t, data, &v); err != nil {
-			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-		} else {
-			if tm, ok := tc.wantInterfaceValue.(time.Time); ok {
-				if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
-				}
-			} else if !reflect.DeepEqual(v, tc.wantInterfaceValue) {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
+			// Test unmarshaling CBOR into a value of type any.
+			var v any
+			err := unmarshal(t, data, &v)
+			checkUnmarshalFunc(t, "Unmarshal", v, err, tc.wantInterfaceValue, nonFloatEqual)
+
+			// Test unmarshaling CBOR into RawMessage.
+			var r RawMessage
+			err = unmarshal(t, data, &r)
+			checkUnmarshal(t, "Unmarshal", r, err, RawMessage(tc.data))
+
+			// Test unmarshaling CBOR into compatible data types.
+			for _, value := range tc.wantValues {
+				t.Run(fmt.Sprintf("%T", value), func(t *testing.T) {
+					v := reflect.New(reflect.TypeOf(value))
+					vPtr := v.Interface()
+					err := unmarshal(t, data, vPtr)
+					checkUnmarshalFunc(t, "Unmarshal", v.Elem().Interface(), err, value, nonFloatEqual)
+				})
 			}
-		}
 
-		// Test unmarshaling CBOR into RawMessage.
-		var r RawMessage
-		if err := unmarshal(t, data, &r); err != nil {
-			t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-		} else if !bytes.Equal(r, tc.data) {
-			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", data, r, tc.data)
-		}
-
-		// Test unmarshaling CBOR into compatible data types.
-		for _, value := range tc.wantValues {
-			v := reflect.New(reflect.TypeOf(value))
-			vPtr := v.Interface()
-			if err := unmarshal(t, data, vPtr); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-			} else {
-				if tm, ok := value.(time.Time); ok {
-					if vt, ok := v.Elem().Interface().(time.Time); !ok || !tm.Equal(vt) {
-						t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v.Elem().Interface(), v.Elem().Interface(), value, value)
-					}
-				} else if !reflect.DeepEqual(v.Elem().Interface(), value) {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v.Elem().Interface(), v.Elem().Interface(), value, value)
-				}
+			// Test unmarshaling CBOR into incompatible data types.
+			for _, typ := range tc.wrongTypes {
+				v := reflect.New(typ)
+				vPtr := v.Interface()
+				err := unmarshal(t, data, vPtr)
+				checkError[*UnmarshalTypeError](t, "Unmarshal", err, "")
 			}
-		}
-
-		// Test unmarshaling CBOR into incompatible data types.
-		for _, typ := range tc.wrongTypes {
-			v := reflect.New(typ)
-			vPtr := v.Interface()
-			if err := unmarshal(t, data, vPtr); err == nil {
-				t.Errorf("Unmarshal(0x%x, %s) didn't return an error", data, typ.String())
-			} else if _, ok := err.(*UnmarshalTypeError); !ok {
-				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
-			} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), "cannot unmarshal")
-			}
-		}
+		})
 	}
 }
 
@@ -7480,50 +6618,40 @@ func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
 	tagNum55799 := mustHexDecode("d9d9f7")
 
 	for _, tc := range unmarshalFloatTestCases {
-		// Prefix tag number 55799 to CBOR test data
-		data := make([]byte, len(tc.data)+3)
-		copy(data, tagNum55799)
-		copy(data[3:], tc.data)
+		t.Run(fmt.Sprintf("0x%x", tc.data), func(t *testing.T) {
+			// Prefix tag number 55799 to CBOR test data
+			data := make([]byte, len(tc.data)+3)
+			copy(data, tagNum55799)
+			copy(data[3:], tc.data)
 
-		// Test unmarshaling CBOR into a value of type any.
-		var v any
-		if err := unmarshal(t, tc.data, &v); err != nil {
-			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-		} else {
-			compareFloats(t, tc.data, v, tc.wantInterfaceValue, tc.equalityThreshold)
-		}
+			// Test unmarshaling CBOR into a value of type any.
+			var v any
+			err := unmarshal(t, tc.data, &v)
+			checkUnmarshalFunc(t, "Unmarshal", v, err, tc.wantInterfaceValue, floatEqual(tc.equalityThreshold))
 
-		// Test unmarshaling CBOR into RawMessage.
-		var r RawMessage
-		if err := unmarshal(t, tc.data, &r); err != nil {
-			t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-		} else if !bytes.Equal(r, tc.data) {
-			t.Errorf("Unmarshal(0x%x) returned RawMessage %v, want %v", tc.data, r, tc.data)
-		}
+			// Test unmarshaling CBOR into RawMessage.
+			var r RawMessage
+			err = unmarshal(t, tc.data, &r)
+			checkUnmarshal(t, "Unmarshal", r, err, RawMessage(tc.data))
 
-		// Test unmarshaling CBOR into compatible data types.
-		for _, value := range tc.wantValues {
-			v := reflect.New(reflect.TypeOf(value))
-			vPtr := v.Interface()
-			if err := unmarshal(t, tc.data, vPtr); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-			} else {
-				compareFloats(t, tc.data, v.Elem().Interface(), value, tc.equalityThreshold)
+			// Test unmarshaling CBOR into compatible data types.
+			for _, value := range tc.wantValues {
+				t.Run(fmt.Sprintf("%T", value), func(t *testing.T) {
+					v := reflect.New(reflect.TypeOf(value))
+					vPtr := v.Interface()
+					err := unmarshal(t, tc.data, vPtr)
+					checkUnmarshalFunc(t, "Unmarshal", v.Elem().Interface(), err, value, floatEqual(tc.equalityThreshold))
+				})
 			}
-		}
 
-		// Test unmarshaling CBOR into incompatible data types.
-		for _, typ := range unmarshalFloatWrongTypes {
-			v := reflect.New(typ)
-			vPtr := v.Interface()
-			if err := unmarshal(t, tc.data, vPtr); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
-			} else if _, ok := err.(*UnmarshalTypeError); !ok {
-				t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.data, err)
-			} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-				t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.data, err.Error(), "cannot unmarshal")
+			// Test unmarshaling CBOR into incompatible data types.
+			for _, typ := range unmarshalFloatWrongTypes {
+				v := reflect.New(typ)
+				vPtr := v.Interface()
+				err := unmarshal(t, tc.data, vPtr)
+				checkError[*UnmarshalTypeError](t, "Unmarshal", err, "")
 			}
-		}
+		})
 	}
 }
 
@@ -7554,46 +6682,23 @@ func TestUnmarshalTagNum55799AsElement(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Test unmarshaling CBOR into a value of type any.
 			var v any
-			if err := unmarshal(t, tc.data, &v); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-			} else {
-				if tm, ok := tc.emptyInterfaceValue.(time.Time); ok {
-					if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
-						t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
-					}
-				} else if !reflect.DeepEqual(v, tc.emptyInterfaceValue) {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.emptyInterfaceValue, tc.emptyInterfaceValue)
-				}
-			}
+			err := unmarshal(t, tc.data, &v)
+			checkUnmarshalFunc(t, "Unmarshal", v, err, tc.emptyInterfaceValue, nonFloatEqual)
 
 			// Test unmarshaling CBOR into compatible data types.
 			for _, value := range tc.values {
 				v := reflect.New(reflect.TypeOf(value))
 				vPtr := v.Interface()
-				if err := unmarshal(t, tc.data, vPtr); err != nil {
-					t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-				} else {
-					if tm, ok := value.(time.Time); ok {
-						if vt, ok := v.Elem().Interface().(time.Time); !ok || !tm.Equal(vt) {
-							t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v.Elem().Interface(), v.Elem().Interface(), value, value)
-						}
-					} else if !reflect.DeepEqual(v.Elem().Interface(), value) {
-						t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v.Elem().Interface(), v.Elem().Interface(), value, value)
-					}
-				}
+				err := unmarshal(t, tc.data, vPtr)
+				checkUnmarshalFunc(t, "Unmarshal", v.Elem().Interface(), err, value, nonFloatEqual)
 			}
 
 			// Test unmarshaling CBOR into incompatible data types.
 			for _, typ := range tc.wrongTypes {
 				v := reflect.New(typ)
 				vPtr := v.Interface()
-				if err := unmarshal(t, tc.data, vPtr); err == nil {
-					t.Errorf("Unmarshal(0x%x, %s) didn't return an error", tc.data, typ.String())
-				} else if _, ok := err.(*UnmarshalTypeError); !ok {
-					t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", tc.data, err)
-				} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.data, err.Error(), "cannot unmarshal")
-				}
+				err := unmarshal(t, tc.data, vPtr)
+				checkError[*UnmarshalTypeError](t, "Unmarshal", err, "")
 			}
 		})
 	}
@@ -7616,21 +6721,17 @@ func TestUnmarshalTagNum55799EnclosingRegisteredTagToInterface(t *testing.T) {
 		mustHexDecode("d9d9f7d8646161"), // 55799(100("a"))
 	} {
 		t.Run(fmt.Sprintf("0x%x to provided interface", data), func(t *testing.T) {
+			want := StringFoo("a")
 			var v Foo
-			if err := unmarshalWithDM(t, dm, data, &v); err != nil {
-				t.Errorf("Unmarshal(0x%x): unexpected error: %v", data, err)
-			} else if f, ok := v.(*StringFoo); !ok || *f != "a" {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want &StringFoo(\"a\")", data, v, v)
-			}
+			err := unmarshalWithDM(t, dm, data, &v)
+			checkUnmarshal(t, "dm.Unmarshal", v, err, &want)
 		})
 
 		t.Run(fmt.Sprintf("0x%x to empty interface", data), func(t *testing.T) {
+			want := StringFoo("a")
 			var v any
-			if err := unmarshalWithDM(t, dm, data, &v); err != nil {
-				t.Errorf("Unmarshal(0x%x): unexpected error: %v", data, err)
-			} else if f, ok := v.(StringFoo); !ok || f != "a" {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want StringFoo(\"a\")", data, v, v)
-			}
+			err := unmarshalWithDM(t, dm, data, &v)
+			checkUnmarshal(t, "dm.Unmarshal", v, err, want)
 		})
 	}
 }
@@ -7640,11 +6741,8 @@ func TestUnmarshalTagNum55799ToBinaryUnmarshaler(t *testing.T) {
 	wantObj := number(1234567890)
 
 	var v number
-	if err := unmarshal(t, data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	} else if !reflect.DeepEqual(v, wantObj) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantObj, wantObj)
-	}
+	err := unmarshal(t, data, &v)
+	checkUnmarshal(t, "Unmarshal", v, err, wantObj)
 }
 
 func TestUnmarshalTagNum55799ToUnmarshaler(t *testing.T) {
@@ -7652,11 +6750,8 @@ func TestUnmarshalTagNum55799ToUnmarshaler(t *testing.T) {
 	wantObj := number3(1)
 
 	var v number3
-	if err := unmarshal(t, data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	} else if !reflect.DeepEqual(v, wantObj) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantObj, wantObj)
-	}
+	err := unmarshal(t, data, &v)
+	checkUnmarshal(t, "Unmarshal", v, err, wantObj)
 }
 
 func TestUnmarshalTagNum55799ToRegisteredGoType(t *testing.T) {
@@ -7674,11 +6769,8 @@ func TestUnmarshalTagNum55799ToRegisteredGoType(t *testing.T) {
 	wantObj := myInt(1)
 
 	var v myInt
-	if err := unmarshalWithDM(t, dm, data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	} else if !reflect.DeepEqual(v, wantObj) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantObj, wantObj)
-	}
+	err := unmarshalWithDM(t, dm, data, &v)
+	checkUnmarshal(t, "dm.Unmarshal", v, err, wantObj)
 }
 
 // TODO: wait for clarification from 7049bis https://github.com/cbor-wg/CBORbis/issues/183
@@ -7688,11 +6780,8 @@ func TestUnmarshalNestedTagNum55799ToEmptyInterface(t *testing.T) {
 	wantObj := Tag{100, Tag{55799, uint64(1)}}
 
 	var v any
-	if err := unmarshal(t, data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	} else if !reflect.DeepEqual(v, wantObj) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantObj, wantObj)
-	}
+	err := unmarshal(t, data, &v)
+	checkUnmarshal(t, "Unmarshal", v, err, wantObj)
 }
 
 func TestUnmarshalNestedTagNum55799ToValue(t *testing.T) {
@@ -7700,11 +6789,8 @@ func TestUnmarshalNestedTagNum55799ToValue(t *testing.T) {
 	wantObj := 1
 
 	var v int
-	if err := unmarshal(t, data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	} else if !reflect.DeepEqual(v, wantObj) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantObj, wantObj)
-	}
+	err := unmarshal(t, data, &v)
+	checkUnmarshal(t, "Unmarshal", v, err, wantObj)
 }
 
 func TestUnmarshalNestedTagNum55799ToTag(t *testing.T) {
@@ -7712,23 +6798,17 @@ func TestUnmarshalNestedTagNum55799ToTag(t *testing.T) {
 	wantObj := Tag{100, Tag{55799, uint64(1)}}
 
 	var v Tag
-	if err := unmarshal(t, data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	} else if !reflect.DeepEqual(v, wantObj) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantObj, wantObj)
-	}
+	err := unmarshal(t, data, &v)
+	checkUnmarshal(t, "Unmarshal", v, err, wantObj)
 }
 
 func TestUnmarshalNestedTagNum55799ToTime(t *testing.T) {
 	data := mustHexDecode("c0d9d9f774323031332d30332d32315432303a30343a30305a") // 0(55799("2013-03-21T20:04:00Z"))
-	wantErrorMsg := "tag number 0 must be followed by text string, got tag"
+	wantErrorMsg := "cbor: tag number 0 must be followed by text string, got tag"
 
 	var v time.Time
-	if err := unmarshal(t, data, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %s, want %s", data, err.Error(), wantErrorMsg)
-	}
+	err := unmarshal(t, data, &v)
+	checkError[error](t, "Unmarshal", err, wantErrorMsg)
 }
 
 func TestUnmarshalNestedTagNum55799ToBinaryUnmarshaler(t *testing.T) {
@@ -7736,23 +6816,17 @@ func TestUnmarshalNestedTagNum55799ToBinaryUnmarshaler(t *testing.T) {
 	wantObj := number(1234567890)
 
 	var v number
-	if err := unmarshal(t, data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	} else if !reflect.DeepEqual(v, wantObj) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantObj, wantObj)
-	}
+	err := unmarshal(t, data, &v)
+	checkUnmarshal(t, "Unmarshal", v, err, wantObj)
 }
 
 func TestUnmarshalNestedTagNum55799ToUnmarshaler(t *testing.T) {
 	data := mustHexDecode("d864d9d9f7a1636e756d01") // 100(55799({"num": 1}))
-	wantErrorMsg := "wrong tag content type"
+	wantErrorMsg := "wrong tag content type, want map"
 
 	var v number3
-	if err := unmarshal(t, data, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %s, want %s", data, err.Error(), wantErrorMsg)
-	}
+	err := unmarshal(t, data, &v)
+	checkError[error](t, "Unmarshal", err, wantErrorMsg)
 }
 
 func TestUnmarshalNestedTagNum55799ToRegisteredGoType(t *testing.T) {
@@ -7770,11 +6844,8 @@ func TestUnmarshalNestedTagNum55799ToRegisteredGoType(t *testing.T) {
 	wantErrorMsg := "cbor: wrong tag number for cbor.myInt, got [125 55799], expected [125]"
 
 	var v myInt
-	if err := unmarshalWithDM(t, dm, data, &v); err == nil {
-		t.Errorf("Unmarshal() didn't return an error")
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %s, want %s", data, err.Error(), wantErrorMsg)
-	}
+	err := unmarshalWithDM(t, dm, data, &v)
+	checkError[error](t, "Unmarshal", err, wantErrorMsg)
 }
 
 func TestUnmarshalPosIntToBigInt(t *testing.T) {
@@ -7783,18 +6854,12 @@ func TestUnmarshalPosIntToBigInt(t *testing.T) {
 	wantBigIntValue := mustBigInt("18446744073709551615")
 
 	var v1 any
-	if err := unmarshal(t, data, &v1); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %+v", data, err)
-	} else if !reflect.DeepEqual(v1, wantEmptyInterfaceValue) {
-		t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", data, v1, v1, wantEmptyInterfaceValue, wantEmptyInterfaceValue)
-	}
+	err := unmarshal(t, data, &v1)
+	checkUnmarshal(t, "Unmarshal", v1, err, wantEmptyInterfaceValue)
 
 	var v2 big.Int
-	if err := unmarshal(t, data, &v2); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %+v", data, err)
-	} else if !reflect.DeepEqual(v2, wantBigIntValue) {
-		t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", data, v2, v2, wantBigIntValue, wantBigIntValue)
-	}
+	err = unmarshal(t, data, &v2)
+	checkUnmarshal(t, "Unmarshal", v2, err, wantBigIntValue)
 }
 
 func TestUnmarshalNegIntToBigInt(t *testing.T) {
@@ -7820,18 +6885,12 @@ func TestUnmarshalNegIntToBigInt(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v1 any
-			if err := unmarshal(t, tc.data, &v1); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %+v", tc.data, err)
-			} else if !reflect.DeepEqual(v1, tc.wantEmptyInterfaceValue) {
-				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, v1, v1, tc.wantEmptyInterfaceValue, tc.wantEmptyInterfaceValue)
-			}
+			err := unmarshal(t, tc.data, &v1)
+			checkUnmarshal(t, "Unmarshal", v1, err, tc.wantEmptyInterfaceValue)
 
 			var v2 big.Int
-			if err := unmarshal(t, tc.data, &v2); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %+v", tc.data, err)
-			} else if !reflect.DeepEqual(v2, tc.wantBigIntValue) {
-				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, v2, v2, tc.wantBigIntValue, tc.wantBigIntValue)
-			}
+			err = unmarshal(t, tc.data, &v2)
+			checkUnmarshal(t, "Unmarshal", v2, err, tc.wantBigIntValue)
 		})
 	}
 }
@@ -7897,19 +6956,13 @@ func TestUnmarshalTag2(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v1 any
-			if err := unmarshal(t, tc.data, &v1); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %+v", tc.data, err)
-			} else if !reflect.DeepEqual(v1, tc.wantEmptyInterfaceValue) {
-				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, v1, v1, tc.wantEmptyInterfaceValue, tc.wantEmptyInterfaceValue)
-			}
+			err := unmarshal(t, tc.data, &v1)
+			checkUnmarshal(t, "Unmarshal", v1, err, tc.wantEmptyInterfaceValue)
 
 			for _, wantValue := range tc.wantValues {
 				v := reflect.New(reflect.TypeOf(wantValue))
-				if err := unmarshal(t, tc.data, v.Interface()); err != nil {
-					t.Errorf("Unmarshal(0x%x) returned error %+v", tc.data, err)
-				} else if !reflect.DeepEqual(v.Elem().Interface(), wantValue) {
-					t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, v.Elem().Interface(), v.Elem().Interface(), wantValue, wantValue)
-				}
+				err := unmarshal(t, tc.data, v.Interface())
+				checkUnmarshal(t, "Unmarshal", v.Elem().Interface(), err, wantValue)
 			}
 		})
 	}
@@ -7964,19 +7017,13 @@ func TestUnmarshalTag3(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v1 any
-			if err := unmarshal(t, tc.data, &v1); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %+v", tc.data, err)
-			} else if !reflect.DeepEqual(v1, tc.wantEmptyInterfaceValue) {
-				t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, v1, v1, tc.wantEmptyInterfaceValue, tc.wantEmptyInterfaceValue)
-			}
+			err := unmarshal(t, tc.data, &v1)
+			checkUnmarshal(t, "Unmarshal", v1, err, tc.wantEmptyInterfaceValue)
 
 			for _, wantValue := range tc.wantValues {
 				v := reflect.New(reflect.TypeOf(wantValue))
-				if err := unmarshal(t, tc.data, v.Interface()); err != nil {
-					t.Errorf("Unmarshal(0x%x) returned error %+v", tc.data, err)
-				} else if !reflect.DeepEqual(v.Elem().Interface(), wantValue) {
-					t.Errorf("Unmarshal(0x%x) returned %v (%T), want %v (%T)", tc.data, v.Elem().Interface(), v.Elem().Interface(), wantValue, wantValue)
-				}
+				err = unmarshal(t, tc.data, v.Interface())
+				checkUnmarshal(t, "Unmarshal", v.Elem().Interface(), err, wantValue)
 			}
 		})
 	}
@@ -8014,11 +7061,8 @@ func TestUnmarshalInvalidTagBignum(t *testing.T) {
 		for _, decodeToType := range tc.decodeToTypes {
 			t.Run(tc.name+" decode to "+decodeToType.String(), func(t *testing.T) {
 				v := reflect.New(decodeToType)
-				if err := unmarshal(t, tc.data, v.Interface()); err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return an error, want error msg %q", tc.data, tc.wantErrorMsg)
-				} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, err, tc.wantErrorMsg)
-				}
+				err := unmarshal(t, tc.data, v.Interface())
+				checkError[error](t, "unmarshal", err, tc.wantErrorMsg)
 			})
 		}
 	}
@@ -8167,19 +7211,12 @@ func TestUnmarshalToInterface(t *testing.T) {
 
 			// Unmarshal to a value of type TestExample with uninitialized Foo interface.
 			var einterface TestExample
-			if err = unmarshal(t, data, &einterface); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error, want error (*UnmarshalTypeError)", data)
-			} else if _, ok := err.(*UnmarshalTypeError); !ok {
-				t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*UnmarshalTypeError)", data, err)
-			}
+			err = unmarshal(t, data, &einterface)
+			checkError[*UnmarshalTypeError](t, "Unmarshal", err, "")
 
 			// Unmarshal to interface value
 			err = unmarshal(t, data, tc.unmarshalToObj)
-			if err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-			} else if !reflect.DeepEqual(tc.unmarshalToObj, tc.v) {
-				t.Errorf("Unmarshal(0x%x) = %v, want %v", data, tc.unmarshalToObj, tc.v)
-			}
+			checkUnmarshal(t, "Unmarshal", tc.unmarshalToObj, err, tc.v)
 		})
 	}
 }
@@ -8222,22 +7259,15 @@ func TestUnmarshalTaggedDataToInterface(t *testing.T) {
 
 	// Unmarshal to wrong type.
 	var v1 Bar
-	if err = unmarshalWithDM(t, dm, data, &v1); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error, want error (*UnmarshalTypeError)", data)
-	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*UnmarshalTypeError)", data, err)
-	}
+	err = unmarshalWithDM(t, dm, data, &v1)
+	checkError[*UnmarshalTypeError](t, "dm.Unmarshal", err, "")
 
 	// Unmarshal to interface value
 	v2 := &FooStruct{
 		Foos: []Foo{&Bar{}},
 	}
 	err = unmarshalWithDM(t, dm, data, v2)
-	if err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	} else if !reflect.DeepEqual(v2, v) {
-		t.Errorf("Unmarshal(0x%x) = %v, want %v", data, v2, v)
-	}
+	checkUnmarshal(t, "dm.Unmarshal", v2, err, v)
 }
 
 type B interface {
@@ -8320,12 +7350,7 @@ func TestUnmarshalRegisteredTagToInterface(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			err = unmarshalWithDM(t, decMode, tc.data, tc.unmarshalToObj)
-			if err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-			}
-			if !reflect.DeepEqual(tc.unmarshalToObj, tc.wantValue) {
-				t.Errorf("Unmarshal(0x%x) = %v, want %v", tc.data, tc.unmarshalToObj, tc.wantValue)
-			}
+			checkUnmarshal(t, "dm.Unmarshal", tc.unmarshalToObj, err, tc.wantValue)
 		})
 	}
 }
@@ -8478,19 +7503,7 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 
 			var v any
 			err := unmarshalWithDM(t, decMode, tc.data, &v)
-			if err != nil {
-				if tc.wantErrorMsg == "" {
-					t.Errorf("Unmarshal(0x%x) to type any returned error %v", tc.data, err)
-				} else if tc.wantErrorMsg != err.Error() {
-					t.Errorf("Unmarshal(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-				}
-			} else {
-				if tc.wantValue == nil {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want error %q", tc.data, v, v, tc.wantErrorMsg)
-				} else if !reflect.DeepEqual(v, tc.wantValue) {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.wantValue, tc.wantValue)
-				}
-			}
+			checkUnmarshalCase[error](t, "dm.Unmarshal", v, err, tc.wantValue, tc.wantErrorMsg != "", tc.wantErrorMsg)
 		})
 	}
 }
@@ -8498,20 +7511,10 @@ func TestUnmarshalToDefaultMapType(t *testing.T) {
 func TestUnmarshalFirstNoTrailing(t *testing.T) {
 	for _, tc := range unmarshalTestCases {
 		var v any
-		if rest, err := UnmarshalFirst(tc.data, &v); err != nil {
-			t.Errorf("UnmarshalFirst(0x%x) returned error %v", tc.data, err)
-		} else {
-			if len(rest) != 0 {
-				t.Errorf("UnmarshalFirst(0x%x) returned rest %x (want [])", tc.data, rest)
-			}
-			// Check the value as well, although this is covered by other tests
-			if tm, ok := tc.wantInterfaceValue.(time.Time); ok {
-				if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
-					t.Errorf("UnmarshalFirst(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
-				}
-			} else if !reflect.DeepEqual(v, tc.wantInterfaceValue) {
-				t.Errorf("UnmarshalFirst(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
-			}
+		rest, err := UnmarshalFirst(tc.data, &v)
+		checkUnmarshalFunc(t, "UnmarshalFirst", v, err, tc.wantInterfaceValue, nonFloatEqual)
+		if len(rest) != 0 {
+			t.Errorf("UnmarshalFirst(0x%x) returned rest %x (want [])", tc.data, rest)
 		}
 	}
 }
@@ -8524,20 +7527,10 @@ func TestUnmarshalfirstTrailing(t *testing.T) {
 		data = append(data, tc.data...)
 		data = append(data, trailingData...)
 		var v any
-		if rest, err := UnmarshalFirst(data, &v); err != nil {
-			t.Errorf("UnmarshalFirst(0x%x) returned error %v", data, err)
-		} else {
-			if !bytes.Equal(trailingData, rest) {
-				t.Errorf("UnmarshalFirst(0x%x) returned rest %x (want %x)", data, rest, trailingData)
-			}
-			// Check the value as well, although this is covered by other tests
-			if tm, ok := tc.wantInterfaceValue.(time.Time); ok {
-				if vt, ok := v.(time.Time); !ok || !tm.Equal(vt) {
-					t.Errorf("UnmarshalFirst(0x%x) = %v (%T), want %v (%T)", data, v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
-				}
-			} else if !reflect.DeepEqual(v, tc.wantInterfaceValue) {
-				t.Errorf("UnmarshalFirst(0x%x) = %v (%T), want %v (%T)", data, v, v, tc.wantInterfaceValue, tc.wantInterfaceValue)
-			}
+		rest, err := UnmarshalFirst(data, &v)
+		checkUnmarshalFunc(t, "UnmarshalFirst", v, err, tc.wantInterfaceValue, nonFloatEqual)
+		if !bytes.Equal(trailingData, rest) {
+			t.Errorf("UnmarshalFirst(0x%x) returned rest %x (want %x)", data, rest, trailingData)
 		}
 	}
 }
@@ -8547,8 +7540,9 @@ func TestUnmarshalFirstInvalidItem(t *testing.T) {
 	invalidCBOR := mustHexDecode("83FF20030102")
 	var v any
 	rest, err := UnmarshalFirst(invalidCBOR, &v)
-	if rest != nil || err == nil {
-		t.Errorf("UnmarshalFirst(0x%x) = (%x, %v), want (nil, err)", invalidCBOR, rest, err)
+	checkError[error](t, "UnmarshalFirst", err, "")
+	if rest != nil {
+		t.Errorf("UnmarshalFirst(0x%x) = %x, want nil", invalidCBOR, rest)
 	}
 }
 
@@ -8612,13 +7606,7 @@ func TestDecodeFieldNameMatching(t *testing.T) {
 
 			var dst s
 			err := unmarshalWithDM(t, decMode, tc.data, &dst)
-			if err != nil {
-				t.Fatalf("Unmarshal(0x%x) returned unexpected error %v", tc.data, err)
-			}
-
-			if !reflect.DeepEqual(dst, tc.wantValue) {
-				t.Errorf("Unmarshal(0x%x) = %#v, want %#v", tc.data, dst, tc.wantValue)
-			}
+			checkUnmarshal(t, "dm.Unmarshal", dst, err, tc.wantValue)
 		})
 	}
 }
@@ -8686,13 +7674,7 @@ func TestDecodeBignumToEmptyInterface(t *testing.T) {
 
 			var v any
 			err := unmarshalWithDM(t, decMode, tc.data, &v)
-			if err != nil {
-				t.Errorf("Unmarshal(0x%x) to type any returned error %v", tc.data, err)
-			} else { //nolint:gocritic // ignore elseif
-				if !reflect.DeepEqual(v, tc.wantValue) {
-					t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", tc.data, v, v, tc.wantValue, tc.wantValue)
-				}
-			}
+			checkUnmarshal(t, "dm.Unmarshal", v, err, tc.wantValue)
 		})
 	}
 }
@@ -8744,13 +7726,8 @@ func TestUnmarshalDefaultByteStringType(t *testing.T) {
 			}
 
 			var got any
-			if err := unmarshalWithDM(t, dm, tc.data, &got); err != nil {
-				t.Errorf("unexpected error: %v", err)
-			}
-
-			if !reflect.DeepEqual(tc.want, got) {
-				t.Errorf("got %#v, want %#v", got, tc.want)
-			}
+			err = unmarshalWithDM(t, dm, tc.data, &got)
+			checkUnmarshal(t, "dm.Unmarshal", got, err, tc.want)
 		})
 	}
 }
@@ -8763,26 +7740,16 @@ func TestUnmarshalByteStringToString(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = unmarshalWithDM(t, derror, mustHexDecode("43414243"), &s); err == nil {
-		t.Error("expected non-nil error from Unmarshal")
-	}
-
-	if s != "" {
-		t.Errorf("expected destination string to be empty, got %q", s)
-	}
+	err = unmarshalWithDM(t, derror, mustHexDecode("43414243"), &s)
+	checkUnmarshalErr[error](t, "dm.Unmarshal", s, err, "", "")
 
 	dallow, err := DecOptions{ByteStringToString: ByteStringToStringAllowed}.DecMode()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err = unmarshalWithDM(t, dallow, mustHexDecode("43414243"), &s); err != nil {
-		t.Errorf("expected nil error from Unmarshal, got: %v", err)
-	}
-
-	if s != "ABC" {
-		t.Errorf("expected destination string to be \"ABC\", got %q", s)
-	}
+	err = unmarshalWithDM(t, dallow, mustHexDecode("43414243"), &s)
+	checkUnmarshal(t, "dm.Unmarshal", s, err, "ABC")
 }
 
 func TestUnmarshalFieldNameByteString(t *testing.T) {
@@ -8793,18 +7760,13 @@ func TestUnmarshalFieldNameByteString(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var s struct {
+	type S struct {
 		F int64 `json:"f"`
 	}
 
+	var s S
 	err = unmarshalWithDM(t, allowed, mustHexDecode("a1414601"), &s) // {h'46': 1}
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if s.F != 1 {
-		t.Errorf("expected field F to be set to 1, got %d", s.F)
-	}
+	checkUnmarshal(t, "dm.Unmarshal", s, err, S{F: 1})
 
 	forbidden, err := DecOptions{
 		FieldNameByteString: FieldNameByteStringForbidden,
@@ -8814,11 +7776,8 @@ func TestUnmarshalFieldNameByteString(t *testing.T) {
 	}
 
 	const wantMsg = "cbor: cannot unmarshal byte string into Go value of type string (map key is of type byte string and cannot be used to match struct field name)"
-	if err := unmarshalWithDM(t, forbidden, mustHexDecode("a1414601"), &s); err == nil {
-		t.Errorf("expected non-nil error")
-	} else if gotMsg := err.Error(); gotMsg != wantMsg {
-		t.Errorf("expected error %q, got %q", wantMsg, gotMsg)
-	}
+	err = unmarshalWithDM(t, forbidden, mustHexDecode("a1414601"), &s)
+	checkError[error](t, "dm.Unmarshal", err, wantMsg)
 }
 
 func TestUnmarshalWithUnrecognizedTagToAnyMode(t *testing.T) {
@@ -8848,13 +7807,8 @@ func TestUnmarshalWithUnrecognizedTagToAnyMode(t *testing.T) {
 			}
 
 			var got any
-			if err := unmarshalWithDM(t, dm, tc.data, &got); err != nil {
-				t.Errorf("unexpected error: %v", err)
-			}
-
-			if tc.want != got {
-				t.Errorf("got %s, want %s", got, tc.want)
-			}
+			err = unmarshalWithDM(t, dm, tc.data, &got)
+			checkUnmarshal(t, "dm.Unmarshal", got, err, tc.want)
 		})
 	}
 }
@@ -8922,12 +7876,8 @@ func TestUnmarshalWithUnrecognizedTagToAnyModeForSupportedTags(t *testing.T) {
 			}
 
 			var got any
-			if err := unmarshalWithDM(t, dm, tc.data, &got); err != nil {
-				t.Errorf("unexpected error: %v", err)
-			}
-
-			compareNonFloats(t, tc.data, got, tc.want)
-
+			err = unmarshalWithDM(t, dm, tc.data, &got)
+			checkUnmarshalFunc(t, "dm.Unmarshal", got, err, tc.want, nonFloatEqual)
 		})
 	}
 }
@@ -8968,13 +7918,8 @@ func TestUnmarshalWithUnrecognizedTagToAnyModeForSharedTag(t *testing.T) {
 			}
 
 			var got any
-
-			if err := unmarshalWithDM(t, dm, tc.data, &got); err != nil {
-				t.Errorf("unexpected error: %v", err)
-			}
-
-			compareNonFloats(t, tc.data, got, tc.want)
-
+			err = unmarshalWithDM(t, dm, tc.data, &got)
+			checkUnmarshalFunc(t, "dm.Unmarshal", got, err, tc.want, nonFloatEqual)
 		})
 	}
 }
@@ -9009,77 +7954,55 @@ func TestNewSimpleValueRegistry(t *testing.T) {
 }
 
 func TestUnmarshalSimpleValues(t *testing.T) {
-	assertNilError := func(t *testing.T, e error) {
-		if e != nil {
-			t.Errorf("expected nil error, got: %v", e)
-		}
-	}
-
-	assertExactError := func(want error) func(*testing.T, error) {
-		return func(t *testing.T, got error) {
-			targetErr := reflect.New(reflect.TypeOf(want)).Interface()
-			if !errors.As(got, &targetErr) ||
-				got.Error() != want.Error() {
-				t.Errorf("want %#v, got %#v", want, got)
-			}
-		}
-	}
-
 	for _, tc := range []struct {
-		name          string
-		fns           []func(*SimpleValueRegistry) error
-		data          []byte
-		into          reflect.Type
-		want          any
-		assertOnError func(t *testing.T, e error)
+		name         string
+		fns          []func(*SimpleValueRegistry) error
+		data         []byte
+		into         reflect.Type
+		want         any
+		wantErrorMsg string
 	}{
 		{
-			name:          "default false into any",
-			fns:           nil,
-			data:          []byte{0xf4},
-			into:          typeAny,
-			want:          false,
-			assertOnError: assertNilError,
+			name: "default false into any",
+			fns:  nil,
+			data: []byte{0xf4},
+			into: typeAny,
+			want: false,
 		},
 		{
-			name:          "default false into bool",
-			fns:           nil,
-			data:          []byte{0xf4},
-			into:          typeBool,
-			want:          false,
-			assertOnError: assertNilError,
+			name: "default false into bool",
+			fns:  nil,
+			data: []byte{0xf4},
+			into: typeBool,
+			want: false,
 		},
 		{
-			name:          "default true into any",
-			fns:           nil,
-			data:          []byte{0xf5},
-			into:          typeAny,
-			want:          true,
-			assertOnError: assertNilError,
+			name: "default true into any",
+			fns:  nil,
+			data: []byte{0xf5},
+			into: typeAny,
+			want: true,
 		},
 		{
-			name:          "default true into bool",
-			fns:           nil,
-			data:          []byte{0xf5},
-			into:          typeBool,
-			want:          true,
-			assertOnError: assertNilError,
+			name: "default true into bool",
+			fns:  nil,
+			data: []byte{0xf5},
+			into: typeBool,
+			want: true,
 		},
 		{
-			name:          "default null into any",
-			fns:           nil,
-			data:          []byte{0xf6},
-			into:          typeAny,
-			want:          nil,
-			assertOnError: assertNilError,
+			name: "default null into any",
+			fns:  nil,
+			data: []byte{0xf6},
+			into: typeAny,
+			want: nil,
 		},
 		{
-			name:          "default undefined into any",
-			fns:           nil,
-			data:          []byte{0xf7},
-			into:          typeAny,
-			want:          nil,
-			assertOnError: assertNilError,
+			name: "default undefined into any",
+			fns:  nil,
+			data: []byte{0xf7},
+			into: typeAny,
+			want: nil,
 		},
 		{
 			name: "reject undefined into any",
@@ -9087,10 +8010,10 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 			data: []byte{0xf7},
 			into: typeAny,
 			want: nil,
-			assertOnError: assertExactError(&UnacceptableDataItemError{
+			wantErrorMsg: UnacceptableDataItemError{
 				CBORType: "primitives",
 				Message:  "simple value 23 is not recognized",
-			}),
+			}.Error(),
 		},
 		{
 			name: "reject true into bool",
@@ -9098,10 +8021,10 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 			data: []byte{0xf5},
 			into: typeBool,
 			want: false,
-			assertOnError: assertExactError(&UnacceptableDataItemError{
+			wantErrorMsg: UnacceptableDataItemError{
 				CBORType: "primitives",
 				Message:  "simple value 21 is not recognized",
-			}),
+			}.Error(),
 		},
 		{
 			name: "reject true into a slice",
@@ -9109,18 +8032,17 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 			data: []byte{0x81, 0xf5},
 			into: reflect.TypeFor[[]bool](),
 			want: []bool(nil),
-			assertOnError: assertExactError(&UnacceptableDataItemError{
+			wantErrorMsg: UnacceptableDataItemError{
 				CBORType: "primitives",
 				Message:  "simple value 21 is not recognized",
-			}),
+			}.Error(),
 		},
 		{
-			name:          "default unrecognized into uint64",
-			fns:           nil,
-			data:          []byte{0xf8, 0xc8},
-			into:          typeUint64,
-			want:          uint64(200),
-			assertOnError: assertNilError,
+			name: "default unrecognized into uint64",
+			fns:  nil,
+			data: []byte{0xf8, 0xc8},
+			into: typeUint64,
+			want: uint64(200),
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -9136,10 +8058,10 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 
 			dst := reflect.New(tc.into)
 			err = unmarshalWithDM(t, decMode, tc.data, dst.Interface())
-			tc.assertOnError(t, err)
-
-			if got := dst.Elem().Interface(); !reflect.DeepEqual(tc.want, got) {
-				t.Errorf("got: %#v\nwant: %#v\n", got, tc.want)
+			if tc.wantErrorMsg != "" {
+				checkUnmarshalErr[*UnacceptableDataItemError](t, "dm.Unmarshal", dst.Elem().Interface(), err, tc.want, tc.wantErrorMsg)
+			} else {
+				checkUnmarshal(t, "dm.Unmarshal", dst.Elem().Interface(), err, tc.want)
 			}
 		})
 	}
@@ -9324,16 +8246,11 @@ func TestNaNDecMode(t *testing.T) {
 				CBORType: cborTypePrimitives.String(),
 				Message:  "floating-point NaN",
 			}
-			if got := unmarshalWithDM(t, dm, tc.src, tc.dst); got != nil {
-				if tc.reject {
-					if !reflect.DeepEqual(want, got) {
-						t.Errorf("Unmarshal() returned error %v, want %v", got, want)
-					}
-				} else {
-					t.Errorf("unexpected error: %v", got)
-				}
-			} else if tc.reject {
-				t.Error("unexpected nil error")
+			err = unmarshalWithDM(t, dm, tc.src, tc.dst)
+			if tc.reject {
+				checkError[*UnacceptableDataItemError](t, "dm.Unmarshal", err, want.Error())
+			} else if err != nil {
+				t.Errorf("unexpected error: %v", err)
 			}
 		})
 	}
@@ -9590,16 +8507,11 @@ func TestInfDecMode(t *testing.T) {
 				CBORType: cborTypePrimitives.String(),
 				Message:  "floating-point infinity",
 			}
-			if got := unmarshalWithDM(t, dm, tc.src, tc.dst); got != nil {
-				if tc.reject {
-					if !reflect.DeepEqual(want, got) {
-						t.Errorf("Unmarshal() returned error %v, want %v", got, want)
-					}
-				} else {
-					t.Errorf("unexpected error: %v", got)
-				}
-			} else if tc.reject {
-				t.Error("unexpected nil error")
+			err = unmarshalWithDM(t, dm, tc.src, tc.dst)
+			if tc.reject {
+				checkError[*UnacceptableDataItemError](t, "dm.Unmarshal", err, want.Error())
+			} else if err != nil {
+				t.Errorf("unexpected error: %v", err)
 			}
 		})
 	}
@@ -9662,16 +8574,11 @@ func TestUnmarshalByteStringTextConversionError(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if err := unmarshalWithDM(t, dm, tc.data, reflect.New(tc.dstType).Interface()); err == nil {
-				if tc.wantErrorMsg != "" {
-					t.Errorf("got nil error, want %q", tc.wantErrorMsg)
-				}
-			} else if got := err.Error(); got != tc.wantErrorMsg {
-				if tc.wantErrorMsg == "" {
-					t.Errorf("expected nil error, got %q", got)
-				} else {
-					t.Errorf("unexpected error, got %q want %q", got, tc.wantErrorMsg)
-				}
+			err = unmarshalWithDM(t, dm, tc.data, reflect.New(tc.dstType).Interface())
+			if tc.wantErrorMsg != "" {
+				checkError[error](t, "dm.Unmarshal", err, tc.wantErrorMsg)
+			} else if err != nil {
+				t.Errorf("unexpected error: %v", err)
 			}
 		})
 	}
@@ -9882,13 +8789,8 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			}
 
 			dstVal := reflect.New(tc.dstType)
-			if err := unmarshalWithDM(t, dm, tc.data, dstVal.Interface()); err != nil {
-				t.Fatal(err)
-			}
-
-			if dst := dstVal.Elem().Interface(); !reflect.DeepEqual(dst, tc.want) {
-				t.Errorf("got: %#v, want %#v", dst, tc.want)
-			}
+			err = unmarshalWithDM(t, dm, tc.data, dstVal.Interface())
+			checkUnmarshal(t, "dm.Unmarshal", dstVal.Elem().Interface(), err, tc.want)
 		})
 	}
 }
@@ -9933,14 +8835,8 @@ func TestBinaryUnmarshalerMode(t *testing.T) {
 			}
 
 			gotrv := reflect.New(reflect.TypeOf(tc.want))
-			if err := unmarshalWithDM(t, dm, tc.data, gotrv.Interface()); err != nil {
-				t.Fatal(err)
-			}
-
-			got := gotrv.Elem().Interface()
-			if !reflect.DeepEqual(tc.want, got) {
-				t.Errorf("want: %v, got: %v", tc.want, got)
-			}
+			err = unmarshalWithDM(t, dm, tc.data, gotrv.Interface())
+			checkUnmarshal(t, "dm.Unmarshal", gotrv.Elem().Interface(), err, tc.want)
 		})
 	}
 }
@@ -9992,16 +8888,10 @@ func TestBignumTagMode(t *testing.T) {
 				t.Run(dstType.String(), func(t *testing.T) {
 					dstv := reflect.New(dstType)
 					err = unmarshalWithDM(t, dm, tc.input, dstv.Interface())
-					if err != nil {
-						if tc.wantErrorMsg == "" {
-							t.Errorf("want nil error, got: %v", err)
-						} else if gotErrMessage := err.Error(); gotErrMessage != tc.wantErrorMsg {
-							t.Errorf("Unmarshal() returned error %q, want %q", gotErrMessage, tc.wantErrorMsg)
-						}
-					} else {
-						if tc.wantErrorMsg != "" {
-							t.Errorf("got nil error, want: %s", tc.wantErrorMsg)
-						}
+					if tc.wantErrorMsg != "" {
+						checkError[error](t, "dm.Unmarshal", err, tc.wantErrorMsg)
+					} else if err != nil {
+						t.Errorf("want nil error, got: %v", err)
 					}
 				})
 			}
@@ -10058,14 +8948,8 @@ func TestTextUnmarshalerMode(t *testing.T) {
 			}
 
 			gotrv := reflect.New(reflect.TypeOf(tc.want))
-			if err := unmarshalWithDM(t, dm, tc.data, gotrv.Interface()); err != nil {
-				t.Fatal(err)
-			}
-
-			got := gotrv.Elem().Interface()
-			if !reflect.DeepEqual(tc.want, got) {
-				t.Errorf("want: %v, got: %v", tc.want, got)
-			}
+			err = unmarshalWithDM(t, dm, tc.data, gotrv.Interface())
+			checkUnmarshal(t, "dm.Unmarshal", gotrv.Elem().Interface(), err, tc.want)
 		})
 	}
 }
@@ -10083,13 +8967,7 @@ func TestTextUnmarshalerModeError(t *testing.T) {
 	}
 
 	err = unmarshalWithDM(t, dec, []byte{0x61, 'a'}, new(errorTextUnmarshaler))
-	if err == nil {
-		t.Fatal("expected non-nil error")
-	}
-
-	if got, want := err.Error(), "cbor: cannot unmarshal text for *cbor.errorTextUnmarshaler: test"; got != want {
-		t.Errorf("want: %q, got: %q", want, got)
-	}
+	checkError[error](t, "dm.Unmarshal", err, "cbor: cannot unmarshal text for *cbor.errorTextUnmarshaler: test")
 }
 
 func TestJSONUnmarshalerTranscoder(t *testing.T) {
@@ -10155,20 +9033,7 @@ func TestJSONUnmarshalerTranscoder(t *testing.T) {
 
 			gotrv := reflect.New(reflect.TypeOf(tc.want))
 			err = unmarshalWithDM(t, dec, tc.data, gotrv.Interface())
-			if tc.wantErrorMsg != "" {
-				if err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return an error, want error %q", tc.data, tc.wantErrorMsg)
-				} else if gotErrorMsg := err.Error(); gotErrorMsg != tc.wantErrorMsg {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want %q", tc.data, gotErrorMsg, tc.wantErrorMsg)
-				}
-			} else {
-				if err != nil {
-					t.Errorf("Unmarshal(0x%x) returned non-nil error %v", tc.data, err)
-				} else if got := gotrv.Elem().Interface(); !reflect.DeepEqual(tc.want, got) {
-					t.Errorf("Unmarshal(0x%x): %v, want %v", tc.data, got, tc.want)
-				}
-			}
-
+			checkUnmarshalCase[error](t, "dm.Unmarshal", gotrv.Elem().Interface(), err, tc.want, tc.wantErrorMsg != "", tc.wantErrorMsg)
 		})
 	}
 }
@@ -10182,11 +9047,11 @@ func TestKeyAsIntTextKeyDoesNotMatchKeyAsIntField(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name    string
-		opts    DecOptions
-		data    []byte
-		want    any
-		wantErr *UnknownFieldError
+		name         string
+		opts         DecOptions
+		data         []byte
+		want         any
+		wantErrorMsg string
 	}{
 		{
 			name: "default options",
@@ -10195,11 +9060,11 @@ func TestKeyAsIntTextKeyDoesNotMatchKeyAsIntField(t *testing.T) {
 			want: s{},
 		},
 		{
-			name:    "unknown field error options",
-			opts:    DecOptions{ExtraReturnErrors: ExtraDecErrorUnknownField},
-			data:    mustHexDecode("a1613101"), // {"1": 1}
-			want:    s{},
-			wantErr: &UnknownFieldError{Index: 0},
+			name:         "unknown field error options",
+			opts:         DecOptions{ExtraReturnErrors: ExtraDecErrorUnknownField},
+			data:         mustHexDecode("a1613101"), // {"1": 1}
+			want:         s{},
+			wantErrorMsg: (&UnknownFieldError{Index: 0}).Error(),
 		},
 	}
 
@@ -10212,18 +9077,10 @@ func TestKeyAsIntTextKeyDoesNotMatchKeyAsIntField(t *testing.T) {
 
 			var v s
 			err = unmarshalWithDM(t, dm, tc.data, &v)
-			if err != nil {
-				if !reflect.DeepEqual(err, tc.wantErr) {
-					t.Errorf("got error: %v, wanted: %v", err, tc.wantErr)
-				}
+			if tc.wantErrorMsg != "" {
+				checkUnmarshalErr[*UnknownFieldError](t, "dm.Unmarshal", v, err, tc.want, tc.wantErrorMsg)
 			} else {
-				if tc.wantErr != nil {
-					t.Errorf("got nil error, wanted: %v", tc.wantErr)
-				}
-			}
-
-			if !reflect.DeepEqual(v, tc.want) {
-				t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", tc.data, v, v, tc.want, tc.want)
+				checkUnmarshal(t, "dm.Unmarshal", v, err, tc.want)
 			}
 		})
 	}
@@ -10241,11 +9098,11 @@ func TestKeyAsIntNormalizedDuplicateFields(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name    string
-		opts    DecOptions
-		data    []byte
-		want    any
-		wantErr *UnknownFieldError
+		name         string
+		opts         DecOptions
+		data         []byte
+		want         any
+		wantErrorMsg string
 	}{
 		{
 			name: "default options",
@@ -10254,11 +9111,11 @@ func TestKeyAsIntNormalizedDuplicateFields(t *testing.T) {
 			want: s{},
 		},
 		{
-			name:    "unknown field error options",
-			opts:    DecOptions{ExtraReturnErrors: ExtraDecErrorUnknownField},
-			data:    mustHexDecode("a10101"), // {1: 1}
-			want:    s{},
-			wantErr: &UnknownFieldError{Index: 0},
+			name:         "unknown field error options",
+			opts:         DecOptions{ExtraReturnErrors: ExtraDecErrorUnknownField},
+			data:         mustHexDecode("a10101"), // {1: 1}
+			want:         s{},
+			wantErrorMsg: (&UnknownFieldError{Index: 0}).Error(),
 		},
 	}
 
@@ -10271,18 +9128,10 @@ func TestKeyAsIntNormalizedDuplicateFields(t *testing.T) {
 
 			var v s
 			err = unmarshalWithDM(t, dm, tc.data, &v)
-			if err != nil {
-				if !reflect.DeepEqual(err, tc.wantErr) {
-					t.Errorf("got error: %v, wanted: %v", err, tc.wantErr)
-				}
+			if tc.wantErrorMsg != "" {
+				checkUnmarshalErr[*UnknownFieldError](t, "dm.Unmarshal", v, err, tc.want, tc.wantErrorMsg)
 			} else {
-				if tc.wantErr != nil {
-					t.Errorf("got nil error, wanted: %v", tc.wantErr)
-				}
-			}
-
-			if !reflect.DeepEqual(v, tc.want) {
-				t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", tc.data, v, v, tc.want, tc.want)
+				checkUnmarshal(t, "dm.Unmarshal", v, err, tc.want)
 			}
 		})
 	}
@@ -10312,12 +9161,7 @@ func TestKeyAsIntAndStringFieldsWithSameName(t *testing.T) {
 
 	var v s
 	err := unmarshal(t, data, &v)
-	if err != nil {
-		t.Errorf("Unmarshal returned unexpected error: %v", err)
-	}
-	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) returned %+v, want %+v", data, v, want)
-	}
+	checkUnmarshal(t, "Unmarshal", v, err, want)
 
 	// Roundtrip
 	b, err := Marshal(want)
@@ -10342,12 +9186,7 @@ func TestKeyAsIntAndStringFieldsWithSameNameAndEmbeddedField(t *testing.T) {
 
 	var v s
 	err := unmarshal(t, data, &v)
-	if err != nil {
-		t.Errorf("Unmarshal returned unexpected error: %v", err)
-	}
-	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) returned %+v, want %+v", data, v, want)
-	}
+	checkUnmarshal(t, "Unmarshal", v, err, want)
 
 	// Roundtrip
 	b, err := Marshal(want)
@@ -10363,27 +9202,27 @@ func TestMapKeyOverflowStructKeyAsInt(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name    string
-		data    []byte
-		wantErr *UnmarshalTypeError
+		name         string
+		data         []byte
+		wantErrorMsg string
 	}{
 		{
 			name: "map key < math.MinInt64",
 			data: mustHexDecode("a13bffffffffffffffff01"), // {-18446744073709551616: 1}
-			wantErr: &UnmarshalTypeError{
+			wantErrorMsg: (&UnmarshalTypeError{
 				CBORType: cborTypeNegativeInt.String(),
 				GoType:   "int64",
 				errorMsg: "-1-18446744073709551615 overflows Go's int64",
-			},
+			}).Error(),
 		},
 		{
 			name: "map key > math.MaxInt64",
 			data: mustHexDecode("a11bffffffffffffffff01"), // {18446744073709551615: 1}
-			wantErr: &UnmarshalTypeError{
+			wantErrorMsg: (&UnmarshalTypeError{
 				CBORType: cborTypePositiveInt.String(),
 				GoType:   "int64",
 				errorMsg: "18446744073709551615 overflows Go's int64",
-			},
+			}).Error(),
 		},
 	}
 
@@ -10391,15 +9230,7 @@ func TestMapKeyOverflowStructKeyAsInt(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var v s
 			err := unmarshal(t, tc.data, &v)
-			if err != nil {
-				if !reflect.DeepEqual(err, tc.wantErr) {
-					t.Errorf("got error: %v, wanted: %v", err, tc.wantErr)
-				}
-			} else {
-				if tc.wantErr != nil {
-					t.Errorf("got nil error, wanted: %v", tc.wantErr)
-				}
-			}
+			checkError[*UnmarshalTypeError](t, "Unmarshal", err, tc.wantErrorMsg)
 		})
 	}
 }
@@ -10497,16 +9328,13 @@ func TestUnmarshalMapWithLargeStringKey(t *testing.T) {
 			v := reflect.New(reflect.TypeOf(tc.value))
 			v.Elem().Set(reflect.ValueOf(tc.value))
 
-			if err := unmarshal(t, data, v.Interface()); err != nil {
-				t.Fatalf("Unmarshal(0x%x) to %T returned error %v", data, v.Elem().Interface(), err)
-			}
-			equal := tc.equalFunc
-			if equal == nil {
-				equal = func(got any) bool { return reflect.DeepEqual(got, tc.wantValue) }
-			}
-			if got := v.Elem().Interface(); !equal(got) {
-				t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, got, got, tc.wantValue, tc.wantValue)
-			}
+			err := unmarshal(t, data, v.Interface())
+			checkUnmarshalFunc(t, "Unmarshal", v.Elem().Interface(), err, tc.wantValue, func(got, want any) bool {
+				if tc.equalFunc != nil {
+					return tc.equalFunc(got)
+				}
+				return reflect.DeepEqual(got, want)
+			})
 		})
 	}
 }
@@ -10840,14 +9668,9 @@ func TestUnmarshalToUnaddressableValue(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			v := tc.value()
 			err := unmarshal(t, tc.data, v)
-			if err == nil {
-				t.Errorf("Unmarshal(0x%x): expected *UnmarshalTypeError, got nil", tc.data)
-			} else if _, ok := err.(*UnmarshalTypeError); !ok {
-				t.Errorf("Unmarshal(0x%x) returned %T, want (*UnmarshalTypeError)", tc.data, err)
-			}
-			if tc.want != nil && !reflect.DeepEqual(v, tc.want) {
-				t.Errorf("Unmarshal(0x%x) = %+v, want %+v", tc.data, v, tc.want)
-			}
+			checkUnmarshalErrFunc[*UnmarshalTypeError](t, "Unmarshal", v, err, tc.want, "", func(got, want any) bool {
+				return want == nil || reflect.DeepEqual(got, want)
+			})
 		})
 	}
 }
@@ -10928,12 +9751,7 @@ func TestUnmarshalToSelfReferenceDataTypes(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			v := tc.val()
 			err := Unmarshal(tc.data, v)
-			if err != nil {
-				t.Fatalf("Unmarshal(0x%x): unexpected error: %v", tc.data, err)
-			}
-			if !reflect.DeepEqual(reflect.ValueOf(v).Elem().Interface(), tc.want) {
-				t.Errorf("Unmarshal(0x%x) = %+v, want %+v", tc.data, reflect.ValueOf(v).Elem().Interface(), tc.want)
-			}
+			checkUnmarshal(t, "Unmarshal", reflect.ValueOf(v).Elem().Interface(), err, tc.want)
 		})
 	}
 }

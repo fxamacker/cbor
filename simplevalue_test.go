@@ -6,7 +6,6 @@ package cbor
 import (
 	"fmt"
 	"io"
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -110,7 +109,7 @@ func TestUnmarshalSimpleValueOnBadData(t *testing.T) {
 		{
 			name:         "float type",
 			data:         mustHexDecode("f90000"),
-			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type SimpleValue",
+			wantErrorMsg: "cbor: cannot unmarshal primitives into Go value of type SimpleValue (not simple values)",
 		},
 
 		// Truncated CBOR data
@@ -161,12 +160,7 @@ func TestUnmarshalSimpleValueOnBadData(t *testing.T) {
 				var v SimpleValue
 
 				err := unmarshal(t, tc.data, &v)
-				if err == nil {
-					t.Errorf("Unmarshal(%x) didn't return error", tc.data)
-				}
-				if !strings.HasPrefix(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-				}
+				checkError[error](t, "Unmarshal", err, tc.wantErrorMsg)
 			}
 		})
 	}
@@ -176,35 +170,24 @@ func testUnmarshalInvalidSimpleValueToEmptyInterface(t *testing.T, data []byte) 
 	t.Helper()
 
 	var v any
-	if err := unmarshal(t, data, v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if _, ok := err.(*SyntaxError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*SyntaxError)", data, err)
-	}
+	err := unmarshal(t, data, v)
+	checkError[*SyntaxError](t, "Unmarshal", err, "")
 }
 
 func testUnmarshalInvalidSimpleValue(t *testing.T, data []byte) {
 	t.Helper()
 
 	var v SimpleValue
-	if err := unmarshal(t, data, v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if _, ok := err.(*SyntaxError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*SyntaxError)", data, err)
-	}
+	err := unmarshal(t, data, v)
+	checkError[*SyntaxError](t, "Unmarshal", err, "")
 }
 
 func testUnmarshalSimpleValueToEmptyInterface(t *testing.T, data []byte, want any) {
 	t.Helper()
 
 	var v any
-	if err := unmarshal(t, data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-		return
-	}
-	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, want, want)
-	}
+	err := unmarshal(t, data, &v)
+	checkUnmarshal(t, "Unmarshal", v, err, want)
 }
 
 func testUnmarshalSimpleValue(t *testing.T, data []byte, want SimpleValue) {
@@ -215,47 +198,25 @@ func testUnmarshalSimpleValue(t *testing.T, data []byte, want SimpleValue) {
 	// Decode to SimpleValue
 	var v SimpleValue
 	err := unmarshal(t, data, &v)
-	if err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-		return
-	}
-	if !reflect.DeepEqual(v, want) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, want, want)
-	}
+	checkUnmarshal(t, "Unmarshal", v, err, want)
 
 	// Decode to uninitialized *SimpleValue
 	var pv *SimpleValue
 	err = unmarshal(t, data, &pv)
-	if err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-		return
-	}
 	if cborNil {
-		if pv != nil {
-			t.Errorf("Unmarshal(0x%x) returned %v, want nil *SimpleValue", data, *pv)
-		}
+		checkUnmarshal(t, "Unmarshal", pv, err, (*SimpleValue)(nil))
 	} else {
-		if !reflect.DeepEqual(*pv, want) {
-			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, *pv, *pv, want, want)
-		}
+		checkUnmarshal(t, "Unmarshal", derefOrNil(pv), err, want)
 	}
 
 	// Decode to initialized *SimpleValue
 	v = SimpleValue(0)
 	pv = &v
 	err = unmarshal(t, data, &pv)
-	if err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-		return
-	}
 	if cborNil {
-		if pv != nil {
-			t.Errorf("Unmarshal(0x%x) returned %v, want nil *SimpleValue", data, *pv)
-		}
+		checkUnmarshal(t, "Unmarshal", pv, err, (*SimpleValue)(nil))
 	} else {
-		if !reflect.DeepEqual(v, want) {
-			t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, want, want)
-		}
+		checkUnmarshal(t, "Unmarshal", v, err, want)
 	}
 }
 

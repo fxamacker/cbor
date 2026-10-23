@@ -868,14 +868,10 @@ func TestDecodeNoTagData(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			dm, _ := DecOptions{}.DecModeWithTags(tagsDecRequired)
 			v := reflect.New(reflect.TypeOf(tc.obj))
-			if err := unmarshalWithDM(t, dm, tc.wantCborData, v.Interface()); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.wantCborData)
-			} else {
-				if _, ok := err.(*UnmarshalTypeError); !ok {
-					t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*UnmarshalTypeError)", tc.wantCborData, err)
-				} else if !strings.Contains(err.Error(), "expect CBOR tag value") {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.wantCborData, err.Error(), "expect CBOR tag value")
-				}
+			err := unmarshalWithDM(t, dm, tc.wantCborData, v.Interface())
+			checkError[*UnmarshalTypeError](t, "dm.Unmarshal", err, "")
+			if !strings.Contains(err.Error(), "expect CBOR tag value") {
+				t.Errorf("dm.Unmarshal: got %q, want substring %q", err.Error(), "expect CBOR tag value")
 			}
 		})
 	}
@@ -962,15 +958,8 @@ func TestDecodeWrongTag(t *testing.T) {
 			t.Run(name, func(t *testing.T) {
 				dm, _ := DecOptions{}.DecModeWithTags(tag.tagSet)
 				v := reflect.New(reflect.TypeOf(tc.obj))
-				if err := unmarshalWithDM(t, dm, tc.data, v.Interface()); err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
-				} else {
-					if _, ok := err.(*WrongTagError); !ok {
-						t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*WrongTagError)", tc.data, err)
-					} else if err.Error() != tc.wantErrorMsg {
-						t.Errorf("Unmarshal(0x%x) returned error %q, want error %q", tc.data, err.Error(), tc.wantErrorMsg)
-					}
-				}
+				err := unmarshalWithDM(t, dm, tc.data, v.Interface())
+				checkError[*WrongTagError](t, "dm.Unmarshal", err, tc.wantErrorMsg)
 			})
 		}
 	}
@@ -981,12 +970,8 @@ func TestDecodeWrongTag(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			dm, _ := DecOptions{}.DecModeWithTags(tagsDecIgnored)
 			v := reflect.New(reflect.TypeOf(tc.obj))
-			if err := unmarshalWithDM(t, dm, tc.data, v.Interface()); err != nil {
-				t.Errorf("Unmarshal() returned error %v", err)
-			}
-			if !reflect.DeepEqual(tc.obj, v.Elem().Interface()) {
-				t.Errorf("Marshal-Unmarshal returned different values: %v, %v", tc.obj, v.Elem().Interface())
-			}
+			err := unmarshalWithDM(t, dm, tc.data, v.Interface())
+			checkUnmarshal(t, "dm.Unmarshal", v.Elem().Interface(), err, tc.obj)
 		})
 	}
 }
@@ -1056,12 +1041,8 @@ func TestDecodeSharedTag(t *testing.T) {
 	var v myInt
 	wantV := myInt(1)
 	data := mustHexDecode("d87b01")
-	if err = unmarshalWithDM(t, dm, data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(v, wantV) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantV, wantV)
-	}
+	err = unmarshalWithDM(t, dm, data, &v)
+	checkUnmarshal(t, "dm.Unmarshal", v, err, wantV)
 
 	// Unregister myInt type
 	sharedTagSet.Remove(myIntType)
@@ -1069,27 +1050,19 @@ func TestDecodeSharedTag(t *testing.T) {
 	// Decode myInt without tag number
 	wantV = myInt(2)
 	data = mustHexDecode("02")
-	if err := unmarshalWithDM(t, dm, data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(v, wantV) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantV, wantV)
-	}
+	err = unmarshalWithDM(t, dm, data, &v)
+	checkUnmarshal(t, "dm.Unmarshal", v, err, wantV)
 
 	// Register myInt type with tag number 234
-	if err := sharedTagSet.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 234); err != nil {
+	if err = sharedTagSet.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 234); err != nil {
 		t.Fatalf("TagSet.Add(%s, %v) returned error %v", myIntType, 100, err)
 	}
 
 	// Decode myInt with tag number 234
 	wantV = myInt(3)
 	data = mustHexDecode("d8ea03")
-	if err := unmarshalWithDM(t, dm, data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(v, wantV) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantV, wantV)
-	}
+	err = unmarshalWithDM(t, dm, data, &v)
+	checkUnmarshal(t, "dm.Unmarshal", v, err, wantV)
 }
 
 func TestDecModeWithTagsError(t *testing.T) {
@@ -1178,11 +1151,8 @@ func TestNilRawTagUnmarshalCBORError(t *testing.T) {
 func TestTagUnmarshalError(t *testing.T) {
 	data := mustHexDecode("d87b61fe") // invalid UTF-8 string
 	var tag Tag
-	if err := unmarshal(t, data, &tag); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return error", data)
-	} else if err.Error() != invalidUTF8ErrorMsg {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), invalidUTF8ErrorMsg)
-	}
+	err := unmarshal(t, data, &tag)
+	checkError[error](t, "Unmarshal", err, invalidUTF8ErrorMsg)
 }
 
 func TestTagMarshalError(t *testing.T) {
@@ -1308,20 +1278,12 @@ func TestDecodeTagToEmptyIface(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v1 any
-			if err := unmarshalWithDM(t, dm, tc.data, &v1); err != nil {
-				t.Errorf("Unmarshal() returned error %v", err)
-			}
-			if !reflect.DeepEqual(tc.wantObj, v1) {
-				t.Errorf("Unmarshal to any returned different values: %v, %v", tc.wantObj, v1)
-			}
+			err := unmarshalWithDM(t, dm, tc.data, &v1)
+			checkUnmarshal(t, "dm.Unmarshal", v1, err, tc.wantObj)
 
 			var v2 any
-			if err := unmarshalWithDM(t, dmSharedTags, tc.data, &v2); err != nil {
-				t.Errorf("Unmarshal() returned error %v", err)
-			}
-			if !reflect.DeepEqual(tc.wantObj, v2) {
-				t.Errorf("Unmarshal to any returned different values: %v, %v", tc.wantObj, v2)
-			}
+			err = unmarshalWithDM(t, dmSharedTags, tc.data, &v2)
+			checkUnmarshal(t, "dm.Unmarshal", v2, err, tc.wantObj)
 		})
 	}
 }
@@ -1341,13 +1303,8 @@ func TestDecodeRegisteredTagToEmptyIfaceError(t *testing.T) {
 	data := mustHexDecode("d865d8663bffffffffffffffff") // 101(102(-18446744073709551616))
 
 	var v any
-	if err := unmarshalWithDM(t, dm, data, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
-	} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), "cannot unmarshal")
-	}
+	err := unmarshalWithDM(t, dm, data, &v)
+	checkError[*UnmarshalTypeError](t, "dm.Unmarshal", err, "")
 }
 
 type number3 uint64
@@ -1397,23 +1354,15 @@ func TestDecodeRegisterTagForUnmarshaler(t *testing.T) {
 
 	// Decode to a value of type any.  Unmarshal() should return object of registered type.
 	var v1 any
-	if err := unmarshalWithDM(t, dm, data, &v1); err != nil {
-		t.Errorf("Unmarshal() returned error %v", err)
-	}
-	if !reflect.DeepEqual(wantObj, v1) {
-		t.Errorf("Unmarshal() returned different values: %v (%T), %v (%T)", wantObj, wantObj, v1, v1)
-	}
+	err := unmarshalWithDM(t, dm, data, &v1)
+	checkUnmarshal(t, "dm.Unmarshal", v1, err, wantObj)
 	b, err := em.Marshal(v1)
 	checkMarshal(t, "em.Marshal", b, err, data)
 
 	// Decode to registered type.
 	var v2 number3
-	if err = unmarshalWithDM(t, dm, data, &v2); err != nil {
-		t.Errorf("Unmarshal() returned error %v", err)
-	}
-	if !reflect.DeepEqual(wantObj, v2) {
-		t.Errorf("Unmarshal() returned different values: %v, %v", wantObj, v2)
-	}
+	err = unmarshalWithDM(t, dm, data, &v2)
+	checkUnmarshal(t, "dm.Unmarshal", v2, err, wantObj)
 	b, err = em.Marshal(v2)
 	checkMarshal(t, "em.Marshal", b, err, data)
 }
@@ -1605,14 +1554,8 @@ func TestUnmarshalRawTagOnBadData(t *testing.T) {
 			// Test Unmarshal(data, *RawTag), which calls RawTag.unmarshalCBOR() under the hood
 			{
 				var v RawTag
-
 				err := unmarshal(t, tc.data, &v)
-				if err == nil {
-					t.Errorf("Unmarshal(%x) didn't return error", tc.data)
-				}
-				if !strings.HasPrefix(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-				}
+				checkError[error](t, "Unmarshal", err, tc.wantErrorMsg)
 			}
 		})
 	}

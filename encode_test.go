@@ -647,13 +647,8 @@ func testMarshalLargeMap(t *testing.T) {
 		}
 
 		m2 := make(map[int]int)
-		if err = unmarshal(t, data, &m2); err != nil {
-			t.Fatalf("Unmarshal(0x%x) returned error %v", data, err)
-		}
-
-		if !reflect.DeepEqual(m1, m2) {
-			t.Errorf("Unmarshal() = %v, want %v", m2, m1)
-		}
+		err = unmarshal(t, data, &m2)
+		checkUnmarshal(t, "Unmarshal", m2, err, m1)
 	}
 }
 
@@ -749,13 +744,8 @@ func testMarshalStruct(t *testing.T) {
 	}
 
 	var v2 outer
-	if err = unmarshal(t, data, &v2); err != nil {
-		t.Fatalf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-
-	if !reflect.DeepEqual(unmarshalWant, v2) {
-		t.Errorf("Unmarshal() = %v, want %v", v2, unmarshalWant)
-	}
+	err = unmarshal(t, data, &v2)
+	checkUnmarshal(t, "Unmarshal", v2, err, unmarshalWant)
 }
 
 // TestMarshalStructVariableLength tests marshaling structs that can encode to CBOR maps of varying
@@ -976,11 +966,8 @@ func testAnonymousFields2(t *testing.T) {
 
 	var v2 T
 	unmarshalWant := T{X: 6}
-	if err := unmarshal(t, b, &v2); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-	} else if !reflect.DeepEqual(v2, unmarshalWant) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v2, v2, unmarshalWant, unmarshalWant)
-	}
+	err = unmarshal(t, b, &v2)
+	checkUnmarshal(t, "Unmarshal", v2, err, unmarshalWant)
 }
 
 func TestAnonymousFields3(t *testing.T) {
@@ -1019,11 +1006,8 @@ func testAnonymousFields4(t *testing.T) {
 	checkMarshal(t, "Marshal", b, err, want)
 
 	var v2 T
-	if err = unmarshal(t, b, &v2); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-	} else if !reflect.DeepEqual(v, v2) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v, v, v2, v2)
-	}
+	err = unmarshal(t, b, &v2)
+	checkUnmarshal(t, "Unmarshal", v2, err, v)
 }
 
 func TestAnonymousFields5(t *testing.T) {
@@ -1064,11 +1048,8 @@ func testAnonymousFields6(t *testing.T) {
 	checkMarshal(t, "Marshal", b, err, want)
 
 	var v2 T
-	if err = unmarshal(t, b, &v2); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-	} else if !reflect.DeepEqual(v, v2) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v, v, v2, v2)
-	}
+	err = unmarshal(t, b, &v2)
+	checkUnmarshal(t, "Unmarshal", v2, err, v)
 }
 
 func TestAnonymousFields7(t *testing.T) {
@@ -1092,11 +1073,8 @@ func testAnonymousFields7(t *testing.T) {
 
 	var v2 T
 	unmarshalWant := T{t1{X: 2}, T2{Y: 4}}
-	if err = unmarshal(t, b, &v2); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-	} else if !reflect.DeepEqual(v2, unmarshalWant) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v2, v2, unmarshalWant, unmarshalWant)
-	}
+	err = unmarshal(t, b, &v2)
+	checkUnmarshal(t, "Unmarshal", v2, err, unmarshalWant)
 }
 
 func TestAnonymousFields8(t *testing.T) {
@@ -1120,27 +1098,17 @@ func testAnonymousFields8(t *testing.T) {
 
 	// v1 cannot be unmarshaled to because reflect cannot allocate unexported field s1.
 	var v1 T
-	wantErrorMsg := "cannot set embedded pointer to unexported struct"
+	wantErrorMsg := "cbor: cannot set embedded pointer to unexported struct: *cbor.t1"
 	wantV := T{T2: &T2{Y: 4}}
 	err = unmarshal(t, b, &v1)
-	if err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error, want error %q", b, wantErrorMsg)
-	} else if !strings.Contains(err.Error(), wantErrorMsg) {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error %q", b, err.Error(), wantErrorMsg)
-	}
-	if !reflect.DeepEqual(v1, wantV) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", b, v1, v1, wantV, wantV)
-	}
+	checkUnmarshalErr[error](t, "Unmarshal", v1, err, wantV, wantErrorMsg)
 
 	// v2 can be unmarshaled to because unexported field t1 is already allocated.
 	var v2 T
 	v2.t1 = &t1{}
 	unmarshalWant := T{&t1{X: 2}, &T2{Y: 4}}
-	if err = unmarshal(t, b, &v2); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-	} else if !reflect.DeepEqual(v2, unmarshalWant) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v2, v2, unmarshalWant, unmarshalWant)
-	}
+	err = unmarshal(t, b, &v2)
+	checkUnmarshal(t, "Unmarshal", v2, err, unmarshalWant)
 }
 
 func TestAnonymousFields9(t *testing.T) {
@@ -1174,11 +1142,8 @@ func testAnonymousFields9(t *testing.T) {
 
 	var v2 T
 	unmarshalWant := T{t1: t1{MyInt1: 1, t2: t2{MyInt2: 3}}}
-	if err = unmarshal(t, b, &v2); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-	} else if !reflect.DeepEqual(v2, unmarshalWant) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v2, v2, unmarshalWant, unmarshalWant)
-	}
+	err = unmarshal(t, b, &v2)
+	checkUnmarshal(t, "Unmarshal", v2, err, unmarshalWant)
 }
 
 func TestAnonymousFields10(t *testing.T) {
@@ -1211,11 +1176,8 @@ func testAnonymousFields10(t *testing.T) {
 
 	var v2 T
 	unmarshalWant := T{t1: t1{X: 1}, t2: t2{Y: 3}}
-	if err = unmarshal(t, b, &v2); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-	} else if !reflect.DeepEqual(v2, unmarshalWant) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v2, v2, unmarshalWant, unmarshalWant)
-	}
+	err = unmarshal(t, b, &v2)
+	checkUnmarshal(t, "Unmarshal", v2, err, unmarshalWant)
 }
 
 func TestAnonymousFields11(t *testing.T) {
@@ -1244,11 +1206,8 @@ func testAnonymousFields11(t *testing.T) {
 
 	var v2 T
 	unmarshalWant := T{t1: t1{Y: 1}, t2: t2{X: 3}}
-	if err = unmarshal(t, b, &v2); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-	} else if !reflect.DeepEqual(v2, unmarshalWant) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v2, v2, unmarshalWant, unmarshalWant)
-	}
+	err = unmarshal(t, b, &v2)
+	checkUnmarshal(t, "Unmarshal", v2, err, unmarshalWant)
 }
 
 func TestOmitAndRenameStructField(t *testing.T) {
@@ -2570,11 +2529,8 @@ func testTaggedField(t *testing.T) {
 
 	var v2 T
 	unmarshalWant := T{T2: T2{"T2"}}
-	if err = unmarshal(t, b, &v2); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-	} else if !reflect.DeepEqual(v2, unmarshalWant) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", b, v2, v2, unmarshalWant, unmarshalWant)
-	}
+	err = unmarshal(t, b, &v2)
+	checkUnmarshal(t, "Unmarshal", v2, err, unmarshalWant)
 }
 
 func TestDuplicatedFields(t *testing.T) {
@@ -2646,11 +2602,8 @@ func testTaggedAnonymousField(t *testing.T) {
 
 	var v2 T
 	unmarshalWant := T{X: 1, T1: T1{X: 2}}
-	if err = unmarshal(t, b, &v2); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-	} else if !reflect.DeepEqual(v2, unmarshalWant) {
-		t.Errorf("Unmarshal(0x%x) = %+v (%T), want %+v (%T)", b, v2, v2, unmarshalWant, unmarshalWant)
-	}
+	err = unmarshal(t, b, &v2)
+	checkUnmarshal(t, "Unmarshal", v2, err, unmarshalWant)
 }
 
 func TestAnonymousInterfaceField(t *testing.T) {
@@ -2671,16 +2624,9 @@ func testAnonymousInterfaceField(t *testing.T) {
 	checkMarshal(t, "Marshal", b, err, want)
 
 	var v2 T
-	const wantErrorMsg = "cannot unmarshal map into Go struct field cbor.T.Reader of type io.Reader"
-	if err = unmarshal(t, b, &v2); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error, want error (*UnmarshalTypeError)", b)
-	} else {
-		if typeError, ok := err.(*UnmarshalTypeError); !ok {
-			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*UnmarshalTypeError)", b, err)
-		} else if !strings.Contains(typeError.Error(), wantErrorMsg) {
-			t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", b, err.Error(), wantErrorMsg)
-		}
-	}
+	const wantErrorMsg = "cbor: cannot unmarshal map into Go struct field cbor.T.Reader of type io.Reader"
+	err = unmarshal(t, b, &v2)
+	checkError[*UnmarshalTypeError](t, "Unmarshal", err, wantErrorMsg)
 }
 
 func TestEncodeInterface(t *testing.T) {
@@ -2694,16 +2640,9 @@ func testEncodeInterface(t *testing.T) {
 	checkMarshal(t, "Marshal", b, err, want)
 
 	var v io.Reader
-	const wantErrorMsg = "cannot unmarshal map into Go value of type io.Reader"
-	if err = unmarshal(t, b, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error, want error (*UnmarshalTypeError)", b)
-	} else {
-		if typeError, ok := err.(*UnmarshalTypeError); !ok {
-			t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*UnmarshalTypeError)", b, err)
-		} else if !strings.Contains(typeError.Error(), wantErrorMsg) {
-			t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", b, err.Error(), wantErrorMsg)
-		}
-	}
+	const wantErrorMsg = "cbor: cannot unmarshal map into Go value of type io.Reader"
+	err = unmarshal(t, b, &v)
+	checkError[*UnmarshalTypeError](t, "Unmarshal", err, wantErrorMsg)
 }
 
 func TestMarshalStructTag1(t *testing.T) {
@@ -3076,12 +3015,8 @@ func testCyclicDataStructure(t *testing.T) {
 	checkMarshal(t, "Marshal", data, err, wantCborData)
 
 	var v1 Node
-	if err = unmarshal(t, data, &v1); err != nil {
-		t.Fatalf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(v, v1) {
-		t.Errorf("Unmarshal(0x%x) returned %+v, want %+v", data, v1, v)
-	}
+	err = unmarshal(t, data, &v1)
+	checkUnmarshal(t, "Unmarshal", v1, err, v)
 }
 
 func TestMarshalUnmarshalStructKeyAsInt(t *testing.T) {
@@ -3120,12 +3055,8 @@ func testMarshalUnmarshalStructKeyAsInt(t *testing.T) {
 			checkMarshal(t, "em.Marshal", b, err, tc.wantCborData)
 
 			var v2 T
-			if err := unmarshal(t, b, &v2); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-			}
-			if !reflect.DeepEqual(tc.obj, v2) {
-				t.Errorf("Unmarshal(0x%x) returned %+v, want %+v", b, v2, tc.obj)
-			}
+			err = unmarshal(t, b, &v2)
+			checkUnmarshal(t, "Unmarshal", v2, err, tc.obj)
 		})
 	}
 }
@@ -3230,18 +3161,24 @@ func testMarshalUnmarshalStructToArray(t *testing.T) {
 			checkMarshal(t, "em.Marshal", b, err, tc.wantCborData)
 
 			var v2 T
-			if err := unmarshal(t, b, &v2); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-			}
-			if tc.obj.T2 == nil {
-				if !reflect.DeepEqual(*(v2.T2), T2{}) {
-					t.Errorf("Unmarshal(0x%x) returned %+v, want %+v", b, v2, tc.obj)
+			err = unmarshal(t, b, &v2)
+			checkUnmarshalFunc(t, "Unmarshal", v2, err, tc.obj, func(got, want any) bool {
+				typedGot, ok := got.(T)
+				if !ok {
+					return false
 				}
-				v2.T2 = nil
-			}
-			if !reflect.DeepEqual(tc.obj, v2) {
-				t.Errorf("Unmarshal(0x%x) returned %+v, want %+v", b, v2, tc.obj)
-			}
+				typedWant, ok := want.(T)
+				if !ok {
+					return false
+				}
+				if typedWant.T2 == nil {
+					if !reflect.DeepEqual(*(typedGot.T2), T2{}) {
+						return false
+					}
+					typedGot.T2 = nil
+				}
+				return reflect.DeepEqual(typedWant, typedGot)
+			})
 		})
 	}
 }
@@ -3728,11 +3665,8 @@ func testShortestFloat16(t *testing.T) {
 			b, err := em.Marshal(tc.f64)
 			checkMarshal(t, "em.Marshal", b, err, tc.wantCborData)
 			var f64 float64
-			if err = unmarshal(t, b, &f64); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-			} else if f64 != tc.f64 {
-				t.Errorf("Unmarshal(0x%x) = %f, want %f", b, f64, tc.f64)
-			}
+			err = unmarshal(t, b, &f64)
+			checkUnmarshal(t, "Unmarshal", f64, err, tc.f64)
 		})
 	}
 }
@@ -3898,18 +3832,12 @@ func testShortestFloatNone(t *testing.T) {
 			checkMarshal(t, "em.Marshal", b, err, tc.wantCborData)
 			if reflect.ValueOf(tc.f).Kind() == reflect.Float32 {
 				var f32 float32
-				if err = unmarshal(t, b, &f32); err != nil {
-					t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-				} else if f32 != tc.f {
-					t.Errorf("Unmarshal(0x%x) = %f, want %f", b, f32, tc.f)
-				}
+				err = unmarshal(t, b, &f32)
+				checkUnmarshal(t, "Unmarshal", f32, err, tc.f)
 			} else {
 				var f64 float64
-				if err = unmarshal(t, b, &f64); err != nil {
-					t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-				} else if f64 != tc.f {
-					t.Errorf("Unmarshal(0x%x) = %f, want %f", b, f64, tc.f)
-				}
+				err = unmarshal(t, b, &f64)
+				checkUnmarshal(t, "Unmarshal", f64, err, tc.f)
 			}
 		})
 	}
@@ -4661,12 +4589,8 @@ func testMarshalSenML(t *testing.T) {
 				t.Errorf("Unmarshal() returned error %v ", err)
 			}
 			var v2 []SenMLRecord
-			if err := unmarshal(t, b, &v2); err != nil {
-				t.Errorf("Marshal() returned error %v", err)
-			}
-			if !reflect.DeepEqual(v, v2) {
-				t.Errorf("SenML round-trip failed: v1 %+v, v2 %+v", v, v2)
-			}
+			err = unmarshal(t, b, &v2)
+			checkUnmarshal(t, "Unmarshal", v2, err, v)
 		})
 	}
 }
