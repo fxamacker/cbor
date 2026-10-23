@@ -19,12 +19,12 @@ func TestInvalidSort(t *testing.T) {
 		{
 			name:         "below range of valid modes",
 			opts:         EncOptions{Sort: -1},
-			wantErrorMsg: "cbor: invalid SortMode -1",
+			wantErrorMsg: "cbor: invalid Sort -1",
 		},
 		{
 			name:         "above range of valid modes",
 			opts:         EncOptions{Sort: 101},
-			wantErrorMsg: "cbor: invalid SortMode 101",
+			wantErrorMsg: "cbor: invalid Sort 101",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -47,12 +47,12 @@ func TestInvalidShortestFloat(t *testing.T) {
 		{
 			name:         "below range of valid modes",
 			opts:         EncOptions{ShortestFloat: -1},
-			wantErrorMsg: "cbor: invalid ShortestFloatMode -1",
+			wantErrorMsg: "cbor: invalid ShortestFloat -1",
 		},
 		{
 			name:         "above range of valid modes",
 			opts:         EncOptions{ShortestFloat: 101},
-			wantErrorMsg: "cbor: invalid ShortestFloatMode 101",
+			wantErrorMsg: "cbor: invalid ShortestFloat 101",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -75,12 +75,12 @@ func TestInvalidNaNConvert(t *testing.T) {
 		{
 			name:         "below range of valid modes",
 			opts:         EncOptions{NaNConvert: -1},
-			wantErrorMsg: "cbor: invalid NaNConvertMode -1",
+			wantErrorMsg: "cbor: invalid NaNConvert -1",
 		},
 		{
 			name:         "above range of valid modes",
 			opts:         EncOptions{NaNConvert: 101},
-			wantErrorMsg: "cbor: invalid NaNConvertMode 101",
+			wantErrorMsg: "cbor: invalid NaNConvert 101",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -103,12 +103,12 @@ func TestInvalidInfConvert(t *testing.T) {
 		{
 			name:         "below range of valid modes",
 			opts:         EncOptions{InfConvert: -1},
-			wantErrorMsg: "cbor: invalid InfConvertMode -1",
+			wantErrorMsg: "cbor: invalid InfConvert -1",
 		},
 		{
 			name:         "above range of valid modes",
 			opts:         EncOptions{InfConvert: 101},
-			wantErrorMsg: "cbor: invalid InfConvertMode 101",
+			wantErrorMsg: "cbor: invalid InfConvert 101",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -131,17 +131,17 @@ func TestEncModeInvalidBigIntConvertMode(t *testing.T) {
 		{
 			name:         "below range of valid modes",
 			opts:         EncOptions{BigIntConvert: -1},
-			wantErrorMsg: "cbor: invalid BigIntConvertMode -1",
+			wantErrorMsg: "cbor: invalid BigIntConvert -1",
 		},
 		{
 			name:         "above range of valid modes",
 			opts:         EncOptions{BigIntConvert: 101},
-			wantErrorMsg: "cbor: invalid BigIntConvertMode 101",
+			wantErrorMsg: "cbor: invalid BigIntConvert 101",
 		},
 		{
 			name:         "above range of valid modes with TagsForbidden",
 			opts:         EncOptions{BigIntConvert: 101, TagsMd: TagsForbidden},
-			wantErrorMsg: "cbor: invalid BigIntConvertMode 101",
+			wantErrorMsg: "cbor: invalid BigIntConvert 101",
 		},
 		{
 			name:         "BigIntConvertNone with TagsForbidden",
@@ -169,12 +169,12 @@ func TestInvalidTimeMode(t *testing.T) {
 		{
 			name:         "below range of valid modes",
 			opts:         EncOptions{Time: -1},
-			wantErrorMsg: "cbor: invalid TimeMode -1",
+			wantErrorMsg: "cbor: invalid Time -1",
 		},
 		{
 			name:         "above range of valid modes",
 			opts:         EncOptions{Time: 101},
-			wantErrorMsg: "cbor: invalid TimeMode 101",
+			wantErrorMsg: "cbor: invalid Time 101",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -337,7 +337,7 @@ func TestEncModeStringType(t *testing.T) {
 		{
 			name:         "invalid mode",
 			opts:         EncOptions{String: -1},
-			wantErrorMsg: "cbor: invalid StringType -1",
+			wantErrorMsg: "cbor: invalid String -1",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

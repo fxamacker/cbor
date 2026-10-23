@@ -218,15 +218,15 @@ const (
 	StringToByteString
 )
 
-func (st StringMode) cborType() (cborType, error) {
+func (st StringMode) cborType() (cborType, bool) {
 	switch st {
 	case StringToTextString:
-		return cborTypeTextString, nil
+		return cborTypeTextString, true
 
 	case StringToByteString:
-		return cborTypeByteString, nil
+		return cborTypeByteString, true
 	}
-	return 0, errors.New("cbor: invalid StringType " + strconv.Itoa(int(st)))
+	return 0, false
 }
 
 // ShortestFloatMode specifies which floating-point format should
@@ -477,21 +477,21 @@ const (
 	ByteSliceLaterFormatBase16
 )
 
-func (bsefm ByteSliceLaterFormatMode) encodingTag() (uint64, error) {
+func (bsefm ByteSliceLaterFormatMode) encodingTag() (uint64, bool) {
 	switch bsefm {
 	case ByteSliceLaterFormatNone:
-		return 0, nil
+		return 0, true
 
 	case ByteSliceLaterFormatBase64URL:
-		return tagNumExpectedLaterEncodingBase64URL, nil
+		return tagNumExpectedLaterEncodingBase64URL, true
 
 	case ByteSliceLaterFormatBase64:
-		return tagNumExpectedLaterEncodingBase64, nil
+		return tagNumExpectedLaterEncodingBase64, true
 
 	case ByteSliceLaterFormatBase16:
-		return tagNumExpectedLaterEncodingBase16, nil
+		return tagNumExpectedLaterEncodingBase16, true
 	}
-	return 0, errors.New("cbor: invalid ByteSliceLaterFormat " + strconv.Itoa(int(bsefm)))
+	return 0, false
 }
 
 // ByteArrayMode specifies how to encode byte arrays.
@@ -793,72 +793,72 @@ func (opts EncOptions) UserBufferEncModeWithSharedTags(tags TagSet) (UserBufferE
 
 func (opts EncOptions) encMode() (*encMode, error) { //nolint:gocritic // ignore hugeParam
 	if !opts.Sort.valid() {
-		return nil, errors.New("cbor: invalid SortMode " + strconv.Itoa(int(opts.Sort)))
+		return nil, invalidEncOptionError("Sort", int(opts.Sort))
 	}
 	if !opts.ShortestFloat.valid() {
-		return nil, errors.New("cbor: invalid ShortestFloatMode " + strconv.Itoa(int(opts.ShortestFloat)))
+		return nil, invalidEncOptionError("ShortestFloat", int(opts.ShortestFloat))
 	}
 	if !opts.NaNConvert.valid() {
-		return nil, errors.New("cbor: invalid NaNConvertMode " + strconv.Itoa(int(opts.NaNConvert)))
+		return nil, invalidEncOptionError("NaNConvert", int(opts.NaNConvert))
 	}
 	if !opts.InfConvert.valid() {
-		return nil, errors.New("cbor: invalid InfConvertMode " + strconv.Itoa(int(opts.InfConvert)))
+		return nil, invalidEncOptionError("InfConvert", int(opts.InfConvert))
 	}
 	if !opts.BigIntConvert.valid() {
-		return nil, errors.New("cbor: invalid BigIntConvertMode " + strconv.Itoa(int(opts.BigIntConvert)))
+		return nil, invalidEncOptionError("BigIntConvert", int(opts.BigIntConvert))
 	}
 	if opts.TagsMd == TagsForbidden && opts.BigIntConvert == BigIntConvertNone {
-		return nil, errors.New("cbor: cannot set TagsMd to TagsForbidden when BigIntConvert is BigIntConvertNone")
+		return nil, tagsForbiddenEncOptionError("BigIntConvert is BigIntConvertNone")
 	}
 	if !opts.Time.valid() {
-		return nil, errors.New("cbor: invalid TimeMode " + strconv.Itoa(int(opts.Time)))
+		return nil, invalidEncOptionError("Time", int(opts.Time))
 	}
 	if !opts.TimeTag.valid() {
-		return nil, errors.New("cbor: invalid TimeTag " + strconv.Itoa(int(opts.TimeTag)))
+		return nil, invalidEncOptionError("TimeTag", int(opts.TimeTag))
 	}
 	if !opts.IndefLength.valid() {
-		return nil, errors.New("cbor: invalid IndefLength " + strconv.Itoa(int(opts.IndefLength)))
+		return nil, invalidEncOptionError("IndefLength", int(opts.IndefLength))
 	}
 	if !opts.NilContainers.valid() {
-		return nil, errors.New("cbor: invalid NilContainers " + strconv.Itoa(int(opts.NilContainers)))
+		return nil, invalidEncOptionError("NilContainers", int(opts.NilContainers))
 	}
 	if !opts.TagsMd.valid() {
-		return nil, errors.New("cbor: invalid TagsMd " + strconv.Itoa(int(opts.TagsMd)))
+		return nil, invalidEncOptionError("TagsMd", int(opts.TagsMd))
 	}
 	if opts.TagsMd == TagsForbidden && opts.TimeTag == EncTagRequired {
-		return nil, errors.New("cbor: cannot set TagsMd to TagsForbidden when TimeTag is EncTagRequired")
+		return nil, tagsForbiddenEncOptionError("TimeTag is EncTagRequired")
 	}
 	if !opts.OmitEmpty.valid() {
-		return nil, errors.New("cbor: invalid OmitEmpty " + strconv.Itoa(int(opts.OmitEmpty)))
+		return nil, invalidEncOptionError("OmitEmpty", int(opts.OmitEmpty))
 	}
-	stringMajorType, err := opts.String.cborType()
-	if err != nil {
-		return nil, err
+	stringMajorType, ok := opts.String.cborType()
+	if !ok {
+		return nil, invalidEncOptionError("String", int(opts.String))
 	}
 	if !opts.FieldName.valid() {
-		return nil, errors.New("cbor: invalid FieldName " + strconv.Itoa(int(opts.FieldName)))
+		return nil, invalidEncOptionError("FieldName", int(opts.FieldName))
 	}
-	byteSliceLaterEncodingTag, err := opts.ByteSliceLaterFormat.encodingTag()
-	if err != nil {
-		return nil, err
+	byteSliceLaterEncodingTag, ok := opts.ByteSliceLaterFormat.encodingTag()
+	if !ok {
+		return nil, invalidEncOptionError("ByteSliceLaterFormat", int(opts.ByteSliceLaterFormat))
 	}
 	if opts.TagsMd == TagsForbidden && opts.ByteSliceLaterFormat != ByteSliceLaterFormatNone {
-		return nil, errors.New("cbor: cannot set TagsMd to TagsForbidden when ByteSliceLaterFormat is not ByteSliceLaterFormatNone")
+		return nil, tagsForbiddenEncOptionError("ByteSliceLaterFormat is not ByteSliceLaterFormatNone")
 	}
 	if !opts.ByteArray.valid() {
-		return nil, errors.New("cbor: invalid ByteArray " + strconv.Itoa(int(opts.ByteArray)))
+		return nil, invalidEncOptionError("ByteArray", int(opts.ByteArray))
 	}
 	if !opts.BinaryMarshaler.valid() {
-		return nil, errors.New("cbor: invalid BinaryMarshaler " + strconv.Itoa(int(opts.BinaryMarshaler)))
+		return nil, invalidEncOptionError("BinaryMarshaler", int(opts.BinaryMarshaler))
 	}
 	if !opts.TextMarshaler.valid() {
-		return nil, errors.New("cbor: invalid TextMarshaler " + strconv.Itoa(int(opts.TextMarshaler)))
+		return nil, invalidEncOptionError("TextMarshaler", int(opts.TextMarshaler))
 	}
 	if !opts.ToIndefArrayStructTag.valid() {
-		return nil, errors.New("cbor: invalid ToIndefArrayStructTag " + strconv.Itoa(int(opts.ToIndefArrayStructTag)))
+		return nil, invalidEncOptionError("ToIndefArrayStructTag", int(opts.ToIndefArrayStructTag))
 	}
 	if opts.IndefLength == IndefLengthForbidden && opts.ToIndefArrayStructTag == ToIndefArrayStructTagAllowed {
-		return nil, errors.New("cbor: cannot set ToIndefArrayStructTag to ToIndefArrayStructTagAllowed when IndefLength is IndefLengthForbidden")
+		return nil, conflictingEncOptionsError("ToIndefArrayStructTag", "ToIndefArrayStructTagAllowed", "IndefLength is IndefLengthForbidden")
 	}
 	em := encMode{
 		sort:                      opts.Sort,
@@ -884,6 +884,25 @@ func (opts EncOptions) encMode() (*encMode, error) { //nolint:gocritic // ignore
 		toIndefArrayStructTag:     opts.ToIndefArrayStructTag,
 	}
 	return &em, nil
+}
+
+// invalidEncOptionError returns an error for an invalid EncOptions field value.
+// The option parameter must be the EncOptions field name (e.g., "Sort").
+func invalidEncOptionError(option string, value int) error {
+	return errors.New("cbor: invalid " + option + " " + strconv.Itoa(value))
+}
+
+// conflictingEncOptionsError returns an error for an EncOptions field value
+// that conflicts with another field.
+// The option parameter must be the EncOptions field name (e.g., "TagsMd").
+func conflictingEncOptionsError(option, value, conflict string) error {
+	return errors.New("cbor: cannot set " + option + " to " + value + " when " + conflict)
+}
+
+// tagsForbiddenEncOptionError returns an error for an EncOptions field value that
+// conflicts with TagsForbidden.
+func tagsForbiddenEncOptionError(conflict string) error {
+	return conflictingEncOptionsError("TagsMd", "TagsForbidden", conflict)
 }
 
 // EncMode is the main interface for CBOR encoding.

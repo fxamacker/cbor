@@ -936,7 +936,7 @@ func (opts DecOptions) validForTags(tags TagSet) error { //nolint:gocritic // ig
 			tagNumExpectedLaterEncodingBase16,
 		} {
 			if rt := tags.getTypeFromTagNum([]uint64{tagNum}); rt != nil {
-				return fmt.Errorf("cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag %d as built-in and conflicts with the provided TagSet's registration of %v", tagNum, rt)
+				return fmt.Errorf("cbor: DecMode with ByteStringToString set to ByteStringToStringAllowedWithExpectedLaterEncoding or non-default ByteStringExpectedFormat treats tag %d as built-in and conflicts with the provided TagSet's registration of %v", tagNum, rt)
 			}
 		}
 
@@ -1010,86 +1010,83 @@ var defaultSimpleValues = func() *SimpleValueRegistry {
 //nolint:gocyclo // Each option comes with some manageable boilerplate
 func (opts DecOptions) decMode() (*decMode, error) { //nolint:gocritic // ignore hugeParam
 	if !opts.DupMapKey.valid() {
-		return nil, errors.New("cbor: invalid DupMapKey " + strconv.Itoa(int(opts.DupMapKey)))
+		return nil, invalidDecOptionError("DupMapKey", int(opts.DupMapKey))
 	}
 
 	if !opts.TimeTag.valid() {
-		return nil, errors.New("cbor: invalid TimeTag " + strconv.Itoa(int(opts.TimeTag)))
+		return nil, invalidDecOptionError("TimeTag", int(opts.TimeTag))
 	}
 
 	if !opts.IndefLength.valid() {
-		return nil, errors.New("cbor: invalid IndefLength " + strconv.Itoa(int(opts.IndefLength)))
+		return nil, invalidDecOptionError("IndefLength", int(opts.IndefLength))
 	}
 
 	if !opts.TagsMd.valid() {
-		return nil, errors.New("cbor: invalid TagsMd " + strconv.Itoa(int(opts.TagsMd)))
+		return nil, invalidDecOptionError("TagsMd", int(opts.TagsMd))
 	}
 
 	if !opts.IntDec.valid() {
-		return nil, errors.New("cbor: invalid IntDec " + strconv.Itoa(int(opts.IntDec)))
+		return nil, invalidDecOptionError("IntDec", int(opts.IntDec))
 	}
 
 	if !opts.MapKeyByteString.valid() {
-		return nil, errors.New("cbor: invalid MapKeyByteString " + strconv.Itoa(int(opts.MapKeyByteString)))
+		return nil, invalidDecOptionError("MapKeyByteString", int(opts.MapKeyByteString))
 	}
 
 	if opts.MaxNestedLevels == 0 {
 		opts.MaxNestedLevels = defaultMaxNestedLevels
 	} else if opts.MaxNestedLevels < minMaxNestedLevels || opts.MaxNestedLevels > maxMaxNestedLevels {
-		return nil, errors.New("cbor: invalid MaxNestedLevels " + strconv.Itoa(opts.MaxNestedLevels) +
-			" (range is [" + strconv.Itoa(minMaxNestedLevels) + ", " + strconv.Itoa(maxMaxNestedLevels) + "])")
+		return nil, invalidDecOptionRangeError("MaxNestedLevels", opts.MaxNestedLevels, minMaxNestedLevels, maxMaxNestedLevels)
 	}
 
 	if opts.MaxArrayElements == 0 {
 		opts.MaxArrayElements = defaultMaxArrayElements
 	} else if opts.MaxArrayElements < minMaxArrayElements || opts.MaxArrayElements > maxMaxArrayElements {
-		return nil, errors.New("cbor: invalid MaxArrayElements " + strconv.Itoa(opts.MaxArrayElements) +
-			" (range is [" + strconv.Itoa(minMaxArrayElements) + ", " + strconv.Itoa(maxMaxArrayElements) + "])")
+		return nil, invalidDecOptionRangeError("MaxArrayElements", opts.MaxArrayElements, minMaxArrayElements, maxMaxArrayElements)
 	}
 
 	if opts.MaxMapPairs == 0 {
 		opts.MaxMapPairs = defaultMaxMapPairs
 	} else if opts.MaxMapPairs < minMaxMapPairs || opts.MaxMapPairs > maxMaxMapPairs {
-		return nil, errors.New("cbor: invalid MaxMapPairs " + strconv.Itoa(opts.MaxMapPairs) +
-			" (range is [" + strconv.Itoa(minMaxMapPairs) + ", " + strconv.Itoa(maxMaxMapPairs) + "])")
+		return nil, invalidDecOptionRangeError("MaxMapPairs", opts.MaxMapPairs, minMaxMapPairs, maxMaxMapPairs)
 	}
 
 	if !opts.ExtraReturnErrors.valid() {
-		return nil, errors.New("cbor: invalid ExtraReturnErrors " + strconv.Itoa(int(opts.ExtraReturnErrors)))
+		return nil, invalidDecOptionError("ExtraReturnErrors", int(opts.ExtraReturnErrors))
 	}
 
 	if opts.DefaultMapType != nil && opts.DefaultMapType.Kind() != reflect.Map {
-		return nil, fmt.Errorf("cbor: invalid DefaultMapType %s", opts.DefaultMapType)
+		return nil, invalidDecOptionTypeError("DefaultMapType", opts.DefaultMapType, "not of kind map")
 	}
 
 	if !opts.UTF8.valid() {
-		return nil, errors.New("cbor: invalid UTF8 " + strconv.Itoa(int(opts.UTF8)))
+		return nil, invalidDecOptionError("UTF8", int(opts.UTF8))
 	}
 
 	if !opts.FieldNameMatching.valid() {
-		return nil, errors.New("cbor: invalid FieldNameMatching " + strconv.Itoa(int(opts.FieldNameMatching)))
+		return nil, invalidDecOptionError("FieldNameMatching", int(opts.FieldNameMatching))
 	}
 
 	if !opts.BigIntDec.valid() {
-		return nil, errors.New("cbor: invalid BigIntDec " + strconv.Itoa(int(opts.BigIntDec)))
+		return nil, invalidDecOptionError("BigIntDec", int(opts.BigIntDec))
 	}
 
 	if opts.DefaultByteStringType != nil &&
 		opts.DefaultByteStringType.Kind() != reflect.String &&
 		(opts.DefaultByteStringType.Kind() != reflect.Slice || opts.DefaultByteStringType.Elem() != typeByte) {
-		return nil, fmt.Errorf("cbor: invalid DefaultByteStringType: %s is not of kind string or []uint8", opts.DefaultByteStringType)
+		return nil, invalidDecOptionTypeError("DefaultByteStringType", opts.DefaultByteStringType, "not of kind string or []uint8")
 	}
 
 	if !opts.ByteStringToString.valid() {
-		return nil, errors.New("cbor: invalid ByteStringToString " + strconv.Itoa(int(opts.ByteStringToString)))
+		return nil, invalidDecOptionError("ByteStringToString", int(opts.ByteStringToString))
 	}
 
 	if !opts.FieldNameByteString.valid() {
-		return nil, errors.New("cbor: invalid FieldNameByteString " + strconv.Itoa(int(opts.FieldNameByteString)))
+		return nil, invalidDecOptionError("FieldNameByteString", int(opts.FieldNameByteString))
 	}
 
 	if !opts.UnrecognizedTagToAny.valid() {
-		return nil, errors.New("cbor: invalid UnrecognizedTagToAnyMode " + strconv.Itoa(int(opts.UnrecognizedTagToAny)))
+		return nil, invalidDecOptionError("UnrecognizedTagToAny", int(opts.UnrecognizedTagToAny))
 	}
 	simpleValues := opts.SimpleValues
 	if simpleValues == nil {
@@ -1097,35 +1094,35 @@ func (opts DecOptions) decMode() (*decMode, error) { //nolint:gocritic // ignore
 	}
 
 	if !opts.TimeTagToAny.valid() {
-		return nil, errors.New("cbor: invalid TimeTagToAny " + strconv.Itoa(int(opts.TimeTagToAny)))
+		return nil, invalidDecOptionError("TimeTagToAny", int(opts.TimeTagToAny))
 	}
 
 	if !opts.NaN.valid() {
-		return nil, errors.New("cbor: invalid NaNDec " + strconv.Itoa(int(opts.NaN)))
+		return nil, invalidDecOptionError("NaN", int(opts.NaN))
 	}
 
 	if !opts.Inf.valid() {
-		return nil, errors.New("cbor: invalid InfDec " + strconv.Itoa(int(opts.Inf)))
+		return nil, invalidDecOptionError("Inf", int(opts.Inf))
 	}
 
 	if !opts.ByteStringToTime.valid() {
-		return nil, errors.New("cbor: invalid ByteStringToTime " + strconv.Itoa(int(opts.ByteStringToTime)))
+		return nil, invalidDecOptionError("ByteStringToTime", int(opts.ByteStringToTime))
 	}
 
 	if !opts.ByteStringExpectedFormat.valid() {
-		return nil, errors.New("cbor: invalid ByteStringExpectedFormat " + strconv.Itoa(int(opts.ByteStringExpectedFormat)))
+		return nil, invalidDecOptionError("ByteStringExpectedFormat", int(opts.ByteStringExpectedFormat))
 	}
 
 	if !opts.BignumTag.valid() {
-		return nil, errors.New("cbor: invalid BignumTag " + strconv.Itoa(int(opts.BignumTag)))
+		return nil, invalidDecOptionError("BignumTag", int(opts.BignumTag))
 	}
 
 	if !opts.BinaryUnmarshaler.valid() {
-		return nil, errors.New("cbor: invalid BinaryUnmarshaler " + strconv.Itoa(int(opts.BinaryUnmarshaler)))
+		return nil, invalidDecOptionError("BinaryUnmarshaler", int(opts.BinaryUnmarshaler))
 	}
 
 	if !opts.TextUnmarshaler.valid() {
-		return nil, errors.New("cbor: invalid TextUnmarshaler " + strconv.Itoa(int(opts.TextUnmarshaler)))
+		return nil, invalidDecOptionError("TextUnmarshaler", int(opts.TextUnmarshaler))
 	}
 
 	dm := decMode{
@@ -1162,6 +1159,26 @@ func (opts DecOptions) decMode() (*decMode, error) { //nolint:gocritic // ignore
 	dm.wellformedSyntaxMode = newWellformedSyntaxMode(&dm)
 
 	return &dm, nil
+}
+
+// invalidDecOptionError returns an error for an invalid DecOptions field value.
+// The option parameter must be the DecOptions field name (e.g., "DupMapKey").
+func invalidDecOptionError(option string, value int) error {
+	return errors.New("cbor: invalid " + option + " " + strconv.Itoa(value))
+}
+
+// invalidDecOptionRangeError returns an error for a DecOptions field value
+// outside of the range [minValue, maxValue].
+// The option parameter must be the DecOptions field name (e.g., "MaxNestedLevels").
+func invalidDecOptionRangeError(option string, value, minValue, maxValue int) error {
+	return errors.New("cbor: invalid " + option + " " + strconv.Itoa(value) +
+		" (range is [" + strconv.Itoa(minValue) + ", " + strconv.Itoa(maxValue) + "])")
+}
+
+// invalidDecOptionTypeError returns an error for a DecOptions field with an invalid reflect.Type value.
+// The option parameter must be the DecOptions field name (e.g., "DefaultMapType").
+func invalidDecOptionTypeError(option string, t reflect.Type, reason string) error {
+	return errors.New("cbor: invalid " + option + " " + t.String() + " (" + reason + ")")
 }
 
 // newWellformedSyntaxMode returns decMode for wellformedness syntax and

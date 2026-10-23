@@ -318,22 +318,22 @@ func TestDecModeInvalidDefaultMapType(t *testing.T) {
 		{
 			name:         "byte slice",
 			opts:         DecOptions{DefaultMapType: reflect.TypeFor[[]byte]()},
-			wantErrorMsg: "cbor: invalid DefaultMapType []uint8",
+			wantErrorMsg: "cbor: invalid DefaultMapType []uint8 (not of kind map)",
 		},
 		{
 			name:         "int slice",
 			opts:         DecOptions{DefaultMapType: reflect.TypeFor[[]int]()},
-			wantErrorMsg: "cbor: invalid DefaultMapType []int",
+			wantErrorMsg: "cbor: invalid DefaultMapType []int (not of kind map)",
 		},
 		{
 			name:         "string",
 			opts:         DecOptions{DefaultMapType: reflect.TypeFor[string]()},
-			wantErrorMsg: "cbor: invalid DefaultMapType string",
+			wantErrorMsg: "cbor: invalid DefaultMapType string (not of kind map)",
 		},
 		{
 			name:         "unnamed struct type",
 			opts:         DecOptions{DefaultMapType: reflect.TypeOf(struct{}{})},
-			wantErrorMsg: "cbor: invalid DefaultMapType struct {}",
+			wantErrorMsg: "cbor: invalid DefaultMapType struct {} (not of kind map)",
 		},
 	}
 	for _, tc := range testCases {
@@ -444,32 +444,32 @@ func TestDecModeInvalidDefaultByteStringType(t *testing.T) {
 		{
 			name:         "neither slice nor string",
 			opts:         DecOptions{DefaultByteStringType: reflect.TypeFor[int]()},
-			wantErrorMsg: "cbor: invalid DefaultByteStringType: int is not of kind string or []uint8",
+			wantErrorMsg: "cbor: invalid DefaultByteStringType int (not of kind string or []uint8)",
 		},
 		{
 			name:         "slice of non-byte",
 			opts:         DecOptions{DefaultByteStringType: reflect.TypeFor[[]int]()},
-			wantErrorMsg: "cbor: invalid DefaultByteStringType: []int is not of kind string or []uint8",
+			wantErrorMsg: "cbor: invalid DefaultByteStringType []int (not of kind string or []uint8)",
 		},
 		{
 			name:         "pointer to byte array",
 			opts:         DecOptions{DefaultByteStringType: reflect.TypeFor[*[42]byte]()},
-			wantErrorMsg: "cbor: invalid DefaultByteStringType: *[42]uint8 is not of kind string or []uint8",
+			wantErrorMsg: "cbor: invalid DefaultByteStringType *[42]uint8 (not of kind string or []uint8)",
 		},
 		{
 			name:         "byte array",
 			opts:         DecOptions{DefaultByteStringType: reflect.TypeFor[[42]byte]()},
-			wantErrorMsg: "cbor: invalid DefaultByteStringType: [42]uint8 is not of kind string or []uint8",
+			wantErrorMsg: "cbor: invalid DefaultByteStringType [42]uint8 (not of kind string or []uint8)",
 		},
 		{
 			name:         "slice with named uint8",
 			opts:         DecOptions{DefaultByteStringType: reflect.TypeFor[[]myUint8]()},
-			wantErrorMsg: "cbor: invalid DefaultByteStringType: []cbor.myUint8 is not of kind string or []uint8",
+			wantErrorMsg: "cbor: invalid DefaultByteStringType []cbor.myUint8 (not of kind string or []uint8)",
 		},
 		{
 			name:         "named slice with named uint8",
 			opts:         DecOptions{DefaultByteStringType: reflect.TypeFor[myUint8Slice]()},
-			wantErrorMsg: "cbor: invalid DefaultByteStringType: cbor.myUint8Slice is not of kind string or []uint8",
+			wantErrorMsg: "cbor: invalid DefaultByteStringType cbor.myUint8Slice (not of kind string or []uint8)",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -548,12 +548,12 @@ func TestDecModeInvalidReturnTypeForEmptyInterface(t *testing.T) {
 		{
 			name:         "below range of valid modes",
 			opts:         DecOptions{UnrecognizedTagToAny: -1},
-			wantErrorMsg: "cbor: invalid UnrecognizedTagToAnyMode -1",
+			wantErrorMsg: "cbor: invalid UnrecognizedTagToAny -1",
 		},
 		{
 			name:         "above range of valid modes",
 			opts:         DecOptions{UnrecognizedTagToAny: 101},
-			wantErrorMsg: "cbor: invalid UnrecognizedTagToAnyMode 101",
+			wantErrorMsg: "cbor: invalid UnrecognizedTagToAny 101",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -604,12 +604,12 @@ func TestDecModeInvalidNaNDec(t *testing.T) {
 		{
 			name:         "below range of valid modes",
 			opts:         DecOptions{NaN: -1},
-			wantErrorMsg: "cbor: invalid NaNDec -1",
+			wantErrorMsg: "cbor: invalid NaN -1",
 		},
 		{
 			name:         "above range of valid modes",
 			opts:         DecOptions{NaN: 101},
-			wantErrorMsg: "cbor: invalid NaNDec 101",
+			wantErrorMsg: "cbor: invalid NaN 101",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -632,12 +632,12 @@ func TestDecModeInvalidInfDec(t *testing.T) {
 		{
 			name:         "below range of valid modes",
 			opts:         DecOptions{Inf: -1},
-			wantErrorMsg: "cbor: invalid InfDec -1",
+			wantErrorMsg: "cbor: invalid Inf -1",
 		},
 		{
 			name:         "above range of valid modes",
 			opts:         DecOptions{Inf: 101},
-			wantErrorMsg: "cbor: invalid InfDec 101",
+			wantErrorMsg: "cbor: invalid Inf 101",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -814,7 +814,7 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 			tags: func(tags TagSet) error {
 				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 21)
 			},
-			wantErrorMsg: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 21 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
+			wantErrorMsg: "cbor: DecMode with ByteStringToString set to ByteStringToStringAllowedWithExpectedLaterEncoding or non-default ByteStringExpectedFormat treats tag 21 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
 		{
 			name: "base64url encoding tag conflicts with non-default ByteSliceExpectedEncoding option",
@@ -822,7 +822,7 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 			tags: func(tags TagSet) error {
 				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 21)
 			},
-			wantErrorMsg: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 21 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
+			wantErrorMsg: "cbor: DecMode with ByteStringToString set to ByteStringToStringAllowedWithExpectedLaterEncoding or non-default ByteStringExpectedFormat treats tag 21 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
 		{
 			name: "base64 encoding tag ignored by default",
@@ -838,7 +838,7 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 			tags: func(tags TagSet) error {
 				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 22)
 			},
-			wantErrorMsg: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 22 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
+			wantErrorMsg: "cbor: DecMode with ByteStringToString set to ByteStringToStringAllowedWithExpectedLaterEncoding or non-default ByteStringExpectedFormat treats tag 22 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
 		{
 			name: "base64 encoding tag conflicts with non-default ByteSliceExpectedEncoding option",
@@ -846,7 +846,7 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 			tags: func(tags TagSet) error {
 				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 22)
 			},
-			wantErrorMsg: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 22 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
+			wantErrorMsg: "cbor: DecMode with ByteStringToString set to ByteStringToStringAllowedWithExpectedLaterEncoding or non-default ByteStringExpectedFormat treats tag 22 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
 		{
 			name: "base16 encoding tag ignored by default",
@@ -862,7 +862,7 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 			tags: func(tags TagSet) error {
 				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 23)
 			},
-			wantErrorMsg: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 23 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
+			wantErrorMsg: "cbor: DecMode with ByteStringToString set to ByteStringToStringAllowedWithExpectedLaterEncoding or non-default ByteStringExpectedFormat treats tag 23 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
 		{
 			name: "base16 encoding tag conflicts with non-default ByteSliceExpectedEncoding option",
@@ -870,7 +870,7 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 			tags: func(tags TagSet) error {
 				return tags.Add(TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), 23)
 			},
-			wantErrorMsg: "cbor: DecMode with non-default StringExpectedEncoding or ByteSliceExpectedEncoding treats tag 23 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
+			wantErrorMsg: "cbor: DecMode with ByteStringToString set to ByteStringToStringAllowedWithExpectedLaterEncoding or non-default ByteStringExpectedFormat treats tag 23 as built-in and conflicts with the provided TagSet's registration of cbor.empty",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
