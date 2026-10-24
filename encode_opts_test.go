@@ -6,380 +6,10 @@ package cbor
 import (
 	"io"
 	"reflect"
-	"strings"
 	"testing"
 )
 
-func TestInvalidSort(t *testing.T) {
-	for _, tc := range []struct {
-		name         string
-		opts         EncOptions
-		wantErrorMsg string
-	}{
-		{
-			name:         "below range of valid modes",
-			opts:         EncOptions{Sort: -1},
-			wantErrorMsg: "cbor: invalid Sort -1",
-		},
-		{
-			name:         "above range of valid modes",
-			opts:         EncOptions{Sort: 101},
-			wantErrorMsg: "cbor: invalid Sort 101",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := tc.opts.EncMode()
-			if err == nil {
-				t.Errorf("EncMode() didn't return an error")
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
-			}
-		})
-	}
-}
-
-func TestInvalidShortestFloat(t *testing.T) {
-	for _, tc := range []struct {
-		name         string
-		opts         EncOptions
-		wantErrorMsg string
-	}{
-		{
-			name:         "below range of valid modes",
-			opts:         EncOptions{ShortestFloat: -1},
-			wantErrorMsg: "cbor: invalid ShortestFloat -1",
-		},
-		{
-			name:         "above range of valid modes",
-			opts:         EncOptions{ShortestFloat: 101},
-			wantErrorMsg: "cbor: invalid ShortestFloat 101",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := tc.opts.EncMode()
-			if err == nil {
-				t.Errorf("EncMode() didn't return an error")
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
-			}
-		})
-	}
-}
-
-func TestInvalidNaNConvert(t *testing.T) {
-	for _, tc := range []struct {
-		name         string
-		opts         EncOptions
-		wantErrorMsg string
-	}{
-		{
-			name:         "below range of valid modes",
-			opts:         EncOptions{NaNConvert: -1},
-			wantErrorMsg: "cbor: invalid NaNConvert -1",
-		},
-		{
-			name:         "above range of valid modes",
-			opts:         EncOptions{NaNConvert: 101},
-			wantErrorMsg: "cbor: invalid NaNConvert 101",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := tc.opts.EncMode()
-			if err == nil {
-				t.Errorf("EncMode() didn't return an error")
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
-			}
-		})
-	}
-}
-
-func TestInvalidInfConvert(t *testing.T) {
-	for _, tc := range []struct {
-		name         string
-		opts         EncOptions
-		wantErrorMsg string
-	}{
-		{
-			name:         "below range of valid modes",
-			opts:         EncOptions{InfConvert: -1},
-			wantErrorMsg: "cbor: invalid InfConvert -1",
-		},
-		{
-			name:         "above range of valid modes",
-			opts:         EncOptions{InfConvert: 101},
-			wantErrorMsg: "cbor: invalid InfConvert 101",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := tc.opts.EncMode()
-			if err == nil {
-				t.Errorf("EncMode() didn't return an error")
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
-			}
-		})
-	}
-}
-
-func TestEncModeInvalidBigIntConvertMode(t *testing.T) {
-	for _, tc := range []struct {
-		name         string
-		opts         EncOptions
-		wantErrorMsg string
-	}{
-		{
-			name:         "below range of valid modes",
-			opts:         EncOptions{BigIntConvert: -1},
-			wantErrorMsg: "cbor: invalid BigIntConvert -1",
-		},
-		{
-			name:         "above range of valid modes",
-			opts:         EncOptions{BigIntConvert: 101},
-			wantErrorMsg: "cbor: invalid BigIntConvert 101",
-		},
-		{
-			name:         "above range of valid modes with TagsForbidden",
-			opts:         EncOptions{BigIntConvert: 101, TagsMd: TagsForbidden},
-			wantErrorMsg: "cbor: invalid BigIntConvert 101",
-		},
-		{
-			name:         "BigIntConvertNone with TagsForbidden",
-			opts:         EncOptions{BigIntConvert: BigIntConvertNone, TagsMd: TagsForbidden},
-			wantErrorMsg: "cbor: cannot set TagsMd to TagsForbidden when BigIntConvert is BigIntConvertNone",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := tc.opts.EncMode()
-			if err == nil {
-				t.Errorf("EncMode() didn't return an error")
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
-			}
-		})
-	}
-}
-
-func TestInvalidTimeMode(t *testing.T) {
-	for _, tc := range []struct {
-		name         string
-		opts         EncOptions
-		wantErrorMsg string
-	}{
-		{
-			name:         "below range of valid modes",
-			opts:         EncOptions{Time: -1},
-			wantErrorMsg: "cbor: invalid Time -1",
-		},
-		{
-			name:         "above range of valid modes",
-			opts:         EncOptions{Time: 101},
-			wantErrorMsg: "cbor: invalid Time 101",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := tc.opts.EncMode()
-			if err == nil {
-				t.Errorf("EncMode() didn't return an error")
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
-			}
-		})
-	}
-}
-
-func TestEncModeInvalidTimeTag(t *testing.T) {
-	for _, tc := range []struct {
-		name         string
-		opts         EncOptions
-		wantErrorMsg string
-	}{
-		{
-			name:         "below range of valid modes",
-			opts:         EncOptions{TimeTag: -1},
-			wantErrorMsg: "cbor: invalid TimeTag -1",
-		},
-		{
-			name:         "above range of valid modes",
-			opts:         EncOptions{TimeTag: 101},
-			wantErrorMsg: "cbor: invalid TimeTag 101",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := tc.opts.EncMode()
-			if err == nil {
-				t.Errorf("EncMode() didn't return an error")
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
-			}
-		})
-	}
-}
-
-func TestEncModeInvalidIndefiniteLengthMode(t *testing.T) {
-	for _, tc := range []struct {
-		name         string
-		opts         EncOptions
-		wantErrorMsg string
-	}{
-		{
-			name:         "below range of valid modes",
-			opts:         EncOptions{IndefLength: -1},
-			wantErrorMsg: "cbor: invalid IndefLength -1",
-		},
-		{
-			name:         "above range of valid modes",
-			opts:         EncOptions{IndefLength: 101},
-			wantErrorMsg: "cbor: invalid IndefLength 101",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := tc.opts.EncMode()
-			if err == nil {
-				t.Errorf("EncMode() didn't return an error")
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
-			}
-		})
-	}
-}
-
-func TestInvalidNilContainers(t *testing.T) {
-	for _, tc := range []struct {
-		name         string
-		opts         EncOptions
-		wantErrorMsg string
-	}{
-		{
-			name:         "below range of valid modes",
-			opts:         EncOptions{NilContainers: -1},
-			wantErrorMsg: "cbor: invalid NilContainers -1",
-		},
-		{
-			name:         "above range of valid modes",
-			opts:         EncOptions{NilContainers: 101},
-			wantErrorMsg: "cbor: invalid NilContainers 101",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := tc.opts.EncMode()
-			if err == nil {
-				t.Errorf("EncMode() didn't return an error")
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
-			}
-		})
-	}
-}
-
-func TestEncModeInvalidTagsMode(t *testing.T) {
-	for _, tc := range []struct {
-		name         string
-		opts         EncOptions
-		wantErrorMsg string
-	}{
-		{
-			name:         "below range of valid modes",
-			opts:         EncOptions{TagsMd: -1},
-			wantErrorMsg: "cbor: invalid TagsMd -1",
-		},
-		{
-			name:         "above range of valid modes",
-			opts:         EncOptions{TagsMd: 101},
-			wantErrorMsg: "cbor: invalid TagsMd 101",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := tc.opts.EncMode()
-			if err == nil {
-				t.Errorf("EncMode() didn't return an error")
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
-			}
-		})
-	}
-}
-
-func TestInvalidOmitEmptyMode(t *testing.T) {
-	for _, tc := range []struct {
-		name         string
-		opts         EncOptions
-		wantErrorMsg string
-	}{
-		{
-			name:         "below range of valid modes",
-			opts:         EncOptions{OmitEmpty: -1},
-			wantErrorMsg: "cbor: invalid OmitEmpty -1",
-		},
-		{
-			name:         "above range of valid modes",
-			opts:         EncOptions{OmitEmpty: 101},
-			wantErrorMsg: "cbor: invalid OmitEmpty 101",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := tc.opts.EncMode()
-			if err == nil {
-				t.Errorf("EncMode() didn't return an error")
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
-			}
-		})
-	}
-}
-
-func TestEncModeStringType(t *testing.T) {
-	for _, tc := range []struct {
-		name         string
-		opts         EncOptions
-		wantErrorMsg string
-	}{
-		{
-			name:         "invalid mode",
-			opts:         EncOptions{String: -1},
-			wantErrorMsg: "cbor: invalid String -1",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := tc.opts.EncMode()
-			if err == nil {
-				t.Errorf("EncMode() didn't return an error")
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
-			}
-		})
-	}
-}
-
-func TestEncModeInvalidFieldNameMode(t *testing.T) {
-	for _, tc := range []struct {
-		name         string
-		opts         EncOptions
-		wantErrorMsg string
-	}{
-		{
-			name:         "below range of valid modes",
-			opts:         EncOptions{FieldName: -1},
-			wantErrorMsg: "cbor: invalid FieldName -1",
-		},
-		{
-			name:         "above range of valid modes",
-			opts:         EncOptions{FieldName: 101},
-			wantErrorMsg: "cbor: invalid FieldName 101",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := tc.opts.EncMode()
-			if err == nil {
-				t.Errorf("EncMode() didn't return an error")
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
-			}
-		})
-	}
-}
-
-func TestInvalidByteSliceExpectedFormat(t *testing.T) {
+func TestEncModeInvalidOptions(t *testing.T) {
 	tagsForbiddenErrorMsg := "cbor: cannot set TagsMd to TagsForbidden when ByteSliceLaterFormat is not ByteSliceLaterFormatNone"
 
 	for _, tc := range []struct {
@@ -388,160 +18,220 @@ func TestInvalidByteSliceExpectedFormat(t *testing.T) {
 		wantErrorMsg string
 	}{
 		{
-			name:         "below range of valid modes",
+			name:         "Sort below range of valid modes",
+			opts:         EncOptions{Sort: -1},
+			wantErrorMsg: "cbor: invalid Sort -1",
+		},
+		{
+			name:         "Sort above range of valid modes",
+			opts:         EncOptions{Sort: 101},
+			wantErrorMsg: "cbor: invalid Sort 101",
+		},
+		{
+			name:         "ShortestFloat below range of valid modes",
+			opts:         EncOptions{ShortestFloat: -1},
+			wantErrorMsg: "cbor: invalid ShortestFloat -1",
+		},
+		{
+			name:         "ShortestFloat above range of valid modes",
+			opts:         EncOptions{ShortestFloat: 101},
+			wantErrorMsg: "cbor: invalid ShortestFloat 101",
+		},
+		{
+			name:         "NaNConvert below range of valid modes",
+			opts:         EncOptions{NaNConvert: -1},
+			wantErrorMsg: "cbor: invalid NaNConvert -1",
+		},
+		{
+			name:         "NaNConvert above range of valid modes",
+			opts:         EncOptions{NaNConvert: 101},
+			wantErrorMsg: "cbor: invalid NaNConvert 101",
+		},
+		{
+			name:         "InfConvert below range of valid modes",
+			opts:         EncOptions{InfConvert: -1},
+			wantErrorMsg: "cbor: invalid InfConvert -1",
+		},
+		{
+			name:         "InfConvert above range of valid modes",
+			opts:         EncOptions{InfConvert: 101},
+			wantErrorMsg: "cbor: invalid InfConvert 101",
+		},
+		{
+			name:         "BigIntConvert below range of valid modes",
+			opts:         EncOptions{BigIntConvert: -1},
+			wantErrorMsg: "cbor: invalid BigIntConvert -1",
+		},
+		{
+			name:         "BigIntConvert above range of valid modes",
+			opts:         EncOptions{BigIntConvert: 101},
+			wantErrorMsg: "cbor: invalid BigIntConvert 101",
+		},
+		{
+			name:         "BigIntConvert above range of valid modes with TagsForbidden",
+			opts:         EncOptions{BigIntConvert: 101, TagsMd: TagsForbidden},
+			wantErrorMsg: "cbor: invalid BigIntConvert 101",
+		},
+		{
+			name:         "BigIntConvert BigIntConvertNone with TagsForbidden",
+			opts:         EncOptions{BigIntConvert: BigIntConvertNone, TagsMd: TagsForbidden},
+			wantErrorMsg: "cbor: cannot set TagsMd to TagsForbidden when BigIntConvert is BigIntConvertNone",
+		},
+		{
+			name:         "Time below range of valid modes",
+			opts:         EncOptions{Time: -1},
+			wantErrorMsg: "cbor: invalid Time -1",
+		},
+		{
+			name:         "Time above range of valid modes",
+			opts:         EncOptions{Time: 101},
+			wantErrorMsg: "cbor: invalid Time 101",
+		},
+		{
+			name:         "TimeTag below range of valid modes",
+			opts:         EncOptions{TimeTag: -1},
+			wantErrorMsg: "cbor: invalid TimeTag -1",
+		},
+		{
+			name:         "TimeTag above range of valid modes",
+			opts:         EncOptions{TimeTag: 101},
+			wantErrorMsg: "cbor: invalid TimeTag 101",
+		},
+		{
+			name:         "IndefLength below range of valid modes",
+			opts:         EncOptions{IndefLength: -1},
+			wantErrorMsg: "cbor: invalid IndefLength -1",
+		},
+		{
+			name:         "IndefLength above range of valid modes",
+			opts:         EncOptions{IndefLength: 101},
+			wantErrorMsg: "cbor: invalid IndefLength 101",
+		},
+		{
+			name:         "NilContainers below range of valid modes",
+			opts:         EncOptions{NilContainers: -1},
+			wantErrorMsg: "cbor: invalid NilContainers -1",
+		},
+		{
+			name:         "NilContainers above range of valid modes",
+			opts:         EncOptions{NilContainers: 101},
+			wantErrorMsg: "cbor: invalid NilContainers 101",
+		},
+		{
+			name:         "TagsMd below range of valid modes",
+			opts:         EncOptions{TagsMd: -1},
+			wantErrorMsg: "cbor: invalid TagsMd -1",
+		},
+		{
+			name:         "TagsMd above range of valid modes",
+			opts:         EncOptions{TagsMd: 101},
+			wantErrorMsg: "cbor: invalid TagsMd 101",
+		},
+		{
+			name:         "OmitEmpty below range of valid modes",
+			opts:         EncOptions{OmitEmpty: -1},
+			wantErrorMsg: "cbor: invalid OmitEmpty -1",
+		},
+		{
+			name:         "OmitEmpty above range of valid modes",
+			opts:         EncOptions{OmitEmpty: 101},
+			wantErrorMsg: "cbor: invalid OmitEmpty 101",
+		},
+		{
+			name:         "String invalid mode",
+			opts:         EncOptions{String: -1},
+			wantErrorMsg: "cbor: invalid String -1",
+		},
+		{
+			name:         "FieldName below range of valid modes",
+			opts:         EncOptions{FieldName: -1},
+			wantErrorMsg: "cbor: invalid FieldName -1",
+		},
+		{
+			name:         "FieldName above range of valid modes",
+			opts:         EncOptions{FieldName: 101},
+			wantErrorMsg: "cbor: invalid FieldName 101",
+		},
+		{
+			name:         "ByteSliceLaterFormat below range of valid modes",
 			opts:         EncOptions{ByteSliceLaterFormat: -1},
 			wantErrorMsg: "cbor: invalid ByteSliceLaterFormat -1",
 		},
 		{
-			name:         "above range of valid modes",
+			name:         "ByteSliceLaterFormat above range of valid modes",
 			opts:         EncOptions{ByteSliceLaterFormat: 101},
 			wantErrorMsg: "cbor: invalid ByteSliceLaterFormat 101",
 		},
 		{
-			name:         "above range of valid modes with TagsForbidden",
+			name:         "ByteSliceLaterFormat above range of valid modes with TagsForbidden",
 			opts:         EncOptions{ByteSliceLaterFormat: 101, TagsMd: TagsForbidden},
 			wantErrorMsg: "cbor: invalid ByteSliceLaterFormat 101",
 		},
 		{
-			name:         "ByteSliceLaterFormatBase64URL with TagsForbidden",
+			name:         "ByteSliceLaterFormat ByteSliceLaterFormatBase64URL with TagsForbidden",
 			opts:         EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64URL, TagsMd: TagsForbidden},
 			wantErrorMsg: tagsForbiddenErrorMsg,
 		},
 		{
-			name:         "ByteSliceLaterFormatBase64 with TagsForbidden",
+			name:         "ByteSliceLaterFormat ByteSliceLaterFormatBase64 with TagsForbidden",
 			opts:         EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase64, TagsMd: TagsForbidden},
 			wantErrorMsg: tagsForbiddenErrorMsg,
 		},
 		{
-			name:         "ByteSliceLaterFormatBase16 with TagsForbidden",
+			name:         "ByteSliceLaterFormat ByteSliceLaterFormatBase16 with TagsForbidden",
 			opts:         EncOptions{ByteSliceLaterFormat: ByteSliceLaterFormatBase16, TagsMd: TagsForbidden},
 			wantErrorMsg: tagsForbiddenErrorMsg,
 		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := tc.opts.EncMode()
-			if err == nil {
-				t.Errorf("EncMode() didn't return an error")
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
-			}
-		})
-	}
-}
-
-func TestInvalidByteArray(t *testing.T) {
-	for _, tc := range []struct {
-		name         string
-		opts         EncOptions
-		wantErrorMsg string
-	}{
 		{
-			name:         "below range of valid modes",
+			name:         "ByteArray below range of valid modes",
 			opts:         EncOptions{ByteArray: -1},
 			wantErrorMsg: "cbor: invalid ByteArray -1",
 		},
 		{
-			name:         "above range of valid modes",
+			name:         "ByteArray above range of valid modes",
 			opts:         EncOptions{ByteArray: 101},
 			wantErrorMsg: "cbor: invalid ByteArray 101",
 		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := tc.opts.EncMode()
-			if err == nil {
-				t.Errorf("EncMode() didn't return an error")
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
-			}
-		})
-	}
-}
-
-func TestEncModeInvalidBinaryMarshalerMode(t *testing.T) {
-	for _, tc := range []struct {
-		name         string
-		opts         EncOptions
-		wantErrorMsg string
-	}{
 		{
-			name:         "below range of valid modes",
+			name:         "BinaryMarshaler below range of valid modes",
 			opts:         EncOptions{BinaryMarshaler: -1},
 			wantErrorMsg: "cbor: invalid BinaryMarshaler -1",
 		},
 		{
-			name:         "above range of valid modes",
+			name:         "BinaryMarshaler above range of valid modes",
 			opts:         EncOptions{BinaryMarshaler: 101},
 			wantErrorMsg: "cbor: invalid BinaryMarshaler 101",
 		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := tc.opts.EncMode()
-			if err == nil {
-				t.Errorf("EncMode() didn't return an error")
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
-			}
-		})
-	}
-}
-
-func TestEncModeInvalidTextMarshalerMode(t *testing.T) {
-	for _, tc := range []struct {
-		name         string
-		opts         EncOptions
-		wantErrorMsg string
-	}{
 		{
-			name:         "below range of valid modes",
+			name:         "TextMarshaler below range of valid modes",
 			opts:         EncOptions{TextMarshaler: -1},
 			wantErrorMsg: "cbor: invalid TextMarshaler -1",
 		},
 		{
-			name:         "above range of valid modes",
+			name:         "TextMarshaler above range of valid modes",
 			opts:         EncOptions{TextMarshaler: 101},
 			wantErrorMsg: "cbor: invalid TextMarshaler 101",
+		},
+		{
+			name:         "ToIndefArrayStructTag below range of valid modes",
+			opts:         EncOptions{ToIndefArrayStructTag: -1},
+			wantErrorMsg: "cbor: invalid ToIndefArrayStructTag -1",
+		},
+		{
+			name:         "ToIndefArrayStructTag above range of valid modes",
+			opts:         EncOptions{ToIndefArrayStructTag: maxToIndefArrayStructTagMode},
+			wantErrorMsg: "cbor: invalid ToIndefArrayStructTag 2",
+		},
+		{
+			name:         "ToIndefArrayStructTagAllowed with IndefLengthForbidden",
+			opts:         EncOptions{IndefLength: IndefLengthForbidden, ToIndefArrayStructTag: ToIndefArrayStructTagAllowed},
+			wantErrorMsg: "cbor: cannot set ToIndefArrayStructTag to ToIndefArrayStructTagAllowed when IndefLength is IndefLengthForbidden",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := tc.opts.EncMode()
-			if err == nil {
-				t.Errorf("EncMode() didn't return an error")
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("EncMode() returned error %q, want %q", err.Error(), tc.wantErrorMsg)
-			}
+			checkError[error](t, "EncMode", err, tc.wantErrorMsg)
 		})
-	}
-}
-
-// TestInvalidToIndefArrayStructTagMode verifies that EncOptions rejects
-// out-of-range values for ToIndefArrayStructTagMode at mode construction time.
-func TestInvalidToIndefArrayStructTagMode(t *testing.T) {
-	for _, m := range []ToIndefArrayStructTagMode{-1, maxToIndefArrayStructTagMode, maxToIndefArrayStructTagMode + 1} {
-		_, err := EncOptions{ToIndefArrayStructTag: m}.EncMode()
-		if err == nil {
-			t.Errorf("expected error for mode %d, got nil", m)
-			continue
-		}
-		if !strings.Contains(err.Error(), "ToIndefArrayStructTag") {
-			t.Errorf("error for mode %d should mention ToIndefArrayStructTag, got: %v", m, err)
-		}
-	}
-}
-
-// TestToIndefArrayStructTagRejectsIndefLengthForbidden verifies that
-// EncOptions rejects the combination of IndefLengthForbidden and
-// ToIndefArrayStructTagAllowed at mode construction time, since the two
-// settings are contradictory.
-func TestToIndefArrayStructTagRejectsIndefLengthForbidden(t *testing.T) {
-	_, err := EncOptions{
-		IndefLength:           IndefLengthForbidden,
-		ToIndefArrayStructTag: ToIndefArrayStructTagAllowed,
-	}.EncMode()
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if !strings.Contains(err.Error(), "ToIndefArrayStructTag") || !strings.Contains(err.Error(), "IndefLength") {
-		t.Errorf("error should mention both options, got: %v", err)
 	}
 }
 
