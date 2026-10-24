@@ -28,80 +28,80 @@ func TestByteString(t *testing.T) {
 
 	testCases := []roundTripTestCase{
 		{
-			name:         "empty",
-			obj:          emptybs,
-			wantCborData: mustHexDecode("40"),
+			name: "empty",
+			v:    emptybs,
+			data: mustHexDecode("40"),
 		},
 		{
-			name:         "not empty",
-			obj:          bs,
-			wantCborData: mustHexDecode("4401020304"),
+			name: "not empty",
+			v:    bs,
+			data: mustHexDecode("4401020304"),
 		},
 		{
-			name:         "array",
-			obj:          []ByteString{bs},
-			wantCborData: mustHexDecode("814401020304"),
+			name: "array",
+			v:    []ByteString{bs},
+			data: mustHexDecode("814401020304"),
 		},
 		{
-			name:         "map with ByteString key",
-			obj:          map[ByteString]bool{bs: true},
-			wantCborData: mustHexDecode("a14401020304f5"),
+			name: "map with ByteString key",
+			v:    map[ByteString]bool{bs: true},
+			data: mustHexDecode("a14401020304f5"),
 		},
 		{
-			name:         "empty ByteString field",
-			obj:          s1{},
-			wantCborData: mustHexDecode("a1616140"),
+			name: "empty ByteString field",
+			v:    s1{},
+			data: mustHexDecode("a1616140"),
 		},
 		{
-			name:         "not empty ByteString field",
-			obj:          s1{A: bs},
-			wantCborData: mustHexDecode("a161614401020304"),
+			name: "not empty ByteString field",
+			v:    s1{A: bs},
+			data: mustHexDecode("a161614401020304"),
 		},
 		{
-			name:         "nil *ByteString field",
-			obj:          s2{},
-			wantCborData: mustHexDecode("a16161f6"),
+			name: "nil *ByteString field",
+			v:    s2{},
+			data: mustHexDecode("a16161f6"),
 		},
 		{
-			name:         "empty *ByteString field",
-			obj:          s2{A: &emptybs},
-			wantCborData: mustHexDecode("a1616140"),
+			name: "empty *ByteString field",
+			v:    s2{A: &emptybs},
+			data: mustHexDecode("a1616140"),
 		},
 		{
-			name:         "not empty *ByteString field",
-			obj:          s2{A: &bs},
-			wantCborData: mustHexDecode("a161614401020304"),
+			name: "not empty *ByteString field",
+			v:    s2{A: &bs},
+			data: mustHexDecode("a161614401020304"),
 		},
 		{
-			name:         "empty ByteString field with omitempty option",
-			obj:          s3{},
-			wantCborData: mustHexDecode("a0"),
+			name: "empty ByteString field with omitempty option",
+			v:    s3{},
+			data: mustHexDecode("a0"),
 		},
 		{
-			name:         "not empty ByteString field with omitempty option",
-			obj:          s3{A: bs},
-			wantCborData: mustHexDecode("a161614401020304"),
+			name: "not empty ByteString field with omitempty option",
+			v:    s3{A: bs},
+			data: mustHexDecode("a161614401020304"),
 		},
 		{
-			name:         "nil *ByteString field with omitempty option",
-			obj:          s4{},
-			wantCborData: mustHexDecode("a0"),
+			name: "nil *ByteString field with omitempty option",
+			v:    s4{},
+			data: mustHexDecode("a0"),
 		},
 		{
-			name:         "empty *ByteString field with omitempty option",
-			obj:          s4{A: &emptybs},
-			wantCborData: mustHexDecode("a1616140"),
+			name: "empty *ByteString field with omitempty option",
+			v:    s4{A: &emptybs},
+			data: mustHexDecode("a1616140"),
 		},
 		{
-			name:         "not empty *ByteString field with omitempty option",
-			obj:          s4{A: &bs},
-			wantCborData: mustHexDecode("a161614401020304"),
+			name: "not empty *ByteString field with omitempty option",
+			v:    s4{A: &bs},
+			data: mustHexDecode("a161614401020304"),
 		},
 	}
 
-	em, _ := EncOptions{}.EncMode()
-	dm, _ := DecOptions{}.DecMode()
-	testRoundTrip(t, testCases, em, dm)
+	em := mustEncMode(t, EncOptions{})
+	dm := mustDecMode(t, DecOptions{})
+	testRoundTripCases(t, testCases, em, dm)
 }
 
 func TestUnmarshalByteStringOnBadData(t *testing.T) {

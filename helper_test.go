@@ -167,6 +167,59 @@ func testMarshalWithFP(t *testing.T, f func(t *testing.T)) {
 	}
 }
 
+func mustEncMode(t *testing.T, opts EncOptions) EncMode { //nolint:gocritic // ignore hugeParam
+	t.Helper()
+	em, err := opts.EncMode()
+	if err != nil {
+		t.Fatalf("EncMode: unexpected error: %v", err)
+	}
+	return em
+}
+
+func mustEncModeWithTags(t *testing.T, opts EncOptions, tags TagSet) EncMode { //nolint:gocritic // ignore hugeParam
+	t.Helper()
+	em, err := opts.EncModeWithTags(tags)
+	if err != nil {
+		t.Fatalf("EncModeWithTags: unexpected error: %v", err)
+	}
+	return em
+}
+
+func mustUserBufferEncMode(t *testing.T, opts EncOptions) UserBufferEncMode { //nolint:gocritic // ignore hugeParam
+	t.Helper()
+	em, err := opts.UserBufferEncMode()
+	if err != nil {
+		t.Fatalf("UserBufferEncMode: unexpected error: %v", err)
+	}
+	return em
+}
+
+func mustDecMode(t *testing.T, opts DecOptions) DecMode { //nolint:gocritic // ignore hugeParam
+	t.Helper()
+	dm, err := opts.DecMode()
+	if err != nil {
+		t.Fatalf("DecMode: unexpected error: %v", err)
+	}
+	return dm
+}
+
+func mustDecModeWithTags(t *testing.T, opts DecOptions, tags TagSet) DecMode { //nolint:gocritic // ignore hugeParam
+	t.Helper()
+	dm, err := opts.DecModeWithTags(tags)
+	if err != nil {
+		t.Fatalf("DecModeWithTags: unexpected error: %v", err)
+	}
+	return dm
+}
+
+func mustAddTag(t *testing.T, tags TagSet, opts TagOptions, contentType reflect.Type, num uint64, nestedNum ...uint64) {
+	t.Helper()
+	err := tags.Add(opts, contentType, num, nestedNum...)
+	if err != nil {
+		t.Fatalf("TagSet.Add: unexpected error: %v", err)
+	}
+}
+
 // Other helper functions
 
 // checkMarshal checks whether a marshal call was successful.
@@ -268,22 +321,27 @@ func testDecoderEOF(t *testing.T, dec *Decoder) {
 }
 
 type roundTripTestCase struct {
-	name         string
-	obj          any
-	wantCborData []byte
+	name string
+	v    any
+	data []byte
 }
 
-func testRoundTrip(t *testing.T, testCases []roundTripTestCase, em EncMode, dm DecMode) {
+func testRoundTripCases(t *testing.T, testCases []roundTripTestCase, em EncMode, dm DecMode) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			b, err := em.Marshal(tc.obj)
-			checkMarshal(t, "em.Marshal", b, err, tc.wantCborData)
-
-			v := reflect.New(reflect.TypeOf(tc.obj))
-			err = unmarshalWithDM(t, dm, b, v.Interface())
-			checkUnmarshal(t, "dm.Unmarshal", v.Elem().Interface(), err, tc.obj)
+			testRoundTripCase(t, tc.v, tc.data, em, dm)
 		})
 	}
+}
+
+func testRoundTripCase(t *testing.T, v any, data []byte, em EncMode, dm DecMode) {
+	t.Helper()
+	b, err := em.Marshal(v)
+	checkMarshal(t, "em.Marshal", b, err, data)
+
+	rv := reflect.New(reflect.TypeOf(v))
+	err = unmarshalWithDM(t, dm, b, rv.Interface())
+	checkUnmarshal(t, "dm.Unmarshal", rv.Elem().Interface(), err, v)
 }
 
 func nonFloatEqual(got any, want any) bool {

@@ -20,7 +20,7 @@ func TestValid1(t *testing.T) {
 
 func TestValid2(t *testing.T) {
 	for _, tc := range marshalTestCases {
-		dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
+		dm := mustDecMode(t, DecOptions{DupMapKey: DupMapKeyEnforcedAPF})
 		if err := dm.Wellformed(tc.wantData); err != nil {
 			t.Errorf("Wellformed() returned error %v", err)
 		}
@@ -453,9 +453,7 @@ func TestWellformedSyntaxMode(t *testing.T) {
 
 	type taggedFloat float64
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, reflect.TypeFor[taggedFloat](), 100); err != nil {
-		t.Fatalf("TagSet.Add: unexpected error: %v", err)
-	}
+	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, reflect.TypeFor[taggedFloat](), 100)
 
 	testCases := []struct {
 		name                    string
@@ -546,18 +544,14 @@ func TestWellformedSyntaxMode(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var dm DecMode
-			var err error
 			if tc.tags != nil {
-				dm, err = tc.opts.DecModeWithTags(tc.tags)
+				dm = mustDecModeWithTags(t, tc.opts, tc.tags)
 			} else {
-				dm, err = tc.opts.DecMode()
-			}
-			if err != nil {
-				t.Fatalf("DecMode: unexpected error: %v", err)
+				dm = mustDecMode(t, tc.opts)
 			}
 
 			name := fmt.Sprintf("Wellformed(0x%x)", tc.data)
-			err = dm.Wellformed(tc.data)
+			err := dm.Wellformed(tc.data)
 			checkErrorType(t, name, err, tc.wantWellformedErr)
 
 			name = fmt.Sprintf("wellformedSyntaxMode.Wellformed(0x%x)", tc.data)

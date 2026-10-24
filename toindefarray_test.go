@@ -12,11 +12,7 @@ import (
 // option allowed. It is a small helper to keep tests focused on behavior.
 func allowToIndefArrayMode(t *testing.T) EncMode {
 	t.Helper()
-	em, err := EncOptions{ToIndefArrayStructTag: ToIndefArrayStructTagAllowed}.EncMode()
-	if err != nil {
-		t.Fatalf("EncMode() returned error: %v", err)
-	}
-	return em
+	return mustEncMode(t, EncOptions{ToIndefArrayStructTag: ToIndefArrayStructTagAllowed})
 }
 
 // TestEncodeStructToIndefArrayBasic verifies the encoded bytes for a
@@ -29,18 +25,14 @@ func TestEncodeStructToIndefArrayBasic(t *testing.T) {
 	}
 
 	em := allowToIndefArrayMode(t)
+	dm := mustDecMode(t, DecOptions{})
 	in := S{Data: []byte{0x73, 0xf7, 0x2d, 0xbe}, Count: 3}
 	want := []byte{0x9f, 0x44, 0x73, 0xf7, 0x2d, 0xbe, 0x03, 0xff} // EDN: [_ h'73f72dbe', 3]
-
-	got, err := em.Marshal(in)
-	checkMarshal(t, "em.Marshal", got, err, want)
 
 	// Roundtrip: decoder accepts both definite and indefinite arrays for
 	// toindefarray-tagged structs (the tag treats them the same way as
 	// `toarray` for decoding).
-	var out S
-	err = unmarshal(t, got, &out)
-	checkUnmarshal(t, "Unmarshal", out, err, in)
+	testRoundTripCase(t, in, want, em, dm)
 }
 
 // TestEncodeStructToIndefArrayEmpty verifies that an empty struct produces
@@ -51,15 +43,10 @@ func TestEncodeStructToIndefArrayEmpty(t *testing.T) {
 	}
 
 	em := allowToIndefArrayMode(t)
+	dm := mustDecMode(t, DecOptions{})
 	in := Empty{}
 	want := []byte{0x9f, 0xff} // EDN: [_]
-
-	got, err := em.Marshal(in)
-	checkMarshal(t, "em.Marshal", got, err, want)
-
-	var out Empty
-	err = unmarshal(t, got, &out)
-	checkUnmarshal(t, "Unmarshal", out, err, in)
+	testRoundTripCase(t, in, want, em, dm)
 }
 
 // TestEncodeStructToIndefArrayNested verifies the byte layout and roundtrip
@@ -77,18 +64,13 @@ func TestEncodeStructToIndefArrayNested(t *testing.T) {
 	}
 
 	em := allowToIndefArrayMode(t)
+	dm := mustDecMode(t, DecOptions{})
 	in := Outer{
 		Inner: Inner{X: []byte{0xab, 0xcd}, Y: 42},
 		Z:     7,
 	}
 	want := []byte{0x9f, 0x9f, 0x42, 0xab, 0xcd, 0x18, 0x2a, 0xff, 0x07, 0xff} // EDN: [_ [_ h'abcd', 42], 7]
-
-	got, err := em.Marshal(in)
-	checkMarshal(t, "em.Marshal", got, err, want)
-
-	var out Outer
-	err = unmarshal(t, got, &out)
-	checkUnmarshal(t, "Unmarshal", out, err, in)
+	testRoundTripCase(t, in, want, em, dm)
 }
 
 // TestEncodeStructToIndefArrayForbiddenByDefault verifies that the default
@@ -197,18 +179,13 @@ func TestEncodeStructToIndefArrayWithCBORTag(t *testing.T) {
 	}
 
 	tags := NewTagSet()
-	if err := tags.Add(
+	mustAddTag(t, tags,
 		TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired},
 		reflect.TypeFor[S](),
 		121,
-	); err != nil {
-		t.Fatalf("TagSet.Add returned error: %v", err)
-	}
+	)
 
-	em, err := EncOptions{ToIndefArrayStructTag: ToIndefArrayStructTagAllowed}.EncModeWithTags(tags)
-	if err != nil {
-		t.Fatalf("EncModeWithTags returned error: %v", err)
-	}
+	em := mustEncModeWithTags(t, EncOptions{ToIndefArrayStructTag: ToIndefArrayStructTagAllowed}, tags)
 	in := S{Field1: 1, Field2: 2}
 	want := []byte{0xd8, 0x79, 0x9f, 0x01, 0x02, 0xff} // EDN: 121([_ 1, 2])
 
