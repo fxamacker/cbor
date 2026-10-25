@@ -6546,12 +6546,12 @@ func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
 
 			// Test unmarshaling CBOR into a value of type any.
 			var v any
-			err := unmarshal(t, tc.data, &v)
+			err := unmarshal(t, data, &v)
 			checkUnmarshalFunc(t, "Unmarshal", v, err, tc.wantInterfaceValue, floatEqual(tc.equalityThreshold))
 
 			// Test unmarshaling CBOR into RawMessage.
 			var r RawMessage
-			err = unmarshal(t, tc.data, &r)
+			err = unmarshal(t, data, &r)
 			checkUnmarshal(t, "Unmarshal", r, err, RawMessage(tc.data))
 
 			// Test unmarshaling CBOR into compatible data types.
@@ -6559,7 +6559,7 @@ func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
 				t.Run(fmt.Sprintf("%T", value), func(t *testing.T) {
 					v := reflect.New(reflect.TypeOf(value))
 					vPtr := v.Interface()
-					err := unmarshal(t, tc.data, vPtr)
+					err := unmarshal(t, data, vPtr)
 					checkUnmarshalFunc(t, "Unmarshal", v.Elem().Interface(), err, value, floatEqual(tc.equalityThreshold))
 				})
 			}
@@ -6568,7 +6568,7 @@ func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
 			for _, typ := range unmarshalFloatWrongTypes {
 				v := reflect.New(typ)
 				vPtr := v.Interface()
-				err := unmarshal(t, tc.data, vPtr)
+				err := unmarshal(t, data, vPtr)
 				checkError[*UnmarshalTypeError](t, "Unmarshal", err, "")
 			}
 		})

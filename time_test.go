@@ -441,14 +441,14 @@ func TestDecTimeTagOption(t *testing.T) {
 			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
-			name:            "not-tagged data with timeTagOptionalDecMode option",
+			name:            "not-tagged data with DecTagOptional option",
 			cborRFC3339Time: mustHexDecode("74323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("1a514b67b0"),
 			dm:              dmTimeTagOptional,
 			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
-			name:                "not-tagged data with timeTagRequiredDecMode option",
+			name:                "not-tagged data with DecTagRequired option",
 			cborRFC3339Time:     mustHexDecode("74323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:        mustHexDecode("1a514b67b0"),
 			dm:                  dmTimeTagRequired,
@@ -457,21 +457,21 @@ func TestDecTimeTagOption(t *testing.T) {
 		},
 		// tagged time CBOR data
 		{
-			name:            "tagged data with timeTagIgnoredDecMode option",
+			name:            "tagged data with DecTagIgnored option",
 			cborRFC3339Time: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c11a514b67b0"),
 			dm:              dmTimeTagIgnored,
 			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
-			name:            "tagged data with timeTagOptionalDecMode option",
+			name:            "tagged data with DecTagOptional option",
 			cborRFC3339Time: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c11a514b67b0"),
 			dm:              dmTimeTagOptional,
 			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
-			name:            "tagged data with timeTagRequiredDecMode option",
+			name:            "tagged data with DecTagRequired option",
 			cborRFC3339Time: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c11a514b67b0"),
 			dm:              dmTimeTagRequired,
@@ -479,21 +479,21 @@ func TestDecTimeTagOption(t *testing.T) {
 		},
 		// mis-tagged time CBOR data
 		{
-			name:            "mis-tagged data with timeTagIgnoredDecMode option",
+			name:            "mis-tagged data with DecTagIgnored option",
 			cborRFC3339Time: mustHexDecode("c8c974323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c8c91a514b67b0"),
 			dm:              dmTimeTagIgnored,
 			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
-			name:            "mis-tagged data with timeTagOptionalDecMode option",
+			name:            "mis-tagged data with DecTagOptional option",
 			cborRFC3339Time: mustHexDecode("c8c974323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c8c91a514b67b0"),
 			dm:              dmTimeTagOptional,
 			wantErrorMsg:    "cbor: wrong tag number for time.Time, got 8, expect 0 or 1",
 		},
 		{
-			name:            "mis-tagged data with timeTagRequiredDecMode option",
+			name:            "mis-tagged data with DecTagRequired option",
 			cborRFC3339Time: mustHexDecode("c8c974323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c8c91a514b67b0"),
 			dm:              dmTimeTagRequired,

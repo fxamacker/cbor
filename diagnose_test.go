@@ -814,10 +814,8 @@ func TestDiagnoseFirst(t *testing.T) {
 				t.Errorf("DiagnoseFirst(0x%x) = %q, want %q", tc.data, str, tc.wantDiag)
 			}
 
-			if bytes.Equal(rest, tc.wantRest) == false {
-				if str != tc.wantDiag {
-					t.Errorf("DiagnoseFirst(0x%x) rest = 0x%x, want 0x%x", tc.data, rest, tc.wantRest)
-				}
+			if !bytes.Equal(rest, tc.wantRest) {
+				t.Errorf("DiagnoseFirst(0x%x) rest = 0x%x, want 0x%x", tc.data, rest, tc.wantRest)
 			}
 
 			checkErrorCase[error](t, "DiagnoseFirst", err, tc.wantErrorMsg != "", tc.wantErrorMsg)
