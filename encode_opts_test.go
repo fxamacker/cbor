@@ -245,7 +245,7 @@ func TestToIndefArrayStructTagOptionsRoundTrip(t *testing.T) {
 	em := mustEncMode(t, opts)
 	got := em.EncOptions()
 	if !reflect.DeepEqual(opts, got) {
-		t.Errorf("EncOptions round-trip mismatch:\n got: %#v\nwant: %#v", got, opts)
+		t.Errorf("em.EncOptions() = %#v, want %#v", got, opts)
 	}
 }
 
@@ -258,7 +258,7 @@ func TestEncOptionsTagsForbidden(t *testing.T) {
 	em := mustEncMode(t, opts1)
 	opts2 := em.EncOptions()
 	if !reflect.DeepEqual(opts1, opts2) {
-		t.Errorf("EncOptions->EncMode->EncOptions returned different values: %#v, %#v", opts1, opts2)
+		t.Errorf("em.EncOptions() = %#v, want %#v", opts2, opts1)
 	}
 }
 
@@ -271,16 +271,16 @@ func TestCanonicalEncOptions(t *testing.T) { //nolint:dupl
 	em := mustEncMode(t, CanonicalEncOptions())
 	opts := em.EncOptions()
 	if opts.Sort != wantSortMode {
-		t.Errorf("CanonicalEncOptions() returned EncOptions with Sort %d, want %d", opts.Sort, wantSortMode)
+		t.Errorf("em.EncOptions().Sort = %d, want %d", opts.Sort, wantSortMode)
 	}
 	if opts.ShortestFloat != wantShortestFloat {
-		t.Errorf("CanonicalEncOptions() returned EncOptions with ShortestFloat %d, want %d", opts.ShortestFloat, wantShortestFloat)
+		t.Errorf("em.EncOptions().ShortestFloat = %d, want %d", opts.ShortestFloat, wantShortestFloat)
 	}
 	if opts.NaNConvert != wantNaNConvert {
-		t.Errorf("CanonicalEncOptions() returned EncOptions with NaNConvert %d, want %d", opts.NaNConvert, wantNaNConvert)
+		t.Errorf("em.EncOptions().NaNConvert = %d, want %d", opts.NaNConvert, wantNaNConvert)
 	}
 	if opts.InfConvert != wantInfConvert {
-		t.Errorf("CanonicalEncOptions() returned EncOptions with InfConvert %d, want %d", opts.InfConvert, wantInfConvert)
+		t.Errorf("em.EncOptions().InfConvert = %d, want %d", opts.InfConvert, wantInfConvert)
 	}
 	enc := em.NewEncoder(io.Discard)
 	err := enc.StartIndefiniteArray()
@@ -296,16 +296,16 @@ func TestCTAP2EncOptions(t *testing.T) { //nolint:dupl
 	em := mustEncMode(t, CTAP2EncOptions())
 	opts := em.EncOptions()
 	if opts.Sort != wantSortMode {
-		t.Errorf("CTAP2EncOptions() returned EncOptions with Sort %d, want %d", opts.Sort, wantSortMode)
+		t.Errorf("em.EncOptions().Sort = %d, want %d", opts.Sort, wantSortMode)
 	}
 	if opts.ShortestFloat != wantShortestFloat {
-		t.Errorf("CTAP2EncOptions() returned EncOptions with ShortestFloat %d, want %d", opts.ShortestFloat, wantShortestFloat)
+		t.Errorf("em.EncOptions().ShortestFloat = %d, want %d", opts.ShortestFloat, wantShortestFloat)
 	}
 	if opts.NaNConvert != wantNaNConvert {
-		t.Errorf("CTAP2EncOptions() returned EncOptions with NaNConvert %d, want %d", opts.NaNConvert, wantNaNConvert)
+		t.Errorf("em.EncOptions().NaNConvert = %d, want %d", opts.NaNConvert, wantNaNConvert)
 	}
 	if opts.InfConvert != wantInfConvert {
-		t.Errorf("CTAP2EncOptions() returned EncOptions with InfConvert %d, want %d", opts.InfConvert, wantInfConvert)
+		t.Errorf("em.EncOptions().InfConvert = %d, want %d", opts.InfConvert, wantInfConvert)
 	}
 	enc := em.NewEncoder(io.Discard)
 	err := enc.StartIndefiniteArray()
@@ -321,16 +321,16 @@ func TestCoreDetEncOptions(t *testing.T) { //nolint:dupl
 	em := mustEncMode(t, CoreDetEncOptions())
 	opts := em.EncOptions()
 	if opts.Sort != wantSortMode {
-		t.Errorf("CoreDetEncOptions() returned EncOptions with Sort %d, want %d", opts.Sort, wantSortMode)
+		t.Errorf("em.EncOptions().Sort = %d, want %d", opts.Sort, wantSortMode)
 	}
 	if opts.ShortestFloat != wantShortestFloat {
-		t.Errorf("CoreDetEncOptions() returned EncOptions with ShortestFloat %d, want %d", opts.ShortestFloat, wantShortestFloat)
+		t.Errorf("em.EncOptions().ShortestFloat = %d, want %d", opts.ShortestFloat, wantShortestFloat)
 	}
 	if opts.NaNConvert != wantNaNConvert {
-		t.Errorf("CoreDetEncOptions() returned EncOptions with NaNConvert %d, want %d", opts.NaNConvert, wantNaNConvert)
+		t.Errorf("em.EncOptions().NaNConvert = %d, want %d", opts.NaNConvert, wantNaNConvert)
 	}
 	if opts.InfConvert != wantInfConvert {
-		t.Errorf("CoreDetEncOptions() returned EncOptions with InfConvert %d, want %d", opts.InfConvert, wantInfConvert)
+		t.Errorf("em.EncOptions().InfConvert = %d, want %d", opts.InfConvert, wantInfConvert)
 	}
 	enc := em.NewEncoder(io.Discard)
 	err := enc.StartIndefiniteArray()
@@ -345,16 +345,16 @@ func TestPreferredUnsortedEncOptions(t *testing.T) {
 	em := mustEncMode(t, PreferredUnsortedEncOptions())
 	opts := em.EncOptions()
 	if opts.Sort != wantSortMode {
-		t.Errorf("PreferredUnsortedEncOptions() returned EncOptions with Sort %d, want %d", opts.Sort, wantSortMode)
+		t.Errorf("em.EncOptions().Sort = %d, want %d", opts.Sort, wantSortMode)
 	}
 	if opts.ShortestFloat != wantShortestFloat {
-		t.Errorf("PreferredUnsortedEncOptions() returned EncOptions with ShortestFloat %d, want %d", opts.ShortestFloat, wantShortestFloat)
+		t.Errorf("em.EncOptions().ShortestFloat = %d, want %d", opts.ShortestFloat, wantShortestFloat)
 	}
 	if opts.NaNConvert != wantNaNConvert {
-		t.Errorf("PreferredUnsortedEncOptions() returned EncOptions with NaNConvert %d, want %d", opts.NaNConvert, wantNaNConvert)
+		t.Errorf("em.EncOptions().NaNConvert = %d, want %d", opts.NaNConvert, wantNaNConvert)
 	}
 	if opts.InfConvert != wantInfConvert {
-		t.Errorf("PreferredUnsortedEncOptions() returned EncOptions with InfConvert %d, want %d", opts.InfConvert, wantInfConvert)
+		t.Errorf("em.EncOptions().InfConvert = %d, want %d", opts.InfConvert, wantInfConvert)
 	}
 	enc := em.NewEncoder(io.Discard)
 	err := enc.StartIndefiniteArray()
@@ -412,6 +412,6 @@ func TestEncOptions(t *testing.T) {
 	em := mustEncMode(t, opts1)
 	opts2 := em.EncOptions()
 	if !reflect.DeepEqual(opts1, opts2) {
-		t.Errorf("EncOptions->EncMode->EncOptions returned different values: %#v, %#v", opts1, opts2)
+		t.Errorf("em.EncOptions() = %#v, want %#v", opts2, opts1)
 	}
 }

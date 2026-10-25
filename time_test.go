@@ -507,7 +507,7 @@ func TestDecTimeTagOption(t *testing.T) {
 			if tc.wantErrorMsgPartial {
 				checkUnmarshalCaseFunc[error](t, "dm.Unmarshal", tm, err, tc.wantTime, tc.wantErrorMsg != "", "", nonFloatEqual)
 				if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborRFC3339Time, err.Error(), tc.wantErrorMsg)
+					t.Errorf("dm.Unmarshal(0x%x): got %q, want substring %q", tc.cborRFC3339Time, err.Error(), tc.wantErrorMsg)
 				}
 			} else {
 				checkUnmarshalCaseFunc[error](t, "dm.Unmarshal", tm, err, tc.wantTime, tc.wantErrorMsg != "", tc.wantErrorMsg, nonFloatEqual)
@@ -518,7 +518,7 @@ func TestDecTimeTagOption(t *testing.T) {
 			if tc.wantErrorMsgPartial {
 				checkUnmarshalCaseFunc[error](t, "dm.Unmarshal", tm, err, tc.wantTime, tc.wantErrorMsg != "", "", nonFloatEqual)
 				if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborRFC3339Time, err.Error(), tc.wantErrorMsg)
+					t.Errorf("dm.Unmarshal(0x%x): got %q, want substring %q", tc.cborUnixTime, err.Error(), tc.wantErrorMsg)
 				}
 			} else {
 				checkUnmarshalCaseFunc[error](t, "dm.Unmarshal", tm, err, tc.wantTime, tc.wantErrorMsg != "", tc.wantErrorMsg, nonFloatEqual)
@@ -1346,10 +1346,10 @@ func testEncodeTime(t *testing.T) {
 				checkNoError(t, "Unmarshal", err)
 				if convert.roundtrip {
 					if convert.opt.hasLocalOffset && tc.tm.Compare(tm) != 0 {
-						t.Errorf("failed to rountrip local time: want %s, got %s", tc.tm, tm)
+						t.Errorf("Unmarshal(0x%x) = %s, want %s (local time round trip)", convert.wantCborData, tm, tc.tm)
 					}
 					if !convert.opt.hasLocalOffset && tc.tm.UTC().Compare(tm.UTC()) != 0 {
-						t.Errorf("failed to roundtrip UTC time: want %s, got %s", tc.tm, tm)
+						t.Errorf("Unmarshal(0x%x) = %s, want %s (UTC round trip)", convert.wantCborData, tm, tc.tm)
 					}
 				}
 			})
@@ -1506,7 +1506,7 @@ func testEncodeTimeUnixMicro(t *testing.T) {
 			err = Unmarshal(b, &f)
 			checkNoError(t, "Unmarshal", err)
 			if f < prev {
-				t.Fatalf("Marshal(%v) encodes %v, want >= %v (encoded value of the previous time)", tm, f, prev)
+				t.Fatalf("Marshal(%v) = %v (as float64), want >= %v (previous time)", tm, f, prev)
 			}
 			prev = f
 		}

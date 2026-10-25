@@ -168,10 +168,10 @@ func TestDecoderUnexpectedEOFError(t *testing.T) {
 				var v any
 				err := decoder.Decode(&v)
 				if v != nil {
-					t.Errorf("Decode() = %v (%T), want nil (no more data)", v, v)
+					t.Errorf("Decoder.Decode = %v (%T), want nil", v, v)
 				}
 				if err != io.ErrUnexpectedEOF {
-					t.Errorf("Decode() returned error %v, want io.ErrUnexpectedEOF (truncated data)", err)
+					t.Errorf("Decoder.Decode error = %v, want io.ErrUnexpectedEOF", err)
 				}
 			}
 		})
@@ -224,10 +224,10 @@ func TestDecoderReadError(t *testing.T) {
 				var v any
 				err := decoder.Decode(&v)
 				if v != nil {
-					t.Errorf("Decode() = %v (%T), want nil (no more data)", v, v)
+					t.Errorf("Decoder.Decode = %v (%T), want nil", v, v)
 				}
 				if err != readerErr {
-					t.Errorf("Decode() returned error %v, want reader error", err)
+					t.Errorf("Decoder.Decode error = %v, want %v", err, readerErr)
 				}
 			}
 		})
@@ -266,10 +266,10 @@ func TestDecoderNoData(t *testing.T) {
 				var v any
 				err := decoder.Decode(&v)
 				if v != nil {
-					t.Errorf("Decode() = %v (%T), want nil", v, v)
+					t.Errorf("Decoder.Decode = %v (%T), want nil", v, v)
 				}
 				if err != tc.wantErr {
-					t.Errorf("Decode() returned error %v, want error %v", err, tc.wantErr)
+					t.Errorf("Decoder.Decode error = %v, want %v", err, tc.wantErr)
 				}
 			}
 		})
@@ -286,7 +286,7 @@ func TestDecoderRecoverableReadError(t *testing.T) {
 	var v any
 	err := decoder.Decode(&v)
 	if err != recoverableReaderErr {
-		t.Fatalf("Decode() returned error %v, want error %v", err, recoverableReaderErr)
+		t.Fatalf("Decoder.Decode error = %v, want %v", err, recoverableReaderErr)
 	}
 
 	err = decoder.Decode(&v)
@@ -357,7 +357,7 @@ func TestDecoderSkip(t *testing.T) {
 				// no more data
 				err := decoder.Skip()
 				if err != io.EOF {
-					t.Errorf("Skip() returned error %v, want io.EOF (no more data)", err)
+					t.Errorf("Decoder.Skip error = %v, want io.EOF", err)
 				}
 			}
 		})
@@ -406,9 +406,9 @@ func TestDecoderSkipInvalidDataError(t *testing.T) {
 				// last data item is invalid
 				err := decoder.Skip()
 				if err == nil {
-					t.Fatalf("Skip() didn't return error")
+					t.Fatalf("Decoder.Skip: expected error containing %q, got nil", "cbor: invalid additional information")
 				} else if !strings.Contains(err.Error(), "cbor: invalid additional information") {
-					t.Errorf("Skip() error %q, want \"cbor: invalid additional information\"", err)
+					t.Errorf("Decoder.Skip: got %q, want substring %q", err.Error(), "cbor: invalid additional information")
 				}
 			}
 		})
@@ -457,7 +457,7 @@ func TestDecoderSkipUnexpectedEOFError(t *testing.T) {
 				// last data item is invalid
 				err := decoder.Skip()
 				if err != io.ErrUnexpectedEOF {
-					t.Errorf("Skip() returned error %v, want io.ErrUnexpectedEOF (truncated data)", err)
+					t.Errorf("Decoder.Skip error = %v, want io.ErrUnexpectedEOF", err)
 				}
 			}
 		})
@@ -508,7 +508,7 @@ func TestDecoderSkipReadError(t *testing.T) {
 				// truncated data because Reader returned error
 				err := decoder.Skip()
 				if err != readerErr {
-					t.Errorf("Skip() returned error %v, want reader error", err)
+					t.Errorf("Decoder.Skip error = %v, want %v", err, readerErr)
 				}
 			}
 		})
@@ -546,7 +546,7 @@ func TestDecoderSkipNoData(t *testing.T) {
 			for range 2 {
 				err := decoder.Skip()
 				if err != tc.wantErr {
-					t.Errorf("Decode() returned error %v, want error %v", err, tc.wantErr)
+					t.Errorf("Decoder.Skip error = %v, want %v", err, tc.wantErr)
 				}
 			}
 		})
@@ -561,7 +561,7 @@ func TestDecoderSkipRecoverableReadError(t *testing.T) {
 
 	err := decoder.Skip()
 	if err != recoverableReaderErr {
-		t.Fatalf("Skip() returned error %v, want error %v", err, recoverableReaderErr)
+		t.Fatalf("Decoder.Skip error = %v, want %v", err, recoverableReaderErr)
 	}
 
 	err = decoder.Skip()
@@ -573,7 +573,7 @@ func TestDecoderSkipRecoverableReadError(t *testing.T) {
 	// no more data
 	err = decoder.Skip()
 	if err != io.EOF {
-		t.Errorf("Skip() returned error %v, want io.EOF (no more data)", err)
+		t.Errorf("Decoder.Skip error = %v, want io.EOF", err)
 	}
 }
 
@@ -665,7 +665,7 @@ func TestDecoderBuffered(t *testing.T) {
 			var v any
 			err = decoder.Decode(&v)
 			if err != tc.decodeErr {
-				t.Errorf("Decode() returned error %v, want %v", err, tc.decodeErr)
+				t.Errorf("Decoder.Decode error = %v, want %v", err, tc.decodeErr)
 			}
 
 			br = decoder.Buffered()
@@ -692,7 +692,7 @@ func TestEncoder(t *testing.T) {
 		}
 	}
 	if !bytes.Equal(w.Bytes(), want.Bytes()) {
-		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want.Bytes())
+		t.Errorf("Encoder output = 0x%x, want 0x%x", w.Bytes(), want.Bytes())
 	}
 }
 
@@ -728,7 +728,7 @@ func TestEncoderError(t *testing.T) {
 		})
 	}
 	if w.Len() != 0 {
-		t.Errorf("Encoder's writer has %d bytes of data, want empty data", w.Len())
+		t.Errorf("Encoder output length = %d, want 0", w.Len())
 	}
 }
 
@@ -749,7 +749,7 @@ func TestIndefiniteByteString(t *testing.T) {
 	checkNoError(t, "Encoder.EndIndefinite", err)
 
 	if !bytes.Equal(w.Bytes(), want) {
-		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+		t.Errorf("Encoder output = 0x%x, want 0x%x", w.Bytes(), want)
 	}
 }
 
@@ -907,7 +907,7 @@ func TestIndefiniteTextString(t *testing.T) {
 	checkNoError(t, "Encoder.EndIndefinite", err)
 
 	if !bytes.Equal(w.Bytes(), want) {
-		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+		t.Errorf("Encoder output = 0x%x, want 0x%x", w.Bytes(), want)
 	}
 }
 
@@ -1063,7 +1063,7 @@ func TestIndefiniteArray(t *testing.T) {
 	checkNoError(t, "Encoder.EndIndefinite", err)
 
 	if !bytes.Equal(w.Bytes(), want) {
-		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+		t.Errorf("Encoder output = 0x%x, want 0x%x", w.Bytes(), want)
 	}
 }
 
@@ -1084,7 +1084,7 @@ func TestIndefiniteArrayWithNilElement(t *testing.T) {
 	checkNoError(t, "Encoder.EndIndefinite", err)
 
 	if !bytes.Equal(w.Bytes(), want) {
-		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+		t.Errorf("Encoder output = 0x%x, want 0x%x", w.Bytes(), want)
 	}
 
 	var decoded []any
@@ -1125,7 +1125,7 @@ func TestIndefiniteMap(t *testing.T) {
 	checkNoError(t, "Encoder.EndIndefinite", err)
 
 	if !bytes.Equal(w.Bytes(), want) {
-		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+		t.Errorf("Encoder output = 0x%x, want 0x%x", w.Bytes(), want)
 	}
 }
 
@@ -1146,7 +1146,7 @@ func TestIndefiniteMapWithNilElement(t *testing.T) {
 	checkNoError(t, "Encoder.EndIndefinite", err)
 
 	if !bytes.Equal(w.Bytes(), want) {
-		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+		t.Errorf("Encoder output = 0x%x, want 0x%x", w.Bytes(), want)
 	}
 
 	var decoded map[string]any
@@ -1177,7 +1177,7 @@ func TestIndefiniteLengthMapItemCount(t *testing.T) {
 
 		wantData := mustHexDecode("bf616101ff") // {_ "a": 1}
 		if !bytes.Equal(buf.Bytes(), wantData) {
-			t.Errorf("Encode returns %x, want %x", buf.Bytes(), wantData)
+			t.Errorf("Encoder output = 0x%x, want 0x%x", buf.Bytes(), wantData)
 		}
 	})
 
@@ -1207,7 +1207,7 @@ func TestIndefiniteLengthMapItemCount(t *testing.T) {
 
 		wantData := mustHexDecode("bf6161bf616201ffff") // {_ "a": {_ "b": 1}}
 		if !bytes.Equal(buf.Bytes(), wantData) {
-			t.Errorf("Encode returns %x, want %x", buf.Bytes(), wantData)
+			t.Errorf("Encoder output = 0x%x, want 0x%x", buf.Bytes(), wantData)
 		}
 	})
 
@@ -1300,7 +1300,7 @@ func TestEncoderStructTag(t *testing.T) {
 	err := encoder.Encode(v)
 	checkNoError(t, "Encoder.Encode", err)
 	if !bytes.Equal(w.Bytes(), want) {
-		t.Errorf("Encoding mismatch: got %v, want %v", w.Bytes(), want)
+		t.Errorf("Encoder output = 0x%x, want 0x%x", w.Bytes(), want)
 	}
 }
 
@@ -1326,12 +1326,12 @@ func TestRawMessage(t *testing.T) {
 	err = unmarshal(t, v.A, v.B)
 	checkNoError(t, "Unmarshal", err)
 	if addr != fmt.Sprintf("%p", *v.B) {
-		t.Fatalf("Unmarshal RawMessage should reuse underlying array if it has sufficient capacity")
+		t.Fatalf("Unmarshal allocated a new RawMessage array, want reuse (sufficient capacity)")
 	}
 	err = unmarshal(t, data, v.B)
 	checkNoError(t, "Unmarshal", err)
 	if addr == fmt.Sprintf("%p", *v.B) {
-		t.Fatalf("Unmarshal RawMessage should allocate a new underlying array if it does not have sufficient capacity")
+		t.Fatalf("Unmarshal reused the RawMessage array, want a new one (insufficient capacity)")
 	}
 }
 

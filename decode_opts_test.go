@@ -314,7 +314,7 @@ func TestDecModeDefaultMaxNestedLevel(t *testing.T) {
 	dm := mustDecMode(t, DecOptions{})
 	maxNestedLevels := dm.DecOptions().MaxNestedLevels
 	if maxNestedLevels != 32 {
-		t.Errorf("DecOptions().MaxNestedLevels = %d, want %v", maxNestedLevels, 32)
+		t.Errorf("dm.DecOptions().MaxNestedLevels = %d, want %d", maxNestedLevels, 32)
 	}
 }
 
@@ -322,7 +322,7 @@ func TestDecModeDefaultMaxArrayElements(t *testing.T) {
 	dm := mustDecMode(t, DecOptions{})
 	maxArrayElements := dm.DecOptions().MaxArrayElements
 	if maxArrayElements != defaultMaxArrayElements {
-		t.Errorf("DecOptions().MaxArrayElementsr = %d, want %v", maxArrayElements, defaultMaxArrayElements)
+		t.Errorf("dm.DecOptions().MaxArrayElements = %d, want %d", maxArrayElements, defaultMaxArrayElements)
 	}
 }
 
@@ -330,7 +330,7 @@ func TestDecModeDefaultMaxMapPairs(t *testing.T) {
 	dm := mustDecMode(t, DecOptions{})
 	maxMapPairs := dm.DecOptions().MaxMapPairs
 	if maxMapPairs != defaultMaxMapPairs {
-		t.Errorf("DecOptions().MaxMapPairs = %d, want %v", maxMapPairs, defaultMaxMapPairs)
+		t.Errorf("dm.DecOptions().MaxMapPairs = %d, want %d", maxMapPairs, defaultMaxMapPairs)
 	}
 }
 
@@ -455,6 +455,6 @@ func TestDecOptions(t *testing.T) {
 	dm := mustDecMode(t, opts1)
 	opts2 := dm.DecOptions()
 	if !reflect.DeepEqual(opts1, opts2) {
-		t.Errorf("DecOptions->DecMode->DecOptions returned different values: %#v, %#v", opts1, opts2)
+		t.Errorf("dm.DecOptions() = %#v, want %#v", opts2, opts1)
 	}
 }

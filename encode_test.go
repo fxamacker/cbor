@@ -2409,13 +2409,13 @@ func TestIsZero(t *testing.T) {
 			defer func() {
 				if err := recover(); err != nil {
 					t.Log(string(debug.Stack()))
-					t.Errorf("unexpected panic %v", err)
+					t.Errorf("getIsZeroFunc: unexpected panic: %v", err)
 				}
 			}()
 			got, err := getIsZeroFunc(tc.t)(nil, tc.v)
 			checkErrorCase[error](t, "getIsZeroFunc", err, tc.wantHasErr, "")
 			if tc.want != got {
-				t.Errorf("getIsZeroFunc() returned %v, want %v", got, tc.want)
+				t.Errorf("getIsZeroFunc = %v, want %v", got, tc.want)
 			}
 		})
 	}
@@ -6160,7 +6160,7 @@ func TestEncodedHeadLength(t *testing.T) {
 				}
 				b := appendHead(nil, byte(cborTypePositiveInt), n)
 				if len(b) != tc.wantLength {
-					t.Errorf("appendHead(%d) encoded %d bytes, want %d bytes", n, len(b), tc.wantLength)
+					t.Errorf("len(appendHead(%d)) = %d, want %d", n, len(b), tc.wantLength)
 				}
 			}
 		})
