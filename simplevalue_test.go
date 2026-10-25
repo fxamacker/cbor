@@ -148,9 +148,7 @@ func TestUnmarshalSimpleValueOnBadData(t *testing.T) {
 				var v SimpleValue
 
 				err := v.UnmarshalCBOR(tc.data)
-				if err == nil {
-					t.Errorf("UnmarshalCBOR(%x) didn't return error", tc.data)
-				}
+				checkError[error](t, "v.UnmarshalCBOR", err, "")
 				if !strings.HasPrefix(err.Error(), tc.wantErrorMsg) {
 					t.Errorf("UnmarshalCBOR(%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 				}

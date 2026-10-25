@@ -639,9 +639,7 @@ func testMarshalLargeMap(t *testing.T) {
 		}
 
 		data, err := Marshal(m1)
-		if err != nil {
-			t.Fatalf("Marshal(%v) returned error %v", m1, err)
-		}
+		checkNoError(t, "Marshal", err)
 
 		m2 := make(map[int]int)
 		err = unmarshal(t, data, &m2)
@@ -660,15 +658,13 @@ func testMarshal(t *testing.T, testCases []marshalTestCase) {
 			for _, value := range tc.values {
 				t.Run(fmt.Sprintf("%T", value), func(t *testing.T) {
 					// Encode value using default options
-					if _, err := Marshal(value); err != nil {
-						t.Errorf("Marshal: unexpected error: %v", err)
-					}
+					_, err := Marshal(value)
+					checkNoError(t, "Marshal", err)
 
 					// Encode value to provided buffer using default options
 					var buf1 bytes.Buffer
-					if err := MarshalToBuffer(value, &buf1); err != nil {
-						t.Errorf("MarshalToBuffer: unexpected error: %v", err)
-					}
+					err = MarshalToBuffer(value, &buf1)
+					checkNoError(t, "MarshalToBuffer", err)
 
 					// Encode value using specified options
 					b, err := em.Marshal(value)
@@ -731,9 +727,7 @@ func testMarshalStruct(t *testing.T) {
 	}
 
 	data, err := Marshal(v1)
-	if err != nil {
-		t.Fatalf("Marshal(%v) returned error %v", v1, err)
-	}
+	checkNoError(t, "Marshal", err)
 
 	var v2 outer
 	err = unmarshal(t, data, &v2)
@@ -2419,9 +2413,7 @@ func TestIsZero(t *testing.T) {
 				}
 			}()
 			got, err := getIsZeroFunc(tc.t)(nil, tc.v)
-			if tc.wantHasErr != (err != nil) {
-				t.Errorf("getIsZeroFunc() returned err=%v, wantErr=%v", err, tc.wantHasErr)
-			}
+			checkErrorCase[error](t, "getIsZeroFunc", err, tc.wantHasErr, "")
 			if tc.want != got {
 				t.Errorf("getIsZeroFunc() returned %v, want %v", got, tc.want)
 			}
@@ -4460,14 +4452,13 @@ func testMarshalSenML(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v []SenMLRecord
-			if err := unmarshal(t, data, &v); err != nil {
-				t.Errorf("Marshal() returned error %v", err)
-			}
+			err := unmarshal(t, data, &v)
+			checkNoError(t, "Unmarshal", err)
+
 			em := mustEncMode(t, tc.opts)
 			b, err := em.Marshal(v)
-			if err != nil {
-				t.Errorf("Unmarshal() returned error %v ", err)
-			}
+			checkNoError(t, "em.Marshal", err)
+
 			var v2 []SenMLRecord
 			err = unmarshal(t, b, &v2)
 			checkUnmarshal(t, "Unmarshal", v2, err, v)
@@ -4480,33 +4471,25 @@ func TestEncIndefiniteLengthOption(t *testing.T) {
 	t.Run("default option", func(t *testing.T) {
 		var buf bytes.Buffer
 		enc := NewEncoder(&buf)
-		if err := enc.StartIndefiniteByteString(); err != nil {
-			t.Errorf("StartIndefiniteByteString() returned an error %v", err)
-		}
-		if err := enc.EndIndefinite(); err != nil {
-			t.Errorf("EndIndefinite() returned an error %v", err)
-		}
+		err := enc.StartIndefiniteByteString()
+		checkNoError(t, "Encoder.StartIndefiniteByteString", err)
+		err = enc.EndIndefinite()
+		checkNoError(t, "Encoder.EndIndefinite", err)
 
-		if err := enc.StartIndefiniteTextString(); err != nil {
-			t.Errorf("StartIndefiniteTextString() returned an error %v", err)
-		}
-		if err := enc.EndIndefinite(); err != nil {
-			t.Errorf("EndIndefinite() returned an error %v", err)
-		}
+		err = enc.StartIndefiniteTextString()
+		checkNoError(t, "Encoder.StartIndefiniteTextString", err)
+		err = enc.EndIndefinite()
+		checkNoError(t, "Encoder.EndIndefinite", err)
 
-		if err := enc.StartIndefiniteArray(); err != nil {
-			t.Errorf("StartIndefiniteArray() returned an error %v", err)
-		}
-		if err := enc.EndIndefinite(); err != nil {
-			t.Errorf("EndIndefinite() returned an error %v", err)
-		}
+		err = enc.StartIndefiniteArray()
+		checkNoError(t, "Encoder.StartIndefiniteArray", err)
+		err = enc.EndIndefinite()
+		checkNoError(t, "Encoder.EndIndefinite", err)
 
-		if err := enc.StartIndefiniteMap(); err != nil {
-			t.Errorf("StartIndefiniteMap() returned an error %v", err)
-		}
-		if err := enc.EndIndefinite(); err != nil {
-			t.Errorf("EndIndefinite() returned an error %v", err)
-		}
+		err = enc.StartIndefiniteMap()
+		checkNoError(t, "Encoder.StartIndefiniteMap", err)
+		err = enc.EndIndefinite()
+		checkNoError(t, "Encoder.EndIndefinite", err)
 	})
 
 	// StartIndefiniteXXX returns error when IndefLength = IndefLengthForbidden
@@ -4515,40 +4498,20 @@ func TestEncIndefiniteLengthOption(t *testing.T) {
 		em := mustEncMode(t, EncOptions{IndefLength: IndefLengthForbidden})
 		enc := em.NewEncoder(&buf)
 		wantErrorMsg := "cbor: indefinite-length byte string isn't allowed"
-		if err := enc.StartIndefiniteByteString(); err == nil {
-			t.Errorf("StartIndefiniteByteString() didn't return an error")
-		} else if _, ok := err.(*IndefiniteLengthError); !ok {
-			t.Errorf("StartIndefiniteByteString() error type %T, want *IndefiniteLengthError", err)
-		} else if err.Error() != wantErrorMsg {
-			t.Errorf("StartIndefiniteByteString() returned error %q, want %q", err.Error(), wantErrorMsg)
-		}
+		err := enc.StartIndefiniteByteString()
+		checkError[*IndefiniteLengthError](t, "Encoder.StartIndefiniteByteString", err, wantErrorMsg)
 
 		wantErrorMsg = "cbor: indefinite-length UTF-8 text string isn't allowed"
-		if err := enc.StartIndefiniteTextString(); err == nil {
-			t.Errorf("StartIndefiniteTextString() didn't return an error")
-		} else if _, ok := err.(*IndefiniteLengthError); !ok {
-			t.Errorf("StartIndefiniteTextString() error type %T, want *IndefiniteLengthError", err)
-		} else if err.Error() != wantErrorMsg {
-			t.Errorf("StartIndefiniteTextString() returned error %q, want %q", err.Error(), wantErrorMsg)
-		}
+		err = enc.StartIndefiniteTextString()
+		checkError[*IndefiniteLengthError](t, "Encoder.StartIndefiniteTextString", err, wantErrorMsg)
 
 		wantErrorMsg = "cbor: indefinite-length array isn't allowed"
-		if err := enc.StartIndefiniteArray(); err == nil {
-			t.Errorf("StartIndefiniteArray() didn't return an error")
-		} else if _, ok := err.(*IndefiniteLengthError); !ok {
-			t.Errorf("StartIndefiniteArray() error type %T, want *IndefiniteLengthError", err)
-		} else if err.Error() != wantErrorMsg {
-			t.Errorf("StartIndefiniteArray() returned error %q, want %q", err.Error(), wantErrorMsg)
-		}
+		err = enc.StartIndefiniteArray()
+		checkError[*IndefiniteLengthError](t, "Encoder.StartIndefiniteArray", err, wantErrorMsg)
 
 		wantErrorMsg = "cbor: indefinite-length map isn't allowed"
-		if err := enc.StartIndefiniteMap(); err == nil {
-			t.Errorf("StartIndefiniteMap() didn't return an error")
-		} else if _, ok := err.(*IndefiniteLengthError); !ok {
-			t.Errorf("StartIndefiniteMap() error type %T, want *IndefiniteLengthError", err)
-		} else if err.Error() != wantErrorMsg {
-			t.Errorf("StartIndefiniteMap() returned error %q, want %q", err.Error(), wantErrorMsg)
-		}
+		err = enc.StartIndefiniteMap()
+		checkError[*IndefiniteLengthError](t, "Encoder.StartIndefiniteMap", err, wantErrorMsg)
 	})
 }
 
@@ -4559,34 +4522,21 @@ func TestEncTagsMdOption(t *testing.T) {
 func testEncTagsMdOption(t *testing.T) {
 	// Default option allows encoding CBOR tags
 	tag := Tag{123, "hello"}
-	if _, err := Marshal(tag); err != nil {
-		t.Errorf("Marshal() returned an error %v", err)
-	}
+	_, err := Marshal(tag)
+	checkNoError(t, "Marshal", err)
 
 	// Create EncMode with TimeTag = EncTagRequired and TagsForbidden option returns error
 	wantErrorMsg := "cbor: cannot set TagsMd to TagsForbidden when TimeTag is EncTagRequired"
-	_, err := EncOptions{TimeTag: EncTagRequired, TagsMd: TagsForbidden}.EncMode()
-	if err == nil {
-		t.Errorf("EncModeWithTags() didn't return an error")
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("EncModeWithTags() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	_, err = EncOptions{TimeTag: EncTagRequired, TagsMd: TagsForbidden}.EncMode()
+	checkError[error](t, "EncMode", err, wantErrorMsg)
 
 	// Create EncMode with TagSet and TagsForbidden option returns error
 	wantErrorMsg = "cbor: cannot create EncMode with TagSet when TagsMd is TagsForbidden"
 	tags := NewTagSet()
 	_, err = EncOptions{TagsMd: TagsForbidden}.EncModeWithTags(tags)
-	if err == nil {
-		t.Errorf("EncModeWithTags() didn't return an error")
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("EncModeWithTags() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "EncModeWithTags", err, wantErrorMsg)
 	_, err = EncOptions{TagsMd: TagsForbidden}.EncModeWithSharedTags(tags)
-	if err == nil {
-		t.Errorf("EncModeWithSharedTags() didn't return an error")
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("EncModeWithSharedTags() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "EncModeWithSharedTags", err, wantErrorMsg)
 
 	// Encoding Tag and TagsForbidden option returns error
 	wantErrorMsg = "cbor: cannot encode cbor.Tag when TagsMd is TagsForbidden"
@@ -5065,15 +5015,11 @@ func testSortModeFastShuffle(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			first, err := em.Marshal(tc.in)
-			if err != nil {
-				t.Fatal(err)
-			}
+			checkNoError(t, "em.Marshal", err)
 
 			for i := 1; i <= tc.trials; i++ {
 				next, err := em.Marshal(tc.in)
-				if err != nil {
-					t.Fatal(err)
-				}
+				checkNoError(t, "em.Marshal", err)
 				if !bytes.Equal(first, next) {
 					return
 				}
@@ -5850,9 +5796,7 @@ func testJSONMarshalerTranscoder(t *testing.T) {
 			opts := EncOptions{
 				JSONMarshalerTranscoder: transcodeFunc(func(w io.Writer, r io.Reader) error {
 					source, err := io.ReadAll(r)
-					if err != nil {
-						t.Fatal(err)
-					}
+					checkNoError(t, "io.ReadAll", err)
 					if got := string(source); got != string(tc.transcodeInput) {
 						t.Errorf("transcoder got input %q, want %q", got, string(tc.transcodeInput))
 					}
@@ -6134,9 +6078,7 @@ func testMarshalerErrorUnwrap(t *testing.T) {
 	innerErr := errors.New("MarshalCBOR: error")
 	v := marshalCBORError(innerErr.Error())
 	_, err := Marshal(v)
-	if err == nil {
-		t.Fatal("Marshal() didn't return an error")
-	}
+	checkError[error](t, "Marshal", err, "")
 	var me *MarshalerError
 	if errors.As(err, &me) {
 		if unwrapped := me.Unwrap(); unwrapped == nil || unwrapped.Error() != innerErr.Error() {
@@ -6169,15 +6111,13 @@ func TestUnsupportedValueErrorMessage(t *testing.T) {
 
 func TestMarshalToBufferNilBuffer(t *testing.T) {
 	// Test package-level function
-	if err := MarshalToBuffer(42, nil); err == nil {
-		t.Error("MarshalToBuffer(42, nil) didn't return an error")
-	}
+	err := MarshalToBuffer(42, nil)
+	checkError[error](t, "MarshalToBuffer", err, "")
 
 	// Test UserBufferEncMode method
 	bem := mustUserBufferEncMode(t, EncOptions{})
-	if err := bem.MarshalToBuffer(42, nil); err == nil {
-		t.Error("UserBufferEncMode.MarshalToBuffer(42, nil) didn't return an error")
-	}
+	err = bem.MarshalToBuffer(42, nil)
+	checkError[error](t, "bem.MarshalToBuffer", err, "")
 }
 
 func TestEncodedHeadLength(t *testing.T) {
@@ -6797,17 +6737,15 @@ func testMarshalStructWithFastPathTypes(t *testing.T) {
 
 			// Round-trip fast path types
 			var fpv fastPathTypes
-			if err = Unmarshal(tc.want, &fpv); err != nil {
-				t.Fatalf("Unmarshal(0x%x): unexpected error: %v", tc.want, err)
-			}
+			err = Unmarshal(tc.want, &fpv)
+			checkNoError(t, "Unmarshal", err)
 			got, err = em.Marshal(fpv)
 			checkMarshal(t, "em.Marshal", got, err, tc.want)
 
 			// Round-trip reflect path types
 			var rpv reflectPathTypes
-			if err = Unmarshal(tc.want, &rpv); err != nil {
-				t.Fatalf("Unmarshal(0x%x): unexpected error: %v", tc.want, err)
-			}
+			err = Unmarshal(tc.want, &rpv)
+			checkNoError(t, "Unmarshal", err)
 			got, err = em.Marshal(rpv)
 			checkMarshal(t, "em.Marshal", got, err, tc.want)
 		})
