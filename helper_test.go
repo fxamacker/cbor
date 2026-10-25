@@ -426,6 +426,26 @@ func checkError[E error](t *testing.T, call string, err error, wantErrMsg string
 	}
 }
 
+// checkNoError checks whether a call succeeded.
+func checkNoError(t *testing.T, call string, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("%s: unexpected error: %v", call, err)
+	}
+}
+
+// checkErrorCase checks a call in a test case that either fails or succeeds.
+// If wantErr is true, it checks err like checkError; otherwise, like
+// checkNoError, and wantErrMsg is ignored.
+func checkErrorCase[E error](t *testing.T, call string, err error, wantErr bool, wantErrMsg string) {
+	t.Helper()
+	if wantErr {
+		checkError[E](t, call, err, wantErrMsg)
+	} else {
+		checkNoError(t, call, err)
+	}
+}
+
 // derefOrNil returns the value pointed to by p, or nil if p is a nil pointer.
 // derefOrNil panics if p's dynamic type isn't a pointer.
 func derefOrNil(p any) any {

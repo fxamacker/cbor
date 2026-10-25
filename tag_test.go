@@ -202,9 +202,9 @@ func TestTagStruct(t *testing.T) {
 
 	data := mustHexDecode("d864a0") // {}
 	var v T
-	if err := unmarshalWithDM(t, dm, data, &v); err != nil {
-		t.Errorf("Unmarshal() returned error %v", err)
-	}
+	err := unmarshalWithDM(t, dm, data, &v)
+	checkNoError(t, "dm.Unmarshal", err)
+
 	b, err := em.Marshal(v)
 	checkMarshal(t, "em.Marshal", b, err, data)
 }
@@ -224,9 +224,9 @@ func TestTagFixedLengthStruct(t *testing.T) {
 
 	data := mustHexDecode("d864a1617360") // {"s":""}
 	var v T
-	if err := unmarshalWithDM(t, dm, data, &v); err != nil {
-		t.Errorf("Unmarshal() returned error %v", err)
-	}
+	err := unmarshalWithDM(t, dm, data, &v)
+	checkNoError(t, "dm.Unmarshal", err)
+
 	b, err := em.Marshal(v)
 	checkMarshal(t, "em.Marshal", b, err, data)
 }
@@ -256,9 +256,9 @@ func TestTagToArrayStruct(t *testing.T) {
 	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.3
 	data := mustHexDecode("d28443a10126a104524173796d6d657472696345434453413235365850a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b7158405427c1ff28d23fbad1f29c4c7c6a555e601d6fa29f9179bc3d7438bacaca5acd08c8d4d4f96131680c429a01f85951ecee743a52b9b63632c57209120e1c9e30")
 	var v signedCWT
-	if err := unmarshalWithDM(t, dm, data, &v); err != nil {
-		t.Errorf("Unmarshal() returned error %v", err)
-	}
+	err := unmarshalWithDM(t, dm, data, &v)
+	checkNoError(t, "dm.Unmarshal", err)
+
 	b, err := em.Marshal(v)
 	checkMarshal(t, "em.Marshal", b, err, data)
 }
@@ -289,9 +289,9 @@ func TestNestedTagStruct(t *testing.T) {
 	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.4
 	data := mustHexDecode("d83dd18443a10104a1044c53796d6d65747269633235365850a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b7148093101ef6d789200")
 	var v macedCOSE
-	if err := unmarshalWithDM(t, dm, data, &v); err != nil {
-		t.Errorf("Unmarshal() returned error %v", err)
-	}
+	err := unmarshalWithDM(t, dm, data, &v)
+	checkNoError(t, "dm.Unmarshal", err)
+
 	b, err := em.Marshal(v)
 	checkMarshal(t, "em.Marshal", b, err, data)
 }
@@ -423,17 +423,8 @@ func TestAddTagError(t *testing.T) {
 	tags := NewTagSet()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if err := tags.Add(tc.opts, tc.typ, tc.num); err == nil {
-				t.Errorf("TagSet.Add(%s, %d) didn't return an error", tc.typ.String(), tc.num)
-			} else if err.Error() != tc.wantErrorMsg {
-				var typeString string
-				if tc.typ == nil {
-					typeString = "nil"
-				} else {
-					typeString = tc.typ.String()
-				}
-				t.Errorf("TagSet.Add(%s, %d) returned error msg %q, want %q", typeString, tc.num, err, tc.wantErrorMsg)
-			}
+			err := tags.Add(tc.opts, tc.typ, tc.num)
+			checkError[error](t, "TagSet.Add", err, tc.wantErrorMsg)
 		})
 	}
 }
@@ -447,11 +438,8 @@ func TestAddDuplicateTagContentTypeError(t *testing.T) {
 	// Add myIntType and 100 to tags
 	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100)
 	// Add myIntType and 101 to tags
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 101); err == nil {
-		t.Errorf("TagSet.Add(%s, %d) didn't return an error", myIntType.String(), 101)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("TagSet.Add(%s, %d) returned error msg %q, want %q", myIntType, 101, err, wantErrorMsg)
-	}
+	err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 101)
+	checkError[error](t, "TagSet.Add", err, wantErrorMsg)
 }
 
 func TestAddDuplicateTagNumError(t *testing.T) {
@@ -466,11 +454,8 @@ func TestAddDuplicateTagNumError(t *testing.T) {
 	// Add myIntType and 100 to tags
 	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100)
 	// Add myBoolType and 100 to tags
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myBoolType, 100); err == nil {
-		t.Errorf("TagSet.Add(%s, %d) didn't return an error", myBoolType.String(), 100)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("TagSet.Add(%s, %d) returned error msg %q, want %q", myBoolType, 100, err, wantErrorMsg)
-	}
+	err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myBoolType, 100)
+	checkError[error](t, "TagSet.Add", err, wantErrorMsg)
 }
 
 func TestAddDuplicateTagNumsError(t *testing.T) {
@@ -485,11 +470,8 @@ func TestAddDuplicateTagNumsError(t *testing.T) {
 	// Add myIntType and [100, 101] to tags
 	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100, 101)
 	// Add myBoolType and [100, 101] to tags
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myBoolType, 100, 101); err == nil {
-		t.Errorf("TagSet.Add(%s, %d, %d) didn't return an error", myBoolType.String(), 100, 101)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("TagSet.Add(%s, %d, %d) returned error msg %q, want %q", myBoolType, 100, 101, err, wantErrorMsg)
-	}
+	err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myBoolType, 100, 101)
+	checkError[error](t, "TagSet.Add", err, wantErrorMsg)
 }
 
 func TestAddRemoveTag(t *testing.T) {
@@ -504,12 +486,10 @@ func TestAddRemoveTag(t *testing.T) {
 	stags := tags.(*syncTagSet)
 	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100)
 	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myFloatType, 101)
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, pMyIntType, 102); err == nil {
-		t.Errorf("TagSet.Add(%s, %d) didn't return an error", pMyIntType.String(), 102)
-	}
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, pMyFloatType, 103); err == nil {
-		t.Errorf("TagSet.Add(%s, %d) didn't return an error", pMyFloatType.String(), 103)
-	}
+	err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, pMyIntType, 102)
+	checkError[error](t, "TagSet.Add", err, "")
+	err = tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, pMyFloatType, 103)
+	checkError[error](t, "TagSet.Add", err, "")
 	if len(stags.t) != 2 {
 		t.Errorf("TagSet len is %d, want %d", len(stags.t), 2)
 	}
@@ -681,11 +661,8 @@ func TestAddTagTypeAliasError(t *testing.T) {
 	tags := NewTagSet()
 	for i, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, tc.typ, uint64(100+i)); err == nil { //nolint:gosec
-				t.Errorf("TagSet.Add(%s, %d) didn't return an error", tc.typ.String(), 0)
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("TagSet.Add(%s, %d) returned error msg %q, want %q", tc.typ.String(), 0, err, tc.wantErrorMsg)
-			}
+			err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, tc.typ, uint64(100+i)) //nolint:gosec
+			checkError[error](t, "TagSet.Add", err, tc.wantErrorMsg)
 		})
 	}
 }
@@ -942,9 +919,7 @@ func TestEncodeSharedTag(t *testing.T) {
 	sharedTagSet := NewTagSet()
 
 	em, err := EncOptions{}.EncModeWithSharedTags(sharedTagSet)
-	if err != nil {
-		t.Errorf("EncModeWithSharedTags() returned error %v", err)
-	}
+	checkNoError(t, "EncModeWithSharedTags", err)
 
 	// Register myInt type with tag number 123
 	mustAddTag(t, sharedTagSet, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 123)
@@ -982,9 +957,7 @@ func TestDecodeSharedTag(t *testing.T) {
 	sharedTagSet := NewTagSet()
 
 	dm, err := DecOptions{}.DecModeWithSharedTags(sharedTagSet)
-	if err != nil {
-		t.Errorf("DecModeWithSharedTags() returned error %v", err)
-	}
+	checkNoError(t, "DecModeWithSharedTags", err)
 
 	// Register myInt type with tag number 123
 	mustAddTag(t, sharedTagSet, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 123)
@@ -1091,11 +1064,8 @@ func TestNilRawTagUnmarshalCBORError(t *testing.T) {
 	wantErrorMsg := "cbor.RawTag: UnmarshalCBOR on nil pointer"
 	var tag *RawTag
 	data := mustHexDecode("c249010000000000000000")
-	if err := tag.UnmarshalCBOR(data); err == nil {
-		t.Errorf("UnmarshalCBOR() didn't return error")
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("UnmarshalCBOR() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	err := tag.UnmarshalCBOR(data)
+	checkError[error](t, "tag.UnmarshalCBOR", err, wantErrorMsg)
 }
 
 func TestTagUnmarshalError(t *testing.T) {
@@ -1482,9 +1452,7 @@ func TestUnmarshalRawTagOnBadData(t *testing.T) {
 				var v RawTag
 
 				err := v.UnmarshalCBOR(tc.data)
-				if err == nil {
-					t.Errorf("UnmarshalCBOR(%x) didn't return error", tc.data)
-				}
+				checkError[error](t, "v.UnmarshalCBOR", err, "")
 				if !strings.HasPrefix(err.Error(), tc.wantErrorMsg) {
 					t.Errorf("UnmarshalCBOR(%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
 				}

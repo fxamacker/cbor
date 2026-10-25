@@ -3604,9 +3604,8 @@ func TestInvalidCBORUnmarshal(t *testing.T) {
 			if ok {
 				d = &decoder{data: tc.data, dm: defaultDecMode}
 				ct, ai, val, err := d.wellformedHead()
-				if err != nil {
-					t.Errorf("wellformedHead(0x%x) error %q, want nil", tc.data, err.Error())
-				} else if sct != ct || sai != ai || sval != val {
+				checkNoError(t, "d.wellformedHead", err)
+				if sct != ct || sai != ai || sval != val {
 					t.Errorf("wellformedHead(0x%x) returned (%s, %d, %d), want (%s, %d, %d)", tc.data, ct, ai, val, sct, sai, sval)
 				}
 			}
@@ -3920,11 +3919,11 @@ func TestStructFieldNil(t *testing.T) {
 		PI  *int
 		PPI **int
 	}
+
 	var struc TestStruct
 	data, err := Marshal(struc)
-	if err != nil {
-		t.Fatalf("Marshal(%+v) returned error %v", struc, err)
-	}
+	checkNoError(t, "Marshal", err)
+
 	var struc2 TestStruct
 	err = unmarshal(t, data, &struc2)
 	checkUnmarshal(t, "Unmarshal", struc2, err, struc)
@@ -4284,13 +4283,12 @@ func TestMapKeyNaN(t *testing.T) {
 	// Data is generating by go-fuzz.
 	data := mustHexDecode("b0303030303030303030303030303030303038303030faffff30303030303030303030303030") // {-17: -17, NaN: -17}
 	var intf any
-	if err := unmarshal(t, data, &intf); err != nil {
-		t.Fatalf("Unmarshal(0x%x) returned error %v", data, err)
-	}
+	err := unmarshal(t, data, &intf)
+	checkNoError(t, "Unmarshal", err)
+
 	em := mustEncMode(t, EncOptions{Sort: SortCanonical})
-	if _, err := em.Marshal(intf); err != nil {
-		t.Errorf("Marshal(%v) returned error %v", intf, err)
-	}
+	_, err = em.Marshal(intf)
+	checkNoError(t, "em.Marshal", err)
 }
 
 func TestUnmarshalUndefinedElement(t *testing.T) {
@@ -4950,9 +4948,8 @@ func TestCOSEExamples(t *testing.T) {
 	}
 	for _, d := range data {
 		var v any
-		if err := unmarshal(t, d, &v); err != nil {
-			t.Errorf("Unmarshal(0x%x) returned error %v", d, err)
-		}
+		err := unmarshal(t, d, &v)
+		checkNoError(t, "Unmarshal", err)
 	}
 }
 
@@ -4989,9 +4986,8 @@ func TestUnmarshalArrayToStruct(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v T
-			if err := unmarshal(t, tc.data, &v); err != nil {
-				t.Errorf("Unmarshal(0x%x) returned error %v", tc.data, err)
-			}
+			err := unmarshal(t, tc.data, &v)
+			checkNoError(t, "Unmarshal", err)
 		})
 	}
 }
@@ -5225,9 +5221,7 @@ func TestUnmarshalDeepNesting(t *testing.T) {
 	}
 	em := mustEncMode(t, EncOptions{})
 	data, err := em.Marshal(root)
-	if err != nil {
-		t.Errorf("Marshal() deeply nested object returned error %v", err)
-	}
+	checkNoError(t, "em.Marshal", err)
 
 	// Try unmarshal it
 	dm := mustDecMode(t, DecOptions{MaxNestedLevels: 65535})
@@ -6110,9 +6104,7 @@ func TestDecIndefiniteLengthOption(t *testing.T) {
 			// Default option allows indefinite-length items
 			var v any
 			err := unmarshal(t, tc.data, &v)
-			if err != nil {
-				t.Errorf("Unmarshal(0x%x) returned an error %v", tc.data, err)
-			}
+			checkNoError(t, "Unmarshal", err)
 
 			dm := mustDecMode(t, tc.opts)
 			err = unmarshalWithDM(t, dm, tc.data, &v)
@@ -6127,30 +6119,21 @@ func TestDecTagsMdOption(t *testing.T) {
 
 	// Default option allows CBOR tags
 	var v any
-	if err := unmarshal(t, data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned an error %v", data, err)
-	}
+	err := unmarshal(t, data, &v)
+	checkNoError(t, "Unmarshal", err)
 
 	// Decoding CBOR tags with TagsForbidden option returns error
 	dm := mustDecMode(t, DecOptions{TagsMd: TagsForbidden})
-	err := unmarshalWithDM(t, dm, data, &v)
+	err = unmarshalWithDM(t, dm, data, &v)
 	checkError[error](t, "dm.Unmarshal", err, wantErrorMsg)
 
 	// Create DecMode with TagSet and TagsForbidden option returns error
 	wantErrorMsg = "cbor: cannot create DecMode with TagSet when TagsMd is TagsForbidden"
 	tags := NewTagSet()
 	_, err = DecOptions{TagsMd: TagsForbidden}.DecModeWithTags(tags)
-	if err == nil {
-		t.Errorf("DecModeWithTags() didn't return an error")
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("DecModeWithTags() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "DecModeWithTags", err, wantErrorMsg)
 	_, err = DecOptions{TagsMd: TagsForbidden}.DecModeWithSharedTags(tags)
-	if err == nil {
-		t.Errorf("DecModeWithSharedTags() didn't return an error")
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("DecModeWithSharedTags() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "DecModeWithSharedTags", err, wantErrorMsg)
 }
 
 func TestIntDecConvertNone(t *testing.T) {
@@ -7229,15 +7212,11 @@ func TestUnmarshalRegisteredTagToInterface(t *testing.T) {
 
 	v1 := A1{Field: &C{Field: 5}}
 	data1, err := em.Marshal(v1)
-	if err != nil {
-		t.Fatalf("Marshal(%+v) returned error %v", v1, err)
-	}
+	checkNoError(t, "em.Marshal", err)
 
 	v2 := A2{Fields: []B{&C{Field: 5}, &D{Field: "a"}}}
 	data2, err := em.Marshal(v2)
-	if err != nil {
-		t.Fatalf("Marshal(%+v) returned error %v", v2, err)
-	}
+	checkNoError(t, "em.Marshal", err)
 
 	testCases := []struct {
 		name           string
@@ -7822,12 +7801,7 @@ func TestNewSimpleValueRegistry(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := NewSimpleValueRegistryFromDefaults(tc.opts...)
-			if err == nil {
-				t.Fatalf("got nil error, want: %s", tc.wantErrorMsg)
-			}
-			if got := err.Error(); got != tc.wantErrorMsg {
-				t.Errorf("want: %s, got: %s", tc.wantErrorMsg, got)
-			}
+			checkError[error](t, "NewSimpleValueRegistryFromDefaults", err, tc.wantErrorMsg)
 		})
 	}
 }
@@ -7926,9 +7900,7 @@ func TestUnmarshalSimpleValues(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			r, err := NewSimpleValueRegistryFromDefaults(tc.fns...)
-			if err != nil {
-				t.Fatal(err)
-			}
+			checkNoError(t, "NewSimpleValueRegistryFromDefaults", err)
 
 			dm := mustDecMode(t, DecOptions{SimpleValues: r})
 
@@ -8120,11 +8092,7 @@ func TestNaNDecMode(t *testing.T) {
 				Message:  "floating-point NaN",
 			}
 			err := unmarshalWithDM(t, dm, tc.src, tc.dst)
-			if tc.reject {
-				checkError[*UnacceptableDataItemError](t, "dm.Unmarshal", err, want.Error())
-			} else if err != nil {
-				t.Errorf("unexpected error: %v", err)
-			}
+			checkErrorCase[*UnacceptableDataItemError](t, "dm.Unmarshal", err, tc.reject, want.Error())
 		})
 	}
 }
@@ -8378,11 +8346,7 @@ func TestInfDecMode(t *testing.T) {
 				Message:  "floating-point infinity",
 			}
 			err := unmarshalWithDM(t, dm, tc.src, tc.dst)
-			if tc.reject {
-				checkError[*UnacceptableDataItemError](t, "dm.Unmarshal", err, want.Error())
-			} else if err != nil {
-				t.Errorf("unexpected error: %v", err)
-			}
+			checkErrorCase[*UnacceptableDataItemError](t, "dm.Unmarshal", err, tc.reject, want.Error())
 		})
 	}
 }
@@ -8441,11 +8405,7 @@ func TestUnmarshalByteStringTextConversionError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dm := mustDecMode(t, tc.opts)
 			err := unmarshalWithDM(t, dm, tc.data, reflect.New(tc.dstType).Interface())
-			if tc.wantErrorMsg != "" {
-				checkError[error](t, "dm.Unmarshal", err, tc.wantErrorMsg)
-			} else if err != nil {
-				t.Errorf("unexpected error: %v", err)
-			}
+			checkErrorCase[error](t, "dm.Unmarshal", err, tc.wantErrorMsg != "", tc.wantErrorMsg)
 		})
 	}
 }
@@ -8742,11 +8702,7 @@ func TestBignumTagMode(t *testing.T) {
 				t.Run(dstType.String(), func(t *testing.T) {
 					dstv := reflect.New(dstType)
 					err := unmarshalWithDM(t, dm, tc.input, dstv.Interface())
-					if tc.wantErrorMsg != "" {
-						checkError[error](t, "dm.Unmarshal", err, tc.wantErrorMsg)
-					} else if err != nil {
-						t.Errorf("want nil error, got: %v", err)
-					}
+					checkErrorCase[error](t, "dm.Unmarshal", err, tc.wantErrorMsg != "", tc.wantErrorMsg)
 				})
 			}
 		})
@@ -8857,9 +8813,7 @@ func TestJSONUnmarshalerTranscoder(t *testing.T) {
 			dm := mustDecMode(t, DecOptions{
 				JSONUnmarshalerTranscoder: transcodeFunc(func(w io.Writer, r io.Reader) error {
 					source, err := io.ReadAll(r)
-					if err != nil {
-						t.Fatal(err)
-					}
+					checkNoError(t, "io.ReadAll", err)
 					if got := string(source); got != string(tc.transcodeInput) {
 						t.Errorf("transcoder got input %q, want %q", got, string(tc.transcodeInput))
 					}

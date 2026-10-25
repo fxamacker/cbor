@@ -1343,9 +1343,8 @@ func testEncodeTime(t *testing.T) {
 
 				var tm time.Time
 				err = unmarshal(t, convert.wantCborData, &tm)
-				if err != nil {
-					t.Errorf("Unmarshal(0x%x) to time.Time returned error %v", convert.wantCborData, err)
-				} else if convert.roundtrip {
+				checkNoError(t, "Unmarshal", err)
+				if convert.roundtrip {
 					if convert.opt.hasLocalOffset && tc.tm.Compare(tm) != 0 {
 						t.Errorf("failed to rountrip local time: want %s, got %s", tc.tm, tm)
 					}
@@ -1480,9 +1479,9 @@ func testEncodeTimeUnixMicro(t *testing.T) {
 
 			if !tc.skipRoundTrip {
 				var got time.Time
-				if err := Unmarshal(b, &got); err != nil {
-					t.Errorf("Unmarshal(0x%x) returned error %v", b, err)
-				} else if !got.Equal(tc.tm) {
+				err := Unmarshal(b, &got)
+				checkNoError(t, "Unmarshal", err)
+				if !got.Equal(tc.tm) {
 					t.Errorf("Unmarshal(0x%x) = %v, want %v", b, got.UTC(), tc.tm)
 				}
 			}
@@ -1501,13 +1500,11 @@ func testEncodeTimeUnixMicro(t *testing.T) {
 		for d := -2 * time.Millisecond; d <= 2*time.Millisecond; d += time.Microsecond {
 			tm := center.Add(d)
 			b, err := em.Marshal(tm)
-			if err != nil {
-				t.Fatalf("Marshal(%v) returned error %v", tm, err)
-			}
+			checkNoError(t, "em.Marshal", err)
+
 			var f float64
-			if err := Unmarshal(b, &f); err != nil {
-				t.Fatalf("Unmarshal(0x%x) returned error %v", b, err)
-			}
+			err = Unmarshal(b, &f)
+			checkNoError(t, "Unmarshal", err)
 			if f < prev {
 				t.Fatalf("Marshal(%v) encodes %v, want >= %v (encoded value of the previous time)", tm, f, prev)
 			}

@@ -283,11 +283,8 @@ func TestCanonicalEncOptions(t *testing.T) { //nolint:dupl
 		t.Errorf("CanonicalEncOptions() returned EncOptions with InfConvert %d, want %d", opts.InfConvert, wantInfConvert)
 	}
 	enc := em.NewEncoder(io.Discard)
-	if err := enc.StartIndefiniteArray(); err == nil {
-		t.Errorf("StartIndefiniteArray() didn't return an error")
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("StartIndefiniteArray() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	err := enc.StartIndefiniteArray()
+	checkError[error](t, "Encoder.StartIndefiniteArray", err, wantErrorMsg)
 }
 
 func TestCTAP2EncOptions(t *testing.T) { //nolint:dupl
@@ -311,11 +308,8 @@ func TestCTAP2EncOptions(t *testing.T) { //nolint:dupl
 		t.Errorf("CTAP2EncOptions() returned EncOptions with InfConvert %d, want %d", opts.InfConvert, wantInfConvert)
 	}
 	enc := em.NewEncoder(io.Discard)
-	if err := enc.StartIndefiniteArray(); err == nil {
-		t.Errorf("StartIndefiniteArray() didn't return an error")
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("StartIndefiniteArray() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	err := enc.StartIndefiniteArray()
+	checkError[error](t, "Encoder.StartIndefiniteArray", err, wantErrorMsg)
 }
 
 func TestCoreDetEncOptions(t *testing.T) { //nolint:dupl
@@ -339,11 +333,8 @@ func TestCoreDetEncOptions(t *testing.T) { //nolint:dupl
 		t.Errorf("CoreDetEncOptions() returned EncOptions with InfConvert %d, want %d", opts.InfConvert, wantInfConvert)
 	}
 	enc := em.NewEncoder(io.Discard)
-	if err := enc.StartIndefiniteArray(); err == nil {
-		t.Errorf("StartIndefiniteArray() didn't return an error")
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("StartIndefiniteArray() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	err := enc.StartIndefiniteArray()
+	checkError[error](t, "Encoder.StartIndefiniteArray", err, wantErrorMsg)
 }
 
 func TestPreferredUnsortedEncOptions(t *testing.T) {
@@ -366,9 +357,8 @@ func TestPreferredUnsortedEncOptions(t *testing.T) {
 		t.Errorf("PreferredUnsortedEncOptions() returned EncOptions with InfConvert %d, want %d", opts.InfConvert, wantInfConvert)
 	}
 	enc := em.NewEncoder(io.Discard)
-	if err := enc.StartIndefiniteArray(); err != nil {
-		t.Errorf("StartIndefiniteArray() returned error %v", err)
-	}
+	err := enc.StartIndefiniteArray()
+	checkNoError(t, "Encoder.StartIndefiniteArray", err)
 }
 
 type stubTranscoder struct{}

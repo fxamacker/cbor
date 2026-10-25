@@ -12,21 +12,18 @@ import (
 
 func TestValid1(t *testing.T) {
 	for _, tc := range marshalTestCases {
-		if err := Wellformed(tc.wantData); err != nil {
-			t.Errorf("Wellformed() returned error %v", err)
-		}
+		err := Wellformed(tc.wantData)
+		checkNoError(t, "Wellformed", err)
 	}
 }
 
 func TestValid2(t *testing.T) {
 	for _, tc := range marshalTestCases {
 		dm := mustDecMode(t, DecOptions{DupMapKey: DupMapKeyEnforcedAPF})
-		if err := dm.Wellformed(tc.wantData); err != nil {
-			t.Errorf("Wellformed() returned error %v", err)
-		}
-		if err := dm.(*decMode).wellformedSyntaxMode.Wellformed(tc.wantData); err != nil {
-			t.Errorf("wellformedSyntaxMode.Wellformed() returned error %v", err)
-		}
+		err := dm.Wellformed(tc.wantData)
+		checkNoError(t, "dm.Wellformed", err)
+		err = dm.(*decMode).wellformedSyntaxMode.Wellformed(tc.wantData)
+		checkNoError(t, "wellformedSyntaxMode.Wellformed", err)
 	}
 }
 
@@ -83,9 +80,8 @@ func TestValidOnStreamingData(t *testing.T) {
 	}
 	d := decoder{data: buf.Bytes(), dm: defaultDecMode}
 	for range marshalTestCases {
-		if err := d.wellformed(true, false); err != nil {
-			t.Errorf("wellformed() returned error %v", err)
-		}
+		err := d.wellformed(true, false)
+		checkNoError(t, "d.wellformed", err)
 	}
 }
 
@@ -260,9 +256,7 @@ func TestDepth(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			d := decoder{data: tc.data, dm: defaultDecMode}
 			depth, err := d.wellformedInternal(0, false)
-			if err != nil {
-				t.Errorf("wellformed(0x%x) returned error %v", tc.data, err)
-			}
+			checkNoError(t, "d.wellformedInternal", err)
 			if depth != tc.wantDepth {
 				t.Errorf("wellformed(0x%x) returned depth %d, want %d", tc.data, depth, tc.wantDepth)
 			}
@@ -324,13 +318,8 @@ func TestDepthError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, _ := tc.opts.decMode()
 			d := decoder{data: tc.data, dm: dm}
-			if _, err := d.wellformedInternal(0, false); err == nil {
-				t.Errorf("wellformed(0x%x) didn't return an error", tc.data)
-			} else if _, ok := err.(*MaxNestedLevelError); !ok {
-				t.Errorf("wellformed(0x%x) returned wrong error type %T, want (*MaxNestedLevelError)", tc.data, err)
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("wellformed(0x%x) returned error %q, want error %q", tc.data, err.Error(), tc.wantErrorMsg)
-			}
+			_, err := d.wellformedInternal(0, false)
+			checkError[*MaxNestedLevelError](t, "d.wellformedInternal", err, tc.wantErrorMsg)
 		})
 	}
 }
@@ -377,9 +366,8 @@ func TestValidBuiltinTagTest(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			d := decoder{data: tc.data, dm: defaultDecMode}
-			if err := d.wellformed(true, true); err != nil {
-				t.Errorf("wellformed(0x%x) returned error %v", tc.data, err)
-			}
+			err := d.wellformed(true, true)
+			checkNoError(t, "d.wellformed", err)
 		})
 	}
 }
@@ -436,20 +424,14 @@ func TestInvalidBuiltinTagTest(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			d := decoder{data: tc.data, dm: defaultDecMode}
 			err := d.wellformed(true, true)
-			if err == nil {
-				t.Errorf("wellformed(0x%x) didn't return an error", tc.data)
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("wellformed(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-			}
+			checkError[error](t, "d.wellformed", err, tc.wantErrorMsg)
 		})
 	}
 }
 
 func TestWellformedSyntaxMode(t *testing.T) {
 	rejectedSimpleValues, err := NewSimpleValueRegistryFromDefaults(WithRejectedSimpleValue(16))
-	if err != nil {
-		t.Fatalf("NewSimpleValueRegistryFromDefaults: unexpected error: %v", err)
-	}
+	checkNoError(t, "NewSimpleValueRegistryFromDefaults", err)
 
 	type taggedFloat float64
 	tags := NewTagSet()

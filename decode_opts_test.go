@@ -402,38 +402,18 @@ func TestDecOptionsConflictWithRegisteredTags(t *testing.T) {
 			tags := NewTagSet()
 			mustAddTag(t, tags, TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[empty](), tc.tagNum)
 
-			if _, err := tc.opts.DecModeWithTags(tags); err == nil {
-				if tc.wantErrorMsg != "" {
-					t.Errorf("got nil error from DecModeWithTags, want %q", tc.wantErrorMsg)
-				}
-			} else if got := err.Error(); got != tc.wantErrorMsg {
-				if tc.wantErrorMsg != "" {
-					t.Errorf("unexpected error from DecModeWithTags, got %q want %q", got, tc.wantErrorMsg)
-				} else {
-					t.Errorf("want nil error from DecModeWithTags, got %q", got)
-				}
-			}
+			_, err := tc.opts.DecModeWithTags(tags)
+			checkErrorCase[error](t, "DecModeWithTags", err, tc.wantErrorMsg != "", tc.wantErrorMsg)
 
-			if _, err := tc.opts.DecModeWithSharedTags(tags); err == nil {
-				if tc.wantErrorMsg != "" {
-					t.Errorf("got nil error from DecModeWithSharedTags, want %q", tc.wantErrorMsg)
-				}
-			} else if got := err.Error(); got != tc.wantErrorMsg {
-				if tc.wantErrorMsg != "" {
-					t.Errorf("unexpected error from DecModeWithSharedTags, got %q want %q", got, tc.wantErrorMsg)
-				} else {
-					t.Errorf("want nil error from DecModeWithSharedTags, got %q", got)
-				}
-			}
+			_, err = tc.opts.DecModeWithSharedTags(tags)
+			checkErrorCase[error](t, "DecModeWithSharedTags", err, tc.wantErrorMsg != "", tc.wantErrorMsg)
 		})
 	}
 }
 
 func TestDecOptions(t *testing.T) {
 	simpleValues, err := NewSimpleValueRegistryFromDefaults(WithRejectedSimpleValue(255))
-	if err != nil {
-		t.Fatal(err)
-	}
+	checkNoError(t, "NewSimpleValueRegistryFromDefaults", err)
 
 	opts1 := DecOptions{
 		DupMapKey:                 DupMapKeyEnforcedAPF,
