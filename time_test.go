@@ -248,6 +248,12 @@ func TestDecodeInvalidTagTime(t *testing.T) {
 			wantErrorMsg:  "cbor: cannot unmarshal primitives into Go value of type time.Time (1e+20 overflows Go's int64)",
 		},
 		{
+			name:          "tag 1 with float64 2^63",
+			data:          mustHexDecode("c1fb43e0000000000000"), // 1(9223372036854775808.0)
+			decodeToTypes: []reflect.Type{typeAny, typeTime},
+			wantErrorMsg:  "cbor: cannot unmarshal primitives into Go value of type time.Time (9.223372036854776e+18 overflows Go's int64)",
+		},
+		{
 			name:          "tag 1 with negative float64 overflow",
 			data:          mustHexDecode("c1fbc415af1d78b58c40"), // 1(-1e+20)
 			decodeToTypes: []reflect.Type{typeAny, typeTime},
