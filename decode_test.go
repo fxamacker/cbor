@@ -3606,7 +3606,7 @@ func TestInvalidCBORUnmarshal(t *testing.T) {
 				ct, ai, val, err := d.wellformedHead()
 				checkNoError(t, "d.wellformedHead", err)
 				if sct != ct || sai != ai || sval != val {
-					t.Errorf("wellformedHead(0x%x) returned (%s, %d, %d), want (%s, %d, %d)", tc.data, ct, ai, val, sct, sai, sval)
+					t.Errorf("d.wellformedHead(0x%x) = (%s, %d, %d), want (%s, %d, %d)", tc.data, ct, ai, val, sct, sai, sval)
 				}
 			}
 		})
@@ -3906,7 +3906,7 @@ func TestUnmarshalPrefilledStruct(t *testing.T) {
 	err := unmarshal(t, data, &prefilledStruct)
 	checkUnmarshal(t, "Unmarshal", prefilledStruct, err, want)
 	if len(prefilledStruct.B) != 2 || cap(prefilledStruct.B) != 4 {
-		t.Errorf("Unmarshal(0x%x) = %v (len %d, cap %d), want len == 2, cap == 5", data, prefilledStruct.B, len(prefilledStruct.B), cap(prefilledStruct.B))
+		t.Errorf("Unmarshal(0x%x) = %v (len %d, cap %d), want len == 2, cap == 4", data, prefilledStruct.B, len(prefilledStruct.B), cap(prefilledStruct.B))
 	}
 	if !reflect.DeepEqual(prefilledStruct.B[:cap(prefilledStruct.B)], []int{2, 3, 400, 500}) {
 		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, prefilledStruct.B, prefilledStruct.B, []int{2, 3, 400, 500}, []int{2, 3, 400, 500})
@@ -5283,7 +5283,7 @@ func TestUnmarshalToNotNilInterface(t *testing.T) {
 	err := unmarshal(t, data, &v)
 	checkUnmarshal(t, "Unmarshal", v, err, wantV)
 	if s != "hello" {
-		t.Errorf("Unmarshal(0x%x) modified s %q", data, s)
+		t.Errorf("after Unmarshal(0x%x), s = %q, want \"hello\"", data, s)
 	}
 }
 
@@ -6546,12 +6546,12 @@ func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
 
 			// Test unmarshaling CBOR into a value of type any.
 			var v any
-			err := unmarshal(t, tc.data, &v)
+			err := unmarshal(t, data, &v)
 			checkUnmarshalFunc(t, "Unmarshal", v, err, tc.wantInterfaceValue, floatEqual(tc.equalityThreshold))
 
 			// Test unmarshaling CBOR into RawMessage.
 			var r RawMessage
-			err = unmarshal(t, tc.data, &r)
+			err = unmarshal(t, data, &r)
 			checkUnmarshal(t, "Unmarshal", r, err, RawMessage(tc.data))
 
 			// Test unmarshaling CBOR into compatible data types.
@@ -6559,7 +6559,7 @@ func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
 				t.Run(fmt.Sprintf("%T", value), func(t *testing.T) {
 					v := reflect.New(reflect.TypeOf(value))
 					vPtr := v.Interface()
-					err := unmarshal(t, tc.data, vPtr)
+					err := unmarshal(t, data, vPtr)
 					checkUnmarshalFunc(t, "Unmarshal", v.Elem().Interface(), err, value, floatEqual(tc.equalityThreshold))
 				})
 			}
@@ -6568,7 +6568,7 @@ func TestUnmarshalFloatWithTagNum55799(t *testing.T) {
 			for _, typ := range unmarshalFloatWrongTypes {
 				v := reflect.New(typ)
 				vPtr := v.Interface()
-				err := unmarshal(t, tc.data, vPtr)
+				err := unmarshal(t, data, vPtr)
 				checkError[*UnmarshalTypeError](t, "Unmarshal", err, "")
 			}
 		})
@@ -7410,7 +7410,7 @@ func TestUnmarshalFirstNoTrailing(t *testing.T) {
 		rest, err := UnmarshalFirst(tc.data, &v)
 		checkUnmarshalFunc(t, "UnmarshalFirst", v, err, tc.wantInterfaceValue, nonFloatEqual)
 		if len(rest) != 0 {
-			t.Errorf("UnmarshalFirst(0x%x) returned rest %x (want [])", tc.data, rest)
+			t.Errorf("UnmarshalFirst(0x%x) rest = 0x%x, want empty", tc.data, rest)
 		}
 	}
 }
@@ -7426,7 +7426,7 @@ func TestUnmarshalfirstTrailing(t *testing.T) {
 		rest, err := UnmarshalFirst(data, &v)
 		checkUnmarshalFunc(t, "UnmarshalFirst", v, err, tc.wantInterfaceValue, nonFloatEqual)
 		if !bytes.Equal(trailingData, rest) {
-			t.Errorf("UnmarshalFirst(0x%x) returned rest %x (want %x)", data, rest, trailingData)
+			t.Errorf("UnmarshalFirst(0x%x) rest = 0x%x, want 0x%x", data, rest, trailingData)
 		}
 	}
 }
@@ -7438,7 +7438,7 @@ func TestUnmarshalFirstInvalidItem(t *testing.T) {
 	rest, err := UnmarshalFirst(invalidCBOR, &v)
 	checkError[error](t, "UnmarshalFirst", err, "")
 	if rest != nil {
-		t.Errorf("UnmarshalFirst(0x%x) = %x, want nil", invalidCBOR, rest)
+		t.Errorf("UnmarshalFirst(0x%x) rest = 0x%x, want nil", invalidCBOR, rest)
 	}
 }
 
@@ -9334,7 +9334,7 @@ func TestNeedsHashableValueCheck(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := needsHashableValueCheck(tc.typ); got != tc.want {
-				t.Errorf("needsHashableValueCheck(%s): got %t, want %t", tc.typ.String(), got, tc.want)
+				t.Errorf("needsHashableValueCheck(%s) = %t, want %t", tc.typ.String(), got, tc.want)
 			}
 		})
 	}

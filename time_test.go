@@ -441,14 +441,14 @@ func TestDecTimeTagOption(t *testing.T) {
 			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
-			name:            "not-tagged data with timeTagOptionalDecMode option",
+			name:            "not-tagged data with DecTagOptional option",
 			cborRFC3339Time: mustHexDecode("74323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("1a514b67b0"),
 			dm:              dmTimeTagOptional,
 			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
-			name:                "not-tagged data with timeTagRequiredDecMode option",
+			name:                "not-tagged data with DecTagRequired option",
 			cborRFC3339Time:     mustHexDecode("74323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:        mustHexDecode("1a514b67b0"),
 			dm:                  dmTimeTagRequired,
@@ -457,21 +457,21 @@ func TestDecTimeTagOption(t *testing.T) {
 		},
 		// tagged time CBOR data
 		{
-			name:            "tagged data with timeTagIgnoredDecMode option",
+			name:            "tagged data with DecTagIgnored option",
 			cborRFC3339Time: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c11a514b67b0"),
 			dm:              dmTimeTagIgnored,
 			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
-			name:            "tagged data with timeTagOptionalDecMode option",
+			name:            "tagged data with DecTagOptional option",
 			cborRFC3339Time: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c11a514b67b0"),
 			dm:              dmTimeTagOptional,
 			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
-			name:            "tagged data with timeTagRequiredDecMode option",
+			name:            "tagged data with DecTagRequired option",
 			cborRFC3339Time: mustHexDecode("c074323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c11a514b67b0"),
 			dm:              dmTimeTagRequired,
@@ -479,21 +479,21 @@ func TestDecTimeTagOption(t *testing.T) {
 		},
 		// mis-tagged time CBOR data
 		{
-			name:            "mis-tagged data with timeTagIgnoredDecMode option",
+			name:            "mis-tagged data with DecTagIgnored option",
 			cborRFC3339Time: mustHexDecode("c8c974323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c8c91a514b67b0"),
 			dm:              dmTimeTagIgnored,
 			wantTime:        mustParseTime(time.RFC3339Nano, "2013-03-21T20:04:00Z"),
 		},
 		{
-			name:            "mis-tagged data with timeTagOptionalDecMode option",
+			name:            "mis-tagged data with DecTagOptional option",
 			cborRFC3339Time: mustHexDecode("c8c974323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c8c91a514b67b0"),
 			dm:              dmTimeTagOptional,
 			wantErrorMsg:    "cbor: wrong tag number for time.Time, got 8, expect 0 or 1",
 		},
 		{
-			name:            "mis-tagged data with timeTagRequiredDecMode option",
+			name:            "mis-tagged data with DecTagRequired option",
 			cborRFC3339Time: mustHexDecode("c8c974323031332d30332d32315432303a30343a30305a"),
 			cborUnixTime:    mustHexDecode("c8c91a514b67b0"),
 			dm:              dmTimeTagRequired,
@@ -507,7 +507,7 @@ func TestDecTimeTagOption(t *testing.T) {
 			if tc.wantErrorMsgPartial {
 				checkUnmarshalCaseFunc[error](t, "dm.Unmarshal", tm, err, tc.wantTime, tc.wantErrorMsg != "", "", nonFloatEqual)
 				if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborRFC3339Time, err.Error(), tc.wantErrorMsg)
+					t.Errorf("dm.Unmarshal(0x%x): got %q, want substring %q", tc.cborRFC3339Time, err.Error(), tc.wantErrorMsg)
 				}
 			} else {
 				checkUnmarshalCaseFunc[error](t, "dm.Unmarshal", tm, err, tc.wantTime, tc.wantErrorMsg != "", tc.wantErrorMsg, nonFloatEqual)
@@ -518,7 +518,7 @@ func TestDecTimeTagOption(t *testing.T) {
 			if tc.wantErrorMsgPartial {
 				checkUnmarshalCaseFunc[error](t, "dm.Unmarshal", tm, err, tc.wantTime, tc.wantErrorMsg != "", "", nonFloatEqual)
 				if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.cborRFC3339Time, err.Error(), tc.wantErrorMsg)
+					t.Errorf("dm.Unmarshal(0x%x): got %q, want substring %q", tc.cborUnixTime, err.Error(), tc.wantErrorMsg)
 				}
 			} else {
 				checkUnmarshalCaseFunc[error](t, "dm.Unmarshal", tm, err, tc.wantTime, tc.wantErrorMsg != "", tc.wantErrorMsg, nonFloatEqual)
@@ -1346,10 +1346,10 @@ func testEncodeTime(t *testing.T) {
 				checkNoError(t, "Unmarshal", err)
 				if convert.roundtrip {
 					if convert.opt.hasLocalOffset && tc.tm.Compare(tm) != 0 {
-						t.Errorf("failed to rountrip local time: want %s, got %s", tc.tm, tm)
+						t.Errorf("Unmarshal(0x%x) = %s, want %s (local time round trip)", convert.wantCborData, tm, tc.tm)
 					}
 					if !convert.opt.hasLocalOffset && tc.tm.UTC().Compare(tm.UTC()) != 0 {
-						t.Errorf("failed to roundtrip UTC time: want %s, got %s", tc.tm, tm)
+						t.Errorf("Unmarshal(0x%x) = %s, want %s (UTC round trip)", convert.wantCborData, tm, tc.tm)
 					}
 				}
 			})
@@ -1506,7 +1506,7 @@ func testEncodeTimeUnixMicro(t *testing.T) {
 			err = Unmarshal(b, &f)
 			checkNoError(t, "Unmarshal", err)
 			if f < prev {
-				t.Fatalf("Marshal(%v) encodes %v, want >= %v (encoded value of the previous time)", tm, f, prev)
+				t.Fatalf("Marshal(%v) = %v (as float64), want >= %v (previous time)", tm, f, prev)
 			}
 			prev = f
 		}

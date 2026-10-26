@@ -57,18 +57,7 @@ func TestValidExtraneousData(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			err := Wellformed(tc.data)
-			if err == nil {
-				t.Errorf("Wellformed(0x%x) didn't return an error", tc.data)
-			} else {
-				ederr, ok := err.(*ExtraneousDataError)
-				if !ok {
-					t.Errorf("Wellformed(0x%x) error type %T, want *ExtraneousDataError", tc.data, err)
-				} else if ederr.numOfBytes != tc.extraneousDataNumOfBytes {
-					t.Errorf("Wellformed(0x%x) returned %d bytes of extraneous data, want %d", tc.data, ederr.numOfBytes, tc.extraneousDataNumOfBytes)
-				} else if ederr.index != tc.extraneousDataIndex {
-					t.Errorf("Wellformed(0x%x) returned extraneous data index %d, want %d", tc.data, ederr.index, tc.extraneousDataIndex)
-				}
-			}
+			checkError[*ExtraneousDataError](t, "Wellformed", err, (&ExtraneousDataError{numOfBytes: tc.extraneousDataNumOfBytes, index: tc.extraneousDataIndex}).Error())
 		})
 	}
 }
@@ -258,7 +247,7 @@ func TestDepth(t *testing.T) {
 			depth, err := d.wellformedInternal(0, false)
 			checkNoError(t, "d.wellformedInternal", err)
 			if depth != tc.wantDepth {
-				t.Errorf("wellformed(0x%x) returned depth %d, want %d", tc.data, depth, tc.wantDepth)
+				t.Errorf("d.wellformedInternal(0x%x) depth = %d, want %d", tc.data, depth, tc.wantDepth)
 			}
 		})
 	}

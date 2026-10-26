@@ -313,7 +313,7 @@ func testDecoderEOF(t *testing.T, dec *Decoder) {
 	var v any
 	err := dec.Decode(&v)
 	if !errors.Is(err, io.EOF) {
-		t.Errorf("Decoder.Decode: got error %v, want io.EOF", err)
+		t.Errorf("Decoder.Decode error = %v, want io.EOF", err)
 	}
 	if v != nil {
 		t.Errorf("Decoder.Decode = %v (%T), want nil (no more data)", v, v)

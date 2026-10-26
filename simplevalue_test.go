@@ -150,7 +150,7 @@ func TestUnmarshalSimpleValueOnBadData(t *testing.T) {
 				err := v.UnmarshalCBOR(tc.data)
 				checkError[error](t, "v.UnmarshalCBOR", err, "")
 				if !strings.HasPrefix(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("UnmarshalCBOR(%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
+					t.Errorf("v.UnmarshalCBOR(0x%x): got %q, want prefix %q", tc.data, err.Error(), tc.wantErrorMsg)
 				}
 			}
 			// Test Unmarshal(data, *SimpleValue), which calls SimpleValue.unmarshalCBOR() under the hood

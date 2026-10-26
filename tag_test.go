@@ -537,7 +537,7 @@ func TestTagSetRemoveNil(t *testing.T) {
 	}
 	ti := tags.getTagItemFromType(myIntType)
 	if !reflect.DeepEqual(ti, expectedTI) {
-		t.Errorf("tagItem is %+v, want %+v", ti, expectedTI)
+		t.Errorf("tags.getTagItemFromType() = %+v, want %+v", ti, expectedTI)
 	}
 }
 
@@ -993,35 +993,29 @@ func TestDecModeWithTagsError(t *testing.T) {
 	wantErrorMsg := "cbor: cannot create DecMode with nil value as TagSet"
 	dm, err := DecOptions{}.DecModeWithTags(nil)
 	if dm != nil {
-		t.Errorf("DecModeWithTags(nil) returned %v", dm)
+		t.Errorf("DecModeWithTags(nil) = %v, want nil", dm)
 	}
-	if err.Error() != wantErrorMsg {
-		t.Errorf("DecModeWithTags(nil) returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "DecModeWithTags", err, wantErrorMsg)
+
 	dm, err = DecOptions{}.DecModeWithSharedTags(nil)
 	if dm != nil {
-		t.Errorf("DecModeWithSharedTags(nil) returned %v", dm)
+		t.Errorf("DecModeWithSharedTags(nil) = %v, want nil", dm)
 	}
-	if err.Error() != wantErrorMsg {
-		t.Errorf("DecModeWithSharedTags(nil) returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "DecModeWithSharedTags", err, wantErrorMsg)
 
 	// Create DecMode with invalid EncOptions
 	wantErrorMsg = "cbor: invalid TimeTag 100"
 	dm, err = DecOptions{TimeTag: 100}.DecModeWithTags(NewTagSet())
 	if dm != nil {
-		t.Errorf("DecModeWithTags() returned %v", dm)
+		t.Errorf("DecModeWithTags() = %v, want nil", dm)
 	}
-	if err.Error() != wantErrorMsg {
-		t.Errorf("DecModeWithTags() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "DecModeWithTags", err, wantErrorMsg)
+
 	dm, err = DecOptions{TimeTag: 100}.DecModeWithSharedTags(NewTagSet())
 	if dm != nil {
-		t.Errorf("DecModeWithSharedTags() returned %v", dm)
+		t.Errorf("DecModeWithSharedTags() = %v, want nil", dm)
 	}
-	if err.Error() != wantErrorMsg {
-		t.Errorf("DecModeWithSharedTags() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "DecModeWithSharedTags", err, wantErrorMsg)
 }
 
 func TestEncModeWithTagsError(t *testing.T) {
@@ -1029,35 +1023,29 @@ func TestEncModeWithTagsError(t *testing.T) {
 	wantErrorMsg := "cbor: cannot create EncMode with nil value as TagSet"
 	em, err := EncOptions{}.EncModeWithTags(nil)
 	if em != nil {
-		t.Errorf("EncModeWithTags(nil) returned %v", em)
+		t.Errorf("EncModeWithTags(nil) = %v, want nil", em)
 	}
-	if err.Error() != wantErrorMsg {
-		t.Errorf("EncModeWithTags(nil) returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "EncModeWithTags", err, wantErrorMsg)
+
 	em, err = EncOptions{}.EncModeWithSharedTags(nil)
 	if em != nil {
-		t.Errorf("EncModeWithSharedTags(nil) returned %v", em)
+		t.Errorf("EncModeWithSharedTags(nil) = %v, want nil", em)
 	}
-	if err.Error() != wantErrorMsg {
-		t.Errorf("EncModeWithSharedTags(nil) returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "EncModeWithSharedTags", err, wantErrorMsg)
 
 	// Create EncMode with invalid EncOptions
 	wantErrorMsg = "cbor: invalid TimeTag 100"
 	em, err = EncOptions{TimeTag: 100}.EncModeWithTags(NewTagSet())
 	if em != nil {
-		t.Errorf("EncModeWithTags() returned %v", em)
+		t.Errorf("EncModeWithTags() = %v, want nil", em)
 	}
-	if err.Error() != wantErrorMsg {
-		t.Errorf("EncModeWithTags() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "EncModeWithTags", err, wantErrorMsg)
+
 	em, err = EncOptions{TimeTag: 100}.EncModeWithSharedTags(NewTagSet())
 	if em != nil {
-		t.Errorf("EncModeWithSharedTags() returned %v", em)
+		t.Errorf("EncModeWithSharedTags() = %v, want nil", em)
 	}
-	if err.Error() != wantErrorMsg {
-		t.Errorf("EncModeWithSharedTags() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "EncModeWithSharedTags", err, wantErrorMsg)
 }
 
 func TestNilRawTagUnmarshalCBORError(t *testing.T) {
@@ -1454,7 +1442,7 @@ func TestUnmarshalRawTagOnBadData(t *testing.T) {
 				err := v.UnmarshalCBOR(tc.data)
 				checkError[error](t, "v.UnmarshalCBOR", err, "")
 				if !strings.HasPrefix(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("UnmarshalCBOR(%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
+					t.Errorf("v.UnmarshalCBOR(0x%x): got %q, want prefix %q", tc.data, err.Error(), tc.wantErrorMsg)
 				}
 			}
 			// Test Unmarshal(data, *RawTag), which calls RawTag.unmarshalCBOR() under the hood
