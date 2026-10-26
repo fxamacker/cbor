@@ -1573,7 +1573,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				return err
 			}
 			if ok {
-				v.Set(reflect.ValueOf(tm))
+				*v.Addr().Interface().(*time.Time) = tm
 			}
 			return nil
 
@@ -1627,7 +1627,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 			bi.Neg(bi)
 
 			if tInfo.nonPtrType == typeBigInt {
-				v.Set(reflect.ValueOf(*bi))
+				*v.Addr().Interface().(*big.Int) = *bi
 				return nil
 			}
 			return &UnmarshalTypeError{
@@ -1708,7 +1708,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 			bi := new(big.Int).SetBytes(b)
 
 			if tInfo.nonPtrType == typeBigInt {
-				v.Set(reflect.ValueOf(*bi))
+				*v.Addr().Interface().(*big.Int) = *bi
 				return nil
 			}
 			if tInfo.nonPtrKind == reflect.Slice || tInfo.nonPtrKind == reflect.Array {
@@ -1731,7 +1731,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 			bi.Neg(bi)
 
 			if tInfo.nonPtrType == typeBigInt {
-				v.Set(reflect.ValueOf(*bi))
+				*v.Addr().Interface().(*big.Int) = *bi
 				return nil
 			}
 			if tInfo.nonPtrKind == reflect.Slice || tInfo.nonPtrKind == reflect.Array {
@@ -1805,7 +1805,7 @@ func (d *decoder) parseToTag(v reflect.Value) error {
 		return err
 	}
 
-	v.Set(reflect.ValueOf(Tag{num, content}))
+	*v.Addr().Interface().(*Tag) = Tag{num, content}
 	return nil
 }
 
@@ -3247,7 +3247,7 @@ func fillPositiveInt(t cborType, val uint64, v reflect.Value) error {
 
 	if v.Type() == typeBigInt {
 		i := new(big.Int).SetUint64(val)
-		v.Set(reflect.ValueOf(*i))
+		*v.Addr().Interface().(*big.Int) = *i
 		return nil
 	}
 	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}
@@ -3273,7 +3273,7 @@ func fillNegativeInt(t cborType, val int64, v reflect.Value) error {
 	}
 	if v.Type() == typeBigInt {
 		i := new(big.Int).SetInt64(val)
-		v.Set(reflect.ValueOf(*i))
+		*v.Addr().Interface().(*big.Int) = *i
 		return nil
 	}
 	return &UnmarshalTypeError{CBORType: t.String(), GoType: v.Type().String()}

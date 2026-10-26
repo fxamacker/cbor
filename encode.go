@@ -1741,7 +1741,7 @@ func encodeTime(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 			nsecs := t.Nanosecond()
 			f = float64(secs) + float64(nsecs)/1e9
 		}
-		return encodeFloat(dst, em, reflect.ValueOf(f))
+		return appendFloat64WithEM(dst, em, f)
 
 	case TimeUnixDynamic:
 		t = t.UTC().Round(time.Microsecond)
@@ -1750,7 +1750,7 @@ func encodeTime(dst []byte, em *encMode, v reflect.Value) ([]byte, error) {
 			return encodeInt(dst, em, reflect.ValueOf(secs))
 		}
 		f := float64(secs) + float64(nsecs)/1e9
-		return encodeFloat(dst, em, reflect.ValueOf(f))
+		return appendFloat64WithEM(dst, em, f)
 
 	case TimeRFC3339:
 		s = t.Format(time.RFC3339)
