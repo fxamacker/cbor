@@ -1920,7 +1920,7 @@ func (d *decoder) parseToTime() (time.Time, bool, error) {
 			return time.Time{}, true, nil
 		}
 		seconds, fractional := math.Modf(f)
-		if seconds > math.MaxInt64 || seconds < math.MinInt64 {
+		if seconds >= math.MaxInt64 || seconds < math.MinInt64 {
 			return time.Time{}, false, &UnmarshalTypeError{
 				CBORType: t.String(),
 				GoType:   typeTime.String(),
