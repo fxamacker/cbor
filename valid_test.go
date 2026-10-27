@@ -5,24 +5,26 @@ package cbor
 
 import (
 	"bytes"
+	"fmt"
+	"reflect"
 	"strconv"
 	"testing"
 )
 
 func TestValid1(t *testing.T) {
 	for _, tc := range marshalTestCases {
-		if err := Wellformed(tc.wantData); err != nil {
-			t.Errorf("Wellformed() returned error %v", err)
-		}
+		err := Wellformed(tc.wantData)
+		checkNoError(t, "Wellformed", err)
 	}
 }
 
 func TestValid2(t *testing.T) {
 	for _, tc := range marshalTestCases {
-		dm, _ := DecOptions{DupMapKey: DupMapKeyEnforcedAPF}.DecMode()
-		if err := dm.Wellformed(tc.wantData); err != nil {
-			t.Errorf("Wellformed() returned error %v", err)
-		}
+		dm := mustDecMode(t, DecOptions{DupMapKey: DupMapKeyEnforcedAPF})
+		err := dm.Wellformed(tc.wantData)
+		checkNoError(t, "dm.Wellformed", err)
+		err = dm.(*decMode).wellformedSyntaxMode.Wellformed(tc.wantData)
+		checkNoError(t, "wellformedSyntaxMode.Wellformed", err)
 	}
 }
 
@@ -56,18 +58,7 @@ func TestValidExtraneousData(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			err := Wellformed(tc.data)
-			if err == nil {
-				t.Errorf("Wellformed(0x%x) didn't return an error", tc.data)
-			} else {
-				ederr, ok := err.(*ExtraneousDataError)
-				if !ok {
-					t.Errorf("Wellformed(0x%x) error type %T, want *ExtraneousDataError", tc.data, err)
-				} else if ederr.numOfBytes != tc.extraneousDataNumOfBytes {
-					t.Errorf("Wellformed(0x%x) returned %d bytes of extraneous data, want %d", tc.data, ederr.numOfBytes, tc.extraneousDataNumOfBytes)
-				} else if ederr.index != tc.extraneousDataIndex {
-					t.Errorf("Wellformed(0x%x) returned extraneous data index %d, want %d", tc.data, ederr.index, tc.extraneousDataIndex)
-				}
-			}
+			checkError[*ExtraneousDataError](t, "Wellformed", err, (&ExtraneousDataError{numOfBytes: tc.extraneousDataNumOfBytes, index: tc.extraneousDataIndex}).Error())
 		})
 	}
 }
@@ -79,9 +70,8 @@ func TestValidOnStreamingData(t *testing.T) {
 	}
 	d := decoder{data: buf.Bytes(), dm: defaultDecMode}
 	for range marshalTestCases {
-		if err := d.wellformed(true, false); err != nil {
-			t.Errorf("wellformed() returned error %v", err)
-		}
+		err := d.wellformed(true, false)
+		checkNoError(t, "d.wellformed", err)
 	}
 }
 
@@ -256,11 +246,9 @@ func TestDepth(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			d := decoder{data: tc.data, dm: defaultDecMode}
 			depth, err := d.wellformedInternal(0, false)
-			if err != nil {
-				t.Errorf("wellformed(0x%x) returned error %v", tc.data, err)
-			}
+			checkNoError(t, "d.wellformedInternal", err)
 			if depth != tc.wantDepth {
-				t.Errorf("wellformed(0x%x) returned depth %d, want %d", tc.data, depth, tc.wantDepth)
+				t.Errorf("d.wellformedInternal(0x%x) depth = %d, want %d", tc.data, depth, tc.wantDepth)
 			}
 		})
 	}
@@ -320,13 +308,8 @@ func TestDepthError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, _ := tc.opts.decMode()
 			d := decoder{data: tc.data, dm: dm}
-			if _, err := d.wellformedInternal(0, false); err == nil {
-				t.Errorf("wellformed(0x%x) didn't return an error", tc.data)
-			} else if _, ok := err.(*MaxNestedLevelError); !ok {
-				t.Errorf("wellformed(0x%x) returned wrong error type %T, want (*MaxNestedLevelError)", tc.data, err)
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("wellformed(0x%x) returned error %q, want error %q", tc.data, err.Error(), tc.wantErrorMsg)
-			}
+			_, err := d.wellformedInternal(0, false)
+			checkError[*MaxNestedLevelError](t, "d.wellformedInternal", err, tc.wantErrorMsg)
 		})
 	}
 }
@@ -373,9 +356,8 @@ func TestValidBuiltinTagTest(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			d := decoder{data: tc.data, dm: defaultDecMode}
-			if err := d.wellformed(true, true); err != nil {
-				t.Errorf("wellformed(0x%x) returned error %v", tc.data, err)
-			}
+			err := d.wellformed(true, true)
+			checkNoError(t, "d.wellformed", err)
 		})
 	}
 }
@@ -432,11 +414,121 @@ func TestInvalidBuiltinTagTest(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			d := decoder{data: tc.data, dm: defaultDecMode}
 			err := d.wellformed(true, true)
-			if err == nil {
-				t.Errorf("wellformed(0x%x) didn't return an error", tc.data)
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("wellformed(0x%x) error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
+			checkError[error](t, "d.wellformed", err, tc.wantErrorMsg)
+		})
+	}
+}
+
+func TestWellformedSyntaxMode(t *testing.T) {
+	rejectedSimpleValues, err := NewSimpleValueRegistryFromDefaults(WithRejectedSimpleValue(16))
+	checkNoError(t, "NewSimpleValueRegistryFromDefaults", err)
+
+	type taggedFloat float64
+	tags := NewTagSet()
+	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, reflect.TypeFor[taggedFloat](), 100)
+
+	testCases := []struct {
+		name                    string
+		opts                    DecOptions
+		tags                    TagSet
+		data                    []byte
+		wantWellformedErr       error // nil, or typed nil pointer of wanted error type
+		wantWellformedSyntaxErr error // nil, or typed nil pointer of wanted error type
+	}{
+		{
+			name: "default options",
+			opts: DecOptions{},
+			data: []byte{0xf9, 0x7e, 0x00}, // NaN
+		},
+		{
+			name:                    "extraneous data",
+			opts:                    DecOptions{NaN: NaNDecodeForbidden},
+			data:                    []byte{0x00, 0x00},
+			wantWellformedErr:       (*ExtraneousDataError)(nil),
+			wantWellformedSyntaxErr: (*ExtraneousDataError)(nil),
+		},
+		{
+			name:                    "MaxNestedLevels exceeded",
+			opts:                    DecOptions{NaN: NaNDecodeForbidden, MaxNestedLevels: 4},
+			data:                    []byte{0x81, 0x81, 0x81, 0x81, 0x81, 0x01}, // [[[[[1]]]]]
+			wantWellformedErr:       (*MaxNestedLevelError)(nil),
+			wantWellformedSyntaxErr: (*MaxNestedLevelError)(nil),
+		},
+		{
+			name:                    "MaxArrayElements exceeded",
+			opts:                    DecOptions{NaN: NaNDecodeForbidden, MaxArrayElements: 16},
+			data:                    append([]byte{0x91}, make([]byte, 17)...), // [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+			wantWellformedErr:       (*MaxArrayElementsError)(nil),
+			wantWellformedSyntaxErr: (*MaxArrayElementsError)(nil),
+		},
+		{
+			name:                    "MaxMapPairs exceeded",
+			opts:                    DecOptions{NaN: NaNDecodeForbidden, MaxMapPairs: 16},
+			data:                    append([]byte{0xb1}, make([]byte, 17*2)...),
+			wantWellformedErr:       (*MaxMapPairsError)(nil),
+			wantWellformedSyntaxErr: (*MaxMapPairsError)(nil),
+		},
+		{
+			name:              "NaN forbidden",
+			opts:              DecOptions{NaN: NaNDecodeForbidden},
+			data:              []byte{0xa1, 0x01, 0xf9, 0x7e, 0x00}, // {1: NaN}
+			wantWellformedErr: (*UnacceptableDataItemError)(nil),
+		},
+		{
+			name:              "Inf forbidden",
+			opts:              DecOptions{Inf: InfDecodeForbidden},
+			data:              []byte{0xf9, 0x7c, 0x00}, // Infinity
+			wantWellformedErr: (*UnacceptableDataItemError)(nil),
+		},
+		{
+			name:              "simple value rejected",
+			opts:              DecOptions{SimpleValues: rejectedSimpleValues},
+			data:              []byte{0xf0}, // simple(16)
+			wantWellformedErr: (*UnacceptableDataItemError)(nil),
+		},
+		{
+			name:              "bignum tag forbidden",
+			opts:              DecOptions{BignumTag: BignumTagForbidden},
+			data:              []byte{0xc2, 0x41, 0x01}, // 2('1')
+			wantWellformedErr: (*UnacceptableDataItemError)(nil),
+		},
+		{
+			name:              "tags forbidden",
+			opts:              DecOptions{TagsMd: TagsForbidden},
+			data:              []byte{0xc1, 0x01}, // 1(1)
+			wantWellformedErr: (*TagsMdError)(nil),
+		},
+		{
+			name:              "NaN forbidden with tags",
+			opts:              DecOptions{NaN: NaNDecodeForbidden},
+			tags:              tags,
+			data:              []byte{0xd8, 0x64, 0xf9, 0x7e, 0x00}, // 100(NaN)
+			wantWellformedErr: (*UnacceptableDataItemError)(nil),
+		},
+		{
+			name:              "indefinite-length array forbidden",
+			opts:              DecOptions{IndefLength: IndefLengthForbidden},
+			data:              []byte{0x9f, 0x01, 0xff}, // [_ 1]
+			wantWellformedErr: (*IndefiniteLengthError)(nil),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var dm DecMode
+			if tc.tags != nil {
+				dm = mustDecModeWithTags(t, tc.opts, tc.tags)
+			} else {
+				dm = mustDecMode(t, tc.opts)
 			}
+
+			name := fmt.Sprintf("Wellformed(0x%x)", tc.data)
+			err := dm.Wellformed(tc.data)
+			checkErrorType(t, name, err, tc.wantWellformedErr)
+
+			name = fmt.Sprintf("wellformedSyntaxMode.Wellformed(0x%x)", tc.data)
+			err = dm.(*decMode).wellformedSyntaxMode.Wellformed(tc.data)
+			checkErrorType(t, name, err, tc.wantWellformedSyntaxErr)
 		})
 	}
 }

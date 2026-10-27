@@ -347,23 +347,21 @@ func TestDiagnosticNotationExamples(t *testing.T) {
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("Diagnostic %d", i), func(t *testing.T) {
 			str, err := Diagnose(tc.data)
-			if err != nil {
-				t.Errorf("Diagnostic(0x%x) returned error %q", tc.data, err)
-			} else if str != tc.wantDiag {
-				t.Errorf("Diagnostic(0x%x) returned `%s`, want `%s`", tc.data, str, tc.wantDiag)
+			checkNoError(t, "Diagnose", err)
+			if str != tc.wantDiag {
+				t.Errorf("Diagnose(0x%x) = %q, want %q", tc.data, str, tc.wantDiag)
 			}
 
 			str, rest, err := DiagnoseFirst(tc.data)
-			if err != nil {
-				t.Errorf("Diagnostic(0x%x) returned error %q", tc.data, err)
-			} else if str != tc.wantDiag {
-				t.Errorf("Diagnostic(0x%x) returned `%s`, want `%s`", tc.data, str, tc.wantDiag)
+			checkNoError(t, "DiagnoseFirst", err)
+			if str != tc.wantDiag {
+				t.Errorf("DiagnoseFirst(0x%x) = %q, want %q", tc.data, str, tc.wantDiag)
 			}
 
 			if rest == nil {
-				t.Errorf("Diagnostic(0x%x) returned nil rest", tc.data)
+				t.Errorf("DiagnoseFirst(0x%x) rest = nil, want empty", tc.data)
 			} else if len(rest) != 0 {
-				t.Errorf("Diagnostic(0x%x) returned non-empty rest '%x'", tc.data, rest)
+				t.Errorf("DiagnoseFirst(0x%x) rest = 0x%x, want empty", tc.data, rest)
 			}
 		})
 	}
@@ -520,15 +518,12 @@ func TestDiagnoseByteString(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, err := tc.opts.DiagMode()
-			if err != nil {
-				t.Errorf("DiagMode() for 0x%x returned error %q", tc.data, err)
-			}
+			checkNoError(t, "DiagMode", err)
 
 			str, err := dm.Diagnose(tc.data)
-			if err != nil {
-				t.Errorf("Diagnose(0x%x) returned error %q", tc.data, err)
-			} else if str != tc.wantDiag {
-				t.Errorf("Diagnose(0x%x) returned `%s`, want %s", tc.data, str, tc.wantDiag)
+			checkNoError(t, "dm.Diagnose", err)
+			if str != tc.wantDiag {
+				t.Errorf("Diagnose(0x%x) = %q, want %q", tc.data, str, tc.wantDiag)
 			}
 		})
 	}
@@ -636,15 +631,12 @@ func TestDiagnoseTextString(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, err := tc.opts.DiagMode()
-			if err != nil {
-				t.Errorf("DiagMode() for 0x%x returned error %q", tc.data, err)
-			}
+			checkNoError(t, "DiagMode", err)
 
 			str, err := dm.Diagnose(tc.data)
-			if err != nil {
-				t.Errorf("Diagnose(0x%x) returned error %q", tc.data, err)
-			} else if str != tc.wantDiag {
-				t.Errorf("Diagnose(0x%x) returned `%s`, want %s", tc.data, str, tc.wantDiag)
+			checkNoError(t, "dm.Diagnose", err)
+			if str != tc.wantDiag {
+				t.Errorf("Diagnose(0x%x) = %q, want %q", tc.data, str, tc.wantDiag)
 			}
 		})
 	}
@@ -686,15 +678,13 @@ func TestDiagnoseInvalidTextString(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, err := tc.opts.DiagMode()
-			if err != nil {
-				t.Errorf("DiagMode() for 0x%x returned error %q", tc.data, err)
-			}
+			checkNoError(t, "DiagMode", err)
 
 			_, err = dm.Diagnose(tc.data)
 			if err == nil {
-				t.Errorf("Diagnose(0x%x) didn't return an error", tc.data)
+				t.Errorf("Diagnose(0x%x): expected error containing %q, got nil", tc.data, tc.wantErrorMsg)
 			} else if !strings.Contains(err.Error(), tc.wantErrorMsg) {
-				t.Errorf("Diagnose(0x%x) returned error %q", tc.data, err)
+				t.Errorf("Diagnose(0x%x): got %q, want substring %q", tc.data, err.Error(), tc.wantErrorMsg)
 			}
 		})
 	}
@@ -768,15 +758,12 @@ func TestDiagnoseFloatingPointNumber(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, err := tc.opts.DiagMode()
-			if err != nil {
-				t.Errorf("DiagMode() for 0x%x returned error %q", tc.data, err)
-			}
+			checkNoError(t, "DiagMode", err)
 
 			str, err := dm.Diagnose(tc.data)
-			if err != nil {
-				t.Errorf("Diagnose(0x%x) returned error %q", tc.data, err)
-			} else if str != tc.wantDiag {
-				t.Errorf("Diagnose(0x%x) returned `%s`, want %s", tc.data, str, tc.wantDiag)
+			checkNoError(t, "dm.Diagnose", err)
+			if str != tc.wantDiag {
+				t.Errorf("Diagnose(0x%x) = %q, want %q", tc.data, str, tc.wantDiag)
 			}
 		})
 	}
@@ -824,23 +811,14 @@ func TestDiagnoseFirst(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			str, rest, err := DiagnoseFirst(tc.data)
 			if str != tc.wantDiag {
-				t.Errorf("DiagnoseFirst(0x%x) returned `%s`, want %s", tc.data, str, tc.wantDiag)
+				t.Errorf("DiagnoseFirst(0x%x) = %q, want %q", tc.data, str, tc.wantDiag)
 			}
 
-			if bytes.Equal(rest, tc.wantRest) == false {
-				if str != tc.wantDiag {
-					t.Errorf("DiagnoseFirst(0x%x) returned rest `%x`, want rest %x", tc.data, rest, tc.wantRest)
-				}
+			if !bytes.Equal(rest, tc.wantRest) {
+				t.Errorf("DiagnoseFirst(0x%x) rest = 0x%x, want 0x%x", tc.data, rest, tc.wantRest)
 			}
 
-			switch {
-			case tc.wantErrorMsg == "" && err != nil:
-				t.Errorf("DiagnoseFirst(0x%x) returned error %q", tc.data, err)
-			case tc.wantErrorMsg != "" && err == nil:
-				t.Errorf("DiagnoseFirst(0x%x) returned nil error, want error %q", tc.data, err)
-			case tc.wantErrorMsg != "" && !strings.Contains(err.Error(), tc.wantErrorMsg):
-				t.Errorf("DiagnoseFirst(0x%x) returned error %q, want error %q", tc.data, err, tc.wantErrorMsg)
-			}
+			checkErrorCase[error](t, "DiagnoseFirst", err, tc.wantErrorMsg != "", tc.wantErrorMsg)
 		})
 	}
 }
@@ -903,19 +881,13 @@ func TestDiagnoseCBORSequences(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, err := tc.opts.DiagMode()
-			if err != nil {
-				t.Errorf("DiagMode() for 0x%x returned error %q", tc.data, err)
-			}
+			checkNoError(t, "DiagMode", err)
 
 			str, err := dm.Diagnose(tc.data)
-			if tc.returnError && err == nil {
-				t.Errorf("Diagnose(0x%x) returned error %q", tc.data, err)
-			} else if !tc.returnError && err != nil {
-				t.Errorf("Diagnose(0x%x) returned error %q", tc.data, err)
-			}
+			checkErrorCase[error](t, "dm.Diagnose", err, tc.returnError, "")
 
 			if str != tc.wantDiag {
-				t.Errorf("Diagnose(0x%x) returned `%s`, want %s", tc.data, str, tc.wantDiag)
+				t.Errorf("Diagnose(0x%x) = %q, want %q", tc.data, str, tc.wantDiag)
 			}
 		})
 	}
@@ -976,19 +948,13 @@ func TestDiagnoseTag(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dm, err := tc.opts.DiagMode()
-			if err != nil {
-				t.Errorf("DiagMode() for 0x%x returned error %q", tc.data, err)
-			}
+			checkNoError(t, "DiagMode", err)
 
 			str, err := dm.Diagnose(tc.data)
-			if tc.returnError && err == nil {
-				t.Errorf("Diagnose(0x%x) returned error %q", tc.data, err)
-			} else if !tc.returnError && err != nil {
-				t.Errorf("Diagnose(0x%x) returned error %q", tc.data, err)
-			}
+			checkErrorCase[error](t, "dm.Diagnose", err, tc.returnError, "")
 
 			if str != tc.wantDiag {
-				t.Errorf("Diagnose(0x%x) returned `%s`, want %s", tc.data, str, tc.wantDiag)
+				t.Errorf("Diagnose(0x%x) = %q, want %q", tc.data, str, tc.wantDiag)
 			}
 		})
 	}
@@ -1007,12 +973,10 @@ func TestDiagnoseOptions(t *testing.T) {
 		MaxMapPairs:             102,
 	}
 	dm, err := opts.DiagMode()
-	if err != nil {
-		t.Errorf("DiagMode() returned an error %v", err)
-	}
+	checkNoError(t, "DiagMode", err)
 	opts2 := dm.DiagOptions()
 	if !reflect.DeepEqual(opts, opts2) {
-		t.Errorf("DiagOptions() returned wrong options %v, want %v", opts2, opts)
+		t.Errorf("dm.DiagOptions() = %v, want %v", opts2, opts)
 	}
 
 	opts = DiagOptions{
@@ -1027,12 +991,10 @@ func TestDiagnoseOptions(t *testing.T) {
 		MaxMapPairs:             102,
 	}
 	dm, err = opts.DiagMode()
-	if err != nil {
-		t.Errorf("DiagMode() returned an error %v", err)
-	}
+	checkNoError(t, "DiagMode", err)
 	opts2 = dm.DiagOptions()
 	if !reflect.DeepEqual(opts, opts2) {
-		t.Errorf("DiagOptions() returned wrong options %v, want %v", opts2, opts)
+		t.Errorf("dm.DiagOptions() = %v, want %v", opts2, opts)
 	}
 }
 
@@ -1041,33 +1003,29 @@ func TestInvalidDiagnoseOptions(t *testing.T) {
 		ByteStringEncoding: ByteStringBase64Encoding + 1,
 	}
 	_, err := opts.DiagMode()
-	if err == nil {
-		t.Errorf("DiagMode() with invalid ByteStringEncoding option didn't return an error")
-	}
+	checkError[error](t, "DiagMode", err, "")
 }
 
 func TestDiagnoseExtraneousData(t *testing.T) {
 	data := mustHexDecode("63666F6FF6")
 	_, err := Diagnose(data)
 	if err == nil {
-		t.Errorf("Diagnose(0x%x) didn't return an error", data)
+		t.Errorf("Diagnose(0x%x): expected error containing %q, got nil", data, "extraneous data")
 	} else if !strings.Contains(err.Error(), `extraneous data`) {
-		t.Errorf("Diagnose(0x%x) returned error %q", data, err)
+		t.Errorf("Diagnose(0x%x): got %q, want substring %q", data, err.Error(), "extraneous data")
 	}
 
 	_, _, err = DiagnoseFirst(data)
-	if err != nil {
-		t.Errorf("DiagnoseFirst(0x%x) returned error %v", data, err)
-	}
+	checkNoError(t, "DiagnoseFirst", err)
 }
 
 func TestDiagnoseNotwellformedData(t *testing.T) {
 	data := mustHexDecode("5f4060ff")
 	_, err := Diagnose(data)
 	if err == nil {
-		t.Errorf("Diagnose(0x%x) didn't return an error", data)
+		t.Errorf("Diagnose(0x%x): expected error containing %q, got nil", data, "wrong element type")
 	} else if !strings.Contains(err.Error(), `wrong element type`) {
-		t.Errorf("Diagnose(0x%x) returned error %q", data, err)
+		t.Errorf("Diagnose(0x%x): got %q, want substring %q", data, err.Error(), "wrong element type")
 	}
 }
 
@@ -1089,21 +1047,21 @@ func TestDiagnoseEmptyData(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			s, err := tc.dm.Diagnose(emptyData)
 			if s != "" {
-				t.Errorf("Diagnose() didn't return empty notation for empty data")
+				t.Errorf("dm.Diagnose(empty) = %q, want \"\"", s)
 			}
 			if err != io.EOF {
-				t.Errorf("Diagnose() didn't return io.EOF for empty data")
+				t.Errorf("dm.Diagnose(empty) error = %v, want io.EOF", err)
 			}
 
 			s, rest, err := tc.dm.DiagnoseFirst(emptyData)
 			if s != "" {
-				t.Errorf("DiagnoseFirst() didn't return empty notation for empty data")
+				t.Errorf("dm.DiagnoseFirst(empty) = %q, want \"\"", s)
 			}
 			if len(rest) != 0 {
-				t.Errorf("DiagnoseFirst() didn't return empty rest for empty data")
+				t.Errorf("dm.DiagnoseFirst(empty) rest = 0x%x, want empty", rest)
 			}
 			if err != io.EOF {
-				t.Errorf("DiagnoseFirst() didn't return io.EOF for empty data")
+				t.Errorf("dm.DiagnoseFirst(empty) error = %v, want io.EOF", err)
 			}
 		})
 	}
@@ -1113,11 +1071,9 @@ func TestDiagnoseInvalidByteStringEncoding(t *testing.T) {
 	_, err := DiagOptions{
 		ByteStringEncoding: maxByteStringEncoding,
 	}.DiagMode()
-	if err == nil {
-		t.Fatal("DiagMode() expected error for invalid ByteStringEncoding, got nil")
-	}
+	checkError[error](t, "DiagMode", err, "")
 	if !strings.Contains(err.Error(), "invalid ByteStringEncoding") {
-		t.Errorf("DiagMode() error = %q, want error containing \"invalid ByteStringEncoding\"", err.Error())
+		t.Errorf("DiagMode: got %q, want substring %q", err.Error(), "invalid ByteStringEncoding")
 	}
 }
 

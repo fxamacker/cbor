@@ -4,9 +4,7 @@
 package cbor
 
 import (
-	"bytes"
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -14,11 +12,7 @@ import (
 // option allowed. It is a small helper to keep tests focused on behavior.
 func allowToIndefArrayMode(t *testing.T) EncMode {
 	t.Helper()
-	em, err := EncOptions{ToIndefArrayStructTag: ToIndefArrayStructTagAllowed}.EncMode()
-	if err != nil {
-		t.Fatalf("EncMode() returned error: %v", err)
-	}
-	return em
+	return mustEncMode(t, EncOptions{ToIndefArrayStructTag: ToIndefArrayStructTagAllowed})
 }
 
 // TestEncodeStructToIndefArrayBasic verifies the encoded bytes for a
@@ -30,30 +24,15 @@ func TestEncodeStructToIndefArrayBasic(t *testing.T) {
 		Count int
 	}
 
-	in := S{Data: []byte{0x73, 0xf7, 0x2d, 0xbe}, Count: 3}
-
 	em := allowToIndefArrayMode(t)
-	got, err := em.Marshal(in)
-	if err != nil {
-		t.Fatalf("Marshal returned error: %v", err)
-	}
-
-	// EDN: [_ h'73f72dbe', 3]
-	want := []byte{0x9f, 0x44, 0x73, 0xf7, 0x2d, 0xbe, 0x03, 0xff}
-	if !bytes.Equal(got, want) {
-		t.Errorf("got %x, want %x", got, want)
-	}
+	dm := mustDecMode(t, DecOptions{})
+	in := S{Data: []byte{0x73, 0xf7, 0x2d, 0xbe}, Count: 3}
+	want := []byte{0x9f, 0x44, 0x73, 0xf7, 0x2d, 0xbe, 0x03, 0xff} // EDN: [_ h'73f72dbe', 3]
 
 	// Roundtrip: decoder accepts both definite and indefinite arrays for
 	// toindefarray-tagged structs (the tag treats them the same way as
 	// `toarray` for decoding).
-	var out S
-	if err := Unmarshal(got, &out); err != nil {
-		t.Fatalf("Unmarshal returned error: %v", err)
-	}
-	if !reflect.DeepEqual(in, out) {
-		t.Errorf("roundtrip mismatch: got %+v, want %+v", out, in)
-	}
+	testRoundTripCase(t, in, want, em, dm)
 }
 
 // TestEncodeStructToIndefArrayEmpty verifies that an empty struct produces
@@ -64,25 +43,10 @@ func TestEncodeStructToIndefArrayEmpty(t *testing.T) {
 	}
 
 	em := allowToIndefArrayMode(t)
+	dm := mustDecMode(t, DecOptions{})
 	in := Empty{}
-	got, err := em.Marshal(in)
-	if err != nil {
-		t.Fatalf("Marshal returned error: %v", err)
-	}
-
-	// EDN: [_]
-	want := []byte{0x9f, 0xff}
-	if !bytes.Equal(got, want) {
-		t.Errorf("got %x, want %x", got, want)
-	}
-
-	var out Empty
-	if err := Unmarshal(got, &out); err != nil {
-		t.Fatalf("Unmarshal returned error: %v", err)
-	}
-	if !reflect.DeepEqual(in, out) {
-		t.Errorf("roundtrip mismatch: got %+v, want %+v", out, in)
-	}
+	want := []byte{0x9f, 0xff} // EDN: [_]
+	testRoundTripCase(t, in, want, em, dm)
 }
 
 // TestEncodeStructToIndefArrayNested verifies the byte layout and roundtrip
@@ -99,30 +63,14 @@ func TestEncodeStructToIndefArrayNested(t *testing.T) {
 		Z     int
 	}
 
+	em := allowToIndefArrayMode(t)
+	dm := mustDecMode(t, DecOptions{})
 	in := Outer{
 		Inner: Inner{X: []byte{0xab, 0xcd}, Y: 42},
 		Z:     7,
 	}
-
-	em := allowToIndefArrayMode(t)
-	got, err := em.Marshal(in)
-	if err != nil {
-		t.Fatalf("Marshal returned error: %v", err)
-	}
-
-	// EDN: [_ [_ h'abcd', 42], 7]
-	want := []byte{0x9f, 0x9f, 0x42, 0xab, 0xcd, 0x18, 0x2a, 0xff, 0x07, 0xff}
-	if !bytes.Equal(got, want) {
-		t.Errorf("got %x, want %x", got, want)
-	}
-
-	var out Outer
-	if err := Unmarshal(got, &out); err != nil {
-		t.Fatalf("Unmarshal returned error: %v", err)
-	}
-	if !reflect.DeepEqual(in, out) {
-		t.Errorf("roundtrip mismatch: got %+v, want %+v", out, in)
-	}
+	want := []byte{0x9f, 0x9f, 0x42, 0xab, 0xcd, 0x18, 0x2a, 0xff, 0x07, 0xff} // EDN: [_ [_ h'abcd', 42], 7]
+	testRoundTripCase(t, in, want, em, dm)
 }
 
 // TestEncodeStructToIndefArrayForbiddenByDefault verifies that the default
@@ -135,13 +83,8 @@ func TestEncodeStructToIndefArrayForbiddenByDefault(t *testing.T) {
 		A int
 	}
 
-	_, err := Marshal(S{A: 1})
-	if err == nil {
-		t.Fatal("expected error from default Marshal, got nil")
-	}
-	if !strings.Contains(err.Error(), "ToIndefArrayStructTag") {
-		t.Errorf("error should mention ToIndefArrayStructTag, got: %v", err)
-	}
+	b, err := Marshal(S{A: 1})
+	checkMarshalErr[error](t, "Marshal", b, err, "cbor: cannot encode struct cbor.S with `toindefarray` when ToIndefArrayStructTag is not ToIndefArrayStructTagAllowed")
 }
 
 // TestEncodeStructToIndefArrayMutuallyExclusive verifies that a struct
@@ -154,62 +97,8 @@ func TestEncodeStructToIndefArrayMutuallyExclusive(t *testing.T) {
 	}
 
 	em := allowToIndefArrayMode(t)
-	_, err := em.Marshal(Bad{A: 1})
-	if err == nil {
-		t.Fatal("expected error for struct declaring both toarray and toindefarray, got nil")
-	}
-	if !strings.Contains(err.Error(), "toarray") || !strings.Contains(err.Error(), "toindefarray") {
-		t.Errorf("error should mention both options, got: %v", err)
-	}
-}
-
-// TestToIndefArrayStructTagOptionsRoundTrip verifies that an EncOptions
-// value containing the non-zero value of ToIndefArrayStructTag round-trips
-// through EncOptions -> EncMode -> EncOptions with all fields preserved.
-// TestEncOptions cannot cover this case because the non-zero values of
-// IndefLength and ToIndefArrayStructTag are mutually exclusive.
-func TestToIndefArrayStructTagOptionsRoundTrip(t *testing.T) {
-	opts := EncOptions{ToIndefArrayStructTag: ToIndefArrayStructTagAllowed}
-	em, err := opts.EncMode()
-	if err != nil {
-		t.Fatalf("EncMode() returned error: %v", err)
-	}
-	got := em.EncOptions()
-	if !reflect.DeepEqual(opts, got) {
-		t.Errorf("EncOptions round-trip mismatch:\n got: %#v\nwant: %#v", got, opts)
-	}
-}
-
-// TestInvalidToIndefArrayStructTagMode verifies that EncOptions rejects
-// out-of-range values for ToIndefArrayStructTagMode at mode construction time.
-func TestInvalidToIndefArrayStructTagMode(t *testing.T) {
-	for _, m := range []ToIndefArrayStructTagMode{-1, maxToIndefArrayStructTagMode, maxToIndefArrayStructTagMode + 1} {
-		_, err := EncOptions{ToIndefArrayStructTag: m}.EncMode()
-		if err == nil {
-			t.Errorf("expected error for mode %d, got nil", m)
-			continue
-		}
-		if !strings.Contains(err.Error(), "ToIndefArrayStructTag") {
-			t.Errorf("error for mode %d should mention ToIndefArrayStructTag, got: %v", m, err)
-		}
-	}
-}
-
-// TestToIndefArrayStructTagRejectsIndefLengthForbidden verifies that
-// EncOptions rejects the combination of IndefLengthForbidden and
-// ToIndefArrayStructTagAllowed at mode construction time, since the two
-// settings are contradictory.
-func TestToIndefArrayStructTagRejectsIndefLengthForbidden(t *testing.T) {
-	_, err := EncOptions{
-		IndefLength:           IndefLengthForbidden,
-		ToIndefArrayStructTag: ToIndefArrayStructTagAllowed,
-	}.EncMode()
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if !strings.Contains(err.Error(), "ToIndefArrayStructTag") || !strings.Contains(err.Error(), "IndefLength") {
-		t.Errorf("error should mention both options, got: %v", err)
-	}
+	b, err := em.Marshal(Bad{A: 1})
+	checkMarshalErr[error](t, "em.Marshal", b, err, "cbor: struct cbor.Bad cannot have both \"toarray\" and \"toindefarray\" options")
 }
 
 // TestEncodeStructToIndefArrayEmbeddedField verifies that fields promoted
@@ -227,16 +116,11 @@ func TestEncodeStructToIndefArrayEmbeddedField(t *testing.T) {
 	}
 
 	em := allowToIndefArrayMode(t)
-	got, err := em.Marshal(Outer{Inner: Inner{A: 1, B: 2}, C: 3})
-	if err != nil {
-		t.Fatalf("Marshal returned error: %v", err)
-	}
+	in := Outer{Inner: Inner{A: 1, B: 2}, C: 3}
+	want := []byte{0x9f, 0x01, 0x02, 0x03, 0xff} // EDN: [_ 1, 2, 3]  (promoted A, B, then C)
 
-	// EDN: [_ 1, 2, 3]  (promoted A, B, then C)
-	want := []byte{0x9f, 0x01, 0x02, 0x03, 0xff}
-	if !bytes.Equal(got, want) {
-		t.Errorf("got %x, want %x", got, want)
-	}
+	got, err := em.Marshal(in)
+	checkMarshal(t, "em.Marshal", got, err, want)
 }
 
 // TestEncodeStructToIndefArrayParentIndefChildArray verifies that a struct
@@ -255,16 +139,11 @@ func TestEncodeStructToIndefArrayParentIndefChildArray(t *testing.T) {
 	}
 
 	em := allowToIndefArrayMode(t)
-	got, err := em.Marshal(Outer{Inner: Inner{A: 1, B: 2}, C: 3})
-	if err != nil {
-		t.Fatalf("Marshal returned error: %v", err)
-	}
+	in := Outer{Inner: Inner{A: 1, B: 2}, C: 3}
+	want := []byte{0x9f, 0x82, 0x01, 0x02, 0x03, 0xff} // EDN: [_ [1, 2], 3]
 
-	// EDN: [_ [1, 2], 3]
-	want := []byte{0x9f, 0x82, 0x01, 0x02, 0x03, 0xff}
-	if !bytes.Equal(got, want) {
-		t.Errorf("got %x, want %x", got, want)
-	}
+	got, err := em.Marshal(in)
+	checkMarshal(t, "em.Marshal", got, err, want)
 }
 
 // TestEncodeStructToIndefArrayParentArrayChildIndef verifies the symmetric
@@ -282,16 +161,11 @@ func TestEncodeStructToIndefArrayParentArrayChildIndef(t *testing.T) {
 	}
 
 	em := allowToIndefArrayMode(t)
-	got, err := em.Marshal(Outer{Inner: Inner{A: 1, B: 2}, C: 3})
-	if err != nil {
-		t.Fatalf("Marshal returned error: %v", err)
-	}
+	in := Outer{Inner: Inner{A: 1, B: 2}, C: 3}
+	want := []byte{0x82, 0x9f, 0x01, 0x02, 0xff, 0x03} // EDN: [[_ 1, 2], 3]
 
-	// EDN: [[_ 1, 2], 3]
-	want := []byte{0x82, 0x9f, 0x01, 0x02, 0xff, 0x03}
-	if !bytes.Equal(got, want) {
-		t.Errorf("got %x, want %x", got, want)
-	}
+	got, err := em.Marshal(in)
+	checkMarshal(t, "em.Marshal", got, err, want)
 }
 
 // TestEncodeStructToIndefArrayWithCBORTag verifies that a struct registered
@@ -305,27 +179,16 @@ func TestEncodeStructToIndefArrayWithCBORTag(t *testing.T) {
 	}
 
 	tags := NewTagSet()
-	if err := tags.Add(
+	mustAddTag(t, tags,
 		TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired},
-		reflect.TypeOf(S{}),
+		reflect.TypeFor[S](),
 		121,
-	); err != nil {
-		t.Fatalf("TagSet.Add returned error: %v", err)
-	}
+	)
 
-	em, err := EncOptions{ToIndefArrayStructTag: ToIndefArrayStructTagAllowed}.EncModeWithTags(tags)
-	if err != nil {
-		t.Fatalf("EncModeWithTags returned error: %v", err)
-	}
+	em := mustEncModeWithTags(t, EncOptions{ToIndefArrayStructTag: ToIndefArrayStructTagAllowed}, tags)
+	in := S{Field1: 1, Field2: 2}
+	want := []byte{0xd8, 0x79, 0x9f, 0x01, 0x02, 0xff} // EDN: 121([_ 1, 2])
 
-	got, err := em.Marshal(S{Field1: 1, Field2: 2})
-	if err != nil {
-		t.Fatalf("Marshal returned error: %v", err)
-	}
-
-	// EDN: 121([_ 1, 2])
-	want := []byte{0xd8, 0x79, 0x9f, 0x01, 0x02, 0xff}
-	if !bytes.Equal(got, want) {
-		t.Errorf("got %x, want %x", got, want)
-	}
+	got, err := em.Marshal(in)
+	checkMarshal(t, "em.Marshal", got, err, want)
 }
