@@ -7,12 +7,11 @@ import (
 	"cmp"
 	"reflect"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 )
 
-// field holds shared struct field metadata returned by getFields().
+// field holds shared struct field metadata returned by collectFields().
 type field struct {
 	name      string
 	nameAsInt int64 // used to match field name with CBOR int
@@ -57,39 +56,32 @@ func indexFieldCmp(fi, fj *field) int {
 	return cmp.Compare(len(iIdx), len(jIdx))
 }
 
-// nameLevelAndTagFieldSorter sorts fields by field name, idx depth, and presence of tag.
-type nameLevelAndTagFieldSorter struct {
-	fields fields
-}
-
-func (x *nameLevelAndTagFieldSorter) Len() int {
-	return len(x.fields)
-}
-
-func (x *nameLevelAndTagFieldSorter) Swap(i, j int) {
-	x.fields[i], x.fields[j] = x.fields[j], x.fields[i]
-}
-
-func (x *nameLevelAndTagFieldSorter) Less(i, j int) bool {
-	fi, fj := x.fields[i], x.fields[j]
+// nameLevelAndTagFieldCmp compares fields by field name, idx depth, and presence of tag.
+func nameLevelAndTagFieldCmp(fi, fj *field) int {
 	if fi.name != fj.name {
-		return fi.name < fj.name
+		return cmp.Compare(fi.name, fj.name)
 	}
 	// Fields with the same name but different keyAsInt are in separate namespaces.
 	if fi.keyAsInt != fj.keyAsInt {
-		return fi.keyAsInt
+		if fi.keyAsInt {
+			return -1
+		}
+		return 1
 	}
 	if len(fi.idx) != len(fj.idx) {
-		return len(fi.idx) < len(fj.idx)
+		return cmp.Compare(len(fi.idx), len(fj.idx))
 	}
 	if fi.tagged != fj.tagged {
-		return fi.tagged
+		if fi.tagged {
+			return -1
+		}
+		return 1
 	}
-	return i < j // Field i and j have the same name, depth, and tagged status. Nothing else matters.
+	return slices.Compare(fi.idx, fj.idx) // Break ties with field index.
 }
 
-// getFields returns visible fields of struct type t following visibility rules for JSON encoding.
-func getFields(t reflect.Type) (flds fields, structOptions string) {
+// collectFields returns visible fields of struct type t following visibility rules for JSON encoding.
+func collectFields(t reflect.Type) (flds fields, structOptions string) {
 	// Get special field "_" tag options
 	if f, ok := t.FieldByName("_"); ok {
 		tag := f.Tag.Get("cbor")
@@ -141,7 +133,7 @@ func getFields(t reflect.Type) (flds fields, structOptions string) {
 		}
 	}
 
-	sort.Sort(&nameLevelAndTagFieldSorter{flds})
+	slices.SortFunc(flds, nameLevelAndTagFieldCmp)
 
 	// Keep visible fields.
 	j := 0 // index of next unique field

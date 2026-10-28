@@ -6,9 +6,12 @@
 package cbor
 
 import (
-	"reflect"
 	"testing"
 )
+
+// unsupportedFuncTypeErrMsg is the error message for marshaling func(int) int.
+// tinygo's reflect.Type.String() returns "func" for func types (tinygo issue #4458).
+const unsupportedFuncTypeErrMsg = "cbor: unsupported type: func"
 
 // TestUnmarshalDeepNesting tests marshaling and unmarshaling of deeply nesting objects.
 // tinygo v0.33 fails with roughly 24+ levels of nested objects.
@@ -26,27 +29,13 @@ func TestUnmarshalDeepNesting(t *testing.T) {
 		n.Child = child
 		n = child
 	}
-	em, err := EncOptions{}.EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned error %v", err)
-	}
+	em := mustEncMode(t, EncOptions{})
 	data, err := em.Marshal(root)
-	if err != nil {
-		t.Errorf("Marshal() deeply nested object returned error %v", err)
-	}
+	checkNoError(t, "em.Marshal", err)
 
 	// Try unmarshal it
-	dm, err := DecOptions{MaxNestedLevels: tinygoNestedLevels}.DecMode()
-	if err != nil {
-		t.Errorf("DecMode() returned error %v", err)
-	}
+	dm := mustDecMode(t, DecOptions{MaxNestedLevels: tinygoNestedLevels})
 	var readback TestNode
-	err = dm.Unmarshal(data, &readback)
-	if err != nil {
-		t.Errorf("Unmarshal() of deeply nested object returned error: %v", err)
-	}
-	if !reflect.DeepEqual(root, &readback) {
-		t.Errorf("Unmarshal() of deeply nested object did not match\nGot: %#v\n Want: %#v\n",
-			&readback, root)
-	}
+	err = unmarshalWithDM(t, dm, data, &readback)
+	checkUnmarshal(t, "dm.Unmarshal", readback, err, *root)
 }

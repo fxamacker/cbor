@@ -4,7 +4,6 @@
 package cbor
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -59,108 +58,106 @@ func TestTagNewTypeWithBuiltinUnderlyingType(t *testing.T) {
 	tags := NewTagSet()
 	for i, typ := range types {
 		tagNum := uint64(100 + i)
-		if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, tagNum); err != nil {
-			t.Fatalf("TagSet.Add(%s, %d) returned error %v", typ, tagNum, err)
-		}
+		mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, tagNum)
 	}
 
-	em, _ := EncOptions{Sort: SortCanonical}.EncModeWithTags(tags)
-	dm, _ := DecOptions{}.DecModeWithTags(tags)
+	em := mustEncModeWithTags(t, EncOptions{Sort: SortCanonical}, tags)
+	dm := mustDecModeWithTags(t, DecOptions{}, tags)
 
 	testCases := []roundTripTestCase{
 		{
-			name:         "bool",
-			obj:          myBool(true),
-			wantCborData: mustHexDecode("d864f5"),
+			name: "bool",
+			v:    myBool(true),
+			data: mustHexDecode("d864f5"),
 		},
 		{
-			name:         "uint",
-			obj:          myUint(0),
-			wantCborData: mustHexDecode("d86500"),
+			name: "uint",
+			v:    myUint(0),
+			data: mustHexDecode("d86500"),
 		},
 		{
-			name:         "uint8",
-			obj:          myUint8(0),
-			wantCborData: mustHexDecode("d86600"),
+			name: "uint8",
+			v:    myUint8(0),
+			data: mustHexDecode("d86600"),
 		},
 		{
-			name:         "uint16",
-			obj:          myUint16(1000),
-			wantCborData: mustHexDecode("d8671903e8"),
+			name: "uint16",
+			v:    myUint16(1000),
+			data: mustHexDecode("d8671903e8"),
 		},
 		{
-			name:         "uint32",
-			obj:          myUint32(1000000),
-			wantCborData: mustHexDecode("d8681a000f4240"),
+			name: "uint32",
+			v:    myUint32(1000000),
+			data: mustHexDecode("d8681a000f4240"),
 		},
 		{
-			name:         "uint64",
-			obj:          myUint64(1000000000000),
-			wantCborData: mustHexDecode("d8691b000000e8d4a51000"),
+			name: "uint64",
+			v:    myUint64(1000000000000),
+			data: mustHexDecode("d8691b000000e8d4a51000"),
 		},
 		{
-			name:         "int",
-			obj:          myInt(-1),
-			wantCborData: mustHexDecode("d86a20"),
+			name: "int",
+			v:    myInt(-1),
+			data: mustHexDecode("d86a20"),
 		},
 		{
-			name:         "int8",
-			obj:          myInt8(-1),
-			wantCborData: mustHexDecode("d86b20"),
+			name: "int8",
+			v:    myInt8(-1),
+			data: mustHexDecode("d86b20"),
 		},
 		{
-			name:         "int16",
-			obj:          myInt16(-1000),
-			wantCborData: mustHexDecode("d86c3903e7"),
+			name: "int16",
+			v:    myInt16(-1000),
+			data: mustHexDecode("d86c3903e7"),
 		},
 		{
-			name:         "int32",
-			obj:          myInt32(-1000),
-			wantCborData: mustHexDecode("d86d3903e7"),
+			name: "int32",
+			v:    myInt32(-1000),
+			data: mustHexDecode("d86d3903e7"),
 		},
 		{
-			name:         "int64",
-			obj:          myInt64(-1000),
-			wantCborData: mustHexDecode("d86e3903e7"),
+			name: "int64",
+			v:    myInt64(-1000),
+			data: mustHexDecode("d86e3903e7"),
 		},
 		{
-			name:         "float32",
-			obj:          myFloat32(100000.0),
-			wantCborData: mustHexDecode("d86ffa47c35000"),
+			name: "float32",
+			v:    myFloat32(100000.0),
+			data: mustHexDecode("d86ffa47c35000"),
 		},
 		{
-			name:         "float64",
-			obj:          myFloat64(1.1),
-			wantCborData: mustHexDecode("d870fb3ff199999999999a"),
+			name: "float64",
+			v:    myFloat64(1.1),
+			data: mustHexDecode("d870fb3ff199999999999a"),
 		},
 		{
-			name:         "string",
-			obj:          myString("a"),
-			wantCborData: mustHexDecode("d8716161"),
+			name: "string",
+			v:    myString("a"),
+			data: mustHexDecode("d8716161"),
 		},
 		{
-			name:         "[]byte",
-			obj:          myByteSlice([]byte{1, 2, 3, 4}),
-			wantCborData: mustHexDecode("d8724401020304"),
+			name: "[]byte",
+			v:    myByteSlice([]byte{1, 2, 3, 4}),
+			data: mustHexDecode("d8724401020304"),
 		},
 		{
-			name:         "[]int",
-			obj:          myIntSlice([]int{1, 2, 3, 4}),
-			wantCborData: mustHexDecode("d8738401020304"),
+			name: "[]int",
+			v:    myIntSlice([]int{1, 2, 3, 4}),
+			data: mustHexDecode("d8738401020304"),
 		},
 		{
-			name:         "[4]int",
-			obj:          myIntArray([...]int{1, 2, 3, 4}),
-			wantCborData: mustHexDecode("d8748401020304"),
+			name: "[4]int",
+			v:    myIntArray([...]int{1, 2, 3, 4}),
+			data: mustHexDecode("d8748401020304"),
 		},
 		{
-			name:         "map[int]int",
-			obj:          myMapIntInt(map[int]int{1: 2, 3: 4}),
-			wantCborData: mustHexDecode("d875a201020304"),
+			name: "map[int]int",
+			v:    myMapIntInt(map[int]int{1: 2, 3: 4}),
+			data: mustHexDecode("d875a201020304"),
 		},
 	}
 
-	testRoundTrip(t, testCases, em, dm)
+	testRoundTripCases(t, testCases, em, dm)
 }
 
 func TestTagBinaryMarshalerUnmarshaler(t *testing.T) {
@@ -168,30 +165,26 @@ func TestTagBinaryMarshalerUnmarshaler(t *testing.T) {
 	t2 := reflect.TypeFor[stru]()
 
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 123); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d) returned error %v", t1, 123, err)
-	}
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t2, 124); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d) returned error %v", t2, 124, err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 123)
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t2, 124)
 
-	em, _ := EncOptions{}.EncModeWithTags(tags)
-	dm, _ := DecOptions{}.DecModeWithTags(tags)
+	em := mustEncModeWithTags(t, EncOptions{}, tags)
+	dm := mustDecModeWithTags(t, DecOptions{}, tags)
 
 	testCases := []roundTripTestCase{
 		{
-			name:         "primitive obj",
-			obj:          number(1234567890),
-			wantCborData: mustHexDecode("d87b4800000000499602d2"),
+			name: "primitive obj",
+			v:    number(1234567890),
+			data: mustHexDecode("d87b4800000000499602d2"),
 		},
 		{
-			name:         "struct obj",
-			obj:          stru{a: "a", b: "b", c: "c"},
-			wantCborData: mustHexDecode("d87c45612C622C63"),
+			name: "struct obj",
+			v:    stru{a: "a", b: "b", c: "c"},
+			data: mustHexDecode("d87c45612C622C63"),
 		},
 	}
 
-	testRoundTrip(t, testCases, em, dm)
+	testRoundTripCases(t, testCases, em, dm)
 }
 
 func TestTagStruct(t *testing.T) {
@@ -202,25 +195,18 @@ func TestTagStruct(t *testing.T) {
 	t1 := reflect.TypeFor[T]()
 
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 100); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d) returned error %v", t1, 100, err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 100)
 
-	em, _ := EncOptions{}.EncModeWithTags(tags)
-	dm, _ := DecOptions{}.DecModeWithTags(tags)
+	em := mustEncModeWithTags(t, EncOptions{}, tags)
+	dm := mustDecModeWithTags(t, DecOptions{}, tags)
 
 	data := mustHexDecode("d864a0") // {}
 	var v T
-	if err := dm.Unmarshal(data, &v); err != nil {
-		t.Errorf("Unmarshal() returned error %v", err)
-	}
+	err := unmarshalWithDM(t, dm, data, &v)
+	checkNoError(t, "dm.Unmarshal", err)
+
 	b, err := em.Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%+v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, data) {
-		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, data)
-	}
+	checkMarshal(t, "em.Marshal", b, err, data)
 }
 
 func TestTagFixedLengthStruct(t *testing.T) {
@@ -231,25 +217,18 @@ func TestTagFixedLengthStruct(t *testing.T) {
 	t1 := reflect.TypeFor[T]()
 
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 100); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d) returned error %v", t1, 100, err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 100)
 
-	em, _ := EncOptions{}.EncModeWithTags(tags)
-	dm, _ := DecOptions{}.DecModeWithTags(tags)
+	em := mustEncModeWithTags(t, EncOptions{}, tags)
+	dm := mustDecModeWithTags(t, DecOptions{}, tags)
 
 	data := mustHexDecode("d864a1617360") // {"s":""}
 	var v T
-	if err := dm.Unmarshal(data, &v); err != nil {
-		t.Errorf("Unmarshal() returned error %v", err)
-	}
+	err := unmarshalWithDM(t, dm, data, &v)
+	checkNoError(t, "dm.Unmarshal", err)
+
 	b, err := em.Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%+v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, data) {
-		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, data)
-	}
+	checkMarshal(t, "em.Marshal", b, err, data)
 }
 
 func TestTagToArrayStruct(t *testing.T) {
@@ -269,26 +248,19 @@ func TestTagToArrayStruct(t *testing.T) {
 	t1 := reflect.TypeFor[signedCWT]()
 
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 18); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d) returned error %v", t1, 18, err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 18)
 
-	em, _ := EncOptions{}.EncModeWithTags(tags)
-	dm, _ := DecOptions{}.DecModeWithTags(tags)
+	em := mustEncModeWithTags(t, EncOptions{}, tags)
+	dm := mustDecModeWithTags(t, DecOptions{}, tags)
 
 	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.3
 	data := mustHexDecode("d28443a10126a104524173796d6d657472696345434453413235365850a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b7158405427c1ff28d23fbad1f29c4c7c6a555e601d6fa29f9179bc3d7438bacaca5acd08c8d4d4f96131680c429a01f85951ecee743a52b9b63632c57209120e1c9e30")
 	var v signedCWT
-	if err := dm.Unmarshal(data, &v); err != nil {
-		t.Errorf("Unmarshal() returned error %v", err)
-	}
+	err := unmarshalWithDM(t, dm, data, &v)
+	checkNoError(t, "dm.Unmarshal", err)
+
 	b, err := em.Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%+v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, data) {
-		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, data)
-	}
+	checkMarshal(t, "em.Marshal", b, err, data)
 }
 
 func TestNestedTagStruct(t *testing.T) {
@@ -309,26 +281,19 @@ func TestNestedTagStruct(t *testing.T) {
 
 	// Register tag CBOR Web Token (CWT) 61 and COSE_Mac0 17 with macedCOSE type
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 61, 17); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d, %v) returned error %v", t1, 61, 17, err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, t1, 61, 17)
 
-	em, _ := EncOptions{}.EncModeWithTags(tags)
-	dm, _ := DecOptions{}.DecModeWithTags(tags)
+	em := mustEncModeWithTags(t, EncOptions{}, tags)
+	dm := mustDecModeWithTags(t, DecOptions{}, tags)
 
 	// Data from https://tools.ietf.org/html/rfc8392#appendix-A section A.4
 	data := mustHexDecode("d83dd18443a10104a1044c53796d6d65747269633235365850a70175636f61703a2f2f61732e6578616d706c652e636f6d02656572696b77037818636f61703a2f2f6c696768742e6578616d706c652e636f6d041a5612aeb0051a5610d9f0061a5610d9f007420b7148093101ef6d789200")
 	var v macedCOSE
-	if err := dm.Unmarshal(data, &v); err != nil {
-		t.Errorf("Unmarshal() returned error %v", err)
-	}
+	err := unmarshalWithDM(t, dm, data, &v)
+	checkNoError(t, "dm.Unmarshal", err)
+
 	b, err := em.Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%+v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, data) {
-		t.Errorf("Marshal(%+v) = 0x%x, want 0x%x", v, b, data)
-	}
+	checkMarshal(t, "em.Marshal", b, err, data)
 }
 
 func TestAddTagError(t *testing.T) {
@@ -458,17 +423,8 @@ func TestAddTagError(t *testing.T) {
 	tags := NewTagSet()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if err := tags.Add(tc.opts, tc.typ, tc.num); err == nil {
-				t.Errorf("TagSet.Add(%s, %d) didn't return an error", tc.typ.String(), tc.num)
-			} else if err.Error() != tc.wantErrorMsg {
-				var typeString string
-				if tc.typ == nil {
-					typeString = "nil"
-				} else {
-					typeString = tc.typ.String()
-				}
-				t.Errorf("TagSet.Add(%s, %d) returned error msg %q, want %q", typeString, tc.num, err, tc.wantErrorMsg)
-			}
+			err := tags.Add(tc.opts, tc.typ, tc.num)
+			checkError[error](t, "TagSet.Add", err, tc.wantErrorMsg)
 		})
 	}
 }
@@ -480,15 +436,10 @@ func TestAddDuplicateTagContentTypeError(t *testing.T) {
 
 	tags := NewTagSet()
 	// Add myIntType and 100 to tags
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100); err != nil {
-		t.Errorf("TagSet.Add(%s, %d) returned error %v", myIntType.String(), 100, err)
-	}
+	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100)
 	// Add myIntType and 101 to tags
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 101); err == nil {
-		t.Errorf("TagSet.Add(%s, %d) didn't return an error", myIntType.String(), 101)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("TagSet.Add(%s, %d) returned error msg %q, want %q", myIntType, 101, err, wantErrorMsg)
-	}
+	err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 101)
+	checkError[error](t, "TagSet.Add", err, wantErrorMsg)
 }
 
 func TestAddDuplicateTagNumError(t *testing.T) {
@@ -501,15 +452,10 @@ func TestAddDuplicateTagNumError(t *testing.T) {
 	tags := NewTagSet()
 
 	// Add myIntType and 100 to tags
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100); err != nil {
-		t.Errorf("TagSet.Add(%s, %d) returned error %v", myIntType.String(), 100, err)
-	}
+	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100)
 	// Add myBoolType and 100 to tags
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myBoolType, 100); err == nil {
-		t.Errorf("TagSet.Add(%s, %d) didn't return an error", myBoolType.String(), 100)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("TagSet.Add(%s, %d) returned error msg %q, want %q", myBoolType, 100, err, wantErrorMsg)
-	}
+	err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myBoolType, 100)
+	checkError[error](t, "TagSet.Add", err, wantErrorMsg)
 }
 
 func TestAddDuplicateTagNumsError(t *testing.T) {
@@ -522,15 +468,10 @@ func TestAddDuplicateTagNumsError(t *testing.T) {
 	tags := NewTagSet()
 
 	// Add myIntType and [100, 101] to tags
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100, 101); err != nil {
-		t.Errorf("TagSet.Add(%s, %d, %d) returned error %v", myIntType.String(), 100, 101, err)
-	}
+	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100, 101)
 	// Add myBoolType and [100, 101] to tags
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myBoolType, 100, 101); err == nil {
-		t.Errorf("TagSet.Add(%s, %d, %d) didn't return an error", myBoolType.String(), 100, 101)
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("TagSet.Add(%s, %d, %d) returned error msg %q, want %q", myBoolType, 100, 101, err, wantErrorMsg)
-	}
+	err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myBoolType, 100, 101)
+	checkError[error](t, "TagSet.Add", err, wantErrorMsg)
 }
 
 func TestAddRemoveTag(t *testing.T) {
@@ -543,18 +484,12 @@ func TestAddRemoveTag(t *testing.T) {
 
 	tags := NewTagSet()
 	stags := tags.(*syncTagSet)
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100); err != nil {
-		t.Errorf("TagSet.Add(%s, %d) returned error %v", myIntType.String(), 100, err)
-	}
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myFloatType, 101); err != nil {
-		t.Errorf("TagSet.Add(%s, %d) returned error %v", myFloatType.String(), 101, err)
-	}
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, pMyIntType, 102); err == nil {
-		t.Errorf("TagSet.Add(%s, %d) didn't return an error", pMyIntType.String(), 102)
-	}
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, pMyFloatType, 103); err == nil {
-		t.Errorf("TagSet.Add(%s, %d) didn't return an error", pMyFloatType.String(), 103)
-	}
+	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100)
+	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myFloatType, 101)
+	err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, pMyIntType, 102)
+	checkError[error](t, "TagSet.Add", err, "")
+	err = tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, pMyFloatType, 103)
+	checkError[error](t, "TagSet.Add", err, "")
 	if len(stags.t) != 2 {
 		t.Errorf("TagSet len is %d, want %d", len(stags.t), 2)
 	}
@@ -583,9 +518,7 @@ func TestTagSetRemoveNil(t *testing.T) {
 		t.Errorf("TagSet len is %d, want %d", len(stags.t), 0)
 	}
 
-	if err := tags.Add(TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100); err != nil {
-		t.Errorf("TagSet.Add(%s, %d) returned error %v", myIntType.String(), 100, err)
-	}
+	mustAddTag(t, tags, TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired}, myIntType, 100)
 	if len(stags.t) != 1 {
 		t.Errorf("TagSet len is %d, want %d", len(stags.t), 1)
 	}
@@ -604,7 +537,7 @@ func TestTagSetRemoveNil(t *testing.T) {
 	}
 	ti := tags.getTagItemFromType(myIntType)
 	if !reflect.DeepEqual(ti, expectedTI) {
-		t.Errorf("tagItem is %+v, want %+v", ti, expectedTI)
+		t.Errorf("tags.getTagItemFromType() = %+v, want %+v", ti, expectedTI)
 	}
 }
 
@@ -705,22 +638,22 @@ func TestAddTagTypeAliasError(t *testing.T) {
 		},
 		{
 			name:         "[]byte",
-			typ:          reflect.TypeFor[myByteSlice](), //nolint:unconvert
+			typ:          reflect.TypeFor[myByteSlice](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got []uint8",
 		},
 		{
 			name:         "[]int",
-			typ:          reflect.TypeFor[myIntSlice](), //nolint:unconvert
+			typ:          reflect.TypeFor[myIntSlice](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got []int",
 		},
 		{
 			name:         "[4]int",
-			typ:          reflect.TypeFor[myIntArray](), //nolint:unconvert
+			typ:          reflect.TypeFor[myIntArray](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got [4]int",
 		},
 		{
 			name:         "map[int]int",
-			typ:          reflect.TypeFor[myMapIntInt](), //nolint:unconvert
+			typ:          reflect.TypeFor[myMapIntInt](),
 			wantErrorMsg: "cbor: can only add named types to TagSet, got map[int]int",
 		},
 	}
@@ -728,11 +661,8 @@ func TestAddTagTypeAliasError(t *testing.T) {
 	tags := NewTagSet()
 	for i, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, tc.typ, uint64(100+i)); err == nil { //nolint:gosec
-				t.Errorf("TagSet.Add(%s, %d) didn't return an error", tc.typ.String(), 0)
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("TagSet.Add(%s, %d) returned error msg %q, want %q", tc.typ.String(), 0, err, tc.wantErrorMsg)
-			}
+			err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, tc.typ, uint64(100+i)) //nolint:gosec
+			checkError[error](t, "TagSet.Add", err, tc.wantErrorMsg)
 		})
 	}
 }
@@ -761,15 +691,9 @@ func TestDecodeTagData(t *testing.T) {
 	tagsDecOptional := NewTagSet()
 	tagsDecIgnored := NewTagSet()
 	for _, tag := range tagInfos {
-		if err := tagsDecRequired.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
-			t.Fatalf("TagSet.Add(%s, %v) returned error %v", tag.t, tag.n, err)
-		}
-		if err := tagsDecOptional.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagOptional}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
-			t.Fatalf("TagSet.Add(%s, %v) returned error %v", tag.t, tag.n, err)
-		}
-		if err := tagsDecIgnored.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagIgnored}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
-			t.Fatalf("TagSet.Add(%s, %v) returned error %v", tag.t, tag.n, err)
-		}
+		mustAddTag(t, tagsDecRequired, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, tag.t, tag.n[0], tag.n[1:]...)
+		mustAddTag(t, tagsDecOptional, TagOptions{EncTag: EncTagRequired, DecTag: DecTagOptional}, tag.t, tag.n[0], tag.n[1:]...)
+		mustAddTag(t, tagsDecIgnored, TagOptions{EncTag: EncTagRequired, DecTag: DecTagIgnored}, tag.t, tag.n[0], tag.n[1:]...)
 	}
 
 	type tag struct {
@@ -784,31 +708,31 @@ func TestDecodeTagData(t *testing.T) {
 
 	testCases := []roundTripTestCase{
 		{
-			name:         "BinaryMarshaler non-struct",
-			obj:          number(1234567890),
-			wantCborData: mustHexDecode("d87b4800000000499602d2"),
+			name: "BinaryMarshaler non-struct",
+			v:    number(1234567890),
+			data: mustHexDecode("d87b4800000000499602d2"),
 		},
 		{
-			name:         "BinaryMarshaler struct",
-			obj:          stru{a: "a", b: "b", c: "c"},
-			wantCborData: mustHexDecode("d87c45612C622C63"),
+			name: "BinaryMarshaler struct",
+			v:    stru{a: "a", b: "b", c: "c"},
+			data: mustHexDecode("d87c45612C622C63"),
 		},
 		{
-			name:         "non-struct",
-			obj:          myInt(1),
-			wantCborData: mustHexDecode("d87d01"),
+			name: "non-struct",
+			v:    myInt(1),
+			data: mustHexDecode("d87d01"),
 		},
 		{
-			name:         "struct",
-			obj:          s{A: "A", B: "B", C: "C"},
-			wantCborData: mustHexDecode("d87ea3616161416162614261636143"), // {"a":"A", "b":"B", "c":"C"}
+			name: "struct",
+			v:    s{A: "A", B: "B", C: "C"},
+			data: mustHexDecode("d87ea3616161416162614261636143"), // {"a":"A", "b":"B", "c":"C"}
 		},
 	}
 	for _, tag := range tags {
 		t.Run(tag.name, func(t *testing.T) {
-			em, _ := EncOptions{}.EncModeWithTags(tag.tagSet)
-			dm, _ := DecOptions{}.DecModeWithTags(tag.tagSet)
-			testRoundTrip(t, testCases, em, dm)
+			em := mustEncModeWithTags(t, EncOptions{}, tag.tagSet)
+			dm := mustDecModeWithTags(t, DecOptions{}, tag.tagSet)
+			testRoundTripCases(t, testCases, em, dm)
 		})
 	}
 }
@@ -836,12 +760,8 @@ func TestDecodeNoTagData(t *testing.T) {
 	tagsDecRequired := NewTagSet()
 	tagsDecOptional := NewTagSet()
 	for _, tag := range tagInfos {
-		if err := tagsDecRequired.Add(TagOptions{EncTag: EncTagNone, DecTag: DecTagRequired}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
-			t.Fatalf("TagSet.Add(%s, %v) returned error %v", tag.t, tag.n, err)
-		}
-		if err := tagsDecOptional.Add(TagOptions{EncTag: EncTagNone, DecTag: DecTagOptional}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
-			t.Fatalf("TagSet.Add(%s, %v) returned error %v", tag.t, tag.n, err)
-		}
+		mustAddTag(t, tagsDecRequired, TagOptions{EncTag: EncTagNone, DecTag: DecTagRequired}, tag.t, tag.n[0], tag.n[1:]...)
+		mustAddTag(t, tagsDecOptional, TagOptions{EncTag: EncTagNone, DecTag: DecTagOptional}, tag.t, tag.n[0], tag.n[1:]...)
 	}
 
 	type tag struct {
@@ -854,32 +774,32 @@ func TestDecodeNoTagData(t *testing.T) {
 
 	testCases := []roundTripTestCase{
 		{
-			name:         "BinaryMarshaler non-struct",
-			obj:          number(1234567890),
-			wantCborData: mustHexDecode("4800000000499602d2"),
+			name: "BinaryMarshaler non-struct",
+			v:    number(1234567890),
+			data: mustHexDecode("4800000000499602d2"),
 		},
 		{
-			name:         "BinaryMarshaler struct",
-			obj:          stru{a: "a", b: "b", c: "c"},
-			wantCborData: mustHexDecode("45612C622C63"),
+			name: "BinaryMarshaler struct",
+			v:    stru{a: "a", b: "b", c: "c"},
+			data: mustHexDecode("45612C622C63"),
 		},
 		{
-			name:         "non-struct",
-			obj:          myInt(1),
-			wantCborData: mustHexDecode("01"),
+			name: "non-struct",
+			v:    myInt(1),
+			data: mustHexDecode("01"),
 		},
 		{
-			name:         "struct",
-			obj:          s{A: "A", B: "B", C: "C"},
-			wantCborData: mustHexDecode("a3616161416162614261636143"), // {"a":"A", "b":"B", "c":"C"}
+			name: "struct",
+			v:    s{A: "A", B: "B", C: "C"},
+			data: mustHexDecode("a3616161416162614261636143"), // {"a":"A", "b":"B", "c":"C"}
 		},
 	}
 
 	for _, tag := range tags {
 		t.Run(tag.name, func(t *testing.T) {
-			em, _ := EncOptions{}.EncModeWithTags(tag.tagSet)
-			dm, _ := DecOptions{}.DecModeWithTags(tag.tagSet)
-			testRoundTrip(t, testCases, em, dm)
+			em := mustEncModeWithTags(t, EncOptions{}, tag.tagSet)
+			dm := mustDecModeWithTags(t, DecOptions{}, tag.tagSet)
+			testRoundTripCases(t, testCases, em, dm)
 		})
 	}
 
@@ -887,16 +807,12 @@ func TestDecodeNoTagData(t *testing.T) {
 	for _, tc := range testCases {
 		name := "EncTagIgnored_DecTagRequired " + tc.name
 		t.Run(name, func(t *testing.T) {
-			dm, _ := DecOptions{}.DecModeWithTags(tagsDecRequired)
-			v := reflect.New(reflect.TypeOf(tc.obj))
-			if err := dm.Unmarshal(tc.wantCborData, v.Interface()); err == nil {
-				t.Errorf("Unmarshal(0x%x) didn't return an error", tc.wantCborData)
-			} else {
-				if _, ok := err.(*UnmarshalTypeError); !ok {
-					t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*UnmarshalTypeError)", tc.wantCborData, err)
-				} else if !strings.Contains(err.Error(), "expect CBOR tag value") {
-					t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", tc.wantCborData, err.Error(), "expect CBOR tag value")
-				}
+			dm := mustDecModeWithTags(t, DecOptions{}, tagsDecRequired)
+			rv := reflect.New(reflect.TypeOf(tc.v))
+			err := unmarshalWithDM(t, dm, tc.data, rv.Interface())
+			checkError[*UnmarshalTypeError](t, "dm.Unmarshal", err, "")
+			if !strings.Contains(err.Error(), "expect CBOR tag value") {
+				t.Errorf("dm.Unmarshal: got %q, want substring %q", err.Error(), "expect CBOR tag value")
 			}
 		})
 	}
@@ -926,15 +842,9 @@ func TestDecodeWrongTag(t *testing.T) {
 	tagsDecOptional := NewTagSet()
 	tagsDecIgnored := NewTagSet()
 	for _, tag := range tagInfos {
-		if err := tagsDecRequired.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
-			t.Fatalf("TagSet.Add(%s, %v) returned error %v", tag.t, tag.n, err)
-		}
-		if err := tagsDecOptional.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagOptional}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
-			t.Fatalf("TagSet.Add(%s, %v) returned error %v", tag.t, tag.n, err)
-		}
-		if err := tagsDecIgnored.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagIgnored}, tag.t, tag.n[0], tag.n[1:]...); err != nil {
-			t.Fatalf("TagSet.Add(%s, %v) returned error %v", tag.t, tag.n, err)
-		}
+		mustAddTag(t, tagsDecRequired, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, tag.t, tag.n[0], tag.n[1:]...)
+		mustAddTag(t, tagsDecOptional, TagOptions{EncTag: EncTagRequired, DecTag: DecTagOptional}, tag.t, tag.n[0], tag.n[1:]...)
+		mustAddTag(t, tagsDecIgnored, TagOptions{EncTag: EncTagRequired, DecTag: DecTagIgnored}, tag.t, tag.n[0], tag.n[1:]...)
 	}
 	type tag struct {
 		name   string
@@ -981,17 +891,10 @@ func TestDecodeWrongTag(t *testing.T) {
 		for _, tag := range tags {
 			name := tag.name + " " + tc.name
 			t.Run(name, func(t *testing.T) {
-				dm, _ := DecOptions{}.DecModeWithTags(tag.tagSet)
+				dm := mustDecModeWithTags(t, DecOptions{}, tag.tagSet)
 				v := reflect.New(reflect.TypeOf(tc.obj))
-				if err := dm.Unmarshal(tc.data, v.Interface()); err == nil {
-					t.Errorf("Unmarshal(0x%x) didn't return an error", tc.data)
-				} else {
-					if _, ok := err.(*WrongTagError); !ok {
-						t.Errorf("Unmarshal(0x%x) returned wrong type of error %T, want (*WrongTagError)", tc.data, err)
-					} else if err.Error() != tc.wantErrorMsg {
-						t.Errorf("Unmarshal(0x%x) returned error %q, want error %q", tc.data, err.Error(), tc.wantErrorMsg)
-					}
-				}
+				err := unmarshalWithDM(t, dm, tc.data, v.Interface())
+				checkError[*WrongTagError](t, "dm.Unmarshal", err, tc.wantErrorMsg)
 			})
 		}
 	}
@@ -1000,14 +903,10 @@ func TestDecodeWrongTag(t *testing.T) {
 	for _, tc := range testCases {
 		name := "EncTagRequired_DecTagIgnored " + tc.name
 		t.Run(name, func(t *testing.T) {
-			dm, _ := DecOptions{}.DecModeWithTags(tagsDecIgnored)
+			dm := mustDecModeWithTags(t, DecOptions{}, tagsDecIgnored)
 			v := reflect.New(reflect.TypeOf(tc.obj))
-			if err := dm.Unmarshal(tc.data, v.Interface()); err != nil {
-				t.Errorf("Unmarshal() returned error %v", err)
-			}
-			if !reflect.DeepEqual(tc.obj, v.Elem().Interface()) {
-				t.Errorf("Marshal-Unmarshal returned different values: %v, %v", tc.obj, v.Elem().Interface())
-			}
+			err := unmarshalWithDM(t, dm, tc.data, v.Interface())
+			checkUnmarshal(t, "dm.Unmarshal", v.Elem().Interface(), err, tc.obj)
 		})
 	}
 }
@@ -1020,25 +919,16 @@ func TestEncodeSharedTag(t *testing.T) {
 	sharedTagSet := NewTagSet()
 
 	em, err := EncOptions{}.EncModeWithSharedTags(sharedTagSet)
-	if err != nil {
-		t.Errorf("EncModeWithSharedTags() returned error %v", err)
-	}
+	checkNoError(t, "EncModeWithSharedTags", err)
 
 	// Register myInt type with tag number 123
-	if err = sharedTagSet.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 123); err != nil {
-		t.Fatalf("TagSet.Add(%s, %v) returned error %v", myIntType, 100, err)
-	}
+	mustAddTag(t, sharedTagSet, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 123)
 
 	// Encode myInt with tag number 123
 	v := myInt(1)
 	wantCborData := mustHexDecode("d87b01")
 	b, err := em.Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, wantCborData) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, wantCborData)
-	}
+	checkMarshal(t, "em.Marshal", b, err, wantCborData)
 
 	// Unregister myInt type
 	sharedTagSet.Remove(myIntType)
@@ -1047,29 +937,16 @@ func TestEncodeSharedTag(t *testing.T) {
 	v = myInt(2)
 	wantCborData = mustHexDecode("02")
 	b, err = em.Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, wantCborData) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, wantCborData)
-	}
+	checkMarshal(t, "em.Marshal", b, err, wantCborData)
 
 	// Register myInt type with tag number 234
-	if err = sharedTagSet.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 234); err != nil {
-		t.Fatalf("TagSet.Add(%s, %v) returned error %v", myIntType, 100, err)
-	}
+	mustAddTag(t, sharedTagSet, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 234)
 
 	// Encode myInt with tag number 234
 	v = myInt(3)
 	wantCborData = mustHexDecode("d8ea03")
 	b, err = em.Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, wantCborData) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, wantCborData)
-	}
-
+	checkMarshal(t, "em.Marshal", b, err, wantCborData)
 }
 
 func TestDecodeSharedTag(t *testing.T) {
@@ -1080,25 +957,17 @@ func TestDecodeSharedTag(t *testing.T) {
 	sharedTagSet := NewTagSet()
 
 	dm, err := DecOptions{}.DecModeWithSharedTags(sharedTagSet)
-	if err != nil {
-		t.Errorf("DecModeWithSharedTags() returned error %v", err)
-	}
+	checkNoError(t, "DecModeWithSharedTags", err)
 
 	// Register myInt type with tag number 123
-	if err = sharedTagSet.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 123); err != nil {
-		t.Fatalf("TagSet.Add(%s, %v) returned error %v", myIntType, 100, err)
-	}
+	mustAddTag(t, sharedTagSet, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 123)
 
 	// Decode myInt with tag number 123
 	var v myInt
 	wantV := myInt(1)
 	data := mustHexDecode("d87b01")
-	if err = dm.Unmarshal(data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(v, wantV) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantV, wantV)
-	}
+	err = unmarshalWithDM(t, dm, data, &v)
+	checkUnmarshal(t, "dm.Unmarshal", v, err, wantV)
 
 	// Unregister myInt type
 	sharedTagSet.Remove(myIntType)
@@ -1106,27 +975,17 @@ func TestDecodeSharedTag(t *testing.T) {
 	// Decode myInt without tag number
 	wantV = myInt(2)
 	data = mustHexDecode("02")
-	if err := dm.Unmarshal(data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(v, wantV) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantV, wantV)
-	}
+	err = unmarshalWithDM(t, dm, data, &v)
+	checkUnmarshal(t, "dm.Unmarshal", v, err, wantV)
 
 	// Register myInt type with tag number 234
-	if err := sharedTagSet.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 234); err != nil {
-		t.Fatalf("TagSet.Add(%s, %v) returned error %v", myIntType, 100, err)
-	}
+	mustAddTag(t, sharedTagSet, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, myIntType, 234)
 
 	// Decode myInt with tag number 234
 	wantV = myInt(3)
 	data = mustHexDecode("d8ea03")
-	if err := dm.Unmarshal(data, &v); err != nil {
-		t.Errorf("Unmarshal(0x%x) returned error %v", data, err)
-	}
-	if !reflect.DeepEqual(v, wantV) {
-		t.Errorf("Unmarshal(0x%x) = %v (%T), want %v (%T)", data, v, v, wantV, wantV)
-	}
+	err = unmarshalWithDM(t, dm, data, &v)
+	checkUnmarshal(t, "dm.Unmarshal", v, err, wantV)
 }
 
 func TestDecModeWithTagsError(t *testing.T) {
@@ -1134,35 +993,29 @@ func TestDecModeWithTagsError(t *testing.T) {
 	wantErrorMsg := "cbor: cannot create DecMode with nil value as TagSet"
 	dm, err := DecOptions{}.DecModeWithTags(nil)
 	if dm != nil {
-		t.Errorf("DecModeWithTags(nil) returned %v", dm)
+		t.Errorf("DecModeWithTags(nil) = %v, want nil", dm)
 	}
-	if err.Error() != wantErrorMsg {
-		t.Errorf("DecModeWithTags(nil) returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "DecModeWithTags", err, wantErrorMsg)
+
 	dm, err = DecOptions{}.DecModeWithSharedTags(nil)
 	if dm != nil {
-		t.Errorf("DecModeWithSharedTags(nil) returned %v", dm)
+		t.Errorf("DecModeWithSharedTags(nil) = %v, want nil", dm)
 	}
-	if err.Error() != wantErrorMsg {
-		t.Errorf("DecModeWithSharedTags(nil) returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "DecModeWithSharedTags", err, wantErrorMsg)
 
 	// Create DecMode with invalid EncOptions
 	wantErrorMsg = "cbor: invalid TimeTag 100"
 	dm, err = DecOptions{TimeTag: 100}.DecModeWithTags(NewTagSet())
 	if dm != nil {
-		t.Errorf("DecModeWithTags() returned %v", dm)
+		t.Errorf("DecModeWithTags() = %v, want nil", dm)
 	}
-	if err.Error() != wantErrorMsg {
-		t.Errorf("DecModeWithTags() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "DecModeWithTags", err, wantErrorMsg)
+
 	dm, err = DecOptions{TimeTag: 100}.DecModeWithSharedTags(NewTagSet())
 	if dm != nil {
-		t.Errorf("DecModeWithSharedTags() returned %v", dm)
+		t.Errorf("DecModeWithSharedTags() = %v, want nil", dm)
 	}
-	if err.Error() != wantErrorMsg {
-		t.Errorf("DecModeWithSharedTags() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "DecModeWithSharedTags", err, wantErrorMsg)
 }
 
 func TestEncModeWithTagsError(t *testing.T) {
@@ -1170,56 +1023,44 @@ func TestEncModeWithTagsError(t *testing.T) {
 	wantErrorMsg := "cbor: cannot create EncMode with nil value as TagSet"
 	em, err := EncOptions{}.EncModeWithTags(nil)
 	if em != nil {
-		t.Errorf("EncModeWithTags(nil) returned %v", em)
+		t.Errorf("EncModeWithTags(nil) = %v, want nil", em)
 	}
-	if err.Error() != wantErrorMsg {
-		t.Errorf("EncModeWithTags(nil) returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "EncModeWithTags", err, wantErrorMsg)
+
 	em, err = EncOptions{}.EncModeWithSharedTags(nil)
 	if em != nil {
-		t.Errorf("EncModeWithSharedTags(nil) returned %v", em)
+		t.Errorf("EncModeWithSharedTags(nil) = %v, want nil", em)
 	}
-	if err.Error() != wantErrorMsg {
-		t.Errorf("EncModeWithSharedTags(nil) returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "EncModeWithSharedTags", err, wantErrorMsg)
 
 	// Create EncMode with invalid EncOptions
 	wantErrorMsg = "cbor: invalid TimeTag 100"
 	em, err = EncOptions{TimeTag: 100}.EncModeWithTags(NewTagSet())
 	if em != nil {
-		t.Errorf("EncModeWithTags() returned %v", em)
+		t.Errorf("EncModeWithTags() = %v, want nil", em)
 	}
-	if err.Error() != wantErrorMsg {
-		t.Errorf("EncModeWithTags() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "EncModeWithTags", err, wantErrorMsg)
+
 	em, err = EncOptions{TimeTag: 100}.EncModeWithSharedTags(NewTagSet())
 	if em != nil {
-		t.Errorf("EncModeWithSharedTags() returned %v", em)
+		t.Errorf("EncModeWithSharedTags() = %v, want nil", em)
 	}
-	if err.Error() != wantErrorMsg {
-		t.Errorf("EncModeWithSharedTags() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	checkError[error](t, "EncModeWithSharedTags", err, wantErrorMsg)
 }
 
 func TestNilRawTagUnmarshalCBORError(t *testing.T) {
 	wantErrorMsg := "cbor.RawTag: UnmarshalCBOR on nil pointer"
 	var tag *RawTag
 	data := mustHexDecode("c249010000000000000000")
-	if err := tag.UnmarshalCBOR(data); err == nil {
-		t.Errorf("UnmarshalCBOR() didn't return error")
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("UnmarshalCBOR() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	err := tag.UnmarshalCBOR(data)
+	checkError[error](t, "tag.UnmarshalCBOR", err, wantErrorMsg)
 }
 
 func TestTagUnmarshalError(t *testing.T) {
 	data := mustHexDecode("d87b61fe") // invalid UTF-8 string
 	var tag Tag
-	if err := Unmarshal(data, &tag); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return error", data)
-	} else if err.Error() != invalidUTF8ErrorMsg {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want %q", data, err.Error(), invalidUTF8ErrorMsg)
-	}
+	err := unmarshal(t, data, &tag)
+	checkError[error](t, "Unmarshal", err, invalidUTF8ErrorMsg)
 }
 
 func TestTagMarshalError(t *testing.T) {
@@ -1228,57 +1069,43 @@ func TestTagMarshalError(t *testing.T) {
 		Number:  123,
 		Content: make(chan bool),
 	}
-	if _, err := Marshal(tag); err == nil {
-		t.Errorf("Marshal() didn't return error")
-	} else if err.Error() != wantErrorMsg {
-		t.Errorf("Marshal() returned error %q, want %q", err.Error(), wantErrorMsg)
-	}
+	b, err := Marshal(tag)
+	checkMarshalErr[error](t, "Marshal", b, err, wantErrorMsg)
 }
 
 func TestMarshalUninitializedTag(t *testing.T) {
 	var v Tag
 	b, err := Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, cborNil) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, cborNil)
-	}
+	checkMarshal(t, "Marshal", b, err, []byte{cborNil})
 }
 
 func TestMarshalUninitializedRawTag(t *testing.T) {
 	var v RawTag
 	b, err := Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, cborNil) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, cborNil)
-	}
+	checkMarshal(t, "Marshal", b, err, []byte{cborNil})
 }
 
 func TestMarshalTagWithEmptyContent(t *testing.T) {
 	v := Tag{Number: 100}           // Tag.Content is empty
 	want := mustHexDecode("d864f6") // 100(null)
 	b, err := Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
-	}
+	checkMarshal(t, "Marshal", b, err, want)
 }
 
 func TestMarshalRawTagWithEmptyContent(t *testing.T) {
 	v := RawTag{Number: 100}        // RawTag.Content is empty
 	want := mustHexDecode("d864f6") // 100(null)
 	b, err := Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, want) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, want)
-	}
+	checkMarshal(t, "Marshal", b, err, want)
+}
+
+func TestMarshalAddressableTag(t *testing.T) {
+	type s struct{ T Tag }
+
+	v := s{T: Tag{Number: 100, Content: 1}}
+	want := []byte{0xa1, 0x61, 0x54, 0xd8, 0x64, 0x01} // {"T": 100(1)}
+	b, err := Marshal(&v)
+	checkMarshal(t, "Marshal", b, err, want)
 }
 
 func TestEncodeTag(t *testing.T) {
@@ -1297,23 +1124,13 @@ func TestEncodeTag(t *testing.T) {
 	lenFirstSortedCborData := mustHexDecode("d864a80af520f5f4f51864f5617af58120f5626161f5811864f5") // tag number: 100, value: map with sorted keys: 10, -1, false, 100, "z", [-1], "aa", [100]
 	bytewiseSortedCborData := mustHexDecode("d864a80af51864f520f5617af5626161f5811864f58120f5f4f5") // tag number: 100, value: map with sorted keys: 10, 100, -1, "z", "aa", [100], [-1], false
 
-	em, _ := EncOptions{Sort: SortLengthFirst}.EncMode()
+	em := mustEncMode(t, EncOptions{Sort: SortLengthFirst})
 	b, err := em.Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, lenFirstSortedCborData) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, lenFirstSortedCborData)
-	}
+	checkMarshal(t, "em.Marshal", b, err, lenFirstSortedCborData)
 
-	em, _ = EncOptions{Sort: SortBytewiseLexical}.EncMode()
+	em = mustEncMode(t, EncOptions{Sort: SortBytewiseLexical})
 	b, err = em.Marshal(v)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v, err)
-	}
-	if !bytes.Equal(b, bytewiseSortedCborData) {
-		t.Errorf("Marshal(%v) = 0x%x, want 0x%x", v, b, bytewiseSortedCborData)
-	}
+	checkMarshal(t, "em.Marshal", b, err, bytewiseSortedCborData)
 }
 
 func TestDecodeTagToEmptyIface(t *testing.T) {
@@ -1324,14 +1141,10 @@ func TestDecodeTagToEmptyIface(t *testing.T) {
 	typeMyUint := reflect.TypeFor[myUint]()
 
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typeMyBool, 100); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d) returned error %v", typeMyBool, 100, err)
-	}
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typeMyUint, 101, 102); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d, %d) returned error %v", typeMyUint, 101, 102, err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typeMyBool, 100)
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typeMyUint, 101, 102)
 
-	dm, _ := DecOptions{}.DecModeWithTags(tags)
+	dm := mustDecModeWithTags(t, DecOptions{}, tags)
 	dmSharedTags, _ := DecOptions{}.DecModeWithSharedTags(tags)
 
 	testCases := []struct {
@@ -1369,20 +1182,12 @@ func TestDecodeTagToEmptyIface(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var v1 any
-			if err := dm.Unmarshal(tc.data, &v1); err != nil {
-				t.Errorf("Unmarshal() returned error %v", err)
-			}
-			if !reflect.DeepEqual(tc.wantObj, v1) {
-				t.Errorf("Unmarshal to any returned different values: %v, %v", tc.wantObj, v1)
-			}
+			err := unmarshalWithDM(t, dm, tc.data, &v1)
+			checkUnmarshal(t, "dm.Unmarshal", v1, err, tc.wantObj)
 
 			var v2 any
-			if err := dmSharedTags.Unmarshal(tc.data, &v2); err != nil {
-				t.Errorf("Unmarshal() returned error %v", err)
-			}
-			if !reflect.DeepEqual(tc.wantObj, v2) {
-				t.Errorf("Unmarshal to any returned different values: %v, %v", tc.wantObj, v2)
-			}
+			err = unmarshalWithDM(t, dmSharedTags, tc.data, &v2)
+			checkUnmarshal(t, "dm.Unmarshal", v2, err, tc.wantObj)
 		})
 	}
 }
@@ -1393,22 +1198,15 @@ func TestDecodeRegisteredTagToEmptyIfaceError(t *testing.T) {
 	typeMyInt := reflect.TypeFor[myInt]()
 
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typeMyInt, 101, 102); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d, %d) returned error %v", typeMyInt, 101, 102, err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typeMyInt, 101, 102)
 
-	dm, _ := DecOptions{}.DecModeWithTags(tags)
+	dm := mustDecModeWithTags(t, DecOptions{}, tags)
 
 	data := mustHexDecode("d865d8663bffffffffffffffff") // 101(102(-18446744073709551616))
 
 	var v any
-	if err := dm.Unmarshal(data, &v); err == nil {
-		t.Errorf("Unmarshal(0x%x) didn't return an error", data)
-	} else if _, ok := err.(*UnmarshalTypeError); !ok {
-		t.Errorf("Unmarshal(0x%x) returned wrong error type %T, want (*UnmarshalTypeError)", data, err)
-	} else if !strings.Contains(err.Error(), "cannot unmarshal") {
-		t.Errorf("Unmarshal(0x%x) returned error %q, want error containing %q", data, err.Error(), "cannot unmarshal")
-	}
+	err := unmarshalWithDM(t, dm, data, &v)
+	checkError[*UnmarshalTypeError](t, "dm.Unmarshal", err, "")
 }
 
 type number3 uint64
@@ -1446,45 +1244,27 @@ func TestDecodeRegisterTagForUnmarshaler(t *testing.T) {
 	typ := reflect.TypeFor[number3]()
 
 	tags := NewTagSet()
-	if err := tags.Add(TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 100); err != nil {
-		t.Fatalf("TagSet.Add(%s, %d) returned error %v", typ, 100, err)
-	}
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, typ, 100)
 
 	data := mustHexDecode("d864a1636e756d01") // 100({"num": 1})
 	wantObj := number3(1)
 
-	dm, _ := DecOptions{}.DecModeWithTags(tags)
-	em, _ := EncOptions{}.EncModeWithTags(tags)
+	em := mustEncModeWithTags(t, EncOptions{}, tags)
+	dm := mustDecModeWithTags(t, DecOptions{}, tags)
 
 	// Decode to a value of type any.  Unmarshal() should return object of registered type.
 	var v1 any
-	if err := dm.Unmarshal(data, &v1); err != nil {
-		t.Errorf("Unmarshal() returned error %v", err)
-	}
-	if !reflect.DeepEqual(wantObj, v1) {
-		t.Errorf("Unmarshal() returned different values: %v (%T), %v (%T)", wantObj, wantObj, v1, v1)
-	}
+	err := unmarshalWithDM(t, dm, data, &v1)
+	checkUnmarshal(t, "dm.Unmarshal", v1, err, wantObj)
 	b, err := em.Marshal(v1)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v1, err)
-	} else if !bytes.Equal(b, data) {
-		t.Errorf("Marshal(%v) returned %v, want %v", v1, b, data)
-	}
+	checkMarshal(t, "em.Marshal", b, err, data)
 
 	// Decode to registered type.
 	var v2 number3
-	if err = dm.Unmarshal(data, &v2); err != nil {
-		t.Errorf("Unmarshal() returned error %v", err)
-	}
-	if !reflect.DeepEqual(wantObj, v2) {
-		t.Errorf("Unmarshal() returned different values: %v, %v", wantObj, v2)
-	}
+	err = unmarshalWithDM(t, dm, data, &v2)
+	checkUnmarshal(t, "dm.Unmarshal", v2, err, wantObj)
 	b, err = em.Marshal(v2)
-	if err != nil {
-		t.Errorf("Marshal(%v) returned error %v", v2, err)
-	} else if !bytes.Equal(b, data) {
-		t.Errorf("Marshal(%v) returned %v, want %v", v2, b, data)
-	}
+	checkMarshal(t, "em.Marshal", b, err, data)
 }
 
 func TestMarshalRawTagContainingMalformedCBORData(t *testing.T) {
@@ -1519,16 +1299,7 @@ func TestMarshalRawTagContainingMalformedCBORData(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			b, err := Marshal(tc.value)
-			if err == nil {
-				t.Errorf("Marshal(%v) didn't return an error, want error %q", tc.value, tc.wantErrorMsg)
-			} else if _, ok := err.(*MarshalerError); !ok {
-				t.Errorf("Marshal(%v) error type %T, want *MarshalerError", tc.value, err)
-			} else if err.Error() != tc.wantErrorMsg {
-				t.Errorf("Marshal(%v) error %q, want %q", tc.value, err.Error(), tc.wantErrorMsg)
-			}
-			if b != nil {
-				t.Errorf("Marshal(%v) = 0x%x, want nil", tc.value, b)
-			}
+			checkMarshalErr[*MarshalerError](t, "Marshal", b, err, tc.wantErrorMsg)
 		})
 	}
 }
@@ -1563,19 +1334,9 @@ func TestEncodeBuiltinTag(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			em, err := tc.opts.EncMode()
-			if err != nil {
-				t.Fatal(err)
-			}
-
+			em := mustEncMode(t, tc.opts)
 			got, err := em.Marshal(tc.tag)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if !bytes.Equal(got, tc.want) {
-				t.Errorf("unexpected difference\ngot: 0x%x\nwant: 0x%x", got, tc.want)
-			}
+			checkMarshal(t, "em.Marshal", got, err, tc.want)
 		})
 	}
 }
@@ -1679,24 +1440,16 @@ func TestUnmarshalRawTagOnBadData(t *testing.T) {
 				var v RawTag
 
 				err := v.UnmarshalCBOR(tc.data)
-				if err == nil {
-					t.Errorf("UnmarshalCBOR(%x) didn't return error", tc.data)
-				}
+				checkError[error](t, "v.UnmarshalCBOR", err, "")
 				if !strings.HasPrefix(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("UnmarshalCBOR(%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
+					t.Errorf("v.UnmarshalCBOR(0x%x): got %q, want prefix %q", tc.data, err.Error(), tc.wantErrorMsg)
 				}
 			}
 			// Test Unmarshal(data, *RawTag), which calls RawTag.unmarshalCBOR() under the hood
 			{
 				var v RawTag
-
-				err := Unmarshal(tc.data, &v)
-				if err == nil {
-					t.Errorf("Unmarshal(%x) didn't return error", tc.data)
-				}
-				if !strings.HasPrefix(err.Error(), tc.wantErrorMsg) {
-					t.Errorf("Unmarshal(%x) returned error %q, want %q", tc.data, err.Error(), tc.wantErrorMsg)
-				}
+				err := unmarshal(t, tc.data, &v)
+				checkError[error](t, "Unmarshal", err, tc.wantErrorMsg)
 			}
 		})
 	}

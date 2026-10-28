@@ -5,9 +5,11 @@ package cbor
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -166,6 +168,19 @@ type SomeFieldsAllOmitEmpty struct {
 	F08 int `cbor:",omitempty"`
 }
 
+// address is a defined type with underlying []byte.
+// address has 8 methods and doesn't implement any Unmarshaler or Marshaler interfaces.
+type address []byte
+
+func (a address) Bytes() []byte         { return append([]byte(nil), a...) }
+func (a address) Compare(x address) int { return bytes.Compare(a, x) }
+func (a address) Equal(x address) bool  { return bytes.Equal(a, x) }
+func (a address) Hex() string           { return hex.EncodeToString([]byte(a)) }
+func (a address) HexWithPrefix() string { return fmt.Sprintf("0x%x", []byte(a)) }
+func (a address) Len() int              { return len(a) }
+func (a *address) Reset(x address)      { *a = append((*a)[:0], x...) }
+func (a address) String() string        { return fmt.Sprintf("0x%x", []byte(a)) }
+
 var decodeBenchmarks = []struct {
 	name          string
 	data          []byte
@@ -174,62 +189,62 @@ var decodeBenchmarks = []struct {
 	{
 		name:          "bool",
 		data:          mustHexDecode("f5"),
-		decodeToTypes: []reflect.Type{typeIntf, typeBool},
+		decodeToTypes: []reflect.Type{typeAny, typeBool},
 	}, // true
 	{
-		name:          "positive int",
+		name:          "uint",
 		data:          mustHexDecode("1bffffffffffffffff"),
-		decodeToTypes: []reflect.Type{typeIntf, typeUint64},
+		decodeToTypes: []reflect.Type{typeAny, typeUint64},
 	}, // uint64(18446744073709551615)
 	{
-		name:          "negative int",
+		name:          "nint",
 		data:          mustHexDecode("3903e7"),
-		decodeToTypes: []reflect.Type{typeIntf, typeInt64},
+		decodeToTypes: []reflect.Type{typeAny, typeInt64},
 	}, // int64(-1000)
 	{
 		name:          "float",
 		data:          mustHexDecode("fbc010666666666666"),
-		decodeToTypes: []reflect.Type{typeIntf, typeFloat64},
+		decodeToTypes: []reflect.Type{typeAny, typeFloat64},
 	}, // float64(-4.1)
 	{
-		name:          "byte string",
+		name:          "bstr",
 		data:          mustHexDecode("581a0102030405060708090a0b0c0d0e0f101112131415161718191a"),
-		decodeToTypes: []reflect.Type{typeIntf, typeByteSlice},
+		decodeToTypes: []reflect.Type{typeAny, typeByteSlice, reflect.TypeFor[address]()},
 	}, // []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}
 	{
-		name:          "indefinite-length byte string",
+		name:          "indef bstr",
 		data:          mustHexDecode("5f410141024103410441054106410741084109410a410b410c410d410e410f4110411141124113411441154116411741184119411aff"),
-		decodeToTypes: []reflect.Type{typeIntf, typeByteSlice},
+		decodeToTypes: []reflect.Type{typeAny, typeByteSlice},
 	}, // []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}
 	{
-		name:          "text string",
+		name:          "tstr",
 		data:          mustHexDecode("782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"),
-		decodeToTypes: []reflect.Type{typeIntf, typeString},
+		decodeToTypes: []reflect.Type{typeAny, typeString},
 	}, // "The quick brown fox jumps over the lazy dog"
 	{
-		name:          "indefinite-length text string",
+		name:          "indef tstr",
 		data:          mustHexDecode("7f61546168616561206171617561696163616b612061626172616f6177616e61206166616f61786120616a6175616d617061736120616f61766165617261206174616861656120616c6161617a617961206164616f6167ff"),
-		decodeToTypes: []reflect.Type{typeIntf, typeString},
+		decodeToTypes: []reflect.Type{typeAny, typeString},
 	}, // "The quick brown fox jumps over the lazy dog"
 	{
 		name:          "array",
 		data:          mustHexDecode("981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a"),
-		decodeToTypes: []reflect.Type{typeIntf, typeIntSlice},
+		decodeToTypes: []reflect.Type{typeAny, typeIntSlice},
 	}, // []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}
 	{
-		name:          "indefinite-length array",
+		name:          "indef array",
 		data:          mustHexDecode("9f0102030405060708090a0b0c0d0e0f101112131415161718181819181aff"),
-		decodeToTypes: []reflect.Type{typeIntf, typeIntSlice},
+		decodeToTypes: []reflect.Type{typeAny, typeIntSlice},
 	}, // []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}
 	{
 		name:          "map",
 		data:          mustHexDecode("ad616161416162614261636143616461446165614561666146616761476168614861696149616a614a616c614c616d614d616e614e"),
-		decodeToTypes: []reflect.Type{typeIntf, typeMapStringIntf, typeMapStringString},
+		decodeToTypes: []reflect.Type{typeAny, typeMapStringAny, typeMapStringString},
 	}, // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}}
 	{
-		name:          "indefinite-length map",
+		name:          "indef map",
 		data:          mustHexDecode("bf616161416162614261636143616461446165614561666146616761476168614861696149616a614a616b614b616c614c616d614d616e614eff"),
-		decodeToTypes: []reflect.Type{typeIntf, typeMapStringIntf, typeMapStringString},
+		decodeToTypes: []reflect.Type{typeAny, typeMapStringAny, typeMapStringString},
 	}, // map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"}}
 }
 
@@ -244,12 +259,12 @@ var encodeBenchmarks = []struct {
 		values: []any{true},
 	},
 	{
-		name:   "positive int",
+		name:   "uint",
 		data:   mustHexDecode("1bffffffffffffffff"),
 		values: []any{uint64(18446744073709551615)},
 	},
 	{
-		name:   "negative int",
+		name:   "nint",
 		data:   mustHexDecode("3903e7"),
 		values: []any{int64(-1000)},
 	},
@@ -259,12 +274,12 @@ var encodeBenchmarks = []struct {
 		values: []any{float64(-4.1)},
 	},
 	{
-		name:   "bytes",
+		name:   "bstr",
 		data:   mustHexDecode("581a0102030405060708090a0b0c0d0e0f101112131415161718191a"),
 		values: []any{[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26}},
 	},
 	{
-		name:   "text",
+		name:   "tstr",
 		data:   mustHexDecode("782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"),
 		values: []any{"The quick brown fox jumps over the lazy dog"},
 	},
@@ -283,10 +298,9 @@ var encodeBenchmarks = []struct {
 func BenchmarkUnmarshal(b *testing.B) {
 	for _, bm := range decodeBenchmarks {
 		for _, t := range bm.decodeToTypes {
-			name := "CBOR " + bm.name + " to Go " + t.String()
-			if t.Kind() == reflect.Struct {
-				name = "CBOR " + bm.name + " to Go " + t.Kind().String()
-			}
+			// Name uses the format: "Unmarshal/CBOR type & encoding/Go type",
+			// e.g. "Unmarshal/bstr/[]byte", "Unmarshal/indef_bstr/[]byte"
+			name := bm.name + "/" + goTypeName(t)
 			b.Run(name, func(b *testing.B) {
 				for b.Loop() {
 					vPtr := reflect.New(t).Interface()
@@ -304,37 +318,37 @@ func BenchmarkUnmarshal(b *testing.B) {
 	}{
 		// Unmarshal CBOR map with string key to map[string]any.
 		{
-			name:         "CBOR map to Go map[string]any",
+			name:         "mixed map/map[string]any",
 			data:         mustHexDecode("a86154f56255691bffffffffffffffff61493903e76146fbc0106666666666666142581a0102030405060708090a0b0c0d0e0f101112131415161718191a6153782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6764536c6369981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a634d7373ad6163614361656145616661466167614761686148616e614e616d614d61616141616261426164614461696149616a614a616c614c"),
 			decodeToType: reflect.TypeFor[map[string]any](),
 		},
 		// Unmarshal CBOR map with string key to struct.
 		{
-			name:         "CBOR map to Go struct",
+			name:         "mixed map/struct",
 			data:         mustHexDecode("a86154f56255491bffffffffffffffff61493903e76146fbc0106666666666666142581a0102030405060708090a0b0c0d0e0f101112131415161718191a6153782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6764536c6369981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a634d7373ad6163614361656145616661466167614761686148616e614e616d614d61616141616261426164614461696149616a614a616c614c"),
 			decodeToType: reflect.TypeFor[T1](),
 		},
 		// Unmarshal CBOR map with integer key, such as COSE Key and SenML, to map[int]any.
 		{
-			name:         "CBOR map to Go map[int]any",
+			name:         "mixed map/map[int]any",
 			data:         mustHexDecode("a801f5021bffffffffffffffff033903e704fbc01066666666666605581a0102030405060708090a0b0c0d0e0f101112131415161718191a06782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6707981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a08ad61646144616661466167614761686148616d614d616e614e6161614161626142616361436165614561696149616a614a616c614c"),
 			decodeToType: reflect.TypeFor[map[int]any](),
 		},
 		// Unmarshal CBOR map with integer key, such as COSE Key and SenML, to struct.
 		{
-			name:         "CBOR map to Go struct keyasint",
+			name:         "mixed map/struct keyasint",
 			data:         mustHexDecode("a801f5021bffffffffffffffff033903e704fbc01066666666666605581a0102030405060708090a0b0c0d0e0f101112131415161718191a06782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f6707981a0102030405060708090a0b0c0d0e0f101112131415161718181819181a08ad61646144616661466167614761686148616d614d616e614e6161614161626142616361436165614561696149616a614a616c614c"),
 			decodeToType: reflect.TypeFor[T2](),
 		},
 		// Unmarshal CBOR array of known sequence of data types, such as signed/maced/encrypted CWT, to []any.
 		{
-			name:         "CBOR array to Go []any",
+			name:         "mixed array/[]any",
 			data:         mustHexDecode("88f51bffffffffffffffff3903e7fbc010666666666666581a0102030405060708090a0b0c0d0e0f101112131415161718191a782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67981a0102030405060708090a0b0c0d0e0f101112131415161718181819181aad616261426163614361646144616561456166614661696149616e614e616161416167614761686148616a614a616c614c616d614d"),
 			decodeToType: reflect.TypeFor[[]any](),
 		},
 		// Unmarshal CBOR array of known sequence of data types, such as signed/maced/encrypted CWT, to struct.
 		{
-			name:         "CBOR array to Go struct toarray",
+			name:         "mixed array/struct toarray",
 			data:         mustHexDecode("88f51bffffffffffffffff3903e7fbc010666666666666581a0102030405060708090a0b0c0d0e0f101112131415161718191a782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67981a0102030405060708090a0b0c0d0e0f101112131415161718181819181aad616261426163614361646144616561456166614661696149616e614e616161416167614761686148616a614a616c614c616d614d"),
 			decodeToType: reflect.TypeFor[T3](),
 		},
@@ -356,10 +370,9 @@ func BenchmarkUnmarshalFirst(b *testing.B) {
 	trailingData := mustHexDecode("4a6b0f4718c73f391091ea1c")
 	for _, bm := range decodeBenchmarks {
 		for _, t := range bm.decodeToTypes {
-			name := "CBOR " + bm.name + " to Go " + t.String()
-			if t.Kind() == reflect.Struct {
-				name = "CBOR " + bm.name + " to Go " + t.Kind().String()
-			}
+			// Name uses the format: "UnmarshalFirst/CBOR type & encoding/Go type",
+			// e.g. "UnmarshalFirst/bstr/[]byte", "UnmarshalFirst/indef_bstr/[]byte"
+			name := bm.name + "/" + goTypeName(t)
 			data := make([]byte, 0, len(bm.data)+len(trailingData))
 			data = append(data, bm.data...)
 			data = append(data, trailingData...)
@@ -380,10 +393,9 @@ func BenchmarkUnmarshalFirstViaDecoder(b *testing.B) {
 	trailingData := mustHexDecode("4a6b0f4718c73f391091ea1c")
 	for _, bm := range decodeBenchmarks {
 		for _, t := range bm.decodeToTypes {
-			name := "CBOR " + bm.name + " to Go " + t.String()
-			if t.Kind() == reflect.Struct {
-				name = "CBOR " + bm.name + " to Go " + t.Kind().String()
-			}
+			// Name uses the format: "UnmarshalFirstViaDecoder/CBOR type & encoding/Go type",
+			// e.g. "UnmarshalFirstViaDecoder/bstr/[]byte", "UnmarshalFirstViaDecoder/indef_bstr/[]byte"
+			name := bm.name + "/" + goTypeName(t)
 			data := make([]byte, 0, len(bm.data)+len(trailingData))
 			data = append(data, bm.data...)
 			data = append(data, trailingData...)
@@ -402,10 +414,9 @@ func BenchmarkUnmarshalFirstViaDecoder(b *testing.B) {
 func BenchmarkDecode(b *testing.B) {
 	for _, bm := range decodeBenchmarks {
 		for _, t := range bm.decodeToTypes {
-			name := "CBOR " + bm.name + " to Go " + t.String()
-			if t.Kind() == reflect.Struct {
-				name = "CBOR " + bm.name + " to Go " + t.Kind().String()
-			}
+			// Name uses the format: "Decode/CBOR type & encoding/Go type",
+			// e.g. "Decode/bstr/[]byte", "Decode/indef_bstr/[]byte"
+			name := bm.name + "/" + goTypeName(t)
 			buf := bytes.NewReader(bm.data)
 			decoder := NewDecoder(buf)
 			b.Run(name, func(b *testing.B) {
@@ -449,10 +460,9 @@ func BenchmarkDecodeStream(b *testing.B) {
 func BenchmarkMarshal(b *testing.B) {
 	for _, bm := range encodeBenchmarks {
 		for _, v := range bm.values {
-			name := "Go " + reflect.TypeOf(v).String() + " to CBOR " + bm.name
-			if reflect.TypeOf(v).Kind() == reflect.Struct {
-				name = "Go " + reflect.TypeOf(v).Kind().String() + " to CBOR " + bm.name
-			}
+			// Name uses the format: "Marshal/Go type/CBOR type",
+			// e.g. "Marshal/[]byte/bstr"
+			name := goTypeName(reflect.TypeOf(v)) + "/" + bm.name
 			b.Run(name, func(b *testing.B) {
 				for b.Loop() {
 					if _, err := Marshal(v); err != nil {
@@ -528,61 +538,290 @@ func BenchmarkMarshal(b *testing.B) {
 		Slci: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26},
 		Mss:  map[string]string{"a": "A", "b": "B", "c": "C", "d": "D", "e": "E", "f": "F", "g": "G", "h": "H", "i": "I", "j": "J", "l": "L", "m": "M", "n": "N"},
 	}
+	// Marshal nested map[string]any to CBOR map.
+	m3 := map[string]any{
+		"id":          "kb-2e8bc9402de2",
+		"title":       "Lorem ipsum dolor sit amet elit",
+		"slug":        "dolor-sit-amet",
+		"locale":      "en-US",
+		"state":       "published",
+		"createdAt":   "2026-02-03T08:15:42Z",
+		"updatedAt":   "2026-03-11T16:04:09Z",
+		"publishedAt": "2026-03-11T16:05:30Z",
+		"archivedAt":  nil,
+		"revision":    int64(7),
+		"authorId":    "usr-9121c4",
+		"featured":    false,
+		"tags":        []any{"lorem", "ipsum", "dolors"},
+		"coverImage":  map[string]any{"src": "/media/sed-do-tempor.png", "alt": "Sed do eiusmod tempor magna", "width": int64(960), "height": int64(540)},
+		"body": map[string]any{
+			"type": "doc",
+			"content": []any{
+				map[string]any{
+					"type":    "heading",
+					"attrs":   map[string]any{"textAlign": "left", "level": int64(2), "id": "overview"},
+					"content": []any{map[string]any{"type": "text", "text": "Overview"}},
+				},
+				map[string]any{
+					"type":  "paragraph",
+					"attrs": map[string]any{"textAlign": "left"},
+					"content": []any{
+						map[string]any{"type": "text", "text": "Ut enim ad minim veniam, quis nostrud "},
+						map[string]any{"type": "text", "text": "laboris", "marks": []any{map[string]any{"type": "bold"}}},
+						map[string]any{"type": "text", "text": ", nisi ut aliquip ex ea."},
+					},
+				},
+				map[string]any{
+					"type":    "heading",
+					"attrs":   map[string]any{"textAlign": "left", "level": int64(2), "id": "steps"},
+					"content": []any{map[string]any{"type": "text", "text": "Steps"}},
+				},
+				map[string]any{
+					"type":  "orderedList",
+					"attrs": map[string]any{"start": int64(1)},
+					"content": []any{
+						map[string]any{
+							"type": "listItem",
+							"content": []any{
+								map[string]any{
+									"type":    "paragraph",
+									"attrs":   map[string]any{"textAlign": "left"},
+									"content": []any{map[string]any{"type": "text", "text": "Duis aute irure dolor in veniam."}},
+								},
+							},
+						},
+						map[string]any{
+							"type": "listItem",
+							"content": []any{
+								map[string]any{
+									"type":    "paragraph",
+									"attrs":   map[string]any{"textAlign": "left"},
+									"content": []any{map[string]any{"type": "text", "text": "Excepteur sint, sunt in culpa id"}},
+								},
+							},
+						},
+						map[string]any{
+							"type": "listItem",
+							"content": []any{
+								map[string]any{
+									"type":    "paragraph",
+									"attrs":   map[string]any{"textAlign": "left"},
+									"content": []any{map[string]any{"type": "text", "text": "Cillum dolore eu fugiat n"}},
+								},
+							},
+						},
+					},
+				},
+				map[string]any{
+					"type":  "callout",
+					"attrs": map[string]any{"tone": "caution"},
+					"content": []any{
+						map[string]any{
+							"type":    "paragraph",
+							"attrs":   map[string]any{"textAlign": "left"},
+							"content": []any{map[string]any{"type": "text", "text": "Nulla pariatur, excepteur sint occaecat"}},
+						},
+					},
+				},
+				map[string]any{
+					"type":  "paragraph",
+					"attrs": map[string]any{"textAlign": "left"},
+					"content": []any{
+						map[string]any{"type": "text", "text": "Anim esse? "},
+						map[string]any{
+							"type": "text",
+							"text": "Id est laborum.",
+							"marks": []any{
+								map[string]any{
+									"type":  "link",
+									"attrs": map[string]any{"href": "https://example.com/lorem/dolore", "target": "_blank", "rel": "noopener", "class": nil},
+								},
+							},
+						},
+						map[string]any{"type": "text", "text": "."},
+					},
+				},
+			},
+		},
+		"history": []any{
+			map[string]any{
+				"revision":  int64(7),
+				"savedAt":   "2026-03-11T16:04:09Z",
+				"editorId":  "usr-9121c4",
+				"note":      "Commodo consequat",
+				"minor":     false,
+				"diffStats": map[string]any{"insertions": int64(18), "deletions": int64(9)},
+			},
+			map[string]any{
+				"revision":  int64(6),
+				"savedAt":   "2026-02-27T10:22:51Z",
+				"editorId":  "usr-5c91e9",
+				"note":      nil,
+				"minor":     true,
+				"diffStats": map[string]any{"insertions": int64(2), "deletions": int64(2)},
+			},
+			map[string]any{
+				"revision":  int64(5),
+				"savedAt":   "2026-02-19T14:48:16Z",
+				"editorId":  "usr-9121c4",
+				"note":      "Velit esse sed",
+				"minor":     false,
+				"diffStats": map[string]any{"insertions": int64(41), "deletions": int64(3)},
+			},
+			map[string]any{
+				"revision":  int64(4),
+				"savedAt":   "2026-02-04T13:05:27Z",
+				"editorId":  "usr-5c91e9",
+				"note":      "Quis aut",
+				"minor":     true,
+				"diffStats": map[string]any{"insertions": int64(1), "deletions": int64(1)},
+			},
+		},
+		"review": map[string]any{
+			"decision":    "approved",
+			"completedAt": "2026-03-11T16:04:58Z",
+			"reviewerId":  "usr-4d0f12",
+			"checklist":   map[string]any{"linksChecked": true, "screenshotsCurrent": true, "styleGuide": true},
+		},
+		"settings": map[string]any{
+			"visibility":    "public",
+			"layout":        "wide",
+			"comments":      map[string]any{"enabled": true, "moderation": "afterPost", "sortOrder": "newest"},
+			"toc":           map[string]any{"enabled": true, "maxDepth": int64(3)},
+			"feedback":      map[string]any{"enabled": true, "prompt": "Amet consectetur?"},
+			"sharing":       map[string]any{"enabled": true, "allowPrint": true, "allowCopy": false},
+			"notifications": map[string]any{"onComment": true, "onFeedback": false},
+			"permissions":   map[string]any{"edit": "team", "comment": "everyone"},
+			"relatedLimit":  int64(4),
+			"customCss":     nil,
+			"layoutOptions": map[string]any{},
+			"overrides":     map[string]any{},
+		},
+		"seo": map[string]any{
+			"metaTitle":       "Lorem ipsum dolor sit am",
+			"metaDescription": "Lorem ipsum dolor sit amet, adipiscing.",
+			"canonicalUrl":    "https://example.com/help/dolor-sit-amet",
+			"noIndex":         false,
+			"keywords":        []any{"dolor sit amet", "ipsum", "sed do tempor"},
+			"openGraph":       map[string]any{"type": "article", "imageUrl": "https://example.com/media/sed-do-tempor.png"},
+			"alternates":      map[string]any{"de": "/de/help/dolor-sit-amet", "fr": "/fr/help/dolor-sit-amet", "es": "/es/help/dolor-sit-amet"},
+			"structuredData":  map[string]any{},
+		},
+		"translations": map[string]any{
+			"de": map[string]any{"state": "current", "revision": int64(7), "translatedAt": "2026-03-12T09:10:33Z", "translatorId": "usr-3378ff"},
+			"fr": map[string]any{"state": "outdated", "revision": int64(5), "translatedAt": "2026-02-20T11:02:18Z", "translatorId": "usr-3378ff"},
+			"es": map[string]any{"state": "outdated", "revision": int64(6), "translatedAt": "2026-02-28T08:44:05Z", "translatorId": "usr-3378ff"},
+			"ja": map[string]any{"state": "requested", "revision": int64(7), "translatedAt": nil, "translatorId": nil},
+		},
+		"renditions": map[string]any{
+			"web": map[string]any{
+				"format":     "html",
+				"url":        "/help/dolor-sit-amet",
+				"renderedAt": "2026-03-11T16:05:12Z",
+				"sizeBytes":  int64(23817),
+				"checksum":   "384cb5f21297367c",
+				"cacheHit":   false,
+				"attempts":   int64(1),
+				"error":      nil,
+				"timing":     map[string]any{"queuedMs": int64(12), "renderMs": int64(184), "uploadMs": int64(37)},
+				"input":      map[string]any{"revision": int64(7), "theme": "standard"},
+			},
+			"print": map[string]any{
+				"format":     "pdf",
+				"url":        "/help/pdf/dolor-sit-amet.pdf",
+				"renderedAt": "2026-03-11T16:05:19Z",
+				"sizeBytes":  int64(88214),
+				"checksum":   "6d573c5617454cf4",
+				"cacheHit":   false,
+				"pageCount":  int64(2),
+				"attempts":   int64(2),
+				"error":      nil,
+				"timing":     map[string]any{"queuedMs": int64(15), "renderMs": int64(1342), "uploadMs": int64(96)},
+				"input":      map[string]any{"revision": int64(7), "theme": "printable"},
+			},
+		},
+		"metrics": map[string]any{
+			"views":          int64(4736),
+			"uniqueVisitors": int64(3377),
+			"helpfulVotes":   int64(212),
+			"unhelpfulVotes": int64(19),
+			"byChannel":      map[string]any{"web": int64(4529), "app": int64(207)},
+			"bySource":       map[string]any{"search": int64(2894), "related": int64(1087), "direct": int64(755)},
+			"byLocale":       map[string]any{"en": int64(3641), "de": int64(598), "fr": int64(301), "es": int64(196)},
+			"byDevice":       map[string]any{"desktop": int64(3052), "mobile": int64(1684)},
+		},
+		"customFields": map[string]any{},
+	}
+	// Marshal nested map[any]any to CBOR map, such as m3 decoded to any with default options.
+	var m4 any
+	if data, err := Marshal(m3); err != nil {
+		b.Fatal("Marshal:", err)
+	} else if err = Unmarshal(data, &m4); err != nil {
+		b.Fatal("Unmarshal:", err)
+	}
 	var moreBenchmarks = []struct {
 		name  string
 		value any
 	}{
 		{
-			name:  "Go map[string]any to CBOR map",
+			name:  "map[string]any/map",
 			value: m1,
 		},
 		{
-			name:  "Go struct to CBOR map",
+			name:  "nested map[string]any/map",
+			value: m3,
+		},
+		{
+			name:  "nested map[any]any/map",
+			value: m4,
+		},
+		{
+			name:  "struct/map",
 			value: v1,
 		},
 		{
-			name:  "Go struct many fields all omitempty all empty to CBOR map",
+			name:  "struct many flds all omitempty all empty/map",
 			value: ManyFieldsAllOmitEmpty{},
 		},
 		{
-			name:  "Go struct some fields all omitempty all empty to CBOR map",
+			name:  "struct some flds all omitempty all empty/map",
 			value: SomeFieldsAllOmitEmpty{},
 		},
 		{
-			name: "Go struct many fields all omitempty all nonempty to CBOR map",
+			name: "struct many flds all omitempty all nonempty/map",
 			value: ManyFieldsAllOmitEmpty{
 				F01: 1, F02: 1, F03: 1, F04: 1, F05: 1, F06: 1, F07: 1, F08: 1, F09: 1, F10: 1, F11: 1, F12: 1, F13: 1, F14: 1, F15: 1, F16: 1,
 				F17: 1, F18: 1, F19: 1, F20: 1, F21: 1, F22: 1, F23: 1, F24: 1, F25: 1, F26: 1, F27: 1, F28: 1, F29: 1, F30: 1, F31: 1, F32: 1,
 			},
 		},
 		{
-			name: "Go struct some fields all omitempty all nonempty to CBOR map",
+			name: "struct some flds all omitempty all nonempty/map",
 			value: SomeFieldsAllOmitEmpty{
 				F01: 1, F02: 1, F03: 1, F04: 1, F05: 1, F06: 1, F07: 1, F08: 1,
 			},
 		},
 		{
-			name:  "Go struct many fields one omitempty to CBOR map",
+			name:  "struct many flds one omitempty/map",
 			value: ManyFieldsOneOmitEmpty{},
 		},
 		{
-			name:  "Go struct some fields one omitempty to CBOR map",
+			name:  "struct some flds one omitempty/map",
 			value: SomeFieldsOneOmitEmpty{},
 		},
 		{
-			name:  "Go map[int]any to CBOR map",
+			name:  "map[int]any/map",
 			value: m2,
 		},
 		{
-			name:  "Go struct keyasint to CBOR map",
+			name:  "struct keyasint/map",
 			value: v2,
 		},
 		{
-			name:  "Go []any to CBOR map",
+			name:  "[]any/array",
 			value: slc,
 		},
 		{
-			name:  "Go struct toarray to CBOR array",
+			name:  "struct toarray/array",
 			value: v3,
 		},
 	}
@@ -590,6 +829,36 @@ func BenchmarkMarshal(b *testing.B) {
 		b.Run(bm.name, func(b *testing.B) {
 			for b.Loop() {
 				if _, err := Marshal(bm.value); err != nil {
+					b.Fatal("Marshal:", err)
+				}
+			}
+		})
+	}
+
+	// Marshal nested maps with sorted keys.
+	sortedEM, err := EncOptions{Sort: SortBytewiseLexical}.EncMode()
+	if err != nil {
+		b.Fatal("EncMode:", err)
+	}
+	for _, bm := range []struct {
+		name  string
+		em    EncMode
+		value any
+	}{
+		{
+			name:  "nested map[string]any/map/bytewise lexical",
+			em:    sortedEM,
+			value: m3,
+		},
+		{
+			name:  "nested map[any]any/map/bytewise lexical",
+			em:    sortedEM,
+			value: m4,
+		},
+	} {
+		b.Run(bm.name, func(b *testing.B) {
+			for b.Loop() {
+				if _, err := bm.em.Marshal(bm.value); err != nil {
 					b.Fatal("Marshal:", err)
 				}
 			}
@@ -629,10 +898,8 @@ func BenchmarkMarshalCanonical(b *testing.B) {
 		},
 	} {
 		for _, v := range bm.values {
-			name := "Go " + reflect.TypeOf(v).String() + " to CBOR " + bm.name
-			if reflect.TypeOf(v).Kind() == reflect.Struct {
-				name = "Go " + reflect.TypeOf(v).Kind().String() + " to CBOR " + bm.name
-			}
+			// Name uses the format: "MarshalCanonical/Go type/CBOR type".
+			name := goTypeName(reflect.TypeOf(v)) + "/" + bm.name
 			b.Run(name, func(b *testing.B) {
 				for b.Loop() {
 					if _, err := Marshal(v); err != nil {
@@ -641,10 +908,8 @@ func BenchmarkMarshalCanonical(b *testing.B) {
 				}
 			})
 			// Canonical encoding
-			name = "Go " + reflect.TypeOf(v).String() + " to CBOR " + bm.name + " canonical"
-			if reflect.TypeOf(v).Kind() == reflect.Struct {
-				name = "Go " + reflect.TypeOf(v).Kind().String() + " to CBOR " + bm.name + " canonical"
-			}
+			// Name uses the format: "MarshalCanonical/Go type/CBOR type/canonical".
+			name = goTypeName(reflect.TypeOf(v)) + "/" + bm.name + "/canonical"
 			em, _ := EncOptions{Sort: SortCanonical}.EncMode()
 			b.Run(name, func(b *testing.B) {
 				for b.Loop() {
@@ -661,10 +926,9 @@ func BenchmarkMarshalCanonical(b *testing.B) {
 func BenchmarkNewEncoderEncode(b *testing.B) {
 	for _, bm := range encodeBenchmarks {
 		for _, v := range bm.values {
-			name := "Go " + reflect.TypeOf(v).String() + " to CBOR " + bm.name
-			if reflect.TypeOf(v).Kind() == reflect.Struct {
-				name = "Go " + reflect.TypeOf(v).Kind().String() + " to CBOR " + bm.name
-			}
+			// Name uses the format: "NewEncoderEncode/Go type/CBOR type",
+			// e.g. "NewEncoderEncode/[]byte/bstr"
+			name := goTypeName(reflect.TypeOf(v)) + "/" + bm.name
 			b.Run(name, func(b *testing.B) {
 				for b.Loop() {
 					encoder := NewEncoder(io.Discard)
@@ -682,10 +946,9 @@ func BenchmarkNewEncoderEncode(b *testing.B) {
 func BenchmarkEncode(b *testing.B) {
 	for _, bm := range encodeBenchmarks {
 		for _, v := range bm.values {
-			name := "Go " + reflect.TypeOf(v).String() + " to CBOR " + bm.name
-			if reflect.TypeOf(v).Kind() == reflect.Struct {
-				name = "Go " + reflect.TypeOf(v).Kind().String() + " to CBOR " + bm.name
-			}
+			// Name uses the format: "Encode/Go type/CBOR type",
+			// e.g. "Encode/[]byte/bstr"
+			name := goTypeName(reflect.TypeOf(v)) + "/" + bm.name
 			b.Run(name, func(b *testing.B) {
 				encoder := NewEncoder(io.Discard)
 				for b.Loop() {
@@ -1009,35 +1272,35 @@ func BenchmarkUnmarshalMapToStruct(b *testing.B) {
 		inputs []input
 	}{
 		{
-			name: "default options",
+			name: "default",
 			opts: DecOptions{},
 			inputs: []input{
 				{
-					name:   "all known fields",
+					name:   "all known flds",
 					data:   allKnownFields,
 					into:   S{},
 					reject: false,
 				},
 				{
-					name:   "all known duplicate fields",
+					name:   "all known dup flds",
 					data:   allKnownDuplicateFields,
 					into:   S{},
 					reject: false,
 				},
 				{
-					name:   "all unknown fields",
+					name:   "all unk flds",
 					data:   allUnknownFields,
 					into:   S{},
 					reject: false,
 				},
 				{
-					name:   "all unknown duplicate fields",
+					name:   "all unk dup flds",
 					data:   allUnknownDuplicateFields,
 					into:   S{},
 					reject: false,
 				},
 				{
-					name:   "many fields one key per field",
+					name:   "many flds one key per fld",
 					data:   manyFieldsOneKeyPerField,
 					into:   ManyFields{},
 					reject: false,
@@ -1045,29 +1308,29 @@ func BenchmarkUnmarshalMapToStruct(b *testing.B) {
 			},
 		},
 		{
-			name: "reject unknown",
+			name: "rej unk",
 			opts: DecOptions{ExtraReturnErrors: ExtraDecErrorUnknownField},
 			inputs: []input{
 				{
-					name:   "all known fields",
+					name:   "all known flds",
 					data:   allKnownFields,
 					into:   S{},
 					reject: false,
 				},
 				{
-					name:   "all known duplicate fields",
+					name:   "all known dup flds",
 					data:   allKnownDuplicateFields,
 					into:   S{},
 					reject: false,
 				},
 				{
-					name:   "all unknown fields",
+					name:   "all unk flds",
 					data:   allUnknownFields,
 					into:   S{},
 					reject: true,
 				},
 				{
-					name:   "all unknown duplicate fields",
+					name:   "all unk dup flds",
 					data:   allUnknownDuplicateFields,
 					into:   S{},
 					reject: true,
@@ -1075,29 +1338,29 @@ func BenchmarkUnmarshalMapToStruct(b *testing.B) {
 			},
 		},
 		{
-			name: "reject duplicate",
+			name: "rej dup",
 			opts: DecOptions{DupMapKey: DupMapKeyEnforcedAPF},
 			inputs: []input{
 				{
-					name:   "all known fields",
+					name:   "all known flds",
 					data:   allKnownFields,
 					into:   S{},
 					reject: false,
 				},
 				{
-					name:   "all known duplicate fields",
+					name:   "all known dup flds",
 					data:   allKnownDuplicateFields,
 					into:   S{},
 					reject: true,
 				},
 				{
-					name:   "all unknown fields",
+					name:   "all unk flds",
 					data:   allUnknownFields,
 					into:   S{},
 					reject: false,
 				},
 				{
-					name:   "all unknown duplicate fields",
+					name:   "all unk dup flds",
 					data:   allUnknownDuplicateFields,
 					into:   S{},
 					reject: true,
@@ -1105,32 +1368,32 @@ func BenchmarkUnmarshalMapToStruct(b *testing.B) {
 			},
 		},
 		{
-			name: "reject unknown and duplicate",
+			name: "rej unk and dup",
 			opts: DecOptions{
 				DupMapKey:         DupMapKeyEnforcedAPF,
 				ExtraReturnErrors: ExtraDecErrorUnknownField,
 			},
 			inputs: []input{
 				{
-					name:   "all known fields",
+					name:   "all known flds",
 					data:   allKnownFields,
 					into:   S{},
 					reject: false,
 				},
 				{
-					name:   "all known duplicate fields",
+					name:   "all known dup flds",
 					data:   allKnownDuplicateFields,
 					into:   S{},
 					reject: true,
 				},
 				{
-					name:   "all unknown fields",
+					name:   "all unk flds",
 					data:   allUnknownFields,
 					into:   S{},
 					reject: true,
 				},
 				{
-					name:   "all unknown duplicate fields",
+					name:   "all unk dup flds",
 					data:   allUnknownDuplicateFields,
 					into:   S{},
 					reject: true,
@@ -1157,4 +1420,14 @@ func BenchmarkUnmarshalMapToStruct(b *testing.B) {
 			})
 		}
 	}
+}
+
+func goTypeName(t reflect.Type) string {
+	if t.Kind() == reflect.Struct {
+		return t.Kind().String()
+	}
+	s := t.String()
+	s = strings.ReplaceAll(s, "interface {}", "any")
+	s = strings.ReplaceAll(s, "uint8", "byte")
+	return s
 }

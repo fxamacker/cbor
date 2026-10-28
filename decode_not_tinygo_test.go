@@ -6,9 +6,11 @@
 package cbor
 
 import (
-	"reflect"
 	"testing"
 )
+
+// unsupportedFuncTypeErrMsg is the error message for marshaling func(int) int.
+const unsupportedFuncTypeErrMsg = "cbor: unsupported type: func(int) int"
 
 func TestUnmarshalDeepNesting(t *testing.T) {
 	// Construct this object rather than embed such a large constant in the code
@@ -23,27 +25,13 @@ func TestUnmarshalDeepNesting(t *testing.T) {
 		n.Child = child
 		n = child
 	}
-	em, err := EncOptions{}.EncMode()
-	if err != nil {
-		t.Errorf("EncMode() returned error %v", err)
-	}
+	em := mustEncMode(t, EncOptions{})
 	data, err := em.Marshal(root)
-	if err != nil {
-		t.Errorf("Marshal() deeply nested object returned error %v", err)
-	}
+	checkNoError(t, "em.Marshal", err)
 
 	// Try unmarshal it
-	dm, err := DecOptions{MaxNestedLevels: 65535}.DecMode()
-	if err != nil {
-		t.Errorf("DecMode() returned error %v", err)
-	}
+	dm := mustDecMode(t, DecOptions{MaxNestedLevels: 65535})
 	var readback TestNode
-	err = dm.Unmarshal(data, &readback)
-	if err != nil {
-		t.Errorf("Unmarshal() of deeply nested object returned error: %v", err)
-	}
-	if !reflect.DeepEqual(root, &readback) {
-		t.Errorf("Unmarshal() of deeply nested object did not match\nGot: %#v\n Want: %#v\n",
-			&readback, root)
-	}
+	err = unmarshalWithDM(t, dm, data, &readback)
+	checkUnmarshal(t, "dm.Unmarshal", readback, err, *root)
 }
