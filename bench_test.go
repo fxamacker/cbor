@@ -8,9 +8,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"math/big"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 const rounds = 100
@@ -180,6 +182,20 @@ func (a address) HexWithPrefix() string { return fmt.Sprintf("0x%x", []byte(a)) 
 func (a address) Len() int              { return len(a) }
 func (a *address) Reset(x address)      { *a = append((*a)[:0], x...) }
 func (a address) String() string        { return fmt.Sprintf("0x%x", []byte(a)) }
+
+// valueMarshaler implements Marshaler with a value receiver.
+type valueMarshaler [4]byte
+
+func (m valueMarshaler) MarshalCBOR() ([]byte, error) {
+	return []byte{0x44, m[0], m[1], m[2], m[3]}, nil
+}
+
+// ptrMarshaler implements Marshaler with a pointer receiver.
+type ptrMarshaler [4]byte
+
+func (m *ptrMarshaler) MarshalCBOR() ([]byte, error) {
+	return []byte{0x44, m[0], m[1], m[2], m[3]}, nil
+}
 
 var decodeBenchmarks = []struct {
 	name          string
@@ -351,6 +367,39 @@ func BenchmarkUnmarshal(b *testing.B) {
 			name:         "mixed array/struct toarray",
 			data:         mustHexDecode("88f51bffffffffffffffff3903e7fbc010666666666666581a0102030405060708090a0b0c0d0e0f101112131415161718191a782b54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67981a0102030405060708090a0b0c0d0e0f101112131415161718181819181aad616261426163614361646144616561456166614661696149616e614e616161416167614761686148616a614a616c614c616d614d"),
 			decodeToType: reflect.TypeFor[T3](),
+		},
+		// Unmarshal CBOR epoch-based date/time (tag 1) to time.Time and any.
+		{
+			name:         "epoch time/time.Time",
+			data:         mustHexDecode("c11a514b67b0"),
+			decodeToType: typeTime,
+		},
+		{
+			name:         "epoch time/any",
+			data:         mustHexDecode("c11a514b67b0"),
+			decodeToType: typeAny,
+		},
+		// Unmarshal CBOR bignum (tag 2) to big.Int and any.
+		{
+			name:         "bignum/big.Int",
+			data:         mustHexDecode("c249010000000000000000"),
+			decodeToType: typeBigInt,
+		},
+		{
+			name:         "bignum/any",
+			data:         mustHexDecode("c249010000000000000000"),
+			decodeToType: typeAny,
+		},
+		// Unmarshal CBOR tag not registered in TagSet to Tag and any.
+		{
+			name:         "tag/Tag",
+			data:         mustHexDecode("d8641a514b67b0"),
+			decodeToType: typeTag,
+		},
+		{
+			name:         "tag/any",
+			data:         mustHexDecode("d8641a514b67b0"),
+			decodeToType: typeAny,
 		},
 	}
 	for _, bm := range moreBenchmarks {
@@ -759,6 +808,15 @@ func BenchmarkMarshal(b *testing.B) {
 	} else if err = Unmarshal(data, &m4); err != nil {
 		b.Fatal("Unmarshal:", err)
 	}
+	// Marshal pointers, so values are addressable like struct fields, slice elements, and map values.
+	t1 := time.Unix(1363896240, 0).UTC()
+	bi := new(big.Int).Lsh(big.NewInt(1), 64)
+	tag := Tag{Number: 100, Content: uint64(1363896240)}
+	vm := valueMarshaler{1, 2, 3, 4}
+	pm := ptrMarshaler{1, 2, 3, 4}
+	var omitZeroTime struct {
+		T time.Time `cbor:",omitzero"`
+	}
 	var moreBenchmarks = []struct {
 		name  string
 		value any
@@ -824,6 +882,30 @@ func BenchmarkMarshal(b *testing.B) {
 			name:  "struct toarray/array",
 			value: v3,
 		},
+		{
+			name:  "*time.Time/uint",
+			value: &t1,
+		},
+		{
+			name:  "*big.Int/bignum",
+			value: bi,
+		},
+		{
+			name:  "*Tag/tag",
+			value: &tag,
+		},
+		{
+			name:  "*value receiver marshaler/bstr",
+			value: &vm,
+		},
+		{
+			name:  "*pointer receiver marshaler/bstr",
+			value: &pm,
+		},
+		{
+			name:  "*struct omitzero time.Time empty/map",
+			value: &omitZeroTime,
+		},
 	}
 	for _, bm := range moreBenchmarks {
 		b.Run(bm.name, func(b *testing.B) {
@@ -835,8 +917,12 @@ func BenchmarkMarshal(b *testing.B) {
 		})
 	}
 
-	// Marshal nested maps with sorted keys.
+	// Marshal with non-default encoding options.
 	sortedEM, err := EncOptions{Sort: SortBytewiseLexical}.EncMode()
+	if err != nil {
+		b.Fatal("EncMode:", err)
+	}
+	timeUnixMicroEM, err := EncOptions{Time: TimeUnixMicro}.EncMode()
 	if err != nil {
 		b.Fatal("EncMode:", err)
 	}
@@ -854,6 +940,11 @@ func BenchmarkMarshal(b *testing.B) {
 			name:  "nested map[any]any/map/bytewise lexical",
 			em:    sortedEM,
 			value: m4,
+		},
+		{
+			name:  "time.Time/float/unix micro",
+			em:    timeUnixMicroEM,
+			value: t1,
 		},
 	} {
 		b.Run(bm.name, func(b *testing.B) {
