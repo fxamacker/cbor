@@ -6,7 +6,7 @@ CBOR is a [trusted alternative](https://www.rfc-editor.org/rfc/rfc8949.html#name
 
 `fxamacker/cbor` is used in projects by Arm Ltd., Cisco, EdgeX&nbsp;Foundry, Flow Foundation, Fraunhofer&#8209;AISEC, IBM, Kubernetes[*](https://github.com/search?q=org%3Akubernetes%20fxamacker%2Fcbor&type=code), Linux&nbsp;Foundation, Microsoft, Oasis&nbsp;Protocol, Red Hat[*](https://github.com/search?q=org%3Aopenshift+fxamacker%2Fcbor&type=code), Tailscale[*](https://github.com/search?q=org%3Atailscale+fxamacker%2Fcbor&type=code), Veraison[*](https://github.com/search?q=org%3Averaison+fxamacker%2Fcbor&type=code), [etc](https://github.com/fxamacker/cbor#who-uses-fxamackercbor).
 
-See [Quick&nbsp;Start](#quick-start) and [Releases](https://github.com/fxamacker/cbor/releases/).  🆕 `UnmarshalFirst` and `DiagnoseFirst` can decode CBOR Sequences.  `MarshalToBuffer` and `UserBufferEncMode` accept user-specified buffer.
+See [Status](https://github.com/fxamacker/cbor#status) and [Quick&nbsp;Start](#quick-start).  🆕 `UnmarshalFirst` and `DiagnoseFirst` can decode CBOR Sequences.  `MarshalToBuffer` and `UserBufferEncMode` accept user-specified buffer.
 
 ## fxamacker/cbor
 
@@ -21,7 +21,8 @@ See [Quick&nbsp;Start](#quick-start) and [Releases](https://github.com/fxamacker
 
 Features include full support for CBOR tags, [Core Deterministic Encoding](https://www.rfc-editor.org/rfc/rfc8949.html#name-core-deterministic-encoding), duplicate map key detection, etc.
 
-API is mostly same as `encoding/json`, plus interfaces that simplify concurrency and CBOR options.
+Core functions have signatures identical to `encoding/json` while allowing custom CBOR settings via concurrency-safe modes created at runtime:<br>
+`Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `(*Encoder).Encode`, and `(*Decoder).Decode`.
 
 Design balances trade-offs between security, speed, concurrency, encoded data size, usability, etc.
 
@@ -59,85 +60,98 @@ Features include CBOR [extension points](https://www.rfc-editor.org/rfc/rfc8949.
 
 `fxamacker/cbor` has configurable limits, etc. that defend against malicious CBOR data.
 
-Notably, `fxamacker/cbor` is fast at rejecting malformed CBOR data.
-
 > [!NOTE]
-> Benchmarks rejecting 10 bytes of malicious CBOR data decoding to `[]byte`:
->
-> | Codec | Speed (ns/op) | Memory | Allocs |
-> | :---- | ------------: | -----: | -----: |
-> | fxamacker/cbor 2.7.0 | 47 ± 7% | 32 B/op | 2 allocs/op |
-> | ugorji/go 1.2.12 | 5878187 ± 3% | 67111556 B/op |  13 allocs/op |
->
-> Faster hardware (overclocked DDR4 or DDR5) can reduce speed difference.
->
-> <details><summary> 🔎&nbsp; Benchmark details </summary><p/>
->
-> Latest comparison for decoding CBOR data to Go `[]byte`:
-> - Input: `[]byte{0x9B, 0x00, 0x00, 0x42, 0xFA, 0x42, 0xFA, 0x42, 0xFA, 0x42}`
-> - go1.22.7, linux/amd64, i5-13600K (DDR4-2933, disabled e-cores)
-> - go test -bench=. -benchmem -count=20
->
-> #### Prior comparisons
->
-> | Codec | Speed (ns/op) | Memory | Allocs |
-> | :---- | ------------: | -----: | -----: |
-> | fxamacker/cbor 2.5.0-beta2 | 44.33 ± 2% | 32 B/op | 2 allocs/op |
-> | fxamacker/cbor 0.1.0 - 2.4.0 | ~44.68 ± 6% | 32 B/op |  2 allocs/op |
-> | ugorji/go 1.2.10 | 5524792.50 ± 3% | 67110491 B/op |  12 allocs/op |
-> | ugorji/go 1.1.0 - 1.2.6 | 💥 runtime: | out of memory: | cannot allocate |
->
-> - Input: `[]byte{0x9B, 0x00, 0x00, 0x42, 0xFA, 0x42, 0xFA, 0x42, 0xFA, 0x42}`
-> - go1.19.6, linux/amd64, i5-13600K (DDR4)
-> - go test -bench=. -benchmem -count=20
->
-> </details>
+> Go's `io.LimitReader` can limit input size, but malicious inputs can be short:
+> - **Malicious CBOR data** (10 bytes): `9B 00 00 42 FA 42 FA 42 FA 42`.
 
-In contrast, some codecs can crash or use excessive resources while decoding bad data.
+`fxamacker/cbor` is fast at rejecting short malformed CBOR data.
 
-> [!WARNING]
-> Go's `encoding/gob` is [not designed to be hardened against adversarial inputs](https://pkg.go.dev/encoding/gob#hdr-Security).
->
-> <details><summary> 🔎&nbsp; gob fatal error (out of memory) 💥 decoding 181 bytes</summary><p/>
->
-> ```Go
-> // Example of encoding/gob having "fatal error: runtime: out of memory"
-> // while decoding 181 bytes (all Go versions as of Dec. 8, 2024).
-> package main
-> import (
-> 	"bytes"
-> 	"encoding/gob"
-> 	"encoding/hex"
-> 	"fmt"
-> )
->
-> // Example data is from https://github.com/golang/go/issues/24446
-> // (shortened to 181 bytes).
-> const data = "4dffb503010102303001ff30000109010130010800010130010800010130" +
-> 	"01ffb80001014a01ffb60001014b01ff860001013001ff860001013001ff" +
-> 	"860001013001ff860001013001ffb80000001eff850401010e3030303030" +
-> 	"30303030303030303001ff3000010c0104000016ffb70201010830303030" +
-> 	"3030303001ff3000010c000030ffb6040405fcff00303030303030303030" +
-> 	"303030303030303030303030303030303030303030303030303030303030" +
-> 	"30"
->
-> type X struct {
-> 	J *X
-> 	K map[string]int
-> }
->
-> func main() {
-> 	raw, _ := hex.DecodeString(data)
-> 	decoder := gob.NewDecoder(bytes.NewReader(raw))
->
-> 	var x X
-> 	decoder.Decode(&x) // fatal error: runtime: out of memory
-> 	fmt.Println("Decoding finished.")
-> }
-> ```
->
->
-> </details>
+Benchmarks unmarshaling CBOR `9B 00 00 42 FA 42 FA 42 FA 42` to `[]byte`:
+
+| CBOR Codec | ns/op | memory B/op | allocs/op |
+| :---- | ------------: | -----: | -----: |
+| fxamacker/cbor 2.10.0 | 28 ± 1% | 8 | 1 |
+| ugorji/go 1.3.2 | 5639731 ± 1% | 67112386 | 10 |
+
+<sub>&nbsp;&nbsp;&nbsp; Go 1.26.10, Alder Lake (DDR4 RAM), benchstat of `go test -bench=. -benchmem -count=20`.</sub>
+
+<details><summary> 🔎&nbsp; bench_test.go and commands used </summary><p/>
+
+`go.mod`:
+
+```
+module example.com/cborbench
+
+go 1.24
+
+require (
+	github.com/fxamacker/cbor/v2 v2.10.0
+	github.com/ugorji/go/codec v1.3.2
+)
+
+require github.com/x448/float16 v0.8.4 // indirect
+```
+
+`bench_test.go`:
+
+```go
+package cborbench
+
+import (
+	"testing"
+
+	"github.com/fxamacker/cbor/v2"
+	"github.com/ugorji/go/codec"
+)
+
+var data = []byte{0x9B, 0x00, 0x00, 0x42, 0xFA, 0x42, 0xFA, 0x42, 0xFA, 0x42}
+
+func BenchmarkFxamackerCborReuse(b *testing.B) {
+	b.ReportAllocs()
+	var v []byte
+	for b.Loop() {
+		if err := cbor.Unmarshal(data, &v); err == nil {
+			b.Fatal("got nil error, want error")
+		}
+	}
+}
+
+func BenchmarkUgorjiGoReuse(b *testing.B) {
+	var h codec.CborHandle
+	b.ReportAllocs()
+	var v []byte
+	for b.Loop() {
+		if err := codec.NewDecoderBytes(data, &h).Decode(&v); err == nil {
+			b.Fatal("got nil error, want error")
+		}
+	}
+}
+```
+
+Commands:
+
+```sh
+go mod tidy
+go test -bench=. -benchmem -count=20 | tee bench.txt
+benchstat -col .name bench.txt
+```
+
+</details>
+
+<details><summary> 🔎&nbsp; Older versions </summary><p/>
+
+Benchmarks unmarshaling CBOR `9B 00 00 42 FA 42 FA 42 FA 42` into `[]byte`:
+
+| CBOR Codec | ns/op | memory B/op | allocs/op |
+| :---- | ------------: | -----: | -----: |
+| fxamacker/cbor 0.1.0 – 2.9.6 | 19.69 – 28.04 | 0 – 8 | 0 – 1 |
+| ugorji/go 1.1.0 – 1.2.6 | 💥 fatal error: | runtime: out of memory | – |
+
+<sub>&nbsp;&nbsp;&nbsp; Go 1.26.10, Alder Lake (DDR4 RAM), benchstat of `go test -bench=. -benchmem -count=20`.</sub>
+
+</details>
+
+For more details, see [Security tips](https://github.com/fxamacker/cbor#security-tips) below.
 
 ### Smaller Encodings with Struct Tag Options
 
@@ -696,25 +710,27 @@ The `RawMessage` type can be used to delay CBOR decoding or precompute CBOR enco
 
 🔒 Use Go's `io.LimitReader` to limit size when decoding very large or indefinite size data.
 
-Default limits may need to be increased for systems handling very large data (e.g. blockchains).
+`DecOptions` can be used to adjust limits such as `MaxArrayElements`, `MaxMapPairs`, and `MaxNestedLevels`.
 
-`DecOptions` can be used to modify default limits for `MaxArrayElements`, `MaxMapPairs`, and `MaxNestedLevels`.
+Some user applications need different limits than this codec's default settings. Set limits based on carefully formulated requirements instead of setting arbitrary maximums that expose the system to denial-of-service attacks.
+
+Design your data formats and protocols to avoid specifying unbounded nested levels, CBOR indefinite-length array, or CBOR indefinite-length map. Instead, use CBOR Sequences ([RFC 8742](https://www.rfc-editor.org/info/rfc8742/)) of reasonably-sized CBOR data items to balance security and performance.
 
 ## Status
 
-v2.10.0 (Wednesday, Oct 28, 2026) speeds up encoding and decoding, reduces memory use, adds the `toindefarray` struct tag option, and fixes bugs. [Contributing Guidelines](https://github.com/fxamacker/cbor/blob/master/CONTRIBUTING.md), Security Policy, and templates were extensively updated.
+v2.10.0 (Wednesday, Oct 28, 2026) speeds up encoding by **up to 2.88×** and decoding by **up to 1.87×** with **zero memory regressions** (B/op, allocs/op), reduces memory use, adds the `toindefarray` struct tag option, and fixes bugs. The [Contributing Guidelines](https://github.com/fxamacker/cbor/blob/master/CONTRIBUTING.md), [Security Policy](https://github.com/fxamacker/cbor/blob/master/SECURITY.md), and templates were [extensively updated](https://github.com/fxamacker/cbor/pull/862).
 
-This release boosts encoding speeds by **up to 2.88×** and decoding by **up to 1.87×** with **zero memory regressions** (B/op, allocs/op), and without using Go's `unsafe` package. Performance gains in user apps depend on configuration and data.
+Encoding sorted nested maps of dynamic JSON-like data to CBOR drops from 70 allocs/op to 1 and from 7.2 KiB/op to 4.0 KiB/op in the benchmarks below. Encoding `time.Time`, `big.Int`, `Tag` and `Marshaler` values, and decoding into `time.Time`, `big.Int` and `Tag`, use 1 to 2 fewer allocs/op (20% to 50% fewer).
 
-Encoding sorted nested maps of dynamic JSON-like data drops from 70 allocs/op to 1 and from 7.2 KiB/op to 4.0 KiB/op in the benchmarks below. Encoding `time.Time`, `big.Int`, `Tag` and `Marshaler` values, and decoding into `time.Time`, `big.Int` and `Tag`, use 1 to 2 fewer allocs/op (20% to 50% fewer).
+This release does not use Go's `unsafe` package. Performance in user apps depends on configuration and data.
 
-Tests were refactored and coverage increased to 97.7%. Fuzz tests were also extended.
+Tests were refactored and coverage increased to 97.7%. Fuzz tests (not yet public) were also extended. Internal checklists and procedures were updated to reduce potential mistakes.
 
-See [v2.10.0 release notes](https://github.com/fxamacker/cbor/releases/tag/v2.10.0).
+For more details and upgrade notes, see [v2.10.0 release notes](https://github.com/fxamacker/cbor/releases/tag/v2.10.0).
 
 ### Prior Releases
 
-Prior to mid-2026, releases and commits tended to be on Sundays because my work schedule didn't leave time to work on this during weekdays (sometimes consecutive weekends and consecutive Christmas breaks, too).  Monday morning releases were to allow more fuzzing to run overnight before clicking the release button.
+Prior to mid-2026, releases and commits tended to be on Sundays because [my work](https://github.com/fxamacker) schedule didn't leave time to work on this during weekdays (sometimes consecutive weekends and consecutive Christmas breaks, too).  Monday morning releases were to allow more fuzzing to run overnight before clicking the release button.
 
 [v2.9.0](https://github.com/fxamacker/cbor/releases/tag/v2.9.0) (Sunday, Jul 13, 2025) improved interoperability/transcoding between CBOR & JSON, refactored tests, and improved docs.   It passed fuzz tests (billions of executions) and is production quality.
 
@@ -880,17 +896,18 @@ __Coverage-guided fuzzing__ must pass billions of execs before tagging a release
 <hr>
 
 ## Versions and API Changes
+
 This project uses [Semantic Versioning](https://semver.org), so the API is always backwards compatible unless the major version number changes.
 
-These functions have signatures identical to encoding/json and their API will continue to match `encoding/json` even after major new releases:
+Core functions have signatures identical to `encoding/json` while allowing custom CBOR settings via concurrency-safe modes created at runtime:<br>
 `Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `(*Encoder).Encode`, and `(*Decoder).Decode`.
 
 Exclusions from SemVer:
 - Newly added API documented as "subject to change".
-- Newly added API in the master branch that has never been tagged in non-beta release.
-- If function parameters are unchanged, bug fixes that change behavior (e.g. return error for edge case was missed in prior version).  We try to highlight these in the release notes and add extended beta period.  E.g. [v2.5.0-beta](https://github.com/fxamacker/cbor/releases/tag/v2.5.0-beta) (Dec 2022) -> [v2.5.0](https://github.com/fxamacker/cbor/releases/tag/v2.5.0) (Aug 2023).
+- Newly added API in the master branch that has never been tagged in a non-beta release.
+- Bug fixes that don't change function signatures and only change behavior (e.g., a function detecting more errors, or a security improvement).  Release notes list these changes in an "Upgrade Notes" section (see [v2.10.0](https://github.com/fxamacker/cbor/releases/tag/v2.10.0)).
 
-This project avoids breaking changes to behavior of encoding and decoding functions unless required to improve conformance with supported RFCs (e.g. RFC 8949, RFC 8742, etc.)  Visible changes that don't improve conformance to standards are typically made available as new opt-in settings or new functions.
+This project avoids changes to the behavior of encoding and decoding functions unless required to fix bugs, improve security, improve conformance with supported RFCs (e.g., RFC 8949, RFC 8742), or match updates to the Go standard library.  Other new behavior is typically made available as new opt-in settings or new functions.
 
 ## Code of Conduct
 
