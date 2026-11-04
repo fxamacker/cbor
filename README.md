@@ -6,7 +6,7 @@ CBOR is a [trusted alternative](https://www.rfc-editor.org/rfc/rfc8949.html#name
 
 `fxamacker/cbor` is used in projects by Arm Ltd., Cisco, EdgeX&nbsp;Foundry, Flow Foundation, Fraunhofer&#8209;AISEC, IBM, Kubernetes[*](https://github.com/search?q=org%3Akubernetes%20fxamacker%2Fcbor&type=code), Linux&nbsp;Foundation, Microsoft, Oasis&nbsp;Protocol, Red Hat[*](https://github.com/search?q=org%3Aopenshift+fxamacker%2Fcbor&type=code), Tailscale[*](https://github.com/search?q=org%3Atailscale+fxamacker%2Fcbor&type=code), Veraison[*](https://github.com/search?q=org%3Averaison+fxamacker%2Fcbor&type=code), [etc](https://github.com/fxamacker/cbor#who-uses-fxamackercbor).
 
-See [Status](https://github.com/fxamacker/cbor#status) and [Quick&nbsp;Start](#quick-start).  🆕 `UnmarshalFirst` and `DiagnoseFirst` can decode CBOR Sequences.  `MarshalToBuffer` and `UserBufferEncMode` accept user-specified buffer.
+See [Status](https://github.com/fxamacker/cbor#status), [Quick&nbsp;Start](#quick-start), and [Security Tips](https://github.com/fxamacker/cbor#security-tips).  💡 `UnmarshalFirst` and `DiagnoseFirst` can decode CBOR Sequences.  `MarshalToBuffer` and `UserBufferEncMode` accept user-specified buffer.
 
 ## fxamacker/cbor
 
@@ -494,7 +494,7 @@ JSON: {"Foo":{"Qux":{}}}
 </details>
 
 <details><summary> 🔎&nbsp; Example using struct tag options</summary><p/>
-	
+
 ![alt text](https://github.com/fxamacker/images/raw/master/cbor/v2.3.0/cbor_struct_tags_api.svg?sanitize=1 "CBOR API and Go Struct Tags")
 
 </details>
@@ -523,7 +523,7 @@ em, err := opts.EncModeWithSharedTags(ts)  // mutable shared CBOR tags
 // Create TagSet (safe for concurrency).
 tags := cbor.NewTagSet()
 // Register tag COSE_Sign1 18 with signedCWT type.
-tags.Add(	
+tags.Add(
 	cbor.TagOptions{EncTag: cbor.EncTagRequired, DecTag: cbor.DecTagRequired},
 	reflect.TypeOf(signedCWT{}),
 	18)
@@ -712,15 +712,15 @@ The `RawMessage` type can be used to delay CBOR decoding or precompute CBOR enco
 
 `DecOptions` can be used to adjust limits such as `MaxArrayElements`, `MaxMapPairs`, and `MaxNestedLevels`.
 
-Some user applications need different limits than this codec's default settings. Set limits based on carefully formulated requirements instead of setting arbitrary maximums that expose the system to denial-of-service attacks.
+Set limits based on actual requirements instead of setting arbitrary maximums that expose the system to denial-of-service attacks.
 
-Design your data formats and protocols to avoid specifying unbounded nested levels, CBOR indefinite-length array, or CBOR indefinite-length map. Instead, use CBOR Sequences ([RFC 8742](https://www.rfc-editor.org/info/rfc8742/)) of reasonably-sized CBOR data items to balance security and performance.
+Design your data formats and protocols to avoid specifying unbounded nested levels, CBOR indefinite-length arrays, or CBOR indefinite-length maps. Instead, use [CBOR Sequences](https://www.rfc-editor.org/info/rfc8742/) of appropriately sized CBOR data items to balance security, performance, and scalability.
 
 ## Status
 
 v2.10.0 (Wednesday, Oct 28, 2026) speeds up encoding by **up to 2.88×** and decoding by **up to 1.87×** with **zero memory regressions** (B/op, allocs/op), reduces memory use, adds the `toindefarray` struct tag option, and fixes bugs. The [Contributing Guidelines](https://github.com/fxamacker/cbor/blob/master/CONTRIBUTING.md), [Security Policy](https://github.com/fxamacker/cbor/blob/master/SECURITY.md), and templates were [extensively updated](https://github.com/fxamacker/cbor/pull/862).
 
-Encoding sorted nested maps of dynamic JSON-like data to CBOR drops from 70 allocs/op to 1 and from 7.2 KiB/op to 4.0 KiB/op in the benchmarks below. Encoding `time.Time`, `big.Int`, `Tag` and `Marshaler` values, and decoding into `time.Time`, `big.Int` and `Tag`, use 1 to 2 fewer allocs/op (20% to 50% fewer).
+Encoding sorted nested maps of dynamic JSON-like data to CBOR drops from 70 allocs/op to 1 and from 7.2 KiB/op to 4.0 KiB/op in the [benchmarks](https://github.com/fxamacker/cbor/releases/tag/v2.10.0). Encoding `time.Time`, `big.Int`, `Tag` and `Marshaler` values, and decoding into `time.Time`, `big.Int` and `Tag`, use 1 to 2 fewer allocs/op (20% to 50% fewer).
 
 This release does not use Go's `unsafe` package. Performance in user apps depends on configuration and data.
 
@@ -746,66 +746,7 @@ __IMPORTANT__:  👉 Before upgrading from v2.4 or older release, please read th
 
 See [v2.5.0 release notes](https://github.com/fxamacker/cbor/releases/tag/v2.5.0) for list of new features, improvements, and bug fixes.
 
-See ["Version and API Changes"](https://github.com/fxamacker/cbor#versions-and-api-changes) section for more info about version numbering, etc.
-
-<!--
-<details><summary> 🔎&nbsp; Benchmark Comparison: v2.4.0 vs v2.5.0</summary><p/>
-
-TODO: Update to v2.4.0 vs 2.5.0 (not beta2).
-
-Comparison of v2.4.0 vs v2.5.0-beta2 provided by @448 (edited to fit width).
-
-PR [#382](https://github.com/fxamacker/cbor/pull/382) returns buffer to pool in `Encode()`. It adds a bit of overhead to `Encode()` but `NewEncoder().Encode()` is a lot faster and uses less memory as shown here:
-
-```
-$ benchstat bench-v2.4.0.log bench-f9e6291.log
-goos: linux
-goarch: amd64
-pkg: github.com/fxamacker/cbor/v2
-cpu: 12th Gen Intel(R) Core(TM) i7-12700H
-                                                     │ bench-v2.4.0.log │  bench-f9e6291.log                  │
-                                                     │      sec/op      │   sec/op     vs base                │
-NewEncoderEncode/Go_bool_to_CBOR_bool-20                   236.70n ± 2%   58.04n ± 1%  -75.48% (p=0.000 n=10)
-NewEncoderEncode/Go_uint64_to_CBOR_positive_int-20         238.00n ± 2%   63.93n ± 1%  -73.14% (p=0.000 n=10)
-NewEncoderEncode/Go_int64_to_CBOR_negative_int-20          238.65n ± 2%   64.88n ± 1%  -72.81% (p=0.000 n=10)
-NewEncoderEncode/Go_float64_to_CBOR_float-20               242.00n ± 2%   63.00n ± 1%  -73.97% (p=0.000 n=10)
-NewEncoderEncode/Go_[]uint8_to_CBOR_bytes-20               245.60n ± 1%   68.55n ± 1%  -72.09% (p=0.000 n=10)
-NewEncoderEncode/Go_string_to_CBOR_text-20                 243.20n ± 3%   68.39n ± 1%  -71.88% (p=0.000 n=10)
-NewEncoderEncode/Go_[]int_to_CBOR_array-20                 563.0n ± 2%    378.3n ± 0%  -32.81% (p=0.000 n=10)
-NewEncoderEncode/Go_map[string]string_to_CBOR_map-20       2.043µ ± 2%    1.906µ ± 2%   -6.75% (p=0.000 n=10)
-geomean                                                    349.7n         122.7n       -64.92%
-
-                                                     │ bench-v2.4.0.log │    bench-f9e6291.log                │
-                                                     │       B/op       │    B/op     vs base                 │
-NewEncoderEncode/Go_bool_to_CBOR_bool-20                     128.0 ± 0%     0.0 ± 0%  -100.00% (p=0.000 n=10)
-NewEncoderEncode/Go_uint64_to_CBOR_positive_int-20           128.0 ± 0%     0.0 ± 0%  -100.00% (p=0.000 n=10)
-NewEncoderEncode/Go_int64_to_CBOR_negative_int-20            128.0 ± 0%     0.0 ± 0%  -100.00% (p=0.000 n=10)
-NewEncoderEncode/Go_float64_to_CBOR_float-20                 128.0 ± 0%     0.0 ± 0%  -100.00% (p=0.000 n=10)
-NewEncoderEncode/Go_[]uint8_to_CBOR_bytes-20                 128.0 ± 0%     0.0 ± 0%  -100.00% (p=0.000 n=10)
-NewEncoderEncode/Go_string_to_CBOR_text-20                   128.0 ± 0%     0.0 ± 0%  -100.00% (p=0.000 n=10)
-NewEncoderEncode/Go_[]int_to_CBOR_array-20                   128.0 ± 0%     0.0 ± 0%  -100.00% (p=0.000 n=10)
-NewEncoderEncode/Go_map[string]string_to_CBOR_map-20         544.0 ± 0%   416.0 ± 0%   -23.53% (p=0.000 n=10)
-geomean                                                      153.4                    ?                       ¹ ²
-¹ summaries must be >0 to compute geomean
-² ratios must be >0 to compute geomean
-
-                                                     │ bench-v2.4.0.log │    bench-f9e6291.log                │
-                                                     │    allocs/op     │ allocs/op   vs base                 │
-NewEncoderEncode/Go_bool_to_CBOR_bool-20                     2.000 ± 0%   0.000 ± 0%  -100.00% (p=0.000 n=10)
-NewEncoderEncode/Go_uint64_to_CBOR_positive_int-20           2.000 ± 0%   0.000 ± 0%  -100.00% (p=0.000 n=10)
-NewEncoderEncode/Go_int64_to_CBOR_negative_int-20            2.000 ± 0%   0.000 ± 0%  -100.00% (p=0.000 n=10)
-NewEncoderEncode/Go_float64_to_CBOR_float-20                 2.000 ± 0%   0.000 ± 0%  -100.00% (p=0.000 n=10)
-NewEncoderEncode/Go_[]uint8_to_CBOR_bytes-20                 2.000 ± 0%   0.000 ± 0%  -100.00% (p=0.000 n=10)
-NewEncoderEncode/Go_string_to_CBOR_text-20                   2.000 ± 0%   0.000 ± 0%  -100.00% (p=0.000 n=10)
-NewEncoderEncode/Go_[]int_to_CBOR_array-20                   2.000 ± 0%   0.000 ± 0%  -100.00% (p=0.000 n=10)
-NewEncoderEncode/Go_map[string]string_to_CBOR_map-20         28.00 ± 0%   26.00 ± 0%    -7.14% (p=0.000 n=10)
-geomean                                                      2.782                    ?                       ¹ ²
-¹ summaries must be >0 to compute geomean
-² ratios must be >0 to compute geomean
-```
-
-</details>
--->
+See ["Versions and API Changes"](https://github.com/fxamacker/cbor#versions-and-api-changes) section for more info about version numbering, etc.
 
 ## Who uses fxamacker/cbor
 
@@ -884,12 +825,12 @@ For more information, see [decoding options](https://pkg.go.dev/github.com/fxama
 If any of these limitations prevent you from using this library, please open an issue along with a link to your project.
 
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  CBOR `Null` (0xf6) more closely matches Go's `nil`.
-* CBOR map keys with data types not supported by Go for map keys are ignored and an error is returned after continuing to decode remaining items. 
+* CBOR map keys with data types not supported by Go for map keys are ignored and an error is returned after continuing to decode remaining items.
 * When decoding registered CBOR tag data to interface type other than `any`, decoder creates a pointer to registered Go type matching CBOR tag number.  Requiring a pointer for this is a Go limitation.
 
 ## Fuzzing and Code Coverage
 
-__Code coverage__ is always 95% or higher (with `go test -cover`) when tagging a release.
+__Code coverage__ is 97% or higher (with `go test -cover`) when tagging a release.
 
 __Coverage-guided fuzzing__ must pass billions of execs before tagging a release.  Fuzzing is done using nonpublic code which may eventually get merged into this project.  Until then, reports like OpenSSF&nbsp;Scorecard can't detect fuzz tests being used by this project.
 
@@ -897,10 +838,12 @@ __Coverage-guided fuzzing__ must pass billions of execs before tagging a release
 
 ## Versions and API Changes
 
-This project uses [Semantic Versioning](https://semver.org), so the API is always backwards compatible unless the major version number changes.
+This project uses [Semantic Versioning](https://semver.org) with the exclusions noted below, so function signatures are backwards compatible.
 
-Core functions have signatures identical to `encoding/json` while allowing custom CBOR settings via concurrency-safe modes created at runtime:<br>
-`Marshal`, `Unmarshal`, `NewEncoder`, `NewDecoder`, `(*Encoder).Encode`, and `(*Decoder).Decode`.
+> [!NOTE]
+> Exclusions from SemVer are similar to the Go standard library's policy for [bug fixes](https://go.dev/doc/godebug) and [changes to `SemanticError`](https://github.com/golang/go/blob/go1.27.3/src/encoding/json/v2/errors.go#L75):
+>
+> > The contents of this error as produced by [`encoding/json/v2`] may change over time.
 
 Exclusions from SemVer:
 - Newly added API documented as "subject to change".
