@@ -27,7 +27,8 @@ type SemanticError struct {
 
 func (e *SemanticError) Error() string { return e.msg }
 
-// MaxNestedLevelError indicates exceeded max nested level of any combination of CBOR arrays/maps/tags.
+// MaxNestedLevelError indicates exceeded max nesting depth as described in
+// DecOptions.MaxNestedLevels.
 type MaxNestedLevelError struct {
 	maxNestedLevels int
 }
