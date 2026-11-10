@@ -81,9 +81,23 @@ type DiagOptions struct {
 	// Refer to https://www.rfc-editor.org/rfc/rfc8949.html#name-encoding-indicators.
 	FloatPrecisionIndicator bool
 
-	// MaxNestedLevels specifies the max nested levels allowed for any combination of CBOR array, maps, and tags.
-	// Default is 32 levels and it can be set to [4, 65535]. Note that higher maximum levels of nesting can
-	// require larger amounts of stack to deserialize. Don't increase this higher than you require.
+	// MaxNestedLevels specifies the max nesting depth allowed for a CBOR data item
+	// as described below.
+	//
+	// An array or map counts as one nesting level. Currently, a tag counts as a
+	// nesting level only if its immediate content is another tag.
+	// For example:
+	//   - 0("2026-03-21T20:04:00Z") has 0 levels
+	//   - 55799(0("2026-03-21T20:04:00Z")) has 1 level
+	//   - [1] has 1 level
+	//   - 258([258([0])]) has 2 levels
+	//
+	// The default max limit is 32 levels, and it can be set from 4 to 65535. For
+	// perspective, most applications don't need a limit higher than 255. Currently,
+	// higher limits, and tags within nested data, can require more stack to deserialize.
+	// Don't set limits higher than actually required, because excessive limits
+	// can expose software to denial-of-service attacks. See:
+	//   - https://github.com/fxamacker/cbor#security-tips
 	MaxNestedLevels int
 
 	// MaxArrayElements specifies the max number of elements for CBOR arrays.
