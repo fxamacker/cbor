@@ -818,6 +818,74 @@ func TestDecodeNoTagData(t *testing.T) {
 	}
 }
 
+func TestDecodeNilToRegisteredTypeWithDecTagRequired(t *testing.T) {
+	type myMap map[string]int
+	type mySlice []int
+	type myStruct struct {
+		A string `cbor:"a"`
+	}
+	type outer struct {
+		M myMap `cbor:"m"`
+	}
+
+	tags := NewTagSet()
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeFor[myMap](), 100)
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeFor[mySlice](), 101)
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeFor[myStruct](), 102)
+
+	dm := mustDecModeWithTags(t, DecOptions{}, tags)
+
+	testCases := []struct {
+		name string
+		data []byte
+		v    any // pointer to non-zero value
+		want any
+	}{
+		{
+			name: "null to map",
+			data: mustHexDecode("f6"),
+			v:    &myMap{"a": 1},
+			want: myMap(nil),
+		},
+		{
+			name: "undefined to map",
+			data: mustHexDecode("f7"),
+			v:    &myMap{"a": 1},
+			want: myMap(nil),
+		},
+		{
+			name: "null to slice",
+			data: mustHexDecode("f6"),
+			v:    &mySlice{1},
+			want: mySlice(nil),
+		},
+		{
+			name: "null to struct",
+			data: mustHexDecode("f6"),
+			v:    &myStruct{A: "a"},
+			want: myStruct{A: "a"},
+		},
+		{
+			name: "null to struct field",
+			data: mustHexDecode("a1616df6"), // {"m": null}
+			v:    &outer{M: myMap{"a": 1}},
+			want: outer{M: nil},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := unmarshalWithDM(t, dm, tc.data, tc.v)
+			checkNoError(t, "dm.Unmarshal", err)
+
+			got := reflect.ValueOf(tc.v).Elem().Interface()
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("dm.Unmarshal(0x%x) = %#v, want %#v", tc.data, got, tc.want)
+			}
+		})
+	}
+}
+
 // TestDecodeWrongTag decodes wrong tag data with DecTagRequired/EncTagOptional/EncTagNone options
 func TestDecodeWrongTag(t *testing.T) {
 	type myInt int

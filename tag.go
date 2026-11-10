@@ -109,6 +109,7 @@ const (
 	DecTagOptional
 
 	// DecTagRequired makes decoder verify tag number and tag number must be present.
+	// Untagged CBOR null and undefined are exempt and are decoded as documented by Unmarshal.
 	DecTagRequired
 
 	maxDecTagMode
