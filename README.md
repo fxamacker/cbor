@@ -710,11 +710,13 @@ The `RawMessage` type can be used to delay CBOR decoding or precompute CBOR enco
 
 🔒 Use Go's `io.LimitReader` to limit size when decoding very large or indefinite size data.
 
-`DecOptions` can be used to adjust limits such as `MaxArrayElements`, `MaxMapPairs`, and `MaxNestedLevels`.
+`DecOptions` can be used to adjust limits such as `MaxArrayElements`, `MaxMapPairs`, and `MaxNestedLevels`.  It can also be used to reject duplicate map keys, indefinite-length items, tags, NaN, and infinity.
+
+For custom validation beyond `DecOptions`, implement the `cbor.Unmarshaler` interface on user-defined types.
 
 Set limits based on actual requirements instead of setting arbitrary maximums that expose the system to denial-of-service attacks.
 
-Design your data formats and protocols to avoid specifying unbounded nested levels, CBOR indefinite-length arrays, or CBOR indefinite-length maps. Instead, use [CBOR Sequences](https://www.rfc-editor.org/info/rfc8742/) of appropriately sized CBOR data items to balance security, performance, and scalability.
+Design your data formats and protocols to avoid specifying unbounded nested levels, CBOR indefinite-length arrays, or CBOR indefinite-length maps.  Instead, use [CBOR Sequences](https://www.rfc-editor.org/info/rfc8742/) of appropriately sized CBOR data items to balance security, performance, and scalability.
 
 ## Status
 
