@@ -7280,6 +7280,37 @@ func TestUnmarshalRegisteredTagToInterface(t *testing.T) {
 	}
 }
 
+func TestUnmarshalToPointerToInterface(t *testing.T) {
+	t.Run("registered tag to nil pointer", func(t *testing.T) {
+		tags := NewTagSet()
+		mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeFor[C](), 279)
+		dm := mustDecModeWithTags(t, DecOptions{}, tags)
+
+		data := mustHexDecode("d90117a1654669656c6405") // 279({"Field": 5})
+		var v *B
+		err := unmarshalWithDM(t, dm, data, &v)
+		checkNoError(t, "dm.Unmarshal", err)
+
+		var want B = &C{Field: 5}
+		if v == nil || !reflect.DeepEqual(*v, want) {
+			t.Errorf("dm.Unmarshal(0x%x) = %#v, want pointer to %#v", data, v, want)
+		}
+	})
+
+	t.Run("untagged data to non-nil pointer to interface holding pointer", func(t *testing.T) {
+		data := mustHexDecode("a1654669656c6405") // {"Field": 5}
+		c := &C{}
+		var b B = c
+		v := &b
+		err := unmarshal(t, data, &v)
+		checkNoError(t, "Unmarshal", err)
+
+		if v != &b || b != B(c) || c.Field != 5 {
+			t.Errorf("Unmarshal(0x%x) = %#v, want same pointer to interface holding %#v", data, v, &C{Field: 5})
+		}
+	})
+}
+
 func TestUnmarshalToDefaultMapType(t *testing.T) {
 
 	cborDataMapIntInt := mustHexDecode("a201020304")                                             // {1: 2, 3: 4}
