@@ -1612,7 +1612,9 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 	if tagItem := d.getRegisteredTagItem(tInfo.nonPtrType); tagItem != nil {
 		t := d.nextCBORType()
 		if t != cborTypeTag {
-			if tagItem.opts.DecTag == DecTagRequired {
+			// CBOR null and undefined may be decoded into every Go type,
+			// so they are exempt from the required tag.
+			if tagItem.opts.DecTag == DecTagRequired && !d.nextCBORNil() {
 				d.skip() // Required tag number is absent, skip entire tag
 				return &UnmarshalTypeError{
 					CBORType: t.String(),
