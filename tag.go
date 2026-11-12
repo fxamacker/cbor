@@ -297,6 +297,9 @@ func (t *syncTagSet) getEncTagItemFromType(typ reflect.Type) *tagItem {
 	t.RLock()
 	ti := t.t[typ]
 	t.RUnlock()
+	if ti == nil || ti.opts.EncTag == EncTagNone {
+		return nil
+	}
 	return ti
 }
 

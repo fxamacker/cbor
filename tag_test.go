@@ -1122,6 +1122,49 @@ func TestDecodeWithDecTagIgnored(t *testing.T) {
 	}
 }
 
+func TestEncodeWithEncTagNone(t *testing.T) {
+	tags := NewTagSet()
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagNone, DecTag: DecTagRequired}, reflect.TypeFor[C](), 100)
+	mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeFor[D](), 101)
+
+	emSharedTags, err := EncOptions{}.EncModeWithSharedTags(tags)
+	checkNoError(t, "EncModeWithSharedTags", err)
+
+	encModes := []struct {
+		name string
+		em   EncMode
+	}{
+		{"EncModeWithTags", mustEncModeWithTags(t, EncOptions{}, tags)},
+		{"EncModeWithSharedTags", emSharedTags},
+	}
+
+	testCases := []struct {
+		name string
+		obj  any
+		want []byte
+	}{
+		{
+			name: "EncTagNone",
+			obj:  C{Field: 1},
+			want: mustHexDecode("a1654669656c6401"), // {"Field": 1}
+		},
+		{
+			name: "EncTagRequired",
+			obj:  D{Field: "a"},
+			want: mustHexDecode("d865a1654669656c646161"), // 101({"Field": "a"})
+		},
+	}
+
+	for _, encMode := range encModes {
+		for _, tc := range testCases {
+			t.Run(encMode.name+"/"+tc.name, func(t *testing.T) {
+				b, err := encMode.em.Marshal(tc.obj)
+				checkMarshal(t, "em.Marshal", b, err, tc.want)
+			})
+		}
+	}
+}
+
 func TestDecModeWithTagsError(t *testing.T) {
 	// Create DecMode with nil as TagSet
 	wantErrorMsg := "cbor: cannot create DecMode with nil value as TagSet"
