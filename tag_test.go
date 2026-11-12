@@ -1076,6 +1076,7 @@ func TestDecodeWithDecTagIgnored(t *testing.T) {
 		data    []byte
 		newObj  func() any
 		wantObj any
+		wantErr bool
 	}{
 		{
 			name:    "not tag",
@@ -1088,6 +1089,18 @@ func TestDecodeWithDecTagIgnored(t *testing.T) {
 			data:    mustHexDecode("d864a1654669656c6401"), // 100({"Field": 1})
 			newObj:  func() any { return new(C) },
 			wantObj: C{Field: 1},
+		},
+		{
+			name:    "registered tag to empty interface",
+			data:    mustHexDecode("d864a1654669656c6401"), // 100({"Field": 1})
+			newObj:  func() any { return new(any) },
+			wantObj: Tag{100, map[any]any{"Field": uint64(1)}},
+		},
+		{
+			name:    "registered tag to nil interface",
+			data:    mustHexDecode("d864a1654669656c6401"), // 100({"Field": 1})
+			newObj:  func() any { return new(B) },
+			wantErr: true,
 		},
 		{
 			name:    "other tag",
@@ -1103,7 +1116,7 @@ func TestDecodeWithDecTagIgnored(t *testing.T) {
 				v := tc.newObj()
 				err := unmarshalWithDM(t, decMode.dm, tc.data, v)
 				got := reflect.ValueOf(v).Elem().Interface()
-				checkUnmarshal(t, "dm.Unmarshal", got, err, tc.wantObj)
+				checkUnmarshalCase[*UnmarshalTypeError](t, "dm.Unmarshal", got, err, tc.wantObj, tc.wantErr, "")
 			})
 		}
 	}

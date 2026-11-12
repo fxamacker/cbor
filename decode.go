@@ -550,7 +550,7 @@ func (fnbsm FieldNameByteStringMode) valid() bool {
 }
 
 // UnrecognizedTagToAnyMode specifies how to decode unrecognized CBOR tag into a value of type any.
-// Currently, recognized CBOR tag numbers are 0, 1, 2, 3, or registered by TagSet.
+// Currently, recognized CBOR tag numbers are 0, 1, 2, 3, or registered by TagSet with DecTag other than DecTagIgnored.
 type UnrecognizedTagToAnyMode int
 
 const (
@@ -874,7 +874,7 @@ type DecOptions struct {
 	FieldNameByteString FieldNameByteStringMode
 
 	// UnrecognizedTagToAny specifies how to decode unrecognized CBOR tag into a value of type any.
-	// Currently, recognized CBOR tag numbers are 0, 1, 2, 3, or registered by TagSet.
+	// Currently, recognized CBOR tag numbers are 0, 1, 2, 3, or registered by TagSet with DecTag other than DecTagIgnored.
 	UnrecognizedTagToAny UnrecognizedTagToAnyMode
 
 	// TimeTagToAny specifies how to decode CBOR tag 0 and 1 into a value of type any.

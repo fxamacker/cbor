@@ -828,7 +828,7 @@ If any of these limitations prevent you from using this library, please open an 
 
 * CBOR `Undefined` (0xf7) value decodes to Go's `nil` value.  CBOR `Null` (0xf6) more closely matches Go's `nil`.
 * CBOR map keys with data types not supported by Go for map keys are ignored and an error is returned after continuing to decode remaining items.
-* When decoding registered CBOR tag data to interface type other than `any`, decoder creates a pointer to registered Go type matching CBOR tag number.  Requiring a pointer for this is a Go limitation.
+* When decoding registered CBOR tag data (not registered with `DecTagIgnored`) to interface type other than `any`, decoder creates a pointer to registered Go type matching CBOR tag number.  Requiring a pointer for this is a Go limitation.
 
 ## Fuzzing and Code Coverage
 
