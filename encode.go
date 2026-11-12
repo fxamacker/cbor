@@ -754,19 +754,7 @@ func (opts EncOptions) UserBufferEncModeWithTags(tags TagSet) (UserBufferEncMode
 	if err != nil {
 		return nil, err
 	}
-	// Copy tags
-	ts := tagSet(make(map[reflect.Type]*tagItem))
-	syncTags := tags.(*syncTagSet)
-	syncTags.RLock()
-	for contentType, tag := range syncTags.t {
-		if tag.opts.EncTag != EncTagNone {
-			ts[contentType] = tag
-		}
-	}
-	syncTags.RUnlock()
-	if len(ts) > 0 {
-		em.tags = ts
-	}
+	em.tags = tags.newImmutableEncTagSet()
 	return em, nil
 }
 
@@ -927,7 +915,7 @@ type UserBufferEncMode interface {
 }
 
 type encMode struct {
-	tags                      tagProvider
+	tags                      encTagSet
 	sort                      SortMode
 	shortestFloat             ShortestFloatMode
 	nanConvert                NaNConvertMode
@@ -1057,7 +1045,7 @@ func (em *encMode) appendTagBytes(dst []byte, v reflect.Value) []byte {
 }
 
 func (em *encMode) appendTagBytesSlow(dst []byte, v reflect.Value) []byte {
-	if tagItem := em.tags.getTagItemFromType(v.Type()); tagItem != nil {
+	if tagItem := em.tags.getEncTagItemFromType(v.Type()); tagItem != nil {
 		return append(dst, tagItem.cborTagNum...)
 	}
 	return dst

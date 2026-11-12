@@ -535,9 +535,9 @@ func TestTagSetRemoveNil(t *testing.T) {
 		contentType: myIntType,
 		opts:        TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
 	}
-	ti := tags.getTagItemFromType(myIntType)
+	ti := stags.t[myIntType]
 	if !reflect.DeepEqual(ti, expectedTI) {
-		t.Errorf("tags.getTagItemFromType() = %+v, want %+v", ti, expectedTI)
+		t.Errorf("TagSet item for %s = %+v, want %+v", myIntType, ti, expectedTI)
 	}
 }
 
