@@ -285,6 +285,9 @@ func (t *syncTagSet) getDecTagItemFromType(typ reflect.Type) *tagItem {
 	t.RLock()
 	ti := t.t[typ]
 	t.RUnlock()
+	if ti == nil || ti.opts.DecTag == DecTagIgnored {
+		return nil
+	}
 	return ti
 }
 
