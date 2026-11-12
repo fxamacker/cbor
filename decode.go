@@ -1499,6 +1499,18 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		return nil
 	}
 
+	// Check validity of supported built-in tags before using the destination value,
+	// so that tag content of an inadmissible type doesn't create or modify Go values.
+	off := d.off
+	for d.nextCBORType() == cborTypeTag {
+		_, _, tagNum := d.readHead()
+		if err := validBuiltinTag(tagNum, d.data[d.off]); err != nil {
+			d.skip()
+			return err
+		}
+	}
+	d.off = off
+
 	if tInfo.spclType == specialTypeIface {
 		if !v.IsNil() {
 			// Decode into the value in the interface only if the value is a non-nil pointer.
@@ -1553,17 +1565,6 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 		}
 		v = v.Elem()
 	}
-
-	// Check validity of supported built-in tags.
-	off := d.off
-	for d.nextCBORType() == cborTypeTag {
-		_, _, tagNum := d.readHead()
-		if err := validBuiltinTag(tagNum, d.data[d.off]); err != nil {
-			d.skip()
-			return err
-		}
-	}
-	d.off = off
 
 	if tInfo.spclType != specialTypeNone {
 		switch tInfo.spclType {

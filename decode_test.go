@@ -6940,6 +6940,34 @@ func TestUnmarshalTag3(t *testing.T) {
 	}
 }
 
+func TestUnmarshalInvalidBuiltinTagToPointerOrInterface(t *testing.T) {
+	t.Run("nil pointer", func(t *testing.T) {
+		data := mustHexDecode("c160") // 1("")
+		var v *int
+		err := unmarshal(t, data, &v)
+		checkError[*InadmissibleTagContentTypeError](t, "Unmarshal", err, "")
+		if v != nil {
+			t.Errorf("Unmarshal(0x%x) = pointer to %v, want nil pointer", data, *v)
+		}
+	})
+
+	t.Run("non-nil interface holding non-pointer", func(t *testing.T) {
+		data := mustHexDecode("c160") // 1("")
+		var v fmt.Stringer = time.Second
+		err := unmarshal(t, data, &v)
+		checkError[*InadmissibleTagContentTypeError](t, "Unmarshal", err, "")
+	})
+
+	t.Run("struct field of non-nil interface holding non-pointer", func(t *testing.T) {
+		data := mustHexDecode("a16146c160") // {"F": 1("")}
+		v := struct {
+			F fmt.Stringer
+		}{F: time.Second}
+		err := unmarshal(t, data, &v)
+		checkError[*InadmissibleTagContentTypeError](t, "Unmarshal", err, "")
+	})
+}
+
 func TestUnmarshalInvalidTagBignum(t *testing.T) {
 	typeBigIntSlice := reflect.TypeFor[[]big.Int]()
 
