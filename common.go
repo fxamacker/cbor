@@ -185,6 +185,10 @@ func validBuiltinTag(tagNum uint64, contentHead byte) error {
 	return nil
 }
 
+func isExpectedLaterEncodingTagNum(tagNum uint64) bool {
+	return tagNum >= tagNumExpectedLaterEncodingBase64URL && tagNum <= tagNumExpectedLaterEncodingBase16
+}
+
 // Transcoder is a scheme for transcoding a single CBOR encoded data item to or from a different
 // data format.
 type Transcoder interface {
