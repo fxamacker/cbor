@@ -362,6 +362,27 @@ func TestAddTagError(t *testing.T) {
 			wantErrorMsg: "cbor: cannot add cbor.RawTag to TagSet",
 		},
 		{
+			name:         "cbor.ByteString",
+			typ:          reflect.TypeFor[ByteString](),
+			num:          108,
+			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
+			wantErrorMsg: "cbor: cannot add cbor.ByteString to TagSet",
+		},
+		{
+			name:         "cbor.SimpleValue",
+			typ:          reflect.TypeFor[SimpleValue](),
+			num:          109,
+			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
+			wantErrorMsg: "cbor: cannot add cbor.SimpleValue to TagSet",
+		},
+		{
+			name:         "cbor.RawMessage",
+			typ:          reflect.TypeFor[RawMessage](),
+			num:          110,
+			opts:         TagOptions{DecTag: DecTagRequired, EncTag: EncTagRequired},
+			wantErrorMsg: "cbor: cannot add cbor.RawMessage to TagSet",
+		},
+		{
 			name:         "big.Int",
 			typ:          reflect.TypeFor[big.Int](),
 			num:          107,
