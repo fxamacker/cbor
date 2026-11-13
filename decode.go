@@ -1511,8 +1511,20 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 	}
 	d.off = off
 
-	if tInfo.spclType == specialTypeIface {
-		if !v.IsNil() {
+	// Find the value to decode into by following pointers and non-empty interfaces.
+	// At this point, CBOR value is not nil/undefined if v is a pointer or interface.
+	for v.Kind() == reflect.Pointer || tInfo.spclType == specialTypeIface {
+		if v.Kind() == reflect.Pointer {
+			// Create new value for the pointer v to point to.
+			if v.IsNil() {
+				if !v.CanSet() {
+					d.skip()
+					return errors.New("cbor: cannot set new value for " + v.Type().String())
+				}
+				v.Set(reflect.New(v.Type().Elem()))
+			}
+			v = v.Elem()
+		} else if !v.IsNil() {
 			// Decode into the value in the interface only if the value is a non-nil pointer.
 			// Any other value in the interface is unaddressable and can't be decoded into.
 			e := v.Elem()
@@ -1528,7 +1540,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 			// Use value type
 			v = e
 			tInfo = getTypeInfo(v.Type())
-		} else { //nolint:gocritic
+		} else {
 			// Create and use registered type if CBOR data is registered tag
 			if d.dm.tags != nil && d.nextCBORType() == cborTypeTag {
 
@@ -1550,20 +1562,12 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 					}
 				}
 			}
-		}
-	}
 
-	// Create new value for the pointer v to point to.
-	// At this point, CBOR value is not nil/undefined if v is a pointer.
-	for v.Kind() == reflect.Pointer {
-		if v.IsNil() {
-			if !v.CanSet() {
-				d.skip()
-				return errors.New("cbor: cannot set new value for " + v.Type().String())
+			if v.Kind() == reflect.Interface {
+				// No registered type was created, so v remains a nil interface.
+				break
 			}
-			v.Set(reflect.New(v.Type().Elem()))
 		}
-		v = v.Elem()
 	}
 
 	if tInfo.spclType != specialTypeNone {
