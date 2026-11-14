@@ -22,23 +22,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Test on various OS with default Go version. 
+  # Test on various OS with default Go version.
   tests:
     name: test ${{matrix.os}} go-${{ matrix.go-version }}
     runs-on: ${{ matrix.os }}
     permissions:
-      contents: read    
+      contents: read
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [ubuntu-latest]
         go-version: [1.24, 1.25, 1.26, 1.27]
+        # On macOS and Windows, use latest Go only to reduce hitting GitHub runner limits.
+        include:
+          - os: macos-latest
+            go-version: 1.27
+          - os: windows-latest
+            go-version: 1.27
     steps:
     - name: Install Go
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version: ${{ matrix.go-version }}
         check-latest: true
-        
+
     - name: Checkout code
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
@@ -49,10 +55,10 @@ jobs:
 
     - name: Get dependencies
       run: go get -v -t -d ./...
-      
+
     - name: Build project
       run: go build ./...
-      
+
     - name: Run tests
       run: |
         go version
