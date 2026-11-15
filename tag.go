@@ -152,12 +152,27 @@ type TagSet interface {
 	// Remove is a no-op if contentType is nil.
 	Remove(contentType reflect.Type)
 
-	tagProvider
+	// newImmutableDecTagSet returns a copy of the tag set
+	// containing items whose DecTag is not DecTagIgnored.
+	// It returns nil if there are no such items.
+	newImmutableDecTagSet() decTagSet
+
+	// newImmutableEncTagSet returns a copy of the tag set
+	// containing items whose EncTag is not EncTagNone.
+	// It returns nil if there are no such items.
+	newImmutableEncTagSet() encTagSet
+
+	decTagSet
+	encTagSet
 }
 
-type tagProvider interface {
-	getTagItemFromType(t reflect.Type) *tagItem
-	getTypeFromTagNum(num []uint64) reflect.Type
+type decTagSet interface {
+	getDecTagItemFromType(t reflect.Type) *tagItem
+	getDecTypeFromTagNum(num []uint64) reflect.Type
+}
+
+type encTagSet interface {
+	getEncTagItemFromType(t reflect.Type) *tagItem
 }
 
 type tagItem struct {
@@ -187,19 +202,32 @@ func (t *tagItem) equalTagNum(num []uint64) bool {
 }
 
 type (
-	tagSet map[reflect.Type]*tagItem
+	// immutableTagSet is a copy of a TagSet that is never modified after creation.
+	// It contains only items that are in use:
+	// - DecTag isn't DecTagIgnored when created via newImmutableDecTagSet().
+	// - EncTag isn't EncTagNone when created via newImmutableEncTagSet().
+	immutableTagSet map[reflect.Type]*tagItem
 
 	syncTagSet struct {
 		sync.RWMutex
-		t tagSet
+		t map[reflect.Type]*tagItem
 	}
 )
 
-func (t tagSet) getTagItemFromType(typ reflect.Type) *tagItem {
+var _ decTagSet = immutableTagSet{}
+var _ encTagSet = immutableTagSet{}
+
+var _ TagSet = &syncTagSet{}
+
+func (t immutableTagSet) getDecTagItemFromType(typ reflect.Type) *tagItem {
 	return t[typ]
 }
 
-func (t tagSet) getTypeFromTagNum(num []uint64) reflect.Type {
+func (t immutableTagSet) getEncTagItemFromType(typ reflect.Type) *tagItem {
+	return t[typ]
+}
+
+func (t immutableTagSet) getDecTypeFromTagNum(num []uint64) reflect.Type {
 	for typ, tag := range t {
 		if tag.equalTagNum(num) {
 			return typ
@@ -253,18 +281,65 @@ func (t *syncTagSet) Remove(contentType reflect.Type) {
 	t.Unlock()
 }
 
-func (t *syncTagSet) getTagItemFromType(typ reflect.Type) *tagItem {
+func (t *syncTagSet) getDecTagItemFromType(typ reflect.Type) *tagItem {
 	t.RLock()
 	ti := t.t[typ]
 	t.RUnlock()
 	return ti
 }
 
-func (t *syncTagSet) getTypeFromTagNum(num []uint64) reflect.Type {
+func (t *syncTagSet) getEncTagItemFromType(typ reflect.Type) *tagItem {
 	t.RLock()
-	rt := t.t.getTypeFromTagNum(num)
+	ti := t.t[typ]
+	t.RUnlock()
+	return ti
+}
+
+func (t *syncTagSet) getDecTypeFromTagNum(num []uint64) reflect.Type {
+	var rt reflect.Type
+	t.RLock()
+	for typ, tag := range t.t {
+		if tag.equalTagNum(num) {
+			rt = typ
+			break
+		}
+	}
 	t.RUnlock()
 	return rt
+}
+
+func (t *syncTagSet) newImmutableDecTagSet() decTagSet {
+	ts := immutableTagSet(make(map[reflect.Type]*tagItem))
+
+	t.RLock()
+	for contentType, tag := range t.t {
+		if tag.opts.DecTag != DecTagIgnored {
+			ts[contentType] = tag
+		}
+	}
+	t.RUnlock()
+
+	if len(ts) == 0 {
+		return nil
+	}
+	return ts
+}
+
+func (t *syncTagSet) newImmutableEncTagSet() encTagSet {
+	ts := immutableTagSet(make(map[reflect.Type]*tagItem))
+
+	t.RLock()
+	for contentType, tag := range t.t {
+		if tag.opts.EncTag != EncTagNone {
+			ts[contentType] = tag
+		}
+	}
+	t.RUnlock()
+
+	if len(ts) == 0 {
+		return nil
+	}
+	return ts
 }
 
 func newTagItem(opts TagOptions, contentType reflect.Type, num uint64, nestedNum ...uint64) (*tagItem, error) {

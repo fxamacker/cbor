@@ -950,7 +950,7 @@ func (opts DecOptions) validForTags(tags TagSet) error { //nolint:gocritic // ig
 			tagNumExpectedLaterEncodingBase64,
 			tagNumExpectedLaterEncodingBase16,
 		} {
-			if rt := tags.getTypeFromTagNum([]uint64{tagNum}); rt != nil {
+			if rt := tags.getDecTypeFromTagNum([]uint64{tagNum}); rt != nil {
 				return fmt.Errorf("cbor: DecMode with ByteStringToString set to ByteStringToStringAllowedWithExpectedLaterEncoding or non-default ByteStringExpectedFormat treats tag %d as built-in and conflicts with the provided TagSet's registration of %v", tagNum, rt)
 			}
 		}
@@ -968,22 +968,7 @@ func (opts DecOptions) DecModeWithTags(tags TagSet) (DecMode, error) { //nolint:
 	if err != nil {
 		return nil, err
 	}
-
-	// Copy tags
-	ts := tagSet(make(map[reflect.Type]*tagItem))
-	syncTags := tags.(*syncTagSet)
-	syncTags.RLock()
-	for contentType, tag := range syncTags.t {
-		if tag.opts.DecTag != DecTagIgnored {
-			ts[contentType] = tag
-		}
-	}
-	syncTags.RUnlock()
-
-	if len(ts) > 0 {
-		dm.tags = ts
-	}
-
+	dm.tags = tags.newImmutableDecTagSet()
 	return dm, nil
 }
 
@@ -1279,7 +1264,7 @@ type DecMode interface {
 }
 
 type decMode struct {
-	tags                      tagProvider
+	tags                      decTagSet
 	dupMapKey                 DupMapKeyMode
 	timeTag                   DecTagMode
 	maxNestedLevels           int
@@ -1442,6 +1427,14 @@ func (dm *decMode) NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{r: r, d: decoder{dm: dm}}
 }
 
+func (dm *decMode) getRegisteredTagItem(vt reflect.Type) *tagItem {
+	// NOTE: this function is written to be inlinable.
+	if dm.tags != nil {
+		return dm.tags.getDecTagItemFromType(vt)
+	}
+	return nil
+}
+
 type decoder struct {
 	data []byte
 	off  int // next read offset in data
@@ -1552,7 +1545,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 				}
 				d.off = off
 
-				registeredType := d.dm.tags.getTypeFromTagNum(tagNums)
+				registeredType := d.dm.tags.getDecTypeFromTagNum(tagNums)
 				if registeredType != nil {
 					if registeredType.Implements(tInfo.nonPtrType) ||
 						reflect.PointerTo(registeredType).Implements(tInfo.nonPtrType) {
@@ -1614,7 +1607,7 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 	}
 
 	// Check registered tag number
-	if tagItem := d.getRegisteredTagItem(tInfo.nonPtrType); tagItem != nil {
+	if tagItem := d.dm.getRegisteredTagItem(tInfo.nonPtrType); tagItem != nil {
 		t := d.nextCBORType()
 		if t != cborTypeTag {
 			// CBOR null and undefined may be decoded into every Go type,
@@ -2244,7 +2237,7 @@ func (d *decoder) parse(skipSelfDescribedTag bool) (any, error) { //nolint:gocyc
 				_, _, num := d.readHead()
 				tagNums = append(tagNums, num)
 			}
-			registeredType := d.dm.tags.getTypeFromTagNum(tagNums)
+			registeredType := d.dm.tags.getDecTypeFromTagNum(tagNums)
 			if registeredType != nil {
 				d.off = tagOff
 				rv := reflect.New(registeredType)
@@ -3072,13 +3065,6 @@ func (d *decoder) validRegisteredTagNums(registeredTag *tagItem) error {
 
 	if !registeredTag.equalTagNum(tagNums) {
 		return &WrongTagError{registeredTag.contentType, registeredTag.num, tagNums}
-	}
-	return nil
-}
-
-func (d *decoder) getRegisteredTagItem(vt reflect.Type) *tagItem {
-	if d.dm.tags != nil {
-		return d.dm.tags.getTagItemFromType(vt)
 	}
 	return nil
 }
