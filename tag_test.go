@@ -1477,6 +1477,182 @@ func TestDecodeRegisterTagForUnmarshaler(t *testing.T) {
 	checkMarshal(t, "em.Marshal", b, err, data)
 }
 
+type rawCBORUnmarshaler struct {
+	data []byte
+}
+
+func (r *rawCBORUnmarshaler) UnmarshalCBOR(data []byte) error {
+	r.data = append([]byte(nil), data...)
+	return nil
+}
+
+// TestDecodeToRegisteredUnmarshaler tests that the registered tag number is checked
+// for registered types implementing cbor.Unmarshaler, and that the registered tag
+// number is passed to UnmarshalCBOR.
+func TestDecodeToRegisteredUnmarshaler(t *testing.T) {
+	decTagModes := []struct {
+		name string
+		dtm  DecTagMode
+	}{
+		{name: "DecTagRequired", dtm: DecTagRequired},
+		{name: "DecTagOptional", dtm: DecTagOptional},
+	}
+
+	type testCase struct {
+		name    string
+		opts    DecOptions
+		tagNums []uint64
+		data    []byte
+		want    rawCBORUnmarshaler
+	}
+
+	testCases := []testCase{
+		{
+			name:    "tag",
+			tagNums: []uint64{100},
+			data:    mustHexDecode("d86401"), // 100(1)
+			want:    rawCBORUnmarshaler{data: mustHexDecode("d86401")},
+		},
+		{
+			name:    "nested tags",
+			tagNums: []uint64{100, 101},
+			data:    mustHexDecode("d864d86501"), // 100(101(1))
+			want:    rawCBORUnmarshaler{data: mustHexDecode("d864d86501")},
+		},
+		{
+			name:    "null",
+			tagNums: []uint64{100},
+			data:    mustHexDecode("f6"), // null
+			want:    rawCBORUnmarshaler{data: mustHexDecode("f6")},
+		},
+		{
+			name:    "tag 23 prefix",
+			tagNums: []uint64{100},
+			data:    mustHexDecode("d7d86401"), // 23(100(1))
+			want:    rawCBORUnmarshaler{data: mustHexDecode("d86401")},
+		},
+		{
+			name:    "tag 23 prefix with ByteStringExpectedBase16",
+			opts:    DecOptions{ByteStringExpectedFormat: ByteStringExpectedBase16},
+			tagNums: []uint64{100},
+			data:    mustHexDecode("d7d86401"), // 23(100(1))
+			want:    rawCBORUnmarshaler{data: mustHexDecode("d86401")},
+		},
+	}
+	for _, tc := range testCases {
+		for _, dtm := range decTagModes {
+			name := dtm.name + "/" + tc.name
+			t.Run(name, func(t *testing.T) {
+				tags := NewTagSet()
+				mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: dtm.dtm}, reflect.TypeFor[rawCBORUnmarshaler](), tc.tagNums[0], tc.tagNums[1:]...)
+
+				dm := mustDecModeWithTags(t, tc.opts, tags)
+
+				var got rawCBORUnmarshaler
+				err := unmarshalWithDM(t, dm, tc.data, &got)
+				checkUnmarshal(t, "dm.Unmarshal", got, err, tc.want)
+			})
+		}
+	}
+
+	wrongTagTestCases := []testCase{
+		{
+			name:    "wrong tag",
+			tagNums: []uint64{100},
+			data:    mustHexDecode("d86501"), // 101(1)
+		},
+		{
+			name:    "fewer tags than registered",
+			tagNums: []uint64{100, 101},
+			data:    mustHexDecode("d86401"), // 100(1)
+		},
+		{
+			name:    "more tags than registered",
+			tagNums: []uint64{100},
+			data:    mustHexDecode("d864d86501"), // 100(101(1))
+		},
+	}
+	for _, tc := range wrongTagTestCases {
+		for _, dtm := range decTagModes {
+			name := dtm.name + "/" + tc.name
+			t.Run(name, func(t *testing.T) {
+				tags := NewTagSet()
+				mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: dtm.dtm}, reflect.TypeFor[rawCBORUnmarshaler](), tc.tagNums[0], tc.tagNums[1:]...)
+
+				dm := mustDecModeWithTags(t, tc.opts, tags)
+
+				var got rawCBORUnmarshaler
+				err := unmarshalWithDM(t, dm, tc.data, &got)
+				checkError[*WrongTagError](t, "dm.Unmarshal", err, "")
+			})
+		}
+
+		for _, dtm := range decTagModes {
+			name := dtm.name + "/" + tc.name + " to interface"
+			t.Run(name, func(t *testing.T) {
+				tags := NewTagSet()
+				mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: dtm.dtm}, reflect.TypeFor[rawCBORUnmarshaler](), tc.tagNums[0], tc.tagNums[1:]...)
+
+				dm := mustDecModeWithTags(t, tc.opts, tags)
+
+				var got Unmarshaler = &rawCBORUnmarshaler{}
+				err := unmarshalWithDM(t, dm, tc.data, &got)
+				checkError[*WrongTagError](t, "dm.Unmarshal", err, "")
+			})
+		}
+	}
+
+	noTagTestCases := []struct {
+		name    string
+		decTag  DecTagMode
+		tagNums []uint64
+		data    []byte
+		want    rawCBORUnmarshaler
+		wantErr bool
+	}{
+		{
+			name:    "DecTagRequired",
+			decTag:  DecTagRequired,
+			tagNums: []uint64{100},
+			data:    mustHexDecode("01"), // 1
+			wantErr: true,
+		},
+		{
+			name:    "DecTagOptional",
+			decTag:  DecTagOptional,
+			tagNums: []uint64{100},
+			data:    mustHexDecode("01"), // 1
+			want:    rawCBORUnmarshaler{data: mustHexDecode("01")},
+		},
+	}
+	for _, tc := range noTagTestCases {
+		t.Run(tc.name+"/no tag", func(t *testing.T) {
+			tags := NewTagSet()
+			mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: tc.decTag}, reflect.TypeFor[rawCBORUnmarshaler](), tc.tagNums[0], tc.tagNums[1:]...)
+
+			dm := mustDecModeWithTags(t, DecOptions{}, tags)
+
+			var got rawCBORUnmarshaler
+			err := unmarshalWithDM(t, dm, tc.data, &got)
+			checkUnmarshalCase[*UnmarshalTypeError](t, "dm.Unmarshal", got, err, tc.want, tc.wantErr, "")
+		})
+	}
+
+	t.Run("unregistered type", func(t *testing.T) {
+		tags := NewTagSet()
+		mustAddTag(t, tags, TagOptions{EncTag: EncTagRequired, DecTag: DecTagRequired}, reflect.TypeFor[number](), 100)
+
+		dm := mustDecModeWithTags(t, DecOptions{}, tags)
+
+		data := mustHexDecode("d86501") // 101(1)
+		want := rawCBORUnmarshaler{data: data}
+
+		var got rawCBORUnmarshaler
+		err := unmarshalWithDM(t, dm, data, &got)
+		checkUnmarshal(t, "dm.Unmarshal", got, err, want)
+	})
+}
+
 func TestMarshalRawTagContainingMalformedCBORData(t *testing.T) {
 	testCases := []struct {
 		name         string
