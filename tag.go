@@ -103,6 +103,8 @@ type DecTagMode int
 
 const (
 	// DecTagIgnored makes decoder ignore tag number (skips if present).
+	// The decoder does not use the registration to check tag numbers or
+	// to select types by tag number.
 	DecTagIgnored DecTagMode = iota
 
 	// DecTagOptional makes decoder verify tag number if it's present.
@@ -285,6 +287,9 @@ func (t *syncTagSet) getDecTagItemFromType(typ reflect.Type) *tagItem {
 	t.RLock()
 	ti := t.t[typ]
 	t.RUnlock()
+	if ti == nil || ti.opts.DecTag == DecTagIgnored {
+		return nil
+	}
 	return ti
 }
 
@@ -292,6 +297,9 @@ func (t *syncTagSet) getEncTagItemFromType(typ reflect.Type) *tagItem {
 	t.RLock()
 	ti := t.t[typ]
 	t.RUnlock()
+	if ti == nil || ti.opts.EncTag == EncTagNone {
+		return nil
+	}
 	return ti
 }
 
@@ -299,7 +307,7 @@ func (t *syncTagSet) getDecTypeFromTagNum(num []uint64) reflect.Type {
 	var rt reflect.Type
 	t.RLock()
 	for typ, tag := range t.t {
-		if tag.equalTagNum(num) {
+		if tag.opts.DecTag != DecTagIgnored && tag.equalTagNum(num) {
 			rt = typ
 			break
 		}
