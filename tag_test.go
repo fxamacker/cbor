@@ -953,6 +953,18 @@ func TestDecodeWrongTag(t *testing.T) {
 			data:         mustHexDecode("d87ea3616161416162614261636143"), // {"a":"A", "b":"B", "c":"C"}
 			wantErrorMsg: "cbor: wrong tag number for cbor.s, got [126], expected [101 102]",
 		},
+		{
+			name:         "expected later encoding tag enclosing wrong tag",
+			obj:          myInt(1),
+			data:         mustHexDecode("d7d87d01"), // 23(125(1))
+			wantErrorMsg: "cbor: wrong tag number for cbor.myInt, got [125], expected [100]",
+		},
+		{
+			name:         "expected later encoding tag enclosed in registered tag",
+			obj:          myInt(1),
+			data:         mustHexDecode("d864d701"), // 100(23(1))
+			wantErrorMsg: "cbor: wrong tag number for cbor.myInt, got [100 23], expected [100]",
+		},
 	}
 
 	for _, tc := range testCases {

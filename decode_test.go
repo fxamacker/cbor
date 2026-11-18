@@ -8470,8 +8470,19 @@ func TestUnmarshalByteStringTextConversionError(t *testing.T) {
 }
 
 func TestUnmarshalByteStringTextConversion(t *testing.T) {
+	type namedByteSlice []byte
+	type nestedTagByteSlice []byte
+
+	tagsDecRequired := NewTagSet()
+	mustAddTag(t, tagsDecRequired, TagOptions{DecTag: DecTagRequired}, reflect.TypeFor[namedByteSlice](), 100)
+	mustAddTag(t, tagsDecRequired, TagOptions{DecTag: DecTagRequired}, reflect.TypeFor[nestedTagByteSlice](), 23, 100)
+
+	tagsDecOptional := NewTagSet()
+	mustAddTag(t, tagsDecOptional, TagOptions{DecTag: DecTagOptional}, reflect.TypeFor[namedByteSlice](), 100)
+
 	for _, tc := range []struct {
 		name    string
+		tags    TagSet
 		opts    DecOptions
 		dstType reflect.Type
 		data    []byte
@@ -8666,9 +8677,48 @@ func TestUnmarshalByteStringTextConversion(t *testing.T) {
 			data:    []byte{0xd6, 0xd5, 0x42, 0x01, 0x02}, // 22(21(h'0102'))
 			want:    "AQI",                                // base64 of [0x01, 0x02] without padding
 		},
+		{
+			name:    "tag 23 wrapping user-registered tag into registered type",
+			tags:    tagsDecRequired,
+			opts:    DecOptions{},
+			dstType: reflect.TypeFor[namedByteSlice](),
+			data:    []byte{0xd7, 0xd8, 0x64, 0x41, 0xff}, // 23(100(h'ff'))
+			want:    namedByteSlice{0xff},
+		},
+		{
+			name: "tag 23 wrapping user-registered tag into registered type with default encoding base16",
+			tags: tagsDecRequired,
+			opts: DecOptions{
+				ByteStringExpectedFormat: ByteStringExpectedBase16,
+			},
+			dstType: reflect.TypeFor[namedByteSlice](),
+			data:    []byte{0xd7, 0xd8, 0x64, 0x41, 0xff}, // 23(100(h'ff'))
+			want:    namedByteSlice{0xff},
+		},
+		{
+			name:    "tag 23 into registered type with optional user-registered tag",
+			tags:    tagsDecOptional,
+			opts:    DecOptions{},
+			dstType: reflect.TypeFor[namedByteSlice](),
+			data:    []byte{0xd7, 0x41, 0xff}, // 23(h'ff')
+			want:    namedByteSlice{0xff},
+		},
+		{
+			name:    "user-registered tag (including tag 23) into registered type",
+			tags:    tagsDecRequired,
+			opts:    DecOptions{},
+			dstType: reflect.TypeFor[nestedTagByteSlice](),
+			data:    []byte{0xd7, 0xd8, 0x64, 0x41, 0xff}, // 23(100(h'ff'))
+			want:    nestedTagByteSlice{0xff},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			dm := mustDecMode(t, tc.opts)
+			var dm DecMode
+			if tc.tags != nil {
+				dm = mustDecModeWithTags(t, tc.opts, tc.tags)
+			} else {
+				dm = mustDecMode(t, tc.opts)
+			}
 			dstVal := reflect.New(tc.dstType)
 			err := unmarshalWithDM(t, dm, tc.data, dstVal.Interface())
 			checkUnmarshal(t, "dm.Unmarshal", dstVal.Elem().Interface(), err, tc.want)

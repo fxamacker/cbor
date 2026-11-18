@@ -1619,9 +1619,26 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 					GoType:   tInfo.typ.String(),
 					errorMsg: "expect CBOR tag value"}
 			}
-		} else if err := d.validRegisteredTagNums(tagItem); err != nil {
-			d.skip() // Skip tag content
-			return err
+		} else {
+			// Scan tag numbers.
+			tagOff := d.off
+			tagNums := make([]uint64, 0, 1)
+			for d.nextCBORType() == cborTypeTag {
+				_, _, tagNum := d.readHead()
+				tagNums = append(tagNums, tagNum)
+			}
+
+			// Validate tag numbers against registered tag numbers by type.
+			if !tagItem.equalTagNum(tagNums) {
+				// Tag numbers 21-23 can enclose any data item, including registered tags.
+				// The tag case below handles them, then the registered tag is checked
+				// again on the remaining tags.
+				if !isExpectedLaterEncodingTagNum(tagNums[0]) {
+					d.skip() // Skip tag content
+					return &WrongTagError{tagItem.contentType, tagItem.num, tagNums}
+				}
+				d.off = tagOff
+			}
 		}
 	}
 
@@ -3051,22 +3068,6 @@ func (d *decoder) parseMapToStruct(v reflect.Value, tInfo *typeInfo) error { //n
 	}
 
 	return err
-}
-
-// validRegisteredTagNums verifies that tag numbers match registered tag numbers of type t.
-// validRegisteredTagNums assumes next CBOR data type is tag.  It scans all tag numbers, and stops at tag content.
-func (d *decoder) validRegisteredTagNums(registeredTag *tagItem) error {
-	// Scan until next cbor data is tag content.
-	tagNums := make([]uint64, 0, 1)
-	for d.nextCBORType() == cborTypeTag {
-		_, _, val := d.readHead()
-		tagNums = append(tagNums, val)
-	}
-
-	if !registeredTag.equalTagNum(tagNums) {
-		return &WrongTagError{registeredTag.contentType, registeredTag.num, tagNums}
-	}
-	return nil
 }
 
 // skip moves data offset to the next item.  skip assumes data is well-formed,
