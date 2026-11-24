@@ -369,6 +369,15 @@ func newTagItem(opts TagOptions, contentType reflect.Type, num uint64, nestedNum
 	if contentType == typeRawTag {
 		return nil, errors.New("cbor: cannot add cbor.RawTag to TagSet")
 	}
+	if contentType == typeByteString {
+		return nil, errors.New("cbor: cannot add cbor.ByteString to TagSet")
+	}
+	if contentType == typeSimpleValue {
+		return nil, errors.New("cbor: cannot add cbor.SimpleValue to TagSet")
+	}
+	if contentType == typeRawMessage {
+		return nil, errors.New("cbor: cannot add cbor.RawMessage to TagSet")
+	}
 	if num == 0 || num == 1 {
 		return nil, errors.New("cbor: cannot add tag number 0 or 1 to TagSet, use EncOptions.TimeTag and DecOptions.TimeTag instead")
 	}
