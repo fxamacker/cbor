@@ -1591,6 +1591,18 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 			return nil
 
 		case specialTypeUnmarshalerIface:
+			if tagItem := d.dm.getRegisteredTagItem(tInfo.nonPtrType); tagItem != nil {
+				_, unmatchedLaterEncodingTagPrefix, _, err := d.checkNextCBORDataForRegisteredItem(tagItem, tInfo)
+				if err != nil {
+					d.skip() // Skip next data item
+					return err
+				}
+				if unmatchedLaterEncodingTagPrefix {
+					// Data item is enclosed in tag number 21-23, which is
+					// handled by the tag case below.
+					break
+				}
+			}
 			return d.parseToUnmarshaler(v)
 
 		case specialTypeUnexportedUnmarshalerIface:
@@ -1608,38 +1620,18 @@ func (d *decoder) parseToValue(v reflect.Value, tInfo *typeInfo) error { //nolin
 
 	// Check registered tag number
 	if tagItem := d.dm.getRegisteredTagItem(tInfo.nonPtrType); tagItem != nil {
-		t := d.nextCBORType()
-		if t != cborTypeTag {
-			// CBOR null and undefined may be decoded into every Go type,
-			// so they are exempt from the required tag.
-			if tagItem.opts.DecTag == DecTagRequired && !d.nextCBORNil() {
-				d.skip() // Required tag number is absent, skip entire tag
-				return &UnmarshalTypeError{
-					CBORType: t.String(),
-					GoType:   tInfo.typ.String(),
-					errorMsg: "expect CBOR tag value"}
-			}
-		} else {
-			// Scan tag numbers.
-			tagOff := d.off
-			tagNums := make([]uint64, 0, 1)
-			for d.nextCBORType() == cborTypeTag {
-				_, _, tagNum := d.readHead()
-				tagNums = append(tagNums, tagNum)
-			}
-
-			// Validate tag numbers against registered tag numbers by type.
-			if !tagItem.equalTagNum(tagNums) {
-				// Tag numbers 21-23 can enclose any data item, including registered tags.
-				// The tag case below handles them, then the registered tag is checked
-				// again on the remaining tags.
-				if !isExpectedLaterEncodingTagNum(tagNums[0]) {
-					d.skip() // Skip tag content
-					return &WrongTagError{tagItem.contentType, tagItem.num, tagNums}
-				}
-				d.off = tagOff
-			}
+		isTag, unmatchedLaterEncodingTagPrefix, tagContentOff, err := d.checkNextCBORDataForRegisteredItem(tagItem, tInfo)
+		if err != nil {
+			d.skip() // Skip next data item
+			return err
 		}
+		if isTag && !unmatchedLaterEncodingTagPrefix {
+			// Skip exact matched tag numbers for the registered type
+			d.off = tagContentOff
+		}
+		// Tag numbers 21-23 can enclose any data item, including registered tags.
+		// The tag case below handles them, then the registered tag is checked
+		// again on the remaining tags.
 	}
 
 	t := d.nextCBORType()
@@ -2005,6 +1997,58 @@ func (d *decoder) parseToUnexportedUnmarshaler(v reflect.Value) error {
 	}
 	d.skip()
 	return errors.New("cbor: failed to assert " + v.Type().String() + " as cbor.unmarshaler")
+}
+
+// checkNextCBORDataForRegisteredItem checks the next CBOR data item against
+// the registered tag item.  Specifically, the tag numbers must match the
+// registered tag numbers if the data item is tagged, and the data item must
+// be tagged if the type is registered with DecTagRequired.
+// checkNextCBORDataForRegisteredItem doesn't move the decoder offset.
+func (d *decoder) checkNextCBORDataForRegisteredItem(tagItem *tagItem, tInfo *typeInfo) (
+	isTag bool,
+	unmatchedLaterEncodingTagPrefix bool,
+	tagContentOff int,
+	err error,
+) {
+	t := d.nextCBORType()
+	isTag = t == cborTypeTag
+
+	if !isTag {
+		// CBOR null and undefined may be decoded into every Go type,
+		// so they are exempt from the required tag.
+		if tagItem.opts.DecTag == DecTagRequired && !d.nextCBORNil() {
+			err = &UnmarshalTypeError{
+				CBORType: t.String(),
+				GoType:   tInfo.typ.String(),
+				errorMsg: "expect CBOR tag value"}
+		}
+		return
+	}
+
+	tagOff := d.off
+
+	// Scan tag numbers.
+	tagNums := make([]uint64, 0, 1)
+	for d.nextCBORType() == cborTypeTag {
+		_, _, tagNum := d.readHead()
+		tagNums = append(tagNums, tagNum)
+	}
+
+	tagContentOff = d.off
+
+	// Restore decoder offset
+	d.off = tagOff
+
+	// Validate tag numbers against registered tag numbers by type.
+	if tagItem.equalTagNum(tagNums) {
+		return
+	}
+
+	unmatchedLaterEncodingTagPrefix = isExpectedLaterEncodingTagNum(tagNums[0])
+	if !unmatchedLaterEncodingTagPrefix {
+		err = &WrongTagError{tagItem.contentType, tagItem.num, tagNums}
+	}
+	return
 }
 
 // parseToJSONUnmarshaler parses CBOR data to be transcoded to JSON and passed to the value's
